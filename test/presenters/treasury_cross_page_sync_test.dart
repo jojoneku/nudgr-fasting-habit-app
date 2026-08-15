@@ -102,8 +102,10 @@ void main() {
     when(storage.saveAwardedXpKeys(any)).thenAnswer((_) async {});
   });
 
-  /// Builds the mobile wiring: ledger → dashboard → budget, with the dependent
-  /// refresh the composition roots install.
+  /// Builds the graph by hand in the order the composition roots use, so these
+  /// tests exercise the wiring itself rather than trusting [TreasuryPresenters]
+  /// to have done it (that's covered separately in
+  /// treasury_presenters_graph_test.dart).
   Future<
       ({
         LedgerPresenter ledger,
@@ -111,11 +113,14 @@ void main() {
         BudgetPresenter budget,
       })> buildStack({bool wireDependents = true}) async {
     final ledger = LedgerPresenter(storage, stats);
-    final dashboard = TreasuryDashboardPresenter(storage, ledger);
     final budget = BudgetPresenter(storage, stats, ledger);
-    if (wireDependents) {
-      budget.onBudgetsChanged = dashboard.reloadBudgets;
-    }
+    // `wireDependents: false` reproduces the old shape — a dashboard that keeps
+    // its own budget copy and never hears about edits.
+    final dashboard = TreasuryDashboardPresenter(
+      storage,
+      ledger,
+      wireDependents ? budget : null,
+    );
     await dashboard.load();
     await budget.load();
     var guard = 0;
@@ -222,15 +227,16 @@ void main() {
           isNot(contains('Sinking Funds')));
     });
 
-    test('without the dependent wiring the dashboard goes stale — the bug',
+    test(
+        'unsubscribed from its budget owner, the dashboard goes stale — the bug',
         () async {
       final s = await buildStack(wireDependents: false);
       s.budget.setMonth(toMonthKey(DateTime.now()));
 
       await s.budget.setBudget('food', 4000);
 
-      // Pins the regression: this is exactly what the user saw before the
-      // composition roots started wiring onBudgetsChanged.
+      // Pins the regression: this is exactly what the user saw while the
+      // dashboard kept a private budget copy refreshed only by its own load().
       expect(s.dashboard.totalBudgetAllocated, 0);
     });
   });

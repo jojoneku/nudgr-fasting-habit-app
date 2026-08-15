@@ -16,7 +16,7 @@ import '../../presenters/stats_presenter.dart';
 import '../../presenters/sync_presenter.dart';
 import '../../presenters/treasury_dashboard_presenter.dart';
 import '../../presenters/treasury_history_presenter.dart';
-import '../../presenters/treasury_month_scope.dart';
+import '../../presenters/treasury_presenters.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
@@ -97,10 +97,9 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final AuthPresenter _authPresenter;
   late final AiCoachPresenter _advisorPresenter;
 
-  /// One "month being read" for Ledger / Bills / Budget / Installments, so
-  /// paging one destination back to June doesn't leave the others in the
-  /// current month with nothing on screen saying so.
-  final TreasuryMonthScope _monthScope = TreasuryMonthScope();
+  /// The Treasury presenter graph. The individual fields above are views onto
+  /// it, kept because the widget tree threads them around individually.
+  late final TreasuryPresenters _treasury;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   RealtimeSyncService? _realtime;
@@ -137,41 +136,23 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // on-device tier and no toggle to honour, so the cloud tier is the only
     // tier and is on by definition.
     cloudAi.enabled = true;
-    _ledgerPresenter = LedgerPresenter(
-      _storage,
-      _statsPresenter,
+    // The whole Treasury graph, wired in one place (see TreasuryPresenters) —
+    // the same assembly the mobile shell uses, so a dependency added there
+    // reaches web automatically instead of having to be remembered twice.
+    // No `ai:`: there is no on-device model in a browser, so the cloud tier is
+    // the only tier.
+    _treasury = TreasuryPresenters(
+      storage: _storage,
+      stats: _statsPresenter,
       cloudAi: cloudAi,
-      monthScope: _monthScope,
     );
-    _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
-    _budgetPresenter = BudgetPresenter(
-      _storage,
-      _statsPresenter,
-      _ledgerPresenter,
-      null,
-      _monthScope,
-    );
-    _billsPresenter = BillsReceivablesPresenter(
-      _storage,
-      _ledgerPresenter,
-      _statsPresenter,
-      dashboard: _treasuryPresenter,
-      budget: _budgetPresenter,
-      monthScope: _monthScope,
-    );
-    // Budgets are owned by the budget presenter but mirrored by the dashboard;
-    // without this an allocation edited on the Budget page left the dashboard's
-    // Budget Overview and month-end projection showing pre-edit numbers.
-    _budgetPresenter.onBudgetsChanged = _treasuryPresenter.reloadBudgets;
-    _historyPresenter = TreasuryHistoryPresenter(_storage);
-    _installmentPresenter = InstallmentPresenter(
-      _storage,
-      _ledgerPresenter,
-      _statsPresenter,
-      monthScope: _monthScope,
-    );
-    _groceryCartPresenter =
-        GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
+    _ledgerPresenter = _treasury.ledger;
+    _treasuryPresenter = _treasury.dashboard;
+    _budgetPresenter = _treasury.budget;
+    _billsPresenter = _treasury.bills;
+    _historyPresenter = _treasury.history;
+    _installmentPresenter = _treasury.installments;
+    _groceryCartPresenter = _treasury.groceryCart;
     // Money Mentor. `fasting` and `nutrition` are omitted: both are optional,
     // and constructing them here would init NotificationService / the sqflite
     // food DB — neither of which has a web implementation. The advisor entry
@@ -228,16 +209,9 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _statsPresenter.dispose();
-    _ledgerPresenter.dispose();
-    _treasuryPresenter.dispose();
-    _budgetPresenter.dispose();
-    _billsPresenter.dispose();
-    _historyPresenter.dispose();
-    _installmentPresenter.dispose();
-    _groceryCartPresenter.dispose();
+    _treasury.dispose(); // every Treasury presenter + the shared month scope
     _advisorPresenter.dispose();
     _authPresenter.dispose();
-    _monthScope.dispose();
     unawaited(_realtime?.dispose() ?? Future.value());
     _syncService?.dispose();
     _syncPresenter?.dispose();
@@ -377,13 +351,9 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   Future<void> _reloadAll() async {
     final loads = <Future<void>>[
       _statsPresenter.loadStats(),
-      _ledgerPresenter.load(),
-      _treasuryPresenter.load(),
-      _budgetPresenter.load(),
-      _billsPresenter.load(),
-      _historyPresenter.load(),
-      _installmentPresenter.load(),
-      _groceryCartPresenter.load(),
+      // One list, owned by the graph — a presenter added there is reloaded here
+      // without this call site having to be updated too.
+      ..._treasury.loadAll(),
     ];
     await Future.wait(loads.map((f) async {
       try {

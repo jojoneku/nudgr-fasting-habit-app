@@ -17,7 +17,7 @@ import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
-import '../presenters/treasury_month_scope.dart';
+import '../presenters/treasury_presenters.dart';
 import '../services/auth_service.dart';
 import '../services/backup_service.dart';
 import '../services/food_db_service.dart';
@@ -70,13 +70,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final CloudAiCoachService _cloudAi;
   late final HealthService _healthService;
   late final ActivityPresenter _activityPresenter;
+
+  /// The Treasury presenter graph. The individual fields below are views onto
+  /// it, kept because the widget tree threads them around individually.
+  late final TreasuryPresenters _treasury;
+
   late final TreasuryDashboardPresenter _treasuryPresenter;
   late final LedgerPresenter _ledgerPresenter;
-
-  /// One "month being read" for Ledger / Bills / Budget / Installments, so
-  /// paging one Treasury tab back to June doesn't leave the others in the
-  /// current month with nothing on screen saying so.
-  final TreasuryMonthScope _monthScope = TreasuryMonthScope();
   late final BillsReceivablesPresenter _billsPresenter;
   late final BudgetPresenter _budgetPresenter;
   late final TreasuryHistoryPresenter _historyPresenter;
@@ -130,42 +130,22 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       healthService: _healthService,
       storage: _storage,
     );
-    _ledgerPresenter = LedgerPresenter(
-      _storage,
-      _statsPresenter,
+    // The whole Treasury graph, wired in one place (see TreasuryPresenters).
+    // Assembling it by hand here and again in the web shell is what let the two
+    // platforms drift and cross-page updates go missing.
+    _treasury = TreasuryPresenters(
+      storage: _storage,
+      stats: _statsPresenter,
       ai: _onDeviceAi,
       cloudAi: _cloudAi,
-      monthScope: _monthScope,
     );
-    _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
-    _budgetPresenter = BudgetPresenter(
-      _storage,
-      _statsPresenter,
-      _ledgerPresenter,
-      null,
-      _monthScope,
-    );
-    _billsPresenter = BillsReceivablesPresenter(
-      _storage,
-      _ledgerPresenter,
-      _statsPresenter,
-      dashboard: _treasuryPresenter,
-      budget: _budgetPresenter,
-      monthScope: _monthScope,
-    );
-    // Budgets are owned by the budget presenter but mirrored by the dashboard
-    // (and, through its forecast, by the Hub's Finance card). Without this an
-    // allocation edited on the Budget tab left both showing pre-edit numbers.
-    _budgetPresenter.onBudgetsChanged = _treasuryPresenter.reloadBudgets;
-    _historyPresenter = TreasuryHistoryPresenter(_storage);
-    _installmentPresenter = InstallmentPresenter(
-      _storage,
-      _ledgerPresenter,
-      _statsPresenter,
-      monthScope: _monthScope,
-    );
-    _groceryCartPresenter =
-        GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
+    _ledgerPresenter = _treasury.ledger;
+    _treasuryPresenter = _treasury.dashboard;
+    _budgetPresenter = _treasury.budget;
+    _billsPresenter = _treasury.bills;
+    _historyPresenter = _treasury.history;
+    _installmentPresenter = _treasury.installments;
+    _groceryCartPresenter = _treasury.groceryCart;
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -281,14 +261,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _questPresenter.dispose();
     _nutritionPresenter?.dispose();
     _activityPresenter.dispose();
-    _treasuryPresenter.dispose();
-    _ledgerPresenter.dispose();
-    _monthScope.dispose();
-    _billsPresenter.dispose();
-    _budgetPresenter.dispose();
-    _historyPresenter.dispose();
-    _installmentPresenter.dispose();
-    _groceryCartPresenter.dispose();
+    _treasury.dispose(); // every Treasury presenter + the shared month scope
     _aiCoachPresenter.dispose();
     _insightsPresenter.dispose();
     _authPresenter.dispose();
