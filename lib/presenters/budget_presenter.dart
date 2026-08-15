@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -41,6 +42,30 @@ class BudgetPresenter extends ChangeNotifier {
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;
+
+  /// Called after any budget or group mutation so presenters holding their own
+  /// copy of the budgets can re-read them.
+  ///
+  /// This presenter owns budgets, but [TreasuryDashboardPresenter] keeps a
+  /// private copy it only refreshed in `load()`. Editing an allocation here
+  /// left the dashboard's Budget Overview, its "Budget Left" tile and its
+  /// projected month-end cash showing pre-edit numbers — and the Hub's Finance
+  /// card, which reads that same projection and never re-loads on its own,
+  /// stayed wrong indefinitely.
+  ///
+  /// Wired by the composition roots (see `home_screen.dart` /
+  /// `treasury_web_app.dart`) rather than taken as a constructor argument, so
+  /// presenters built standalone — tests, single-screen mounts — are unchanged.
+  /// Mirrors `BillsReceivablesPresenter._notifyDependents`.
+  Future<void> Function()? onBudgetsChanged;
+
+  /// Awaited rather than fired and forgotten, so a caller that awaits the
+  /// mutation can rely on every dependent having caught up — the same contract
+  /// as `BillsReceivablesPresenter._notifyDependents`.
+  Future<void> _notifyDependents() async {
+    final notify = onBudgetsChanged;
+    if (notify != null) await notify();
+  }
 
   /// Another tab moved the shared month — follow it.
   void _adoptScopeMonth() {
@@ -556,6 +581,7 @@ class BudgetPresenter extends ChangeNotifier {
     // Optimistic: repaint before persisting.
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
+    await _notifyDependents();
     await _checkBudgetNotExceededXp();
   }
 
@@ -606,6 +632,9 @@ class BudgetPresenter extends ChangeNotifier {
     // Persist only non-defaults OR customised defaults (name changes).
     // We always save the full list so merge() on reload picks up overrides.
     await _storage.saveBudgetGroups(_groups);
+    // Groups classify a budget as savings vs expense, which the dashboard's
+    // expense-only totals depend on — so a rename or delete has to fan out too.
+    await _notifyDependents();
   }
 
   Future<void> removeBudget(String categoryId) async {
@@ -615,6 +644,7 @@ class BudgetPresenter extends ChangeNotifier {
         .toList();
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
+    await _notifyDependents();
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────

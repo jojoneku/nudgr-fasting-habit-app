@@ -1315,6 +1315,24 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     await _ledger?.reloadAccounts();
   }
 
+  /// Re-reads budgets and budget groups from storage.
+  ///
+  /// Budgets are owned by [BudgetPresenter], which persists them and notifies
+  /// its own listeners — but this presenter keeps a private copy that only
+  /// [load] refreshed. Editing an allocation (or renaming a group) therefore
+  /// left every budget-derived figure here stale: the dashboard's Budget
+  /// Overview and "Budget Left", and — because [forecastedNetBalance] reserves
+  /// [totalBudgetRemaining] — the projected month-end cash shown on the Hub's
+  /// Finance card, which never re-loads on its own.
+  ///
+  /// Cheaper than a full [load] and does not disturb the loading flag, so a
+  /// budget edit doesn't flash a spinner over the dashboard.
+  Future<void> reloadBudgets() async {
+    _budgets = await _storage.loadBudgets();
+    _budgetGroups = BudgetGroupDef.merge(await _storage.loadBudgetGroups());
+    notifyListeners();
+  }
+
   Future<void> load() async {
     _isLoading = true;
     notifyListeners();

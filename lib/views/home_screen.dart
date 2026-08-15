@@ -153,6 +153,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       budget: _budgetPresenter,
       monthScope: _monthScope,
     );
+    // Budgets are owned by the budget presenter but mirrored by the dashboard
+    // (and, through its forecast, by the Hub's Finance card). Without this an
+    // allocation edited on the Budget tab left both showing pre-edit numbers.
+    _budgetPresenter.onBudgetsChanged = _treasuryPresenter.reloadBudgets;
     _historyPresenter = TreasuryHistoryPresenter(_storage);
     _installmentPresenter = InstallmentPresenter(
       _storage,

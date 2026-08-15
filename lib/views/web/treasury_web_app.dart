@@ -159,6 +159,10 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       budget: _budgetPresenter,
       monthScope: _monthScope,
     );
+    // Budgets are owned by the budget presenter but mirrored by the dashboard;
+    // without this an allocation edited on the Budget page left the dashboard's
+    // Budget Overview and month-end projection showing pre-edit numbers.
+    _budgetPresenter.onBudgetsChanged = _treasuryPresenter.reloadBudgets;
     _historyPresenter = TreasuryHistoryPresenter(_storage);
     _installmentPresenter = InstallmentPresenter(
       _storage,
