@@ -217,6 +217,43 @@ void main() {
       expect(exp2.budgetedType, SetAsideType.sinkingFund);
     });
 
+    test('roundtrip preserves the funding route, and copyWith can clear it',
+        () {
+      // "₱5,000 from BPI to Maya" has to survive a save — it is what stops the
+      // funding sheet asking the same question every month.
+      final exp = BudgetedExpense(
+        id: 'e2',
+        name: 'Travel Fund',
+        budgetedType: SetAsideType.goal,
+        month: '2026-04',
+        allocatedAmount: 5000,
+        categoryId: 'c1',
+        accountId: 'bpi',
+        destinationAccountId: 'maya',
+      );
+      final exp2 = BudgetedExpense.fromJson(exp.toJson());
+      expect(exp2.accountId, 'bpi');
+      expect(exp2.destinationAccountId, 'maya');
+
+      // Omitting the argument leaves it alone; passing null clears it, so
+      // picking "Decide when funding" in the editor actually sticks.
+      expect(exp2.copyWith(name: 'Renamed').destinationAccountId, 'maya');
+      expect(exp2.copyWith(destinationAccountId: null).destinationAccountId,
+          isNull);
+    });
+
+    test('a row saved before destinations existed loads with none', () {
+      final json = {
+        'id': 'e8',
+        'name': 'Old set-aside',
+        'budgetedType': 'savings',
+        'month': '2026-01',
+        'allocatedAmount': 500.0,
+        'categoryId': '',
+      };
+      expect(BudgetedExpense.fromJson(json).destinationAccountId, isNull);
+    });
+
     test('legacy BillType-valued budgetedType migrates to SetAsideType.other',
         () {
       // Pre-existing rows stored a BillType name (e.g. "utility"). These must
