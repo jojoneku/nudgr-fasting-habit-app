@@ -5,6 +5,7 @@ import '../../../presenters/treasury_dashboard_presenter.dart';
 import '../../../utils/finance_format.dart';
 import '../../widgets/system/system.dart';
 import '../design/web_breakpoints.dart';
+import 'web_hero_card.dart';
 import 'web_number.dart';
 
 /// Desktop counterpart of the mobile `NetWorthHero` — the blue gradient card,
@@ -29,41 +30,18 @@ class WebNetWorthHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final blue = context.appColors.fast;
-    final surface = cs.surface;
-
-    // Same blend the mobile hero uses: tint the card surface with the domain
-    // blue so the gradient follows the active theme rather than baking hex.
-    Color blend(double alpha) =>
-        Color.alphaBlend(blue.withValues(alpha: alpha), surface);
 
     final trend = presenter.netWorthTrend();
     final values = [for (final p in trend) p.value];
     final delta = presenter.netWorthMonthDelta;
     final pct = presenter.netWorthMonthDeltaPct;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            blend(isDark ? 0.30 : 0.16),
-            blend(isDark ? 0.16 : 0.08),
-            surface,
-          ],
-          stops: const [0.0, 0.55, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: blue.withValues(alpha: isDark ? 0.35 : 0.22),
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(WebInsets.xl),
+    // The gradient shell now lives in WebHeroCard — the same one the Bills
+    // due-soon hero frames itself with, so "a Nudgr hero" is one definition
+    // rather than a treatment each page re-derives.
+    return WebHeroCard(
+      accent: blue,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final figure = _Figure(
