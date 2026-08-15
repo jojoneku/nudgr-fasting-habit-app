@@ -66,11 +66,11 @@ void main() {
     when(stats.addXp(any)).thenAnswer((_) async {});
     when(stats.stats).thenReturn(UserStats.initial());
 
+    // Owners first, then the dashboard that subscribes to them.
     final ledger = LedgerPresenter(storage, stats);
-    final dash = TreasuryDashboardPresenter(storage, ledger);
     final budget = BudgetPresenter(storage, stats, ledger);
-    final bills = BillsReceivablesPresenter(storage, ledger, stats,
-        dashboard: dash, budget: budget);
+    final bills = BillsReceivablesPresenter(storage, ledger, stats);
+    final dash = TreasuryDashboardPresenter(storage, ledger, budget, bills);
     final history = TreasuryHistoryPresenter(storage);
     final installments = InstallmentPresenter(storage, ledger, stats);
     final cart = GroceryCartPresenter(storage, ledger: ledger);

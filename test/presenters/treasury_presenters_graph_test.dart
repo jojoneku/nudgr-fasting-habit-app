@@ -2,10 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/treasury_presenters.dart';
@@ -148,6 +151,65 @@ void main() {
 
     expect(
         t.dashboard.budgetGroups.map((g) => g.name), contains('Sinking Funds'));
+  });
+
+  test('a bill added on the Bills page reaches the dashboard', () async {
+    final t = await build();
+    addTearDown(t.dispose);
+    final live = toMonthKey(DateTime.now());
+    t.bills.setMonth(live);
+
+    expect(t.dashboard.hasBills, isFalse);
+
+    await t.bills.addBill(Bill(
+      id: 'b1',
+      name: 'Internet',
+      billType: BillType.utility,
+      amount: 1899,
+      dueDay: 15,
+      month: live,
+      categoryId: '',
+    ));
+
+    expect(t.dashboard.hasBills, isTrue);
+    expect(t.dashboard.monthUnpaidBills, 1899);
+  });
+
+  test('a receivable added on the Bills page reaches the dashboard', () async {
+    final t = await build();
+    addTearDown(t.dispose);
+    final live = toMonthKey(DateTime.now());
+    t.bills.setMonth(live);
+
+    await t.bills.addReceivable(Receivable(
+      id: 'r1',
+      name: 'Salary',
+      receivableType: ReceivableType.salary,
+      amount: 30000,
+      month: live,
+      categoryId: '',
+    ));
+
+    expect(t.dashboard.pendingReceivables, 30000);
+  });
+
+  test('a set-aside added on the Bills page reaches the dashboard', () async {
+    final t = await build();
+    addTearDown(t.dispose);
+    final live = toMonthKey(DateTime.now());
+    t.bills.setMonth(live);
+
+    await t.bills.addBudgetedExpense(BudgetedExpense(
+      id: 'e1',
+      name: 'Emergency fund',
+      budgetedType: SetAsideType.savings,
+      month: live,
+      allocatedAmount: 5000,
+      categoryId: '',
+    ));
+
+    // Feeds "Budget / Savings Due" and the month-end projection.
+    expect(t.dashboard.budgetedExpensesRemaining, 5000);
   });
 
   test('an account edit reaches the ledger, dashboard and budget', () async {

@@ -7,6 +7,8 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -92,8 +94,11 @@ void main() {
     when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
     when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});
     when(storage.loadBills()).thenAnswer((_) async => []);
+    when(storage.saveBills(any)).thenAnswer((_) async {});
     when(storage.loadReceivables()).thenAnswer((_) async => []);
+    when(storage.saveReceivables(any)).thenAnswer((_) async {});
     when(storage.loadBudgetedExpenses()).thenAnswer((_) async => []);
+    when(storage.saveBudgetedExpenses(any)).thenAnswer((_) async {});
     when(storage.loadMonthlySummaries()).thenAnswer((_) async => []);
     when(storage.saveMonthlySummaries(any)).thenAnswer((_) async {});
     when(storage.loadWarnedBudgetKeys()).thenAnswer((_) async => <String>{});
@@ -111,23 +116,27 @@ void main() {
         LedgerPresenter ledger,
         TreasuryDashboardPresenter dashboard,
         BudgetPresenter budget,
+        BillsReceivablesPresenter bills,
       })> buildStack({bool wireDependents = true}) async {
     final ledger = LedgerPresenter(storage, stats);
     final budget = BudgetPresenter(storage, stats, ledger);
+    final bills = BillsReceivablesPresenter(storage, ledger, stats);
     // `wireDependents: false` reproduces the old shape — a dashboard that keeps
-    // its own budget copy and never hears about edits.
+    // its own copies and never hears about the owners' edits.
     final dashboard = TreasuryDashboardPresenter(
       storage,
       ledger,
       wireDependents ? budget : null,
+      wireDependents ? bills : null,
     );
     await dashboard.load();
     await budget.load();
+    await bills.load();
     var guard = 0;
     while (ledger.isLoading && guard++ < 50) {
       await Future<void>.delayed(Duration.zero);
     }
-    return (ledger: ledger, dashboard: dashboard, budget: budget);
+    return (ledger: ledger, dashboard: dashboard, budget: budget, bills: bills);
   }
 
   group('editing a goal', () {
@@ -238,6 +247,57 @@ void main() {
       // Pins the regression: this is exactly what the user saw while the
       // dashboard kept a private budget copy refreshed only by its own load().
       expect(s.dashboard.totalBudgetAllocated, 0);
+    });
+  });
+
+  group('editing a bill', () {
+    Bill internet(String month) => Bill(
+          id: 'b1',
+          name: 'Internet',
+          billType: BillType.utility,
+          amount: 1899,
+          dueDay: 15,
+          month: month,
+          categoryId: '',
+        );
+
+    test('a new bill reaches the dashboard', () async {
+      final s = await buildStack();
+      final live = toMonthKey(DateTime.now());
+      s.bills.setMonth(live);
+
+      expect(s.dashboard.hasBills, isFalse);
+
+      await s.bills.addBill(internet(live));
+
+      expect(s.dashboard.hasBills, isTrue);
+      expect(s.dashboard.monthUnpaidBills, 1899);
+    });
+
+    test('deleting a bill clears it from the dashboard', () async {
+      final s = await buildStack();
+      final live = toMonthKey(DateTime.now());
+      s.bills.setMonth(live);
+      await s.bills.addBill(internet(live));
+      expect(s.dashboard.monthUnpaidBills, 1899);
+
+      await s.bills.deleteBill('b1');
+
+      expect(s.dashboard.monthUnpaidBills, 0);
+      expect(s.dashboard.hasBills, isFalse);
+    });
+
+    test('unsubscribed from its bills owner, the dashboard goes stale',
+        () async {
+      final s = await buildStack(wireDependents: false);
+      final live = toMonthKey(DateTime.now());
+      s.bills.setMonth(live);
+
+      await s.bills.addBill(internet(live));
+
+      // Bills used to push a dashboard reload after every one of its ~28
+      // mutations. This pins that the subscribe replacing it is load-bearing.
+      expect(s.dashboard.hasBills, isFalse);
     });
   });
 }

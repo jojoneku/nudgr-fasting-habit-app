@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
@@ -74,12 +75,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     StorageService storage, [
     LedgerPresenter? ledger,
     BudgetPresenter? budget,
+    BillsReceivablesPresenter? bills,
   ])  : _storage = storage,
         _ledger = ledger,
-        _budget = budget {
+        _budget = budget,
+        _billsPresenter = bills {
     load();
     _ledger?.addListener(_syncFromLedger);
     _budget?.addListener(_syncFromBudget);
+    _billsPresenter?.addListener(_syncFromBills);
   }
 
   final StorageService _storage;
@@ -90,11 +94,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// falls back to whatever [load] read from storage.
   final BudgetPresenter? _budget;
 
+  /// The owner of the bills, receivables and budgeted expenses this presenter
+  /// reports on. Optional on the same terms as [_budget]. Named apart from the
+  /// `_bills` list below, which is this presenter's mirrored copy.
+  final BillsReceivablesPresenter? _billsPresenter;
+
   /// Mirror accounts/transactions/categories from LedgerPresenter so that
   /// dashboard summaries reflect ledger mutations without waiting for a tab
-  /// switch or app restart. Bills/receivables stay loaded from storage because
-  /// they're owned by BillsReceivablesPresenter, which pushes a reload after
-  /// its own writes.
+  /// switch or app restart.
+  ///
+  /// This is the pattern every slice of borrowed state follows here — see also
+  /// [_syncFromBudget] and [_syncFromBills]. The rule: whoever displays data
+  /// someone else owns subscribes to the owner. Never a private copy refreshed
+  /// only by this presenter's own [load].
   void _syncFromLedger() {
     final ledger = _ledger;
     if (ledger == null) return;
@@ -132,10 +144,38 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Mirror bills, receivables and budgeted expenses from their owner,
+  /// [BillsReceivablesPresenter].
+  ///
+  /// The last slice to move off the push model: bills used to reload this
+  /// presenter itself after each of its ~28 mutations, which every new mutation
+  /// had to remember to do. Subscribing puts the dependency where it belongs —
+  /// with the presenter that needs the data — and costs an in-memory list swap
+  /// instead of a full re-read of storage.
+  void _syncFromBills() {
+    final owner = _billsPresenter;
+    if (owner == null) return;
+    final bills = owner.allBills;
+    final receivables = owner.allReceivables;
+    final expenses = owner.allBudgetedExpenses;
+    // Same guard as _syncFromBudget: the owner also notifies for month changes
+    // and selection state, which don't change what this presenter shows.
+    if (listEquals(bills, _bills) &&
+        listEquals(receivables, _receivables) &&
+        listEquals(expenses, _budgetedExpenses)) {
+      return;
+    }
+    _bills = bills;
+    _receivables = receivables;
+    _budgetedExpenses = expenses;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
     _budget?.removeListener(_syncFromBudget);
+    _billsPresenter?.removeListener(_syncFromBills);
     super.dispose();
   }
 
