@@ -24,10 +24,17 @@ class WebDashboardPage extends StatelessWidget {
   /// reconciles the matching statement bill.
   final BillsReceivablesPresenter billsPresenter;
 
+  /// Routes the empty state's button to the Setup & Accounts destination.
+  /// Without it a brand-new web user landed on a dead end: the page said "add
+  /// an account" and offered nothing to press, leaving them to guess which
+  /// sidebar item meant "accounts".
+  final VoidCallback? onManageAccounts;
+
   const WebDashboardPage({
     super.key,
     required this.presenter,
     required this.billsPresenter,
+    this.onManageAccounts,
   });
 
   /// Below this width the two content columns stack into one.
@@ -42,7 +49,7 @@ class WebDashboardPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         if (!presenter.hasAccounts) {
-          return const _EmptyState();
+          return _EmptyState(onManageAccounts: onManageAccounts);
         }
         return SingleChildScrollView(
           padding: const EdgeInsets.all(WebInsets.xxl),
@@ -534,74 +541,24 @@ class _CreditAccountRow extends StatelessWidget {
   });
 
   Future<void> _payNow(BuildContext context) async {
-    final funders = presenter.liquidAccounts;
+    // Same funding rule as the mobile quick-pay sheet: any non-liability
+    // account, not just the liquid ones. Restricting web to `liquidAccounts`
+    // meant a card you'd normally pay from savings simply couldn't be paid
+    // here.
+    final funders =
+        billsPresenter.accounts.where((a) => a.isActive && !a.isLiability);
     if (funders.isEmpty) {
-      AppToast.error(context, 'No liquid account to pay from.');
+      AppToast.error(context, 'No account to pay from.');
       return;
     }
-    var fromId = funders.first.id;
-    final amountController = TextEditingController(
-      text: account.currentPayable.toStringAsFixed(2),
+    final paid = await showWebQuickPayDialog(
+      context,
+      card: account,
+      presenter: billsPresenter,
     );
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) => AlertDialog(
-          title: Text('Pay ${account.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('You owe ${formatPeso(account.currentPayable)}. '
-                  'This transfers from the funding account and lowers what you owe.'),
-              const SizedBox(height: WebInsets.md),
-              TextField(
-                controller: amountController,
-                autofocus: true,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Amount'),
-              ),
-              const SizedBox(height: WebInsets.md),
-              DropdownButtonFormField<String>(
-                initialValue: fromId,
-                decoration: const InputDecoration(labelText: 'Pay from'),
-                items: [
-                  for (final a in funders)
-                    DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ],
-                onChanged: (v) => setLocalState(() => fromId = v ?? fromId),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Pay'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed == true) {
-      final amount = double.tryParse(amountController.text.trim()) ?? 0;
-      if (amount > 0) {
-        await billsPresenter.quickPayCard(
-          accountId: account.id,
-          fromAccountId: fromId,
-          amount: amount,
-        );
-        if (context.mounted) {
-          AppToast.success(
-              context, 'Paid ${formatPeso(amount)} to ${account.name}.');
-        }
-      }
+    if (paid != null && context.mounted) {
+      AppToast.success(context, 'Paid ${formatPeso(paid)} to ${account.name}.');
     }
-    amountController.dispose();
   }
 
   @override
@@ -1095,19 +1052,21 @@ class _SavingsGoalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    // Goal accounts (with targets) first, then savings accounts.
-    final goals = [
-      ...presenter.goalAccounts,
-      ...presenter.savingsAccounts,
-    ].where((a) => (a.goalTarget ?? 0) > 0).toList();
+    // Targeted goals first (they get a progress bar), then plain savings —
+    // which used to be filtered out entirely, so money visible on the phone's
+    // Goals & Savings section simply wasn't on the desktop card. Mirrors
+    // GoalsSavingsScreen, which has always shown both.
+    final all = [...presenter.goalAccounts, ...presenter.savingsAccounts];
+    final goals = all.where((a) => (a.goalTarget ?? 0) > 0).toList();
+    final plainSavings = all.where((a) => (a.goalTarget ?? 0) <= 0).toList();
 
-    if (goals.isEmpty) {
+    if (goals.isEmpty && plainSavings.isEmpty) {
       return const WebCard(
         title: 'Savings Goals',
         description: 'Progress toward your targets',
         child: _CardEmpty(
           icon: Icons.flag_outlined,
-          text: 'No savings goals with a target set',
+          text: 'No savings or goal accounts yet',
         ),
       );
     }
@@ -1157,9 +1116,41 @@ class _SavingsGoalsCard extends StatelessWidget {
       ));
     }
 
+    // Savings with no target: a balance line, no progress bar — there is
+    // nothing to be a percentage of.
+    if (plainSavings.isNotEmpty) {
+      if (rows.isNotEmpty) {
+        rows
+          ..add(const SizedBox(height: WebInsets.lg))
+          ..add(Divider(
+              height: 1, color: cs.outlineVariant.withValues(alpha: 0.4)))
+          ..add(const SizedBox(height: WebInsets.lg));
+      }
+      for (var i = 0; i < plainSavings.length; i++) {
+        final a = plainSavings[i];
+        if (i > 0) rows.add(const SizedBox(height: WebInsets.md));
+        rows.add(Row(
+          children: [
+            Expanded(
+              child: Text(a.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
+            ),
+            Text(formatPeso(a.balance),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+          ],
+        ));
+      }
+    }
+
     return WebCard(
       title: 'Savings Goals',
-      description: 'Progress toward your targets',
+      description: goals.isEmpty
+          ? 'Your savings accounts'
+          : 'Progress toward your targets',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: rows,
@@ -1371,7 +1362,11 @@ class _CardEmpty extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  /// Null only where the dashboard is mounted without a shell to navigate
+  /// (tests) — then the copy points at the sidebar instead of offering a button.
+  final VoidCallback? onManageAccounts;
+
+  const _EmptyState({this.onManageAccounts});
 
   @override
   Widget build(BuildContext context) {
@@ -1391,11 +1386,22 @@ class _EmptyState extends StatelessWidget {
                     ?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: WebInsets.sm),
             Text(
-              'Add an account to start tracking your financial position.',
+              onManageAccounts != null
+                  ? 'Add an account to start tracking your financial position.'
+                  : 'Add an account under Setup & Accounts to start tracking '
+                      'your financial position.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
                   ?.copyWith(color: cs.onSurfaceVariant),
             ),
+            if (onManageAccounts != null) ...[
+              const SizedBox(height: WebInsets.xl),
+              FilledButton.icon(
+                onPressed: onManageAccounts,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Add your first account'),
+              ),
+            ],
           ],
         ),
       ),

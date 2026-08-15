@@ -17,6 +17,7 @@ import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
+import '../presenters/treasury_month_scope.dart';
 import '../services/auth_service.dart';
 import '../services/backup_service.dart';
 import '../services/food_db_service.dart';
@@ -71,6 +72,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final ActivityPresenter _activityPresenter;
   late final TreasuryDashboardPresenter _treasuryPresenter;
   late final LedgerPresenter _ledgerPresenter;
+
+  /// One "month being read" for Ledger / Bills / Budget / Installments, so
+  /// paging one Treasury tab back to June doesn't leave the others in the
+  /// current month with nothing on screen saying so.
+  final TreasuryMonthScope _monthScope = TreasuryMonthScope();
   late final BillsReceivablesPresenter _billsPresenter;
   late final BudgetPresenter _budgetPresenter;
   late final TreasuryHistoryPresenter _historyPresenter;
@@ -129,20 +135,31 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _statsPresenter,
       ai: _onDeviceAi,
       cloudAi: _cloudAi,
+      monthScope: _monthScope,
     );
     _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
-    _budgetPresenter =
-        BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);
+    _budgetPresenter = BudgetPresenter(
+      _storage,
+      _statsPresenter,
+      _ledgerPresenter,
+      null,
+      _monthScope,
+    );
     _billsPresenter = BillsReceivablesPresenter(
       _storage,
       _ledgerPresenter,
       _statsPresenter,
       dashboard: _treasuryPresenter,
       budget: _budgetPresenter,
+      monthScope: _monthScope,
     );
     _historyPresenter = TreasuryHistoryPresenter(_storage);
-    _installmentPresenter =
-        InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
+    _installmentPresenter = InstallmentPresenter(
+      _storage,
+      _ledgerPresenter,
+      _statsPresenter,
+      monthScope: _monthScope,
+    );
     _groceryCartPresenter =
         GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
     _nutritionPresenter = NutritionPresenter(
@@ -262,6 +279,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _activityPresenter.dispose();
     _treasuryPresenter.dispose();
     _ledgerPresenter.dispose();
+    _monthScope.dispose();
     _billsPresenter.dispose();
     _budgetPresenter.dispose();
     _historyPresenter.dispose();

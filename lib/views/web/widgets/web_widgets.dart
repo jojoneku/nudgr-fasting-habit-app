@@ -11,6 +11,7 @@ export 'web_month_stepper.dart';
 export 'web_net_worth_hero.dart';
 export 'web_number.dart';
 export 'web_progress.dart';
+export 'web_quick_pay_dialog.dart';
 export 'web_searchable_dropdown.dart';
 export 'web_section.dart';
 export 'web_shell.dart';

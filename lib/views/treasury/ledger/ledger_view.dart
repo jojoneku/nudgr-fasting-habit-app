@@ -56,7 +56,19 @@ class _LedgerViewState extends State<LedgerView> {
     final summary = presenter.lastCommittedSummary;
     if (summary != null && summary != _lastSnackbarSummary) {
       _lastSnackbarSummary = summary;
-      AppToast.show(context, summary, duration: const Duration(seconds: 2));
+      // Quick-log always dates "today", so logging while reading an older month
+      // jumps the list to the current one. Say so — moving the user's reading
+      // position without a word reads as the list glitching.
+      final snappedFrom = presenter.lastCommitSnappedFromMonth;
+      AppToast.show(
+        context,
+        snappedFrom == null
+            ? summary
+            : '$summary — dated today, so the list moved from '
+                '${monthLabel(snappedFrom)} to '
+                '${monthLabel(presenter.selectedMonth)}.',
+        duration: Duration(seconds: snappedFrom == null ? 2 : 4),
+      );
       presenter.clearLastCommittedSummary();
     }
     final prefill = presenter.pendingFormPrefill;
@@ -431,7 +443,11 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
                       nutrition: widget.nutrition,
                     )
                 : null,
-            tooltip: 'Scan a receipt',
+            // Say WHY it's greyed out. A disabled button with an unchanged
+            // tooltip reads as broken rather than deliberately unavailable.
+            tooltip: canSend
+                ? 'Scan a receipt'
+                : 'Receipts are dated today — use the form to log on this day',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           // Reference-style input pill: a sparkle glyph hinting at AI parsing +
@@ -1259,15 +1275,21 @@ Widget _buildTxnTile(
     accountColor: accountColor,
     category: category,
     onTap: () => onEdit(txn),
-    onDelete: () {
+    onDelete: () async {
       HapticFeedback.mediumImpact();
       final deleted = txn;
-      presenter.deleteTransaction(deleted.id);
+      // Transfer-aware: deleting one leg of a transfer must take its partner
+      // with it, or the source stays debited while the destination stays
+      // credited. The removed set comes back so Undo restores every leg.
+      final removed = await presenter.deleteTransactionOrGroup(deleted.id);
+      if (removed.isEmpty || !context.mounted) return;
       AppToast.action(
         context,
-        message: 'Deleted "${deleted.description}"',
+        message: removed.length > 1
+            ? 'Deleted transfer "${deleted.description}"'
+            : 'Deleted "${deleted.description}"',
         actionLabel: 'Undo',
-        onAction: () => presenter.restoreTransaction(deleted),
+        onAction: () => presenter.restoreTransactions(removed),
       );
     },
   );

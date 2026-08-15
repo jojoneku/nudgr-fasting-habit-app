@@ -1,12 +1,12 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../presenters/ledger_presenter.dart';
 import '../../../presenters/nutrition_presenter.dart';
 import '../../../services/image_compressor.dart';
 import '../../nutrition/food_photo_sheet.dart';
+import '../../widgets/system/system.dart';
 
 /// Unified "snap a photo to log" entry point shared by the ledger and the hub
 /// quick-log bar. Step 1 asks what the photo is: a **receipt** (→ a ledger
@@ -57,8 +57,17 @@ Future<void> _runReceiptFlow(
     );
     if (source == null || !context.mounted) return;
 
-    final XFile? picked = await _pick(source);
-    if (picked == null || !context.mounted) return;
+    final result = await _pick(source);
+    if (!context.mounted) return;
+    if (result.error != null) {
+      // A denied permission, a missing camera, or (on mobile web) no picker
+      // implementation at all used to close the sheet with no explanation —
+      // indistinguishable from the feature being broken.
+      AppToast.error(context, result.error!);
+      return;
+    }
+    final XFile? picked = result.file;
+    if (picked == null || !context.mounted) return; // user cancelled
 
     final bytes = await picked.readAsBytes();
     if (!context.mounted) return;
@@ -81,17 +90,34 @@ Future<void> _runReceiptFlow(
 
 enum _ReceiptOutcome { retake, done }
 
-Future<XFile?> _pick(ImageSource source) async {
+/// A picked file, or the reason there isn't one. `file == null` with no
+/// [error] means the user simply backed out.
+typedef _PickResult = ({XFile? file, String? error});
+
+Future<_PickResult> _pick(ImageSource source) async {
   try {
-    return await ImagePicker().pickImage(
+    final file = await ImagePicker().pickImage(
       source: source,
       maxWidth: 2048,
       maxHeight: 2048,
       imageQuality: 90,
     );
-  } catch (_) {
-    // Permission denied or no camera — surfaced as a no-op (sheet closes).
-    return null;
+    return (file: file, error: null);
+  } on MissingPluginException {
+    // No picker on this platform — the case a browser hits.
+    return (
+      file: null,
+      error: source == ImageSource.camera
+          ? "This browser can't open the camera. Try uploading the photo instead."
+          : "This browser can't open the file picker."
+    );
+  } catch (e) {
+    return (
+      file: null,
+      error: source == ImageSource.camera
+          ? 'Could not open the camera. Check the app has camera permission.'
+          : 'Could not open your photos. Check the app has photo permission.'
+    );
   }
 }
 
