@@ -8,11 +8,9 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
-import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
-import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
@@ -77,15 +75,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     StorageService storage,
     LedgerPresenter ledger,
     StatsPresenter stats, {
-    TreasuryDashboardPresenter? dashboard,
-    BudgetPresenter? budget,
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
   })  : _storage = storage,
         _ledger = ledger,
         _stats = stats,
-        _dashboard = dashboard,
-        _budget = budget,
         _monthScope = monthScope,
         _notifications = notifications ?? NotificationService() {
     if (monthScope != null) {
@@ -105,8 +99,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final StorageService _storage;
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
-  final TreasuryDashboardPresenter? _dashboard;
-  final BudgetPresenter? _budget;
   final NotificationService _notifications;
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
@@ -127,15 +119,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     super.dispose();
   }
 
-  /// Refresh the dashboard and budget presenters' bill/receivable/expense
-  /// state after this presenter mutates storage. Ledger sync handles the
-  /// transaction/account fan-out automatically via the listener chain.
+  /// Runs after every mutation of this presenter's own state.
+  ///
+  /// It used to also reload the dashboard and the budget presenter — a push
+  /// that each new mutation had to remember, and that re-read storage for data
+  /// the budget already receives live from the ledger. Both now subscribe
+  /// instead (the dashboard's `_syncFromBills`), so all that remains
+  /// is the reimbursement hand-off below, which stays a push because the ledger
+  /// sits *below* this presenter and subscribing upward would be a cycle.
   Future<void> _notifyDependents() async {
     _syncReimbursementsToLedger();
-    await Future.wait([
-      if (_dashboard != null) _dashboard.load(),
-      if (_budget != null) _budget.load(),
-    ]);
   }
 
   /// Pushes the set of still-outstanding reimbursement receivables to the
@@ -211,10 +204,25 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           return byDue != 0 ? byDue : a.name.compareTo(b.name);
         });
 
-  /// Every stored bill regardless of month — assertions across month
-  /// boundaries (e.g. statement due-month filing) need the unfiltered list.
+  /// Every stored bill regardless of month — this presenter owns them.
+  ///
+  /// Exposed, like [allReceivables] and [allBudgetedExpenses], so presenters
+  /// that report on bills can mirror the in-memory list off a notify rather
+  /// than keeping a private copy only their own `load()` refreshed. Also what
+  /// assertions across month boundaries (e.g. statement due-month filing) need.
+  List<Bill> get allBills => List.unmodifiable(_allBills);
+
+  /// Deprecated alias for [allBills], kept so existing tests keep reading.
   @visibleForTesting
-  List<Bill> get allBillsForTest => List.unmodifiable(_allBills);
+  List<Bill> get allBillsForTest => allBills;
+
+  /// Every stored receivable regardless of month — this presenter owns them.
+  List<Receivable> get allReceivables => List.unmodifiable(_allReceivables);
+
+  /// Every stored budgeted expense regardless of month — this presenter owns
+  /// them.
+  List<BudgetedExpense> get allBudgetedExpenses =>
+      List.unmodifiable(_allExpenses);
 
   double get totalBillsAmount => bills.fold(0.0, (sum, b) => sum + b.amount);
 
