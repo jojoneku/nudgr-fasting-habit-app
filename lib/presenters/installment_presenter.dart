@@ -218,6 +218,50 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  // ─── Batch actions ────────────────────────────────────────────────────────────
+  //
+  // Driven by the Bills tab's selection mode. Each is tolerant: ids that are
+  // unknown, inactive, or already in the target state are skipped rather than
+  // throwing, so one bad row can't abandon the rest of the selection.
+
+  /// Records this month's payment for every installment in [ids] that hasn't
+  /// been paid yet, each from its own account for its own monthly amount.
+  /// Returns how many were paid.
+  Future<int> markManyPaid(Iterable<String> ids, {DateTime? date}) async {
+    var applied = 0;
+    for (final id in ids.toSet()) {
+      final inst = _installments.where((i) => i.id == id).firstOrNull;
+      if (inst == null || isPaidForMonth(id)) continue;
+      await markPaid(id, date: date);
+      applied++;
+    }
+    return applied;
+  }
+
+  /// Reverses this month's payment for every installment in [ids]. Returns how
+  /// many were reversed.
+  Future<int> markManyUnpaid(Iterable<String> ids) async {
+    var applied = 0;
+    for (final id in ids.toSet()) {
+      if (!isPaidForMonth(id)) continue;
+      await markUnpaid(id);
+      applied++;
+    }
+    return applied;
+  }
+
+  /// Deletes every installment in [ids] along with its payment transactions.
+  /// Returns how many existed.
+  Future<int> deleteInstallments(Iterable<String> ids) async {
+    var applied = 0;
+    for (final id in ids.toSet()) {
+      if (!_installments.any((i) => i.id == id)) continue;
+      await deleteInstallment(id);
+      applied++;
+    }
+    return applied;
+  }
+
   // ─── Private helpers ──────────────────────────────────────────────────────────
 
   Installment _findById(String id) =>

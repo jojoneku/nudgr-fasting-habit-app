@@ -69,6 +69,23 @@ class ObligationCard extends StatelessWidget {
   /// knows nothing about the list it sits in); null means "not reorderable".
   final Widget? dragHandle;
 
+  /// Replaces the built-in long-press menu — the Bills tab uses it to start
+  /// multi-select. Null keeps the menu (Undo / Edit / Delete).
+  final VoidCallback? onLongPress;
+
+  /// The row's list is in multi-select: tapping picks the row instead of opening
+  /// it, and the trailing Pay/Receive/Undo control is withheld so a stray tap
+  /// can't settle something mid-selection.
+  final bool selectionMode;
+
+  /// Whether this row is one of the picked ones. Only meaningful under
+  /// [selectionMode].
+  final bool selected;
+
+  /// Picks / un-picks this row. Takes over both tap and long-press while
+  /// [selectionMode] is on.
+  final VoidCallback? onSelectionToggle;
+
   const ObligationCard({
     super.key,
     required this.icon,
@@ -89,6 +106,10 @@ class ObligationCard extends StatelessWidget {
     this.onUndo,
     this.undoLabel,
     this.dragHandle,
+    this.onLongPress,
+    this.selectionMode = false,
+    this.selected = false,
+    this.onSelectionToggle,
   });
 
   @override
@@ -101,18 +122,34 @@ class ObligationCard extends StatelessWidget {
     final actionColor =
         isInflow ? context.appColors.success : context.appColors.bills;
 
+    // Selection keeps a settled row readable: a picked row is never dimmed, so
+    // you can see what you are about to undo or delete.
+    final dimmed = done && !selected;
+    final hasMenu = onEdit != null || onDelete != null || onUndo != null;
+
     return AnimatedOpacity(
-      opacity: done ? 0.55 : 1,
+      opacity: dimmed ? 0.55 : 1,
       duration: AppMotion.appear,
       child: AppCard(
         variant: AppCardVariant.outlined,
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        onTap: onEdit,
-        onLongPress: (onEdit != null || onDelete != null || onUndo != null)
-            ? () => _showMenu(context)
-            : null,
+        color: selected ? cs.primary.withValues(alpha: 0.12) : null,
+        onTap: selectionMode ? onSelectionToggle : onEdit,
+        onLongPress: selectionMode
+            ? onSelectionToggle
+            : (onLongPress ?? (hasMenu ? () => _showMenu(context) : null)),
         child: Row(
           children: [
+            if (selectionMode) ...[
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 22,
+                color: selected ? cs.primary : cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 10),
+            ],
             AppIconBadge(icon: icon, color: iconColor, size: 40, iconSize: 20),
             const SizedBox(width: 12),
             Expanded(
@@ -197,7 +234,17 @@ class ObligationCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            if (dragHandle != null)
+            if (selectionMode)
+              // No Pay / Receive / Undo while selecting — the batch bar owns the
+              // actions, and a settle fired by a mis-tap here would be silent.
+              // Settled rows keep a plain check so you can still tell them
+              // apart: picked rows are not dimmed.
+              if (done)
+                Icon(Icons.check_circle,
+                    color: context.appColors.success, size: 22)
+              else
+                const SizedBox.shrink()
+            else if (dragHandle != null)
               dragHandle!
             else if (done)
               // Settled rows keep the check only when there is nothing to

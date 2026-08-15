@@ -40,6 +40,7 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
   SetAsideType _budgetedType = SetAsideType.other;
   String? _selectedCategoryId;
   String? _selectedAccountId;
+  String? _selectedDestinationId;
   bool _isSubmitting = false;
 
   @override
@@ -53,6 +54,7 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
       _budgetedType = e.budgetedType;
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
       _selectedAccountId = e.accountId;
+      _selectedDestinationId = e.destinationAccountId;
     }
   }
 
@@ -83,6 +85,7 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
             ? null
             : _noteController.text.trim(),
         accountId: _selectedAccountId,
+        destinationAccountId: _selectedDestinationId,
         // Preserve funded state + link when editing.
         isPaid: e?.isPaid ?? false,
         spentAmount: e?.spentAmount ?? 0,
@@ -101,11 +104,25 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
 
   // Only liquid accounts can fund a set-aside — funding it later debits one.
   List<FinancialAccount> get _liquidAccounts =>
-      widget.presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
+      widget.presenter.setAsideFundingAccounts;
+
+  /// Where the money lands when this is funded. Excludes the funding account —
+  /// a transfer to itself isn't one.
+  List<FinancialAccount> get _destinationAccounts =>
+      widget.presenter.setAsideDestinationAccounts
+          .where((a) => a.id != _selectedAccountId)
+          .toList();
 
   FinancialAccount? get _selectedAccount {
     for (final a in _liquidAccounts) {
       if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  FinancialAccount? get _selectedDestination {
+    for (final a in widget.presenter.setAsideDestinationAccounts) {
+      if (a.id == _selectedDestinationId) return a;
     }
     return null;
   }
@@ -118,7 +135,26 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
       allowNone: true,
       noneLabel: 'None',
     );
-    if (choice != null) setState(() => _selectedAccountId = choice.id);
+    if (choice != null) {
+      setState(() {
+        _selectedAccountId = choice.id;
+        // The source can't also be the destination.
+        if (_selectedDestinationId == _selectedAccountId) {
+          _selectedDestinationId = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickDestination() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: _destinationAccounts,
+      selectedId: _selectedDestinationId,
+      allowNone: true,
+      noneLabel: 'Decide when funding',
+    );
+    if (choice != null) setState(() => _selectedDestinationId = choice.id);
   }
 
   Widget _buildForm(BuildContext context) {
@@ -189,6 +225,17 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
               account: _selectedAccount,
               placeholder: 'None',
               onTap: _pickAccount,
+            ),
+          ],
+          if (_destinationAccounts.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const SheetFieldLabel('Set aside into (optional)'),
+            SheetAccountField(
+              account: _selectedDestination,
+              // Naming it here means "₱5,000 from BPI to Maya" is decided once;
+              // leaving it blank means the funding sheet asks at the time.
+              placeholder: 'Decide when funding',
+              onTap: _pickDestination,
             ),
           ],
           if (expenseCategories.isNotEmpty) ...[

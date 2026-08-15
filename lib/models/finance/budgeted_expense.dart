@@ -45,6 +45,12 @@ class BudgetedExpense {
   final String categoryId;
   final String? note; // e.g. "Cash", "Maya Savings"
   final String? accountId; // funding account this set-aside is moved from
+
+  /// Where the money lands when this set-aside is funded — the transfer's
+  /// destination (e.g. "BPI → Maya"). Optional: null means the destination was
+  /// never decided, and the funding sheet asks for it at confirmation time
+  /// rather than guessing a savings account on the user's behalf.
+  final String? destinationAccountId;
   final bool isPaid;
   final bool isRecurring; // re-created each month via auto-generation
   final RecurrenceType? recurrenceType;
@@ -62,6 +68,7 @@ class BudgetedExpense {
     required this.categoryId,
     this.note,
     this.accountId,
+    this.destinationAccountId,
     this.isPaid = false,
     this.isRecurring = false,
     this.recurrenceType,
@@ -81,6 +88,7 @@ class BudgetedExpense {
       categoryId: json['categoryId'] as String,
       note: json['note'] as String?,
       accountId: json['accountId'] as String?,
+      destinationAccountId: json['destinationAccountId'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
@@ -101,6 +109,7 @@ class BudgetedExpense {
         'categoryId': categoryId,
         'note': note,
         'accountId': accountId,
+        'destinationAccountId': destinationAccountId,
         'isPaid': isPaid,
         'isRecurring': isRecurring,
         'recurrenceType': recurrenceType?.name,
@@ -118,6 +127,9 @@ class BudgetedExpense {
     String? categoryId,
     String? note,
     Object? accountId = _kUnset,
+    // Sentinel-guarded for the same reason as [accountId]: picking "Spend it"
+    // in the editor has to be able to clear a saved destination back out.
+    Object? destinationAccountId = _kUnset,
     bool? isPaid,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
@@ -139,6 +151,9 @@ class BudgetedExpense {
       note: note ?? this.note,
       accountId:
           identical(accountId, _kUnset) ? this.accountId : accountId as String?,
+      destinationAccountId: identical(destinationAccountId, _kUnset)
+          ? this.destinationAccountId
+          : destinationAccountId as String?,
       isPaid: isPaid ?? this.isPaid,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
