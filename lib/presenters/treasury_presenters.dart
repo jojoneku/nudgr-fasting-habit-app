@@ -41,12 +41,14 @@ class TreasuryPresenters {
   /// Owns budgets and budget groups.
   final BudgetPresenter budget;
 
-  /// Reports on everything; mirrors accounts/transactions from [ledger] and
-  /// budgets/groups from [budget], and is reloaded by [bills] after its writes.
-  final TreasuryDashboardPresenter dashboard;
-
   /// Owns bills, receivables and budgeted expenses.
   final BillsReceivablesPresenter bills;
+
+  /// Reports on everything and owns nothing: it mirrors accounts, transactions
+  /// and categories from [ledger], budgets and groups from [budget], and bills,
+  /// receivables and set-asides from [bills] — subscribing to each owner rather
+  /// than keeping copies only its own `load()` refreshes.
+  final TreasuryDashboardPresenter dashboard;
 
   final TreasuryHistoryPresenter history;
   final InstallmentPresenter installments;
@@ -66,8 +68,8 @@ class TreasuryPresenters {
   /// Builds the graph.
   ///
   /// Construction order is load-bearing and is the reason this lives in one
-  /// place: budget needs the ledger, the dashboard needs both, and bills needs
-  /// the dashboard and the budget to reload after its own writes.
+  /// place: budget and bills need the ledger, and the dashboard subscribes to
+  /// all three, so it is built last.
   ///
   /// [ai] and [cloudAi] are the ledger's natural-language tiers — mobile passes
   /// both, web passes the cloud tier only (there is no on-device model in a
@@ -92,7 +94,8 @@ class TreasuryPresenters {
       monthScope: scope,
     );
 
-    // Before the dashboard: the dashboard subscribes to it.
+    // Owners first, reporters last: the dashboard subscribes to all three, so
+    // each has to exist before it does.
     final budget = BudgetPresenter(
       storage,
       stats,
@@ -101,18 +104,16 @@ class TreasuryPresenters {
       scope,
     );
 
-    final dashboard = TreasuryDashboardPresenter(storage, ledger, budget);
-
-    // Last: it reloads the dashboard and the budget after its own writes.
     final bills = BillsReceivablesPresenter(
       storage,
       ledger,
       stats,
-      dashboard: dashboard,
-      budget: budget,
       notifications: notifications,
       monthScope: scope,
     );
+
+    final dashboard =
+        TreasuryDashboardPresenter(storage, ledger, budget, bills);
 
     return TreasuryPresenters._(
       monthScope: scope,
