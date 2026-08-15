@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
@@ -20,17 +21,33 @@ class BudgetPresenter extends ChangeNotifier {
     StatsPresenter stats, [
     LedgerPresenter? ledger,
     NotificationService? notifications,
+    TreasuryMonthScope? monthScope,
   ])  : _storage = storage,
         _stats = stats,
         _ledger = ledger,
+        _monthScope = monthScope,
         _notifications = notifications ?? NotificationService() {
     _ledger?.addListener(_syncFromLedger);
+    if (monthScope != null) {
+      _selectedMonth = monthScope.month;
+      monthScope.addListener(_adoptScopeMonth);
+    }
   }
 
   final StorageService _storage;
   final StatsPresenter _stats;
   final LedgerPresenter? _ledger;
   final NotificationService _notifications;
+
+  /// Shared "month being read" across the Treasury tabs; null when unshared.
+  final TreasuryMonthScope? _monthScope;
+
+  /// Another tab moved the shared month — follow it.
+  void _adoptScopeMonth() {
+    final month = _monthScope?.month;
+    if (month == null || month == _selectedMonth) return;
+    setMonth(month);
+  }
 
   /// Pull transactions, accounts, and categories from LedgerPresenter so
   /// budget totals stay in sync after ledger mutations or mark-paid flows.
@@ -95,6 +112,7 @@ class BudgetPresenter extends ChangeNotifier {
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
+    _monthScope?.removeListener(_adoptScopeMonth);
     super.dispose();
   }
 
@@ -123,11 +141,20 @@ class BudgetPresenter extends ChangeNotifier {
 
   void setMonth(String month) {
     _selectedMonth = month;
+    _monthScope?.setMonth(month); // keep Ledger/Bills/Installments in step
     notifyListeners();
   }
 
+  /// Every budget across all months — this presenter owns them.
+  ///
+  /// Exposed so presenters that need budget-derived figures can mirror the
+  /// in-memory list off a notify (as [TreasuryDashboardPresenter] does) instead
+  /// of keeping a private copy that only their own `load()` refreshed.
+  List<Budget> get allBudgets => List.unmodifiable(_allBudgets);
+
   // ─── Group getters ────────────────────────────────────────────────────────────
 
+  /// Groups, already merged with the built-in defaults.
   List<BudgetGroupDef> get groups => List.unmodifiable(_groups);
 
   List<BudgetGroupDef> get expenseGroups =>

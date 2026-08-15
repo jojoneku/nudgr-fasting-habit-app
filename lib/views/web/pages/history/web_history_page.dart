@@ -4,6 +4,7 @@ import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_month_detail_dialog.dart';
 
 /// Web History page (Plan 050-E).
 ///
@@ -108,8 +109,13 @@ class _MonthRow {
   final double savingsContribution;
   final bool isLive;
 
+  /// The record behind the row, so the table can drill into a month the way
+  /// the phone's History list always could.
+  final MonthlySummary summary;
+
   _MonthRow(this.month, MonthlySummary s, {this.isLive = false})
-      : income = s.totalInflow,
+      : summary = s,
+        income = s.totalInflow,
         expenses = s.totalOutflow,
         net = s.netSavings,
         rate = s.totalInflow > 0 ? s.netSavings / s.totalInflow : 0,
@@ -346,11 +352,19 @@ class _HistoryBody extends StatelessWidget {
     final tableRows = rows.reversed.toList();
     return WebCard(
       title: 'Monthly Summary',
-      description: 'The numbers behind the trend',
+      description: 'The numbers behind the trend — open a month for detail',
       padding: const EdgeInsets.all(WebInsets.sm),
       child: WebDataTable<_MonthRow>(
         rows: tableRows,
         emptyLabel: 'No months recorded',
+        // Drill into a month, as the phone's History list always could. The
+        // desktop table was read-only, which made the surface built for
+        // analysis the one you could not analyse from.
+        onRowTap: (r) => showWebMonthDetailDialog(
+          context,
+          summary: r.summary,
+          categories: categories,
+        ),
         columns: [
           WebColumn<_MonthRow>(
             label: 'Month',

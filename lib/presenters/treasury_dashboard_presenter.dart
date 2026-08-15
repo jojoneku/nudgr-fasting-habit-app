@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
@@ -69,20 +70,31 @@ class DashboardAccountRow {
 }
 
 class TreasuryDashboardPresenter extends ChangeNotifier {
-  TreasuryDashboardPresenter(StorageService storage, [LedgerPresenter? ledger])
-      : _storage = storage,
-        _ledger = ledger {
+  TreasuryDashboardPresenter(
+    StorageService storage, [
+    LedgerPresenter? ledger,
+    BudgetPresenter? budget,
+  ])  : _storage = storage,
+        _ledger = ledger,
+        _budget = budget {
     load();
     _ledger?.addListener(_syncFromLedger);
+    _budget?.addListener(_syncFromBudget);
   }
 
   final StorageService _storage;
   final LedgerPresenter? _ledger;
 
+  /// The owner of the budgets this presenter reports on. Optional so the
+  /// dashboard still builds standalone (tests, single-screen mounts), where it
+  /// falls back to whatever [load] read from storage.
+  final BudgetPresenter? _budget;
+
   /// Mirror accounts/transactions/categories from LedgerPresenter so that
   /// dashboard summaries reflect ledger mutations without waiting for a tab
-  /// switch or app restart. Bills/receivables/budgets stay loaded from storage
-  /// because they're owned by other presenters.
+  /// switch or app restart. Bills/receivables stay loaded from storage because
+  /// they're owned by BillsReceivablesPresenter, which pushes a reload after
+  /// its own writes.
   void _syncFromLedger() {
     final ledger = _ledger;
     if (ledger == null) return;
@@ -92,9 +104,38 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Mirror budgets and groups from their owner, [BudgetPresenter].
+  ///
+  /// These used to be read only in [load], so an allocation edited on the
+  /// Budget page left every budget-derived figure here stale: Budget Overview,
+  /// "Budget Left", and — through [forecastedNetBalance] — the projected
+  /// month-end cash on the Hub's Finance card, which never reloads on its own.
+  ///
+  /// Subscribing rather than having the budget presenter push means the
+  /// dependency is declared once, here, by the presenter that actually needs
+  /// it: a new budget mutation cannot forget to announce itself.
+  void _syncFromBudget() {
+    final budget = _budget;
+    if (budget == null) return;
+    final budgets = budget.allBudgets;
+    final groups = budget.groups;
+    // BudgetPresenter also notifies for month changes and its own ledger sync.
+    // Skip the repaint when the mirrored data is unchanged, so those don't
+    // rebuild the dashboard for nothing. Budget/BudgetGroupDef don't override
+    // `==`, so this compares element identity — and every mutation rebuilds the
+    // list with at least one fresh element, which is exactly the signal wanted.
+    if (listEquals(budgets, _budgets) && listEquals(groups, _budgetGroups)) {
+      return;
+    }
+    _budgets = budgets;
+    _budgetGroups = groups;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
+    _budget?.removeListener(_syncFromBudget);
     super.dispose();
   }
 

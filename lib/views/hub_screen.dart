@@ -518,6 +518,7 @@ class _HubScreenState extends State<HubScreen> {
           installmentPresenter: installments,
           groceryCartPresenter: groceryCart,
           nutritionPresenter: widget.nutritionPresenter,
+          syncPresenter: widget.syncPresenter,
         ),
       ),
     );

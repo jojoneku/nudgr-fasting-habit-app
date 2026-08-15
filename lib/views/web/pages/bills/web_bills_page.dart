@@ -125,10 +125,9 @@ class _BillsBody extends StatelessWidget {
         ..add(_WebCreditCardsCard(presenter: presenter, cards: creditCards))
         ..add(const SizedBox(height: WebInsets.xl));
     }
-    // Keep the installment view on the same month the user is browsing here so
-    // "due this month" lines up with the bills above. Logic lives in the
-    // presenter; this is a no-op when the months already match.
-    installmentPresenter.syncMonth(presenter.selectedMonth);
+    // Installments follow the shared TreasuryMonthScope, so "due this month"
+    // already lines up with the bills above — no month poke from `build` (which
+    // mutated presenter state mid-frame to get the same effect).
     final installmentsCard = _InstallmentsCard(presenter: installmentPresenter);
 
     children
@@ -220,9 +219,9 @@ class _SideBySideCards extends StatelessWidget {
 /// (expense) Category, then calls [BillsReceivablesPresenter.addBill] with a
 /// freshly built [Bill] keyed to `presenter.selectedMonth`.
 ///
-// TODO(plan-050): The mobile sheet also supports a payment note and a recurring
-// toggle (with recurrence type). Those advanced fields are intentionally
-// omitted here to keep the web form focused on the common case.
+// Payment note and the recurring toggle are included: without them a bill
+// added on web was silently one-off, so the same task produced a different
+// result depending on which device you happened to use.
 class _AddBillDialog extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
 
@@ -242,9 +241,13 @@ class _AddBillDialogState extends State<_AddBillDialog> {
   final _amountController = TextEditingController();
   final _dueDayController = TextEditingController();
 
+  final _paymentNoteController = TextEditingController();
+
   late BillType _billType;
   String? _selectedAccountId;
   String? _selectedCategoryId;
+  bool _isRecurring = false;
+  RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
   @override
@@ -260,6 +263,12 @@ class _AddBillDialogState extends State<_AddBillDialog> {
       _dueDayController.text = b.dueDay.toString();
       _selectedAccountId = b.accountId;
       _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
+      // Hide the internal auto-statement marker — it is not a user-facing note
+      // (mirrors the mobile sheet).
+      _paymentNoteController.text =
+          b.isAutoStatement ? '' : (b.paymentNote ?? '');
+      _isRecurring = b.isRecurring;
+      _recurrenceType = b.recurrenceType ?? RecurrenceType.monthly;
     }
   }
 
@@ -268,7 +277,28 @@ class _AddBillDialogState extends State<_AddBillDialog> {
     _nameController.dispose();
     _amountController.dispose();
     _dueDayController.dispose();
+    _paymentNoteController.dispose();
     super.dispose();
+  }
+
+  String _recurrenceLabel(RecurrenceType r) => switch (r) {
+        RecurrenceType.monthly => 'Monthly',
+        RecurrenceType.weekly => 'Weekly',
+        RecurrenceType.yearly => 'Yearly',
+        RecurrenceType.custom => 'Custom',
+      };
+
+  /// Resolves the note to persist (mirrors the mobile sheet). A user-typed note
+  /// wins; otherwise the auto-statement marker we hid from the field is
+  /// re-applied, so editing an auto-generated statement doesn't strip its flag.
+  /// On an edit, a cleared field persists as empty rather than null — `copyWith`
+  /// reads null as "leave unchanged", which would silently bring the note back.
+  String? _resolvePaymentNote() {
+    final typed = _paymentNoteController.text.trim();
+    if (typed.isNotEmpty) return typed;
+    if (widget.existing?.isAutoStatement ?? false)
+      return Bill.autoStatementNote;
+    return widget.existing == null ? null : '';
   }
 
   List<FinanceCategory> get _expenseCategories => widget.presenter.categories
@@ -292,11 +322,14 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           month: widget.presenter.selectedMonth,
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
+          paymentNote: _resolvePaymentNote(),
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         );
         await widget.presenter.addBill(bill);
       } else {
         // Edit in place — copyWith preserves fields the form doesn't expose
-        // (paymentNote, recurrence, paid state, linked transaction).
+        // (paid state, linked transaction).
         await widget.presenter.updateBill(existing.copyWith(
           name: _nameController.text.trim(),
           billType: _billType,
@@ -304,6 +337,9 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           dueDay: dueDay,
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
+          paymentNote: _resolvePaymentNote(),
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
       }
       if (mounted) Navigator.of(context).pop();
@@ -428,6 +464,39 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                         DropdownMenuItem(value: c.id, child: Text(c.name)),
                     ],
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
+                  ),
+                ],
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _paymentNoteController,
+                  decoration: const InputDecoration(
+                      labelText: 'Payment note (optional)'),
+                  textInputAction: TextInputAction.done,
+                ),
+                // Recurrence — without it, a bill added here was silently
+                // one-off and never came back next month, while the same bill
+                // added on the phone recurred.
+                const SizedBox(height: WebInsets.sm),
+                SwitchListTile(
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                  title: const Text('Recurring'),
+                  subtitle: const Text('Auto-generate next month'),
+                  secondary: Icon(Icons.autorenew_rounded, color: cs.primary),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_isRecurring) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  DropdownButtonFormField<RecurrenceType>(
+                    initialValue: _recurrenceType,
+                    decoration: const InputDecoration(labelText: 'Recurrence'),
+                    items: [
+                      for (final r in RecurrenceType.values)
+                        DropdownMenuItem(
+                            value: r, child: Text(_recurrenceLabel(r))),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _recurrenceType = v ?? _recurrenceType),
                   ),
                 ],
                 if (accounts.isEmpty && categories.isEmpty) ...[

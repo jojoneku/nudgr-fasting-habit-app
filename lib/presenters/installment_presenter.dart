@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
@@ -16,16 +17,40 @@ const _installmentCategoryId = '__installment__';
 
 class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   InstallmentPresenter(
-      StorageService storage, LedgerPresenter ledger, StatsPresenter stats)
-      : _storage = storage,
+    StorageService storage,
+    LedgerPresenter ledger,
+    StatsPresenter stats, {
+    TreasuryMonthScope? monthScope,
+  })  : _storage = storage,
         _ledger = ledger,
-        _stats = stats {
+        _stats = stats,
+        _monthScope = monthScope {
+    if (monthScope != null) {
+      _selectedMonth = monthScope.month;
+      monthScope.addListener(_adoptScopeMonth);
+    }
     load();
   }
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
+
+  /// Shared "month being read" across the Treasury tabs; null when unshared.
+  final TreasuryMonthScope? _monthScope;
+
+  /// Another tab moved the shared month — follow it.
+  void _adoptScopeMonth() {
+    final month = _monthScope?.month;
+    if (month == null || month == _selectedMonth) return;
+    setMonth(month);
+  }
+
+  @override
+  void dispose() {
+    _monthScope?.removeListener(_adoptScopeMonth);
+    super.dispose();
+  }
 
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
@@ -45,16 +70,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   void setMonth(String month) {
     _selectedMonth = month;
+    _monthScope?.setMonth(month); // keep Ledger/Bills/Budget in step
     safeNotify();
-  }
-
-  /// Adopt [month] as the selected month WITHOUT notifying listeners. Safe to
-  /// call from a `build` method (e.g. the web bills page keeps the installment
-  /// view aligned with the month the user is browsing). A no-op — and crucially
-  /// no rebuild loop — when the month already matches.
-  void syncMonth(String month) {
-    if (_selectedMonth == month) return;
-    _selectedMonth = month;
   }
 
   // ─── Installment views ────────────────────────────────────────────────────────

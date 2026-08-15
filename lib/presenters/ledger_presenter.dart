@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
@@ -41,12 +42,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? ai,
     AiCoachService? cloudAi,
     FinancePersonalDictionary? financeDict,
+    TreasuryMonthScope? monthScope,
   })  : _storage = storage,
         _stats = stats,
         _ai = ai,
         _cloudAi = cloudAi,
+        _monthScope = monthScope,
         _financeDict = financeDict ?? FinancePersonalDictionary(storage) {
+    if (monthScope != null) {
+      _selectedMonth = monthScope.month;
+      monthScope.addListener(_adoptScopeMonth);
+    }
     load();
+  }
+
+  /// Shared "month being read" across the Treasury tabs. Null in contexts that
+  /// don't share one (tests, standalone views) — then the month is private to
+  /// this presenter, exactly as before.
+  final TreasuryMonthScope? _monthScope;
+
+  /// Another tab moved the shared month — follow it.
+  void _adoptScopeMonth() {
+    final month = _monthScope?.month;
+    if (month == null || month == _selectedMonth) return;
+    setMonth(month);
+  }
+
+  @override
+  void dispose() {
+    _monthScope?.removeListener(_adoptScopeMonth);
+    super.dispose();
   }
 
   final StorageService _storage;
@@ -113,11 +138,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         double runningBalance,
         double accountBalance,
       })>? _spreadsheetCache;
+  List<
+      ({
+        TransactionRecord txn,
+        double runningBalance,
+        double accountBalance,
+      })>? _spreadsheetAllCache;
 
   @override
   void safeNotify() {
     _rowsForMonthCache = null;
     _spreadsheetCache = null;
+    _spreadsheetAllCache = null;
     super.safeNotify();
   }
 
@@ -125,6 +157,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerChatState _chatState = const LedgerChatState.idle();
   FinanceParseError? _chatHardError;
   String? _lastCommittedSummary;
+  String? _lastCommitSnappedFromMonth;
   ParsedTransaction? _pendingFormPrefill;
   DateTime? _pausedAt;
   static const _staleConversationThreshold = Duration(minutes: 5);
@@ -132,6 +165,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerChatState get chatState => _chatState;
   FinanceParseError? get chatHardError => _chatHardError;
   String? get lastCommittedSummary => _lastCommittedSummary;
+
+  /// Set when the last Quick-Add commit moved the view out of the month the
+  /// user was reading (Quick Add always dates "today"). Holds the month they
+  /// were on, so the view can explain the jump instead of just doing it.
+  String? get lastCommitSnappedFromMonth => _lastCommitSnappedFromMonth;
   ParsedTransaction? get pendingFormPrefill => _pendingFormPrefill;
 
   // --- Public state ---
@@ -268,6 +306,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _selectedDate = next;
     _selectedMonth =
         '${next.year.toString().padLeft(4, '0')}-${next.month.toString().padLeft(2, '0')}';
+    _monthScope?.setMonth(_selectedMonth);
     safeNotify();
   }
 
@@ -275,13 +314,14 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       .where((a) => _selectedAccountIds.contains(a.id))
       .fold(0.0, (sum, a) => sum + a.balance);
 
-  /// Transactions in [selectedMonth] filtered by [selectedAccountId] and
-  /// [selectedCategoryId].
-  /// In "All" view: deduplicates transfers — keeps only the outflow leg.
-  /// In single-account view: shows both legs belonging to that account.
   /// Transactions in [selectedMonth] after every active filter — accounts and
   /// categories (multi-select), the owed flag, and an optional single day. The
   /// shared base for both the grouped and flat list views.
+  ///
+  /// Transfers are NOT deduplicated: both legs are listed (see
+  /// [_filteredTransactions]), so the destination account's increase is
+  /// visible. Deleting one leg must therefore remove its partner too — that's
+  /// what [deleteTransactionOrGroup] is for.
   List<TransactionRecord> get _visibleTransactions {
     var txns = _filteredTransactions;
 
@@ -489,11 +529,52 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     ];
   }
 
+  /// The same rows as [ledgerSpreadsheetRows] but over ALL history rather than
+  /// the selected month.
+  ///
+  /// The web grid reads this whenever a cross-month filter is active (a search
+  /// term, or a date range). Searching "Netflix" or asking for May→July while
+  /// scoped to one month returned an empty grid, which read as "you have no
+  /// such transactions" rather than "your filter can't see them".
+  List<
+      ({
+        TransactionRecord txn,
+        double runningBalance,
+        double accountBalance,
+      })> get ledgerSpreadsheetRowsAllMonths {
+    final cached = _spreadsheetAllCache;
+    if (cached != null) return cached;
+    final acctMap = _accountBalanceByTxnId;
+
+    // Same accumulation rule as ledgerRowsForMonth: chronological for the
+    // running balance, displayed newest-first.
+    final chronological = [..._allTransactions]..sort((a, b) {
+        final byDate = a.date.compareTo(b.date);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
+    final rows = <({
+      TransactionRecord txn,
+      double runningBalance,
+      double accountBalance,
+    })>[];
+    var balance = 0.0;
+    for (final t in chronological) {
+      balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      rows.add((
+        txn: t,
+        runningBalance: balance,
+        accountBalance: acctMap[t.id] ?? 0.0,
+      ));
+    }
+    return _spreadsheetAllCache = rows.reversed.toList();
+  }
+
   // --- Filter controls ---
 
   void setMonth(String month) {
     _selectedMonth = month;
     _selectedDate = null; // clear day filter when navigating months
+    _monthScope?.setMonth(month); // keep Bills/Budget/Installments in step
     safeNotify();
   }
 
@@ -760,6 +841,28 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Re-adds every record in [txns] — the Undo counterpart of
+  /// [deleteTransactionOrGroup], which may have removed both legs of a
+  /// transfer. Restoring the legs one at a time through [restoreTransaction]
+  /// would work too, but this persists once instead of per leg.
+  Future<void> restoreTransactions(List<TransactionRecord> txns) async {
+    if (txns.isEmpty) return;
+    if (txns.length == 1) return restoreTransaction(txns.first);
+    _allTransactions = [..._allTransactions, ...txns];
+    for (final txn in txns) {
+      _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    }
+    safeNotify();
+    await _saveAll();
+    for (final txn in txns) {
+      if (txn.reimbursable &&
+          txn.type == TransactionType.outflow &&
+          txn.reimbursementReceivableId != null) {
+        await spawnReimbursementReceivable(txn, null);
+      }
+    }
+  }
+
   /// Logs a reimbursable outflow — money you spent but expect to recover (e.g.
   /// a work expense). [outflow] must already carry `reimbursable: true` and a
   /// pre-generated `reimbursementReceivableId`. The outflow is persisted as a
@@ -917,30 +1020,41 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Deletes a transaction; if it belongs to a transfer pair, removes BOTH legs
   /// so the two accounts unwind cleanly and neither side is left orphaned.
-  Future<void> deleteTransactionOrGroup(String id) async {
+  ///
+  /// Returns every record actually removed, so an Undo can put the whole set
+  /// back via [restoreTransactions] — restoring only the swiped leg would leave
+  /// the partner missing and the two account balances out of step.
+  Future<List<TransactionRecord>> deleteTransactionOrGroup(String id) async {
     final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
-    if (txn == null) return;
+    if (txn == null) return const [];
     final groupId = txn.transferGroupId;
     if (groupId == null) {
       await deleteTransaction(id);
-      return;
+      return [txn];
     }
-    for (final leg
-        in _allTransactions.where((t) => t.transferGroupId == groupId)) {
+    final legs = _allTransactions
+        .where((t) => t.transferGroupId == groupId)
+        .toList(growable: false);
+    for (final leg in legs) {
       _reverseBalanceDelta(leg.accountId, leg.amount, leg.type);
     }
     _allTransactions =
         _allTransactions.where((t) => t.transferGroupId != groupId).toList();
     safeNotify();
     await _saveAll();
+    return legs;
   }
 
   /// Bulk-deletes the given transaction ids in ONE mutation + ONE persist,
   /// instead of N fire-and-forget calls each doing a full-list write. Transfer
   /// pairs are expanded so both legs go (matches [deleteTransactionOrGroup]).
   /// (Plan 052 C8)
-  Future<void> deleteTransactions(Set<String> ids) async {
-    if (ids.isEmpty) return;
+  ///
+  /// Returns every record removed so an Undo can restore the exact set via
+  /// [restoreTransactions] — including transfer partners the caller never
+  /// selected.
+  Future<List<TransactionRecord>> deleteTransactions(Set<String> ids) async {
+    if (ids.isEmpty) return const [];
     // Expand any transfer legs whose partner is in the selection set.
     final groupIds = _allTransactions
         .where((t) => ids.contains(t.id) && t.transferGroupId != null)
@@ -951,7 +1065,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             ids.contains(t.id) ||
             (t.transferGroupId != null && groupIds.contains(t.transferGroupId)))
         .toList();
-    if (toRemove.isEmpty) return;
+    if (toRemove.isEmpty) return const [];
     for (final t in toRemove) {
       _reverseBalanceDelta(t.accountId, t.amount, t.type);
     }
@@ -960,6 +1074,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
     safeNotify();
     await _saveAll();
+    return toRemove;
   }
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
@@ -1301,6 +1416,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   void clearLastCommittedSummary() {
     if (_lastCommittedSummary == null) return;
     _lastCommittedSummary = null;
+    _lastCommitSnappedFromMonth = null;
     safeNotify();
   }
 
@@ -1391,9 +1507,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // row is actually visible instead of silently landing off-screen (the toast
     // fired but no row appeared).
     final nowKey = toMonthKey(now);
+    final snappedFrom = _selectedMonth;
+    _lastCommitSnappedFromMonth = null;
     if (_selectedMonth != nowKey) {
       _selectedMonth = nowKey;
       _selectedDate = null; // clear any day filter so the new row isn't hidden
+      _monthScope?.setMonth(nowKey);
+      // Record the jump so the view can say so. Moving the user's reading
+      // position without a word is what made this feel like a glitch.
+      _lastCommitSnappedFromMonth = snappedFrom;
     }
     safeNotify();
   }

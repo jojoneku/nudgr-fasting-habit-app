@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_manage_groups_dialog.dart';
 
 /// Web Budget page (Plan 050-D) — tabular, editable budget setup + an
 /// "Allocation by Group" donut. Mirrors the Claude design reference
@@ -132,12 +133,27 @@ class _BudgetBody extends StatelessWidget {
             subtitle:
                 '${monthLabel(presenter.selectedMonth)} · set your allocations · '
                 '${usedPct.toStringAsFixed(1)}% of ${formatPeso(allocated)} used',
-            trailing: WebMonthStepper(
-              label: monthLabel(presenter.selectedMonth),
-              onPrev: () =>
-                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
-              onNext: () =>
-                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Groups could only be *assigned* on web, never created —
+                // leaving the Allocation by Group card below impossible to
+                // populate without reaching for the phone.
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      showWebManageGroupsDialog(context, presenter: presenter),
+                  icon: const Icon(Icons.folder_outlined, size: 16),
+                  label: const Text('Manage groups'),
+                ),
+                const SizedBox(width: WebInsets.sm),
+                WebMonthStepper(
+                  label: monthLabel(presenter.selectedMonth),
+                  onPrev: () => presenter
+                      .setMonth(previousMonth(presenter.selectedMonth)),
+                  onNext: () =>
+                      presenter.setMonth(nextMonth(presenter.selectedMonth)),
+                ),
+              ],
             ),
           ),
           _StatStrip(

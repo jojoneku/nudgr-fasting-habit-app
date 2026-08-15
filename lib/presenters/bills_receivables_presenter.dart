@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -12,6 +13,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -78,12 +80,18 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     TreasuryDashboardPresenter? dashboard,
     BudgetPresenter? budget,
     NotificationService? notifications,
+    TreasuryMonthScope? monthScope,
   })  : _storage = storage,
         _ledger = ledger,
         _stats = stats,
         _dashboard = dashboard,
         _budget = budget,
+        _monthScope = monthScope,
         _notifications = notifications ?? NotificationService() {
+    if (monthScope != null) {
+      _selectedMonth = monthScope.month;
+      monthScope.addListener(_adoptScopeMonth);
+    }
     // Receivables live here, so let the ledger delegate reimbursement-receivable
     // create/delete back to this presenter (keeps the in-memory list
     // authoritative instead of racing direct storage writes).
@@ -100,6 +108,24 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final TreasuryDashboardPresenter? _dashboard;
   final BudgetPresenter? _budget;
   final NotificationService _notifications;
+
+  /// Shared "month being read" across the Treasury tabs; null when unshared.
+  final TreasuryMonthScope? _monthScope;
+
+  /// Another tab moved the shared month — follow it. [setMonth] is async
+  /// (it regenerates recurring bills and credit statements for the new month),
+  /// so this kicks it off and lets the resulting notify refresh the view.
+  void _adoptScopeMonth() {
+    final month = _monthScope?.month;
+    if (month == null || month == _selectedMonth) return;
+    unawaited(setMonth(month));
+  }
+
+  @override
+  void dispose() {
+    _monthScope?.removeListener(_adoptScopeMonth);
+    super.dispose();
+  }
 
   /// Refresh the dashboard and budget presenters' bill/receivable/expense
   /// state after this presenter mutates storage. Ledger sync handles the
@@ -552,6 +578,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> setMonth(String month) async {
     _selectedMonth = month;
+    _monthScope?.setMonth(month); // keep Ledger/Budget/Installments in step
     await _autoGenerateRecurringIfNeeded(month);
     // Re-run close-date detection so navigating into the current real month
     // (e.g., day 1 of a new month) sees the statement without requiring a

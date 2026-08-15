@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/presenters/sync_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/app_colors.dart';
@@ -27,10 +28,16 @@ class TreasuryDashboardView extends StatelessWidget {
   /// dashboard still builds standalone (e.g. in tests) without a Pay button.
   final BillsReceivablesPresenter? billsPresenter;
 
+  /// Drives the header's sync pill. Null when no sync stack is wired (signed
+  /// out, or a standalone/test mount) — the pill then says so instead of
+  /// claiming everything is synced.
+  final SyncPresenter? syncPresenter;
+
   const TreasuryDashboardView({
     super.key,
     required this.presenter,
     this.billsPresenter,
+    this.syncPresenter,
   });
 
   void _showQuickPay(BuildContext context, FinancialAccount card) {
@@ -73,6 +80,7 @@ class TreasuryDashboardView extends StatelessWidget {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: _DashboardScrollBody(
             presenter: presenter,
+            syncPresenter: syncPresenter,
             onAddAccount: () => _showAccountSheet(context),
             onEditAccount: (account) => _showAccountSheet(context, account),
             onAddGoalSavings: () => _showGoalSavingsSheet(context),
@@ -112,6 +120,7 @@ class _AddAccountFab extends StatelessWidget {
 
 class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
+  final SyncPresenter? syncPresenter;
   final VoidCallback onAddAccount;
   final ValueChanged<FinancialAccount> onEditAccount;
   final VoidCallback onAddGoalSavings;
@@ -124,6 +133,7 @@ class _DashboardScrollBody extends StatelessWidget {
     required this.onAddAccount,
     required this.onEditAccount,
     required this.onAddGoalSavings,
+    this.syncPresenter,
     this.onPayCredit,
   });
 
@@ -134,7 +144,7 @@ class _DashboardScrollBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _GreetingHeader(),
+          _GreetingHeader(syncPresenter: syncPresenter),
           const SizedBox(height: 14),
           NetWorthHero(presenter: presenter),
           const SizedBox(height: 12),
@@ -216,11 +226,12 @@ class _EmptyAccountsCard extends StatelessWidget {
   }
 }
 
-/// Greeting line + "Synced" status pill at the top of the dashboard body.
-/// The "Treasury" title itself is provided by the module app bar. The pill is a
-/// static status indicator for this increment (live sync state is wired later).
+/// Greeting line + sync status pill at the top of the dashboard body.
+/// The "Treasury" title itself is provided by the module app bar.
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader();
+  final SyncPresenter? syncPresenter;
+
+  const _GreetingHeader({this.syncPresenter});
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +246,7 @@ class _GreetingHeader extends StatelessWidget {
             ),
           ),
         ),
-        const _SyncedPill(),
+        _SyncedPill(presenter: syncPresenter),
       ],
     );
   }
@@ -249,36 +260,98 @@ String _greeting() {
   return 'Good evening';
 }
 
+/// Live sync status.
+///
+/// This used to be a hardcoded green "Synced" badge — it read the same offline,
+/// with a queue of unpushed changes, or signed out. On a finance screen that is
+/// the worst possible thing to be wrong about, so it now reports what
+/// [SyncPresenter] actually knows, and tapping it forces a sync.
 class _SyncedPill extends StatelessWidget {
-  const _SyncedPill();
+  final SyncPresenter? presenter;
+
+  const _SyncedPill({this.presenter});
 
   @override
   Widget build(BuildContext context) {
+    final p = presenter;
+    if (p == null) {
+      // No sync stack wired (signed out, or a standalone mount). Say that
+      // rather than implying the data is safely in the cloud.
+      return _pill(
+        context,
+        label: 'Local only',
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      );
+    }
+    return ListenableBuilder(
+      listenable: p,
+      builder: (context, _) {
+        final cs = Theme.of(context).colorScheme;
+        final (Color color, bool spinning) = switch (p) {
+          _ when p.syncError != null => (cs.error, false),
+          _ when p.isSyncing => (cs.primary, true),
+          _ when p.pendingCount > 0 => (context.appColors.orange, false),
+          _ => (context.appColors.success, false),
+        };
+        return _pill(
+          context,
+          label: p.syncError != null ? 'Sync failed' : p.statusLabel,
+          color: color,
+          spinning: spinning,
+          onTap: p.isSyncing ? null : () => p.forceSync().catchError((_) {}),
+        );
+      },
+    );
+  }
+
+  Widget _pill(
+    BuildContext context, {
+    required String label,
+    required Color color,
+    bool spinning = false,
+    VoidCallback? onTap,
+  }) {
     final theme = Theme.of(context);
-    final green = context.appColors.success;
-    return Container(
+    final pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: green.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(color: green, shape: BoxShape.circle),
-          ),
+          if (spinning)
+            SizedBox(
+              width: 8,
+              height: 8,
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: color),
+            )
+          else
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
           const SizedBox(width: 6),
           Text(
-            'Synced',
+            label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: green,
+              color: color,
               fontWeight: FontWeight.w700,
             ),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return pill;
+    return Semantics(
+      button: true,
+      label: 'Sync now',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: pill,
       ),
     );
   }
