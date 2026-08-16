@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
@@ -129,11 +130,10 @@ class _BudgetBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          WebSectionHeader(
+          WebPageHeader(
             title: 'Budget',
-            subtitle:
-                '${monthLabel(presenter.selectedMonth)} · set your allocations · '
-                '${usedPct.toStringAsFixed(1)}% of ${formatPeso(allocated)} used',
+            subtitle: '${monthLabel(presenter.selectedMonth)} · '
+                'set your allocations',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -157,6 +157,13 @@ class _BudgetBody extends StatelessWidget {
               ],
             ),
           ),
+          // The question a budget screen exists to answer is "am I on track",
+          // and only the ring hero answers it — the tiles below say how much.
+          // Web opened straight on the tiles; the phone leads with the ring.
+          if (rows.isNotEmpty) ...[
+            _PaceRingHero(presenter: presenter),
+            const SizedBox(height: WebInsets.xl),
+          ],
           _StatStrip(
             allocated: allocated,
             spent: spent,
@@ -193,6 +200,174 @@ class _BudgetBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(WebInsets.xxl),
       child: Align(alignment: Alignment.topCenter, child: content),
+    );
+  }
+}
+
+// ─── Pace ring hero ────────────────────────────────────────────────────────
+
+/// Desktop counterpart of the mobile Budget hero: the spent-percentage ring
+/// beside the SPENT figure, "of {allocated}", the remaining line, and the
+/// Ahead-of-pace / Over-pace / Over-budget pill.
+///
+/// Deliberately a plain [WebCard] and not a [WebHeroCard] — the phone's Budget
+/// hero is an ordinary elevated card, and the gradient treatment is reserved
+/// for net worth and what's due. Every figure is a presenter getter; the only
+/// decision here is which colour the ring escalates to.
+class _PaceRingHero extends StatelessWidget {
+  final BudgetPresenter presenter;
+
+  const _PaceRingHero({required this.presenter});
+
+  /// Below this width the ring drops above the figure instead of beside it.
+  static const double _sideBySideMin = 460;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final appColors = context.appColors;
+
+    final allocated = presenter.totalAllocated;
+    final spent = presenter.totalSpent;
+    final remaining = presenter.totalRemaining;
+    final pct = presenter.percentUsed;
+    final over = spent > allocated && allocated > 0;
+    // Keys off the raw sign, not `over` — spending against a zero allocation
+    // still reads as overspent (matching the phone).
+    final overspent = remaining < 0;
+
+    final ring = AppRingProgress(
+      value: pct.clamp(0.0, 1.0),
+      size: 128,
+      strokeWidth: 14,
+      primaryColor: over ? cs.error : appColors.fast,
+      center: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${(pct * 100).round()}%',
+            style: theme.textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          Text(
+            'spent',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: appColors.textMuted),
+          ),
+        ],
+      ),
+    );
+
+    final figure = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'SPENT',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: appColors.textMuted,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        WebNumber(
+          formatPeso(spent),
+          size: WebNumberSize.tileLarge,
+          weight: FontWeight.w800,
+        ),
+        Text(
+          'of ${formatPeso(allocated)}',
+          style:
+              theme.textTheme.bodySmall?.copyWith(color: appColors.textMuted),
+        ),
+        const SizedBox(height: WebInsets.sm),
+        Text(
+          overspent
+              ? '${formatPeso(remaining.abs())} over'
+              : '${formatPeso(remaining)} left',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: overspent ? cs.error : appColors.success,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (presenter.isCurrentMonth) ...[
+          const SizedBox(height: WebInsets.md),
+          _PacePill(ahead: presenter.isAheadOfPace, over: over),
+        ],
+      ],
+    );
+
+    return WebCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < _sideBySideMin) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ring,
+                const SizedBox(height: WebInsets.lg),
+                figure,
+              ],
+            );
+          }
+          return Row(
+            children: [
+              ring,
+              const SizedBox(width: WebInsets.xxl),
+              Expanded(child: figure),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Ahead of pace / Over pace / Over budget — the phone's pill, same wording and
+/// same escalation.
+class _PacePill extends StatelessWidget {
+  final bool ahead;
+  final bool over;
+
+  const _PacePill({required this.ahead, required this.over});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final good = ahead && !over;
+    final color = good ? context.appColors.success : theme.colorScheme.error;
+    final label = over
+        ? 'Over budget'
+        : ahead
+            ? 'Ahead of pace'
+            : 'Over pace';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            good
+                ? Icons.check_circle_outline_rounded
+                : Icons.warning_amber_rounded,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: color, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
     );
   }
 }

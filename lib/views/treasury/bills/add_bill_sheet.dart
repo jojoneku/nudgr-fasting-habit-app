@@ -163,11 +163,14 @@ class _AddBillSheetState extends State<AddBillSheet> {
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
         reminderDaysBefore: _reminderOn ? _reminderDays : null,
-        // Preserve paid state / links when editing.
+        // Preserve paid state, links, and the next-month override when editing
+        // — this builds a fresh Bill rather than copyWith, so anything not
+        // restated here is dropped.
         isPaid: widget.existing?.isPaid ?? false,
         paidDate: widget.existing?.paidDate,
         paidAmount: widget.existing?.paidAmount,
         transactionId: widget.existing?.transactionId,
+        nextMonthAmount: widget.existing?.nextMonthAmount,
       );
       if (widget.existing != null) {
         await widget.presenter.updateBill(bill);

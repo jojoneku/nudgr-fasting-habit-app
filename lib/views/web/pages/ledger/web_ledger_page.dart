@@ -649,6 +649,11 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // The phone gives the Ledger a title row of its own and puts the
+            // month and filter controls on a second row beneath it. Web opened
+            // straight onto the toolbar, so the one page with no name was the
+            // one users are in most. The toolbar below is that controls row.
+            const WebPageHeader(title: 'Ledger'),
             _Toolbar(
               monthLabel: monthLabel(_p.selectedMonth),
               spansAllMonths: spansAll,
