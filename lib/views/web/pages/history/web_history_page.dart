@@ -195,10 +195,10 @@ class _HistoryBody extends StatelessWidget {
         // nesting it in a WebCard would put surfaceContainerLow on
         // surfaceContainerLow — two fills that read as one box.
         if (current != null) ...[
-          WebSectionHeader(
+          const WebSectionHeader(
             title: 'Current month',
             subtitle: 'Still open — these numbers are still moving',
-            trailing: const WebBadge('Live', tone: WebBadgeTone.info),
+            trailing: WebBadge('Live', tone: WebBadgeTone.info),
           ),
           MonthlySummaryCard(
             summary: current!,

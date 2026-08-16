@@ -1485,7 +1485,8 @@ Future<void> _markBillPaidFlow(
     return;
   }
   if (!context.mounted) return;
-  final payerName = _lookupAccountName(presenter, selectedAccountId) ?? 'your account';
+  final payerName =
+      _lookupAccountName(presenter, selectedAccountId) ?? 'your account';
   AppToast.success(
     context,
     alreadyInLedger
