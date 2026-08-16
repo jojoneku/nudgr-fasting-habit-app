@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../design/account_category_label.dart';
@@ -138,6 +139,9 @@ class _CategoriesCardState extends State<_CategoriesCard> {
   final _nameController = TextEditingController();
   CategoryType _type = CategoryType.expense;
   String _draftColor = kCategoryPalette.first;
+  // "Auto" — the name-derived glyph. Same result as the key this row used to
+  // hard-code, but now the user can override it before adding.
+  String _draftIcon = kAutoCategoryIconKey;
   bool _submitting = false;
 
   @override
@@ -157,12 +161,16 @@ class _CategoriesCardState extends State<_CategoriesCard> {
         id: id,
         name: name,
         type: _type,
-        icon: 'tag',
+        icon: _draftIcon,
         colorHex: _draftColor,
       ));
       _nameController.clear();
-      // Advance the draft swatch so consecutive adds get distinct colors.
-      setState(() => _draftColor = cycleCategoryColor(_draftColor));
+      setState(() {
+        // Advance the draft swatch so consecutive adds get distinct colors.
+        _draftColor = cycleCategoryColor(_draftColor);
+        // Reset to Auto for the next add, matching the mobile sheet.
+        _draftIcon = kAutoCategoryIconKey;
+      });
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -282,11 +290,27 @@ class _CategoriesCardState extends State<_CategoriesCard> {
               children: [
                 _ColorDot(hex: _draftColor),
                 const SizedBox(width: WebInsets.sm),
+                WebCategoryIconPreview(
+                  iconKey: _draftIcon,
+                  name: _nameController.text,
+                  type: _type,
+                  size: 32,
+                  onTap: () async {
+                    final picked = await showWebCategoryIconPicker(context,
+                        current: _draftIcon);
+                    if (picked != null && mounted) {
+                      setState(() => _draftIcon = picked);
+                    }
+                  },
+                ),
+                const SizedBox(width: WebInsets.sm),
                 Expanded(
                   child: TextField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
                     onSubmitted: (_) => _add(),
+                    // Keeps the auto-glyph preview tracking the typed name.
+                    onChanged: (_) => setState(() {}),
                     style: theme.textTheme.bodyMedium,
                     decoration: const InputDecoration(
                       isCollapsed: true,
@@ -493,6 +517,23 @@ class _CategoryTableRowState extends State<_CategoryTableRow> {
             child: Row(
               children: [
                 _ColorDot(hex: cat.colorHex),
+                const SizedBox(width: WebInsets.sm),
+                // Changing a saved category's icon, the same way the mobile
+                // manage-categories sheet allows.
+                WebCategoryIconPreview(
+                  iconKey: cat.icon,
+                  name: cat.name,
+                  type: cat.type,
+                  size: 32,
+                  onTap: () async {
+                    final picked = await showWebCategoryIconPicker(context,
+                        current: cat.icon);
+                    if (picked != null && picked != cat.icon && mounted) {
+                      await widget.ledger
+                          .updateCategory(cat.copyWith(icon: picked));
+                    }
+                  },
+                ),
                 const SizedBox(width: WebInsets.sm),
                 Expanded(
                   child: TextField(

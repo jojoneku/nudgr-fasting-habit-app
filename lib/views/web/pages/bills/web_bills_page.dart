@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
@@ -14,6 +16,8 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
+
+final _expectedDateFmt = DateFormat('MMM d, yyyy');
 
 /// Web Bills & Receivables page (Plan 050-C).
 ///
@@ -248,7 +252,13 @@ class _AddBillDialogState extends State<_AddBillDialog> {
   String? _selectedCategoryId;
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
+  bool _reminderOn = false;
+  int _reminderDays = 2;
   bool _isSubmitting = false;
+
+  /// Lead times offered for the due-date reminder, matching the mobile sheet's
+  /// chips so the same bill can be set up identically on either platform.
+  static const _reminderDayOptions = [1, 2, 3, 5, 7];
 
   @override
   void initState() {
@@ -269,6 +279,8 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           b.isAutoStatement ? '' : (b.paymentNote ?? '');
       _isRecurring = b.isRecurring;
       _recurrenceType = b.recurrenceType ?? RecurrenceType.monthly;
+      _reminderOn = b.reminderDaysBefore != null;
+      _reminderDays = b.reminderDaysBefore ?? 2;
     }
   }
 
@@ -325,6 +337,7 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           paymentNote: _resolvePaymentNote(),
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
+          reminderDaysBefore: _reminderOn ? _reminderDays : null,
         );
         await widget.presenter.addBill(bill);
       } else {
@@ -340,6 +353,11 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           paymentNote: _resolvePaymentNote(),
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
+          // Now that the form owns this field, pass it explicitly on every
+          // save. The sentinel copyWith used to leave it untouched, which
+          // preserved a mobile-set reminder but also made switching it off
+          // here impossible.
+          reminderDaysBefore: _reminderOn ? _reminderDays : null,
         ));
       }
       if (mounted) Navigator.of(context).pop();
@@ -499,6 +517,34 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                         setState(() => _recurrenceType = v ?? _recurrenceType),
                   ),
                 ],
+                // Per-bill reminder lead time. Mobile has had this since the
+                // bill sheet shipped; on desktop the field existed on the model
+                // but nothing could set it, so a bill created here never
+                // reminded you and one created on the phone couldn't be turned
+                // off here.
+                const SizedBox(height: WebInsets.sm),
+                SwitchListTile(
+                  value: _reminderOn,
+                  onChanged: (v) => setState(() => _reminderOn = v),
+                  title: const Text('Remind me before due'),
+                  secondary:
+                      Icon(Icons.notifications_none_rounded, color: cs.primary),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_reminderOn) ...[
+                  const SizedBox(height: WebInsets.xs),
+                  Wrap(
+                    spacing: WebInsets.sm,
+                    children: [
+                      for (final d in _reminderDayOptions)
+                        ChoiceChip(
+                          label: Text(d == 1 ? '1 day' : '$d days'),
+                          selected: _reminderDays == d,
+                          onSelected: (_) => setState(() => _reminderDays = d),
+                        ),
+                    ],
+                  ),
+                ],
                 if (accounts.isEmpty && categories.isEmpty) ...[
                   const SizedBox(height: WebInsets.sm),
                   Text(
@@ -569,8 +615,8 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
-  final _dayController = TextEditingController();
 
+  late DateTime _expectedDate;
   late ReceivableType _type;
   String? _selectedAccountId;
   String? _selectedCategoryId;
@@ -583,12 +629,14 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
     super.initState();
     final r = widget.existing;
     _type = r?.receivableType ?? ReceivableType.salary;
+    // A new receivable starts on today's date rather than in the month being
+    // browsed, matching the mobile sheet.
+    _expectedDate = r?.expectedDate ?? DateTime.now();
     if (r != null) {
       _nameController.text = r.name;
       _amountController.text = r.amount == r.amount.roundToDouble()
           ? r.amount.round().toString()
           : r.amount.toString();
-      _dayController.text = r.expectedDate?.day.toString() ?? '';
       _selectedAccountId = r.accountId;
       _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
       _isRecurring = r.isRecurring;
@@ -607,7 +655,6 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
-    _dayController.dispose();
     super.dispose();
   }
 
@@ -615,14 +662,14 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
       .where((c) => c.type == CategoryType.income)
       .toList();
 
-  /// Build an [expectedDate] for the selected month, clamping the day to the
-  /// month's length so short months (e.g. Feb 30) never throw.
-  DateTime _expectedDate(int day) {
-    final parts = widget.presenter.selectedMonth.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final lastDay = DateTime(year, month + 1, 0).day;
-    return DateTime(year, month, day.clamp(1, lastDay));
+  Future<void> _pickExpectedDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _expectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+    if (picked != null) setState(() => _expectedDate = picked);
   }
 
   Future<void> _submit() async {
@@ -630,7 +677,6 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
-      final day = int.parse(_dayController.text);
       final existing = widget.existing;
       if (existing == null) {
         final receivable = Receivable(
@@ -638,7 +684,9 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           name: _nameController.text.trim(),
           receivableType: _type,
           amount: amount,
-          expectedDate: _expectedDate(day),
+          // Day only — a stored time of day is invisible on the card yet used
+          // to order same-day entries, same as the mobile sheet.
+          expectedDate: DateUtils.dateOnly(_expectedDate),
           month: widget.presenter.selectedMonth,
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
@@ -651,7 +699,9 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           name: _nameController.text.trim(),
           receivableType: _type,
           amount: amount,
-          expectedDate: _expectedDate(day),
+          // Day only — a stored time of day is invisible on the card yet used
+          // to order same-day entries, same as the mobile sheet.
+          expectedDate: DateUtils.dateOnly(_expectedDate),
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
           isRecurring: _isRecurring,
@@ -727,18 +777,26 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                     ),
                     const SizedBox(width: WebInsets.md),
                     Expanded(
-                      child: TextFormField(
-                        controller: _dayController,
-                        decoration: const InputDecoration(
-                            labelText: 'Expected day (1–31)'),
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _submit(),
-                        validator: (v) {
-                          final d = int.tryParse(v ?? '');
-                          if (d == null || d < 1 || d > 31) return '1–31';
-                          return null;
-                        },
+                      // A real date, like the mobile sheet picks. The day-number
+                      // field this replaces was clamped into the selected month,
+                      // so a receivable expected next month — the normal case
+                      // for an invoice raised late in the month — could not be
+                      // expressed here at all.
+                      child: InputDecorator(
+                        decoration:
+                            const InputDecoration(labelText: 'Expected date'),
+                        child: InkWell(
+                          onTap: _pickExpectedDate,
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today_outlined,
+                                  size: 16, color: cs.onSurfaceVariant),
+                              const SizedBox(width: WebInsets.sm),
+                              Text(_expectedDateFmt.format(_expectedDate),
+                                  style: theme.textTheme.bodyMedium),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -1215,91 +1273,45 @@ class _BillRow extends StatelessWidget {
     // is safe here because payerAccountsFor already drops the liability itself
     // for credit-card/BNPL statement bills, so it can never re-select it. The
     // "already in ledger" toggle skips recording entirely for manual expenses.
-    var alreadyInLedger = false;
-    String? selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
+    String? preferredAccountId = payers.isNotEmpty ? payers.first.id : null;
     if (bill.accountId != null && payers.any((a) => a.id == bill.accountId)) {
-      selectedAccountId = bill.accountId;
+      preferredAccountId = bill.accountId;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) => AlertDialog(
-          title: const Text('Mark bill as paid?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(alreadyInLedger
-                  ? 'Mark "${bill.name}" (${formatPeso(bill.amount)}) as paid '
-                      'without recording a transaction.'
-                  : 'Pay ${formatPeso(bill.amount)} for "${bill.name}". '
-                      'This debits the selected account.'),
-              if (!alreadyInLedger) ...[
-                const SizedBox(height: WebInsets.md),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Pay from'),
-                  items: [
-                    for (final a in payers)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                  ],
-                  onChanged: (v) => setLocalState(() => selectedAccountId = v),
-                ),
-              ],
-              const SizedBox(height: 4),
-              CheckboxListTile(
-                value: alreadyInLedger,
-                onChanged: (v) =>
-                    setLocalState(() => alreadyInLedger = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Already added to ledger'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Mark paid')),
-          ],
-        ),
+
+    // The shared settle dialog carries the amount and date the ad-hoc dialog
+    // here never had, so a partial payment, an overpayment, or last month's
+    // reconciliation is expressible on desktop the same way it is on mobile.
+    final result = await showWebSettleDialog(
+      context,
+      title: 'Mark "${bill.name}" paid',
+      summary: 'Records the payment and debits the funding account. '
+          'Adjust the amount for a partial payment or an overpayment.',
+      confirmLabel: 'Mark paid',
+      initialAmount: bill.amount,
+      amountLabel: 'Amount paid',
+      dateLabel: 'Payment date',
+      accounts: payers,
+      accountLabel: 'Pay from',
+      initialAccountId: preferredAccountId,
+      requiresAccount: true,
+      showLedgerToggle: true,
+      emptyAccountsMessage: 'Add a funding account before marking paid.',
+      onSubmit: (r) => presenter.markBillPaid(
+        bill.id,
+        paidAmount: r.amount,
+        accountId: r.accountId,
+        paidDate: r.date,
+        recordInLedger: r.recordInLedger,
       ),
     );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
+    if (result == null || !context.mounted) return;
 
-    // An account is only required when we're actually recording the payment.
-    if (!alreadyInLedger && selectedAccountId == null) {
-      AppToast.error(context, 'Add a funding account before marking paid.');
-      return;
-    }
-
-    try {
-      await presenter.markBillPaid(
-        bill.id,
-        paidAmount: bill.amount,
-        accountId: alreadyInLedger ? null : selectedAccountId,
-        recordInLedger: !alreadyInLedger,
-      );
-    } catch (e) {
-      // Surface the failure instead of discarding the Future — a rejected
-      // payer (or any error) would otherwise leave the bill silently unpaid.
-      if (context.mounted) {
-        AppToast.error(context, 'Could not mark "${bill.name}" paid: $e');
-      }
-      return;
-    }
-    if (!context.mounted) return;
-    final payerName = _accountName(selectedAccountId) ?? 'your account';
+    final payerName = _accountName(result.accountId) ?? 'your account';
     AppToast.success(
       context,
-      alreadyInLedger
+      !result.recordInLedger
           ? 'Marked "${bill.name}" paid.'
-          : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.',
+          : 'Paid ${formatPeso(result.amount)} for "${bill.name}" from $payerName.',
     );
   }
 }
@@ -1519,99 +1531,42 @@ class _ReceivableRow extends StatelessWidget {
     // silently and shown as read-only prose, so a deposit that didn't go to the
     // default account could not be recorded where it actually went.
     final destinations = presenter.depositAccountsFor(receivable);
-    var selectedAccountId = presenter.preferredDepositAccountId(receivable);
 
-    var alreadyInLedger = false;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) {
-          // Recomputed inside the builder so the sentence and the dropdown can
-          // never disagree about where the money is going.
-          final accountName =
-              presenter.accountName(selectedAccountId) ?? 'your account';
-          return AlertDialog(
-            title: const Text('Mark as received?'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(alreadyInLedger
-                    ? 'Mark "${receivable.name}" (${formatPeso(receivable.amount)}) '
-                        'as received without recording a transaction.'
-                    : 'Deposit ${formatPeso(receivable.amount)} from '
-                        '"${receivable.name}" into $accountName? This credits the '
-                        'account balance.'),
-                if (!alreadyInLedger && destinations.isNotEmpty) ...[
-                  const SizedBox(height: WebInsets.md),
-                  DropdownButtonFormField<String>(
-                    initialValue: selectedAccountId,
-                    decoration: const InputDecoration(labelText: 'Deposit to'),
-                    items: [
-                      for (final a in destinations)
-                        DropdownMenuItem(value: a.id, child: Text(a.name)),
-                    ],
-                    onChanged: (v) =>
-                        setLocalState(() => selectedAccountId = v),
-                  ),
-                ],
-                const SizedBox(height: 4),
-                CheckboxListTile(
-                  value: alreadyInLedger,
-                  onChanged: (v) =>
-                      setLocalState(() => alreadyInLedger = v ?? false),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: const Text('Already added to ledger'),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancel')),
-              FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Mark received')),
-            ],
-          );
-        },
+    // Same shared settle dialog as bills, as an inflow: a client who paid only
+    // part of an invoice, or paid it three weeks ago, is now recordable here
+    // instead of only on the phone.
+    final result = await showWebSettleDialog(
+      context,
+      title: 'Mark "${receivable.name}" received',
+      summary: 'Records the deposit and credits the destination account. '
+          'Adjust the amount if only part of it came in.',
+      confirmLabel: 'Mark received',
+      initialAmount: receivable.amount,
+      amountLabel: 'Amount received',
+      dateLabel: 'Date received',
+      accounts: destinations,
+      accountLabel: 'Deposit to',
+      initialAccountId: presenter.preferredDepositAccountId(receivable),
+      requiresAccount: true,
+      showLedgerToggle: true,
+      emptyAccountsMessage: 'Add an account before marking received.',
+      onSubmit: (r) => presenter.markReceivableReceived(
+        receivable.id,
+        receivedAmount: r.amount,
+        accountId: r.accountId,
+        receivedDate: r.date,
+        recordInLedger: r.recordInLedger,
       ),
     );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-
-    // An account is only required when we're actually recording the receipt.
-    if (!alreadyInLedger && selectedAccountId == null) {
-      AppToast.error(context, 'Add an account before marking received.');
-      return;
-    }
+    if (result == null || !context.mounted) return;
 
     final accountName =
-        presenter.accountName(selectedAccountId) ?? 'your account';
-    try {
-      await presenter.markReceivableReceived(
-        receivable.id,
-        receivedAmount: receivable.amount,
-        accountId: alreadyInLedger ? null : selectedAccountId,
-        recordInLedger: !alreadyInLedger,
-      );
-    } catch (e) {
-      // Match the bill flow: surface the failure instead of discarding the
-      // Future, which would leave the receivable silently unreceived.
-      if (context.mounted) {
-        AppToast.error(
-            context, 'Could not mark "${receivable.name}" received: $e');
-      }
-      return;
-    }
-    if (!context.mounted) return;
+        presenter.accountName(result.accountId) ?? 'your account';
     AppToast.success(
       context,
-      alreadyInLedger
+      !result.recordInLedger
           ? 'Marked "${receivable.name}" received.'
-          : 'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.',
+          : 'Received ${formatPeso(result.amount)} for "${receivable.name}" into $accountName.',
     );
   }
 }
@@ -2003,87 +1958,47 @@ class _BudgetedExpenseRow extends StatelessWidget {
     // rather than auto-picking a savings account the user never named.
     String? toId = presenter.preferredSetAsideDestinationId(expense,
         fromAccountId: fromId);
-    // Null is a real answer here ("spend it"), so the decision is tracked apart
-    // from the value. Sentinel rather than null in the dropdown, for the same
-    // reason.
-    const spendIt = '__spend__';
-    var destinationChosen = toId != null;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) => AlertDialog(
-          title: const Text('Fund this set-aside?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Move ${formatPeso(expense.allocatedAmount)} for '
-                  '"${expense.name}" from one account into another. Setting money '
-                  'aside is recorded as a transfer, not spending.'),
-              const SizedBox(height: WebInsets.md),
-              DropdownButtonFormField<String>(
-                initialValue: fromId,
-                decoration: const InputDecoration(labelText: 'Fund from'),
-                items: [
-                  for (final a in payers)
-                    DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ],
-                onChanged: (v) => setLocalState(() {
-                  fromId = v;
-                  if (toId == fromId) toId = null; // can't transfer to itself
-                }),
-              ),
-              const SizedBox(height: WebInsets.md),
-              DropdownButtonFormField<String>(
-                initialValue: destinationChosen ? (toId ?? spendIt) : null,
-                decoration: const InputDecoration(
-                  labelText: 'Set aside into',
-                  hintText: 'Choose where it goes',
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                      value: spendIt, child: Text('Spend it (no transfer)')),
-                  for (final a in destinations)
-                    if (a.id != fromId)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ],
-                onChanged: (v) => setLocalState(() {
-                  toId = v == spendIt ? null : v;
-                  destinationChosen = true;
-                }),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            FilledButton(
-                // Where the money is going has to be settled before it moves.
-                onPressed:
-                    destinationChosen ? () => Navigator.pop(ctx, true) : null,
-                child: const Text('Fund')),
-          ],
-        ),
+    // Funding a sinking fund is rarely all-or-nothing — you put in what you can
+    // this month. The shared settle dialog supplies the editable amount and the
+    // date this flow never had; the destination picker rides along as its
+    // optional second dropdown, keeping "spend it" a deliberate choice.
+    final result = await showWebSettleDialog(
+      context,
+      title: 'Fund "${expense.name}"',
+      summary: 'Moves money from one account into another. Setting money aside '
+          'is recorded as a transfer, not spending. Adjust the amount to fund '
+          'part of it.',
+      confirmLabel: 'Fund',
+      initialAmount: expense.allocatedAmount,
+      amountLabel: 'Amount to set aside',
+      dateLabel: 'Date',
+      accounts: payers,
+      accountLabel: 'Fund from',
+      initialAccountId: fromId,
+      requiresAccount: true,
+      destination: WebSettleDestination(
+        options: destinations,
+        label: 'Set aside into',
+        initialId: toId,
+        initiallyChosen: toId != null,
+      ),
+      onSubmit: (r) => presenter.markExpensePaid(
+        expense.id,
+        paidAmount: r.amount,
+        accountId: r.accountId!,
+        toAccountId: r.destinationId,
+        paidDate: r.date,
       ),
     );
-    if (confirmed != true || fromId == null) return;
+    if (result == null || !context.mounted) return;
 
-    await presenter.markExpensePaid(
-      expense.id,
-      paidAmount: expense.allocatedAmount,
-      accountId: fromId!,
-      toAccountId: toId,
-    );
-    if (!context.mounted) return;
-    final fromName = presenter.accountName(fromId) ?? 'your account';
-    final toName = presenter.accountName(toId);
+    final fromName = presenter.accountName(result.accountId) ?? 'your account';
+    final toName = presenter.accountName(result.destinationId);
     AppToast.success(
       context,
       toName != null
-          ? 'Transferred ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName to $toName.'
-          : 'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName.',
+          ? 'Transferred ${formatPeso(result.amount)} for "${expense.name}" from $fromName to $toName.'
+          : 'Set aside ${formatPeso(result.amount)} for "${expense.name}" from $fromName.',
     );
   }
 }
@@ -2592,29 +2507,30 @@ class _InstallmentRow extends StatelessWidget {
   Future<void> _markPaid(BuildContext context) async {
     final accountName =
         presenter.accountName(installment.accountId) ?? 'the linked account';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mark installment as paid?'),
-        content: Text(
-            'Record this month\'s ${formatPeso(installment.monthlyAmount)} '
-            'payment for "${installment.name}" on $accountName?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Mark paid')),
-        ],
+    // The bare `markPaid(id)` this replaced took the monthly amount dated today
+    // and offered nothing else. An installment run can carry a catch-up month
+    // or a rounded final payment, both of which need the amount and the date.
+    // No account picker: an installment is always charged to its linked
+    // account, so there is nothing to choose.
+    final result = await showWebSettleDialog(
+      context,
+      title: 'Mark "${installment.name}" paid',
+      summary: 'Records this month\'s payment on $accountName.',
+      confirmLabel: 'Mark paid',
+      initialAmount: installment.monthlyAmount,
+      amountLabel: 'Amount paid',
+      dateLabel: 'Payment date',
+      scheduledNote: 'Monthly: ${formatPeso(installment.monthlyAmount)}',
+      onSubmit: (r) => presenter.markPaid(
+        installment.id,
+        overrideAmount: r.amount,
+        date: r.date,
       ),
     );
-    if (confirmed != true) return;
-    await presenter.markPaid(installment.id);
-    if (!context.mounted) return;
+    if (result == null || !context.mounted) return;
     AppToast.success(
       context,
-      'Recorded ${formatPeso(installment.monthlyAmount)} for "${installment.name}".',
+      'Recorded ${formatPeso(result.amount)} for "${installment.name}".',
     );
   }
 

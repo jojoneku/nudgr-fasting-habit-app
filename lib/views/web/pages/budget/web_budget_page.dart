@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
@@ -977,6 +978,11 @@ class _AddRowState extends State<_AddRow> {
       widget.presenter.expenseCategories.length,
       isExpense: true,
     );
+    // Starts on "Auto" (the name-derived glyph), which is exactly what the
+    // hard-coded key here used to produce — so the default is unchanged and
+    // picking a specific icon is now possible rather than mobile-only.
+    var iconKey = kAutoCategoryIconKey;
+
     FinanceCategory? build() {
       final name = nameCtrl.text.trim();
       if (name.isEmpty) return null;
@@ -984,38 +990,63 @@ class _AddRowState extends State<_AddRow> {
         id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
         name: name,
         type: CategoryType.expense,
-        icon: 'tag',
+        icon: iconKey,
         colorHex: colorHex,
       );
     }
 
     final cat = await showDialog<FinanceCategory>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New Expense Category'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'Category name'),
-          onSubmitted: (_) {
-            final c = build();
-            if (c != null) Navigator.pop(ctx, c);
-          },
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocalState) => AlertDialog(
+          title: const Text('New Expense Category'),
+          content: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              WebCategoryIconPreview(
+                iconKey: iconKey,
+                name: nameCtrl.text,
+                type: CategoryType.expense,
+                onTap: () async {
+                  final picked = await showWebCategoryIconPicker(ctx,
+                      current: iconKey);
+                  if (picked != null) setLocalState(() => iconKey = picked);
+                },
+              ),
+              const SizedBox(width: WebInsets.md),
+              Expanded(
+                child: TextField(
+                  controller: nameCtrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration:
+                      const InputDecoration(labelText: 'Category name'),
+                  // Rebuild so the auto-glyph preview tracks the typed name
+                  // live, the way the mobile add-form does.
+                  onChanged: (_) => setLocalState(() {}),
+                  onSubmitted: (_) {
+                    final c = build();
+                    if (c != null) Navigator.pop(ctx, c);
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final c = build();
+                if (c != null) Navigator.pop(ctx, c);
+              },
+              child: const Text('Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final c = build();
-              if (c != null) Navigator.pop(ctx, c);
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
     nameCtrl.dispose();
