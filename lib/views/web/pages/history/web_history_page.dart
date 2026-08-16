@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/history/monthly_summary_card.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_month_detail_dialog.dart';
 
@@ -178,12 +179,38 @@ class _HistoryBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        WebSectionHeader(
+        WebPageHeader(
           title: 'History',
           subtitle: closedCount == 0
               ? 'Live month so far · $spanLabel'
               : 'Last ${rows.length} months · $spanLabel',
         ),
+
+        // The phone opens History on the month you are actually in, before any
+        // aggregate over closed ones. Web led with five averages, so the
+        // running month — the only one you can still change — was buried in a
+        // table row. Same MonthlySummaryCard the phone renders.
+        // Section header + bare card, not a card inside a card: the phone puts
+        // "CURRENT MONTH · LIVE" in a section heading above the summary, and
+        // nesting it in a WebCard would put surfaceContainerLow on
+        // surfaceContainerLow — two fills that read as one box.
+        if (current != null) ...[
+          WebSectionHeader(
+            title: 'Current month',
+            subtitle: 'Still open — these numbers are still moving',
+            trailing: const WebBadge('Live', tone: WebBadgeTone.info),
+          ),
+          MonthlySummaryCard(
+            summary: current!,
+            isLive: true,
+            onTap: () => showWebMonthDetailDialog(
+              context,
+              summary: current!,
+              categories: categories,
+            ),
+          ),
+          const SizedBox(height: WebInsets.xl),
+        ],
 
         // ── Stat strip ─────────────────────────────────────────────────────
         _StatStrip(

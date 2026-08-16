@@ -126,7 +126,10 @@ class _BillsBody extends StatelessWidget {
     final comingUp = presenter.comingUpItems(installmentPresenter);
     if (comingUp.isNotEmpty) {
       children
-        ..add(_ComingUpCard(items: comingUp))
+        ..add(_ComingUpCard(
+          items: comingUp,
+          onTap: (item) => _openComingUpItem(context, item),
+        ))
         ..add(const SizedBox(height: WebInsets.xl));
     }
 
@@ -195,6 +198,35 @@ class _BillsBody extends StatelessWidget {
       context: context,
       builder: (_) => _AddBillDialog(presenter: presenter),
     );
+  }
+
+  /// Routes a "Coming up" row to the dialog for its own kind, resolved off
+  /// [ComingUpItem.source].
+  ///
+  /// Deliberately different from the phone, which opens the *settle* sheet
+  /// here. Web's settle flows other than a bill's still live inside their row
+  /// widgets, and lifting three money-moving flows out of a 3k-line file to
+  /// match a tap target is a change that deserves its own diff. Opening the
+  /// item's editor is the same destination reachable from the sections below,
+  /// so a tap is never a dead end.
+  void _openComingUpItem(BuildContext context, ComingUpItem item) {
+    final source = item.source;
+    Widget? dialog;
+    if (source is Bill) {
+      dialog = _AddBillDialog(presenter: presenter, existing: source);
+    } else if (source is Receivable) {
+      dialog = _ReceivableDialog(presenter: presenter, existing: source);
+    } else if (source is BudgetedExpense) {
+      dialog = _BudgetedExpenseDialog(presenter: presenter, existing: source);
+    } else if (source is Installment) {
+      dialog =
+          _InstallmentDialog(presenter: installmentPresenter, existing: source);
+    }
+    if (dialog == null) return;
+    // Bound to a final so the builder closure captures a non-nullable Widget —
+    // promotion of `dialog` doesn't reach inside the closure.
+    final resolved = dialog;
+    showDialog<void>(context: context, builder: (_) => resolved);
   }
 }
 
@@ -312,8 +344,9 @@ class _DueSoonRow extends StatelessWidget {
 /// it identically.
 class _ComingUpCard extends StatelessWidget {
   final List<ComingUpItem> items;
+  final void Function(ComingUpItem) onTap;
 
-  const _ComingUpCard({required this.items});
+  const _ComingUpCard({required this.items, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -321,7 +354,7 @@ class _ComingUpCard extends StatelessWidget {
       title: 'Coming up',
       description: 'Next ${items.length} across bills, receivables, '
           'set-asides and installments',
-      child: ComingUpTimeline(items: items),
+      child: ComingUpTimeline(items: items, onTap: onTap),
     );
   }
 }
