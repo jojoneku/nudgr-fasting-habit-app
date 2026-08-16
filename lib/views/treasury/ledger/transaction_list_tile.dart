@@ -75,6 +75,10 @@ class TransactionListTile extends StatelessWidget {
       label: '${txn.description}, $_amountText, $accountLabel',
       child: AppListTile(
         key: key,
+        // Each row is its own card: a lighter grey fill on the darker screen
+        // background, so a day's transactions read as a stack of items rather
+        // than as text on the page.
+        cardColor: cs.surfaceContainerLow,
         leading: isTransfer
             ? AppIconBadge(
                 icon: Icons.swap_horiz_rounded,

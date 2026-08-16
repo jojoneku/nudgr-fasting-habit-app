@@ -27,6 +27,20 @@ class DueSoonStack extends StatefulWidget {
   State<DueSoonStack> createState() => _DueSoonStackState();
 }
 
+/// "{Category} · due {Mmm d}" — the line under a due-soon hero's bill name.
+/// Top-level so the desktop Bills page composes the identical subtitle instead
+/// of re-deriving one that drifts from the phone's.
+String dueSoonSubtitle(BillsReceivablesPresenter presenter, Bill bill) {
+  final categoryName = presenter.categories
+      .where((c) => c.id == bill.categoryId)
+      .firstOrNull
+      ?.name;
+  return [
+    if (categoryName != null && categoryName.isNotEmpty) categoryName,
+    'due ${DateFormat('MMM d').format(presenter.billDueDate(bill))}',
+  ].join(' · ');
+}
+
 class _DueSoonStackState extends State<DueSoonStack> {
   // Full-width pages so the hero card fills the available content width (the
   // list already insets 16px each side). The stacked-deck plates + page dots
@@ -38,17 +52,6 @@ class _DueSoonStackState extends State<DueSoonStack> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  String _subtitle(Bill bill) {
-    final categoryName = widget.presenter.categories
-        .where((c) => c.id == bill.categoryId)
-        .firstOrNull
-        ?.name;
-    return [
-      if (categoryName != null && categoryName.isNotEmpty) categoryName,
-      'due ${DateFormat('MMM d').format(widget.presenter.billDueDate(bill))}',
-    ].join(' · ');
   }
 
   @override
@@ -80,7 +83,7 @@ class _DueSoonStackState extends State<DueSoonStack> {
                     billName: bill.name,
                     amount: bill.amount,
                     dueLabel: due.label,
-                    subtitle: _subtitle(bill),
+                    subtitle: dueSoonSubtitle(widget.presenter, bill),
                     overdue: due.overdue,
                     onMarkPaid: () => widget.onMarkPaid(bill),
                     onEdit: () => widget.onEdit(bill),

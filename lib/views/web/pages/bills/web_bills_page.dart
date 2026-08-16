@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
@@ -10,8 +11,13 @@ import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
+import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
+import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
@@ -89,7 +95,21 @@ class _BillsBody extends StatelessWidget {
             presenter.setMonth(nextMonth(presenter.selectedMonth)),
       ),
       const SizedBox(height: WebInsets.xl),
-      _StatStrip(
+    ];
+
+    // The move the web page was missing: lead with what is about to come due,
+    // not with a row of totals. Same DueSoonHero the phone renders — mobile
+    // swipes a PageView through them, desktop has the width to show them at
+    // once, so the deck becomes a row.
+    final imminent = presenter.imminentUnpaidBills;
+    if (imminent.isNotEmpty) {
+      children
+        ..add(_DueSoonRow(presenter: presenter, bills: imminent))
+        ..add(const SizedBox(height: WebInsets.xl));
+    }
+
+    children
+      ..add(_StatStrip(
         dueTotal: dueTotal,
         paidTotal: paidTotal,
         monthTotal: monthTotal,
@@ -97,9 +117,21 @@ class _BillsBody extends StatelessWidget {
         unpaidCount: unpaid.length,
         paidCount: paid.length,
         receivableCount: pendingReceivables.length,
-      ),
-      const SizedBox(height: WebInsets.xl),
-    ];
+      ))
+      ..add(const SizedBox(height: WebInsets.xl));
+
+    // "Coming up" — every obligation type on one timeline, the way the phone
+    // shows it. Web had no equivalent: bills, receivables, set-asides and
+    // installments were four separate cards you had to merge in your head.
+    final comingUp = presenter.comingUpItems(installmentPresenter);
+    if (comingUp.isNotEmpty) {
+      children
+        ..add(_ComingUpCard(
+          items: comingUp,
+          onTap: (item) => _openComingUpItem(context, item),
+        ))
+        ..add(const SizedBox(height: WebInsets.xl));
+    }
 
     final creditCards = presenter.creditAccounts;
     final upcomingCard = _UpcomingCard(
@@ -167,6 +199,35 @@ class _BillsBody extends StatelessWidget {
       builder: (_) => _AddBillDialog(presenter: presenter),
     );
   }
+
+  /// Routes a "Coming up" row to the dialog for its own kind, resolved off
+  /// [ComingUpItem.source].
+  ///
+  /// Deliberately different from the phone, which opens the *settle* sheet
+  /// here. Web's settle flows other than a bill's still live inside their row
+  /// widgets, and lifting three money-moving flows out of a 3k-line file to
+  /// match a tap target is a change that deserves its own diff. Opening the
+  /// item's editor is the same destination reachable from the sections below,
+  /// so a tap is never a dead end.
+  void _openComingUpItem(BuildContext context, ComingUpItem item) {
+    final source = item.source;
+    Widget? dialog;
+    if (source is Bill) {
+      dialog = _AddBillDialog(presenter: presenter, existing: source);
+    } else if (source is Receivable) {
+      dialog = _ReceivableDialog(presenter: presenter, existing: source);
+    } else if (source is BudgetedExpense) {
+      dialog = _BudgetedExpenseDialog(presenter: presenter, existing: source);
+    } else if (source is Installment) {
+      dialog =
+          _InstallmentDialog(presenter: installmentPresenter, existing: source);
+    }
+    if (dialog == null) return;
+    // Bound to a final so the builder closure captures a non-nullable Widget —
+    // promotion of `dialog` doesn't reach inside the closure.
+    final resolved = dialog;
+    showDialog<void>(context: context, builder: (_) => resolved);
+  }
 }
 
 /// Places two cards side by side on wide viewports and stacks them (left above
@@ -208,6 +269,92 @@ class _SideBySideCards extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Due-soon heroes ──────────────────────────────────────────────────────────
+
+/// The phone's swipeable due-soon deck, re-proportioned for a desktop page: the
+/// same [DueSoonHero] cards laid out side by side (two per row on a wide page,
+/// one when narrow) instead of stacked behind a PageView. Swiping is a phone
+/// affordance; on a monitor there is simply room to show them.
+///
+/// Reuses the mobile widget rather than a lookalike, so the gradient, the
+/// overdue escalation, and the Mark-paid button can never drift between the two
+/// surfaces. Actions route to the same dialogs the bill rows below use.
+class _DueSoonRow extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final List<Bill> bills;
+
+  const _DueSoonRow({required this.presenter, required this.bills});
+
+  /// Below this width two heroes side by side would each be too cramped for the
+  /// amount and the Mark-paid button to sit on one line.
+  static const double _twoUpMin = 860;
+
+  /// Beyond this many cards the row stops being a glance and starts being the
+  /// list that already follows it. Nothing is lost by the cap — every bill
+  /// beyond it is still in the Upcoming card further down the page.
+  static const int _maxHeroes = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = bills.take(_maxHeroes).toList();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cols = constraints.maxWidth >= _twoUpMin ? 2 : 1;
+        const gap = WebInsets.xl;
+        final width = (constraints.maxWidth - gap * (cols - 1)) / cols;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final bill in shown)
+              SizedBox(width: width, child: _hero(context, bill)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _hero(BuildContext context, Bill bill) {
+    final due = presenter.billDueInfo(bill);
+    return DueSoonHero(
+      billName: bill.name,
+      amount: bill.amount,
+      dueLabel: due.label,
+      subtitle: dueSoonSubtitle(presenter, bill),
+      overdue: due.overdue,
+      onMarkPaid: () => _markBillPaidFlow(context, presenter, bill),
+      onEdit: () => showDialog<void>(
+        context: context,
+        builder: (_) => _AddBillDialog(presenter: presenter, existing: bill),
+      ),
+    );
+  }
+}
+
+// ─── Coming up ────────────────────────────────────────────────────────────────
+
+/// The unified "Coming up" timeline, in a web card. The timeline itself is the
+/// phone's [ComingUpTimeline] — the merged bill/receivable/set-aside/installment
+/// list comes ready-made from the presenter, so both surfaces order and colour
+/// it identically.
+class _ComingUpCard extends StatelessWidget {
+  final List<ComingUpItem> items;
+  final void Function(ComingUpItem) onTap;
+
+  const _ComingUpCard({required this.items, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return WebCard(
+      title: 'Coming up',
+      description: 'Next ${items.length} across bills, receivables, '
+          'set-asides and installments',
+      child: ComingUpTimeline(items: items, onTap: onTap),
     );
   }
 }
@@ -852,8 +999,11 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WebSectionHeader(
-      title: 'Bills & Receivables',
+    // "Bills", not "Bills & Receivables": the phone names the screen in one
+    // word and lets the sections say what's in it. The month control sits on
+    // the title's line, as it does on mobile.
+    return WebPageHeader(
+      title: 'Bills',
       subtitle: subtitle,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1097,6 +1247,11 @@ class _BillRow extends StatelessWidget {
             onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
           ),
           const SizedBox(width: WebInsets.md),
+          // The colour-tinted category badge is what carries a row's identity
+          // on every mobile Treasury list; web rows were anonymous text. Same
+          // widget, same palette slot, so a category looks the same on both.
+          _billBadge(context),
+          const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1197,111 +1352,153 @@ class _BillRow extends StatelessWidget {
     return match.isEmpty ? null : match.first.name;
   }
 
-  Future<void> _markPaid(BuildContext context) async {
-    // Eligible funding accounts. payerAccountsFor excludes the liability itself
-    // for a credit-card / credit-line / BNPL statement bill (you can't pay a
-    // statement from the account it belongs to — markBillPaid throws for that),
-    // which the old code hit by defaulting to bill.accountId. Restrict to
-    // active liquid accounts as the fundable set.
-    final payers = presenter
-        .payerAccountsFor(bill)
-        .where((a) => a.isActive && a.isLiquid)
-        .toList();
+  Future<void> _markPaid(BuildContext context) =>
+      _markBillPaidFlow(context, presenter, bill);
 
-    // Marking paid moves real money out of an account and can't be undone in
-    // one click — confirm, let the user pick which account is debited, and
-    // default to the account set on the bill when it's a valid payer, falling
-    // back to the first eligible one. (Plan 052 U1/U2) Preferring bill.accountId
-    // is safe here because payerAccountsFor already drops the liability itself
-    // for credit-card/BNPL statement bills, so it can never re-select it. The
-    // "already in ledger" toggle skips recording entirely for manual expenses.
-    var alreadyInLedger = false;
-    String? selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
-    if (bill.accountId != null && payers.any((a) => a.id == bill.accountId)) {
-      selectedAccountId = bill.accountId;
-    }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) => AlertDialog(
-          title: const Text('Mark bill as paid?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(alreadyInLedger
-                  ? 'Mark "${bill.name}" (${formatPeso(bill.amount)}) as paid '
-                      'without recording a transaction.'
-                  : 'Pay ${formatPeso(bill.amount)} for "${bill.name}". '
-                      'This debits the selected account.'),
-              if (!alreadyInLedger) ...[
-                const SizedBox(height: WebInsets.md),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Pay from'),
-                  items: [
-                    for (final a in payers)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                  ],
-                  onChanged: (v) => setLocalState(() => selectedAccountId = v),
-                ),
-              ],
-              const SizedBox(height: 4),
-              CheckboxListTile(
-                value: alreadyInLedger,
-                onChanged: (v) =>
-                    setLocalState(() => alreadyInLedger = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Already added to ledger'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Mark paid')),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true) return;
-    if (!context.mounted) return;
-
-    // An account is only required when we're actually recording the payment.
-    if (!alreadyInLedger && selectedAccountId == null) {
-      AppToast.error(context, 'Add a funding account before marking paid.');
-      return;
-    }
-
-    try {
-      await presenter.markBillPaid(
-        bill.id,
-        paidAmount: bill.amount,
-        accountId: alreadyInLedger ? null : selectedAccountId,
-        recordInLedger: !alreadyInLedger,
-      );
-    } catch (e) {
-      // Surface the failure instead of discarding the Future — a rejected
-      // payer (or any error) would otherwise leave the bill silently unpaid.
-      if (context.mounted) {
-        AppToast.error(context, 'Could not mark "${bill.name}" paid: $e');
-      }
-      return;
-    }
-    if (!context.mounted) return;
-    final payerName = _accountName(selectedAccountId) ?? 'your account';
-    AppToast.success(
-      context,
-      alreadyInLedger
-          ? 'Marked "${bill.name}" paid.'
-          : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.',
+  /// The row's leading category badge, resolved exactly as the mobile Bills tab
+  /// resolves it: the category's palette slot for the tint (so the same
+  /// category is the same colour on both surfaces) and the bills accent as the
+  /// fallback for an uncategorised bill.
+  Widget _billBadge(BuildContext context) {
+    final category = presenter.categoryById(bill.categoryId);
+    final color = category != null
+        ? resolveSliceColor(
+            category.colorHex,
+            presenter.categoryPaletteSlot(bill.categoryId),
+            brightness: Theme.of(context).brightness,
+          )
+        : context.appColors.bills;
+    return CategoryBadge(
+      iconKey: category?.icon,
+      name: category?.name,
+      type: category?.type ?? CategoryType.expense,
+      color: color,
+      size: 34,
+      iconSize: 17,
     );
   }
+}
+
+/// The web mark-a-bill-paid flow: confirm, pick the funding account, then hand
+/// off to [BillsReceivablesPresenter.markBillPaid]. Top-level because two
+/// surfaces drive it — the bill row's checkbox and the due-soon hero's
+/// "Mark paid" button — and a second copy would be a second set of rules for
+/// which accounts may fund a statement.
+Future<void> _markBillPaidFlow(
+  BuildContext context,
+  BillsReceivablesPresenter presenter,
+  Bill bill,
+) async {
+  // Eligible funding accounts. payerAccountsFor excludes the liability itself
+  // for a credit-card / credit-line / BNPL statement bill (you can't pay a
+  // statement from the account it belongs to — markBillPaid throws for that),
+  // which the old code hit by defaulting to bill.accountId. Restrict to
+  // active liquid accounts as the fundable set.
+  final payers = presenter
+      .payerAccountsFor(bill)
+      .where((a) => a.isActive && a.isLiquid)
+      .toList();
+
+  // Marking paid moves real money out of an account and can't be undone in
+  // one click — confirm, let the user pick which account is debited, and
+  // default to the account set on the bill when it's a valid payer, falling
+  // back to the first eligible one. (Plan 052 U1/U2) Preferring bill.accountId
+  // is safe here because payerAccountsFor already drops the liability itself
+  // for credit-card/BNPL statement bills, so it can never re-select it. The
+  // "already in ledger" toggle skips recording entirely for manual expenses.
+  var alreadyInLedger = false;
+  String? selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
+  if (bill.accountId != null && payers.any((a) => a.id == bill.accountId)) {
+    selectedAccountId = bill.accountId;
+  }
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setLocalState) => AlertDialog(
+        title: const Text('Mark bill as paid?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(alreadyInLedger
+                ? 'Mark "${bill.name}" (${formatPeso(bill.amount)}) as paid '
+                    'without recording a transaction.'
+                : 'Pay ${formatPeso(bill.amount)} for "${bill.name}". '
+                    'This debits the selected account.'),
+            if (!alreadyInLedger) ...[
+              const SizedBox(height: WebInsets.md),
+              DropdownButtonFormField<String>(
+                initialValue: selectedAccountId,
+                decoration: const InputDecoration(labelText: 'Pay from'),
+                items: [
+                  for (final a in payers)
+                    DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setLocalState(() => selectedAccountId = v),
+              ),
+            ],
+            const SizedBox(height: 4),
+            CheckboxListTile(
+              value: alreadyInLedger,
+              onChanged: (v) =>
+                  setLocalState(() => alreadyInLedger = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Already added to ledger'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Mark paid')),
+        ],
+      ),
+    ),
+  );
+  if (confirmed != true) return;
+  if (!context.mounted) return;
+
+  // An account is only required when we're actually recording the payment.
+  if (!alreadyInLedger && selectedAccountId == null) {
+    AppToast.error(context, 'Add a funding account before marking paid.');
+    return;
+  }
+
+  try {
+    await presenter.markBillPaid(
+      bill.id,
+      paidAmount: bill.amount,
+      accountId: alreadyInLedger ? null : selectedAccountId,
+      recordInLedger: !alreadyInLedger,
+    );
+  } catch (e) {
+    // Surface the failure instead of discarding the Future — a rejected
+    // payer (or any error) would otherwise leave the bill silently unpaid.
+    if (context.mounted) {
+      AppToast.error(context, 'Could not mark "${bill.name}" paid: $e');
+    }
+    return;
+  }
+  if (!context.mounted) return;
+  final payerName =
+      _lookupAccountName(presenter, selectedAccountId) ?? 'your account';
+  AppToast.success(
+    context,
+    alreadyInLedger
+        ? 'Marked "${bill.name}" paid.'
+        : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.',
+  );
+}
+
+String? _lookupAccountName(
+    BillsReceivablesPresenter presenter, String? accountId) {
+  final match = presenter.accounts.where((a) => a.id == accountId).toList();
+  return match.isEmpty ? null : match.first.name;
 }
 
 // ─── Receivables card ─────────────────────────────────────────────────────────

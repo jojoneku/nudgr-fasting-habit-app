@@ -1265,9 +1265,9 @@ Widget _buildTxnTile(
       ? null
       : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
           brightness: Theme.of(context).brightness);
-  // Reference "no background" rows: no per-row card fill — rows sit directly on
-  // the screen background, separated only by the list tile's own padding. Swipe
-  // -to-delete + undo is preserved by TransactionListTile's onDelete.
+  // Each row carries its own lighter-grey card fill (see TransactionListTile),
+  // so a day's transactions read as a stack of items rather than text on the
+  // page. Swipe-to-delete + undo is preserved by TransactionListTile's onDelete.
   return TransactionListTile(
     key: ValueKey(txn.id),
     txn: txn,
