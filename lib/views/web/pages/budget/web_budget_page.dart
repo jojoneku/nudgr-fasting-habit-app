@@ -1009,8 +1009,8 @@ class _AddRowState extends State<_AddRow> {
                 name: nameCtrl.text,
                 type: CategoryType.expense,
                 onTap: () async {
-                  final picked = await showWebCategoryIconPicker(ctx,
-                      current: iconKey);
+                  final picked =
+                      await showWebCategoryIconPicker(ctx, current: iconKey);
                   if (picked != null) setLocalState(() => iconKey = picked);
                 },
               ),
@@ -1020,8 +1020,7 @@ class _AddRowState extends State<_AddRow> {
                   controller: nameCtrl,
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
-                  decoration:
-                      const InputDecoration(labelText: 'Category name'),
+                  decoration: const InputDecoration(labelText: 'Category name'),
                   // Rebuild so the auto-glyph preview tracks the typed name
                   // live, the way the mobile add-form does.
                   onChanged: (_) => setLocalState(() {}),

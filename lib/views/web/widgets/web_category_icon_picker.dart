@@ -125,8 +125,7 @@ class _IconChoice extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 22, color: selected ? cs.primary : cs.onSurface),
+            Icon(icon, size: 22, color: selected ? cs.primary : cs.onSurface),
             if (label != null) ...[
               const SizedBox(width: WebInsets.sm),
               Text(

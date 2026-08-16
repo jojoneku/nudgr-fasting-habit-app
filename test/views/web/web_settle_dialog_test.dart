@@ -227,8 +227,8 @@ void main() {
         requiresAccount: true,
       );
 
-      final button = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Mark paid'));
+      final button = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Mark paid'));
       expect(button.onPressed, isNull);
     });
   });
@@ -291,8 +291,8 @@ void main() {
       );
 
       // Nothing on file — where the money goes must be answered first.
-      final blocked = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Mark paid'));
+      final blocked = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Mark paid'));
       expect(blocked.onPressed, isNull);
 
       await tester.tap(destinationDropdown());
@@ -300,8 +300,8 @@ void main() {
       await tester.tap(find.text('Savings').last);
       await tester.pumpAndSettle();
 
-      final unblocked = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Mark paid'));
+      final unblocked = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Mark paid'));
       expect(unblocked.onPressed, isNotNull);
     });
 
@@ -370,8 +370,8 @@ void main() {
         ),
       );
 
-      final button = tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Mark paid'));
+      final button = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Mark paid'));
       expect(button.onPressed, isNull);
     });
   });

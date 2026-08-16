@@ -98,8 +98,10 @@ class _WebBatchSettleDialogState extends State<_WebBatchSettleDialog> {
 
   bool get _needsDestination => _isSetAside && _unnamedDestinations > 0;
 
-  List<FinancialAccount> get _destinationOptions =>
-      [for (final a in widget.destinations) if (a.id != _accountId) a];
+  List<FinancialAccount> get _destinationOptions => [
+        for (final a in widget.destinations)
+          if (a.id != _accountId) a
+      ];
 
   @override
   void initState() {
@@ -260,10 +262,10 @@ class _WebBatchSettleDialogState extends State<_WebBatchSettleDialog> {
                         ? (_toAccountId ?? _spendItSentinel)
                         : null,
                     decoration: InputDecoration(
-                      labelText:
-                          widget.savedDestinationCount > 0 && _useSavedDestinations
-                              ? 'Set the other $_unnamedDestinations aside into'
-                              : 'Set aside into',
+                      labelText: widget.savedDestinationCount > 0 &&
+                              _useSavedDestinations
+                          ? 'Set the other $_unnamedDestinations aside into'
+                          : 'Set aside into',
                       hintText: 'Choose where it goes',
                     ),
                     items: [

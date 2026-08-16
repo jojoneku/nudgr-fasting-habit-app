@@ -223,7 +223,8 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
   /// Destinations minus the funding account — money can't be transferred into
   /// the account it just left.
   List<FinancialAccount> get _destinationOptions => [
-        for (final a in widget.destination?.options ?? const <FinancialAccount>[])
+        for (final a
+            in widget.destination?.options ?? const <FinancialAccount>[])
           if (a.id != _accountId) a,
       ];
 
@@ -256,7 +257,8 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final amount = double.parse(_amountController.text.replaceAll(',', '').trim());
+    final amount =
+        double.parse(_amountController.text.replaceAll(',', '').trim());
     final recordInLedger = _recordsInLedger;
     final result = WebSettleResult(
       amount: amount,
@@ -276,7 +278,8 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
       // leave the entry silently un-settled with nothing on screen to say so.
       if (mounted) {
         setState(() => _isSubmitting = false);
-        AppToast.error(context, 'Could not ${widget.confirmLabel.toLowerCase()}: $e');
+        AppToast.error(
+            context, 'Could not ${widget.confirmLabel.toLowerCase()}: $e');
       }
     }
   }
@@ -308,7 +311,8 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
               TextFormField(
                 controller: _amountController,
                 autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
                   labelText: widget.amountLabel,
                   prefixText: '₱ ',

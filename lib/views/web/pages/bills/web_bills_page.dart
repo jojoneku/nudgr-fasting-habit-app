@@ -198,7 +198,9 @@ class _BillsBodyState extends State<_BillsBody> {
     // Select-all covers every row of the section, in display order — including
     // the paid bills, which live in their own card further down but are the
     // same selection (that is what makes batch-undo reachable).
-    final billIds = [for (final b in [...unpaid, ...paid]) b.id];
+    final billIds = [
+      for (final b in [...unpaid, ...paid]) b.id
+    ];
     final receivableIds = [for (final r in receivables) r.id];
     final expenseIds = [for (final e in presenter.budgetedExpenses) e.id];
     final installmentIds = [
@@ -309,10 +311,10 @@ class _BillsBodyState extends State<_BillsBody> {
       .where((e) => _selectedIds.contains(e.id))
       .toList();
 
-  List<Installment> get _selectedInstallments => installmentPresenter
-      .dueThisMonth
-      .where((i) => _selectedIds.contains(i.id))
-      .toList();
+  List<Installment> get _selectedInstallments =>
+      installmentPresenter.dueThisMonth
+          .where((i) => _selectedIds.contains(i.id))
+          .toList();
 
   /// What the action bar needs: how many picked rows can still be settled, how
   /// many can be reversed, and the settle verb. Computed here so `build` stays
@@ -527,8 +529,7 @@ class _BillsBodyState extends State<_BillsBody> {
               title: 'Undo ${targets.length} receipts?',
               name: _batchName(targets.length, 'receivable'),
               entryLabel: 'receivable',
-              hasLedgerEntry:
-                  targets.any(presenter.receivableHasLedgerEntry),
+              hasLedgerEntry: targets.any(presenter.receivableHasLedgerEntry),
               ledgerEffect:
                   '${formatPeso(targets.fold(0.0, (s, r) => s + (r.receivedAmount ?? r.amount)))} '
                   'is taken back out of the accounts it was deposited into.',
@@ -608,8 +609,7 @@ class _BillsBodyState extends State<_BillsBody> {
         final deleted = switch (section) {
           _BatchSection.bills => await presenter.deleteBills(ids),
           _BatchSection.receivables => await presenter.deleteReceivables(ids),
-          _BatchSection.budgeted =>
-            await presenter.deleteBudgetedExpenses(ids),
+          _BatchSection.budgeted => await presenter.deleteBudgetedExpenses(ids),
           _BatchSection.installments =>
             await installmentPresenter.deleteInstallments(ids),
         };
@@ -622,8 +622,7 @@ String _plural(int n, String singular) => n == 1 ? singular : '${singular}s';
 
 /// Stand-in name for a multi-row undo dialog, which asks about a group rather
 /// than a named entry.
-String _batchName(int n, String singular) =>
-    '$n ${_plural(n, singular)}';
+String _batchName(int n, String singular) => '$n ${_plural(n, singular)}';
 
 /// Places two cards side by side on wide viewports and stacks them (left above
 /// right) once the page gets too narrow for two readable columns. On wide

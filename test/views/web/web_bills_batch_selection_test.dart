@@ -146,10 +146,12 @@ void main() {
   /// The "Select" button belonging to the section whose card carries [label].
   /// Each card has its own, so they have to be told apart by ancestor.
   Finder selectButtonNear(String cardTitle) => find.descendant(
-        of: find.ancestor(
-          of: find.text(cardTitle),
-          matching: find.byType(Row),
-        ).first,
+        of: find
+            .ancestor(
+              of: find.text(cardTitle),
+              matching: find.byType(Row),
+            )
+            .first,
         matching: find.widgetWithText(TextButton, 'Select'),
       );
 
@@ -219,8 +221,7 @@ void main() {
       await pumpPage(tester, bills, installments);
 
       final receivablesSelect = selectButtonNear('Receivables');
-      expect(
-          tester.widget<TextButton>(receivablesSelect).onPressed, isNotNull);
+      expect(tester.widget<TextButton>(receivablesSelect).onPressed, isNotNull);
 
       await tester.tap(find.text('Select').first); // bills
       await tester.pumpAndSettle();
@@ -301,10 +302,12 @@ void main() {
       expect(find.text('Fund 2 set-asides'), findsOneWidget);
       // Neither names a destination, so the shared one must be answered. The
       // second dropdown is "Set aside into" (the first is "Fund from").
-      await tester.tap(find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(DropdownButtonFormField<String>),
-      ).last);
+      await tester.tap(find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(DropdownButtonFormField<String>),
+          )
+          .last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Spend it (no transfer)').last);
       await tester.pumpAndSettle();

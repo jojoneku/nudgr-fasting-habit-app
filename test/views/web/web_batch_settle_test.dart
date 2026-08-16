@@ -144,8 +144,8 @@ void main() {
 
       // None of the three name a destination, so the shared one must be
       // answered before money moves.
-      final blocked =
-          tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
+      final blocked = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
       expect(blocked.onPressed, isNull);
 
       await tester.tap(find.byType(DropdownButtonFormField<String>).last);
@@ -173,8 +173,8 @@ void main() {
       // All three already know where they go, so nothing is left to ask and
       // Fund is live immediately.
       expect(find.text('3 of 3 have their own destination'), findsOneWidget);
-      final button =
-          tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
+      final button = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
       expect(button.onPressed, isNotNull);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Fund 3'));
@@ -198,8 +198,8 @@ void main() {
       await tester.tap(find.byType(Checkbox));
       await tester.pumpAndSettle();
 
-      final blocked =
-          tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
+      final blocked = tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
       expect(blocked.onPressed, isNull);
       expect(find.text('Set aside into'), findsOneWidget);
     });
@@ -271,12 +271,15 @@ void main() {
 
       // Visible so the bar doesn't reflow as the selection changes, but inert.
       expect(
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Pay 0')).onPressed,
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Pay 0'))
+            .onPressed,
         isNull,
       );
       expect(
         tester
-            .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Undo 0'))
+            .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Undo 0'))
             .onPressed,
         isNull,
       );
@@ -287,12 +290,15 @@ void main() {
       await tester.pumpWidget(bar(enabled: false));
 
       expect(
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Pay 2')).onPressed,
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Pay 2'))
+            .onPressed,
         isNull,
       );
       expect(
         tester
-            .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Delete 3'))
+            .widget<OutlinedButton>(
+                find.widgetWithText(OutlinedButton, 'Delete 3'))
             .onPressed,
         isNull,
       );
@@ -329,7 +335,9 @@ void main() {
 
       // Disabled rather than hidden: it explains why this section went quiet.
       expect(
-        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Select')).onPressed,
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Select'))
+            .onPressed,
         isNull,
       );
     });
@@ -337,7 +345,9 @@ void main() {
     testWidgets('is disabled when the section has no rows', (tester) async {
       await tester.pumpWidget(control(total: 0));
       expect(
-        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Select')).onPressed,
+        tester
+            .widget<TextButton>(find.widgetWithText(TextButton, 'Select'))
+            .onPressed,
         isNull,
       );
     });
