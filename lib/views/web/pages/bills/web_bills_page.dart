@@ -13,6 +13,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
@@ -53,7 +54,12 @@ class WebBillsPage extends StatelessWidget {
 
 // ─── Body ─────────────────────────────────────────────────────────────────────
 
-class _BillsBody extends StatelessWidget {
+/// Which list a running batch selection belongs to. Only one section can be
+/// selecting at a time — a batch settles through one account on one date, and a
+/// selection spanning bills *and* receivables has no single meaning.
+enum _BatchSection { bills, receivables, budgeted, installments }
+
+class _BillsBody extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final InstallmentPresenter installmentPresenter;
 
@@ -61,6 +67,90 @@ class _BillsBody extends StatelessWidget {
     required this.presenter,
     required this.installmentPresenter,
   });
+
+  @override
+  State<_BillsBody> createState() => _BillsBodyState();
+}
+
+class _BillsBodyState extends State<_BillsBody> {
+  /// The section currently selecting, or null when not in selection mode.
+  _BatchSection? _section;
+
+  /// Ids picked in [_section].
+  final Set<String> _selectedIds = {};
+
+  /// True while a batch is in flight, so a second click can't fire it twice.
+  bool _busy = false;
+
+  BillsReceivablesPresenter get presenter => widget.presenter;
+  InstallmentPresenter get installmentPresenter => widget.installmentPresenter;
+
+  bool _picking(_BatchSection section) => _section == section;
+  bool _locked(_BatchSection section) =>
+      _section != null && _section != section;
+
+  void _start(_BatchSection section) => setState(() {
+        _section = section;
+        _selectedIds.clear();
+      });
+
+  void _exitSelection() => setState(() {
+        _section = null;
+        _selectedIds.clear();
+      });
+
+  void _toggle(String id) => setState(() {
+        if (!_selectedIds.remove(id)) _selectedIds.add(id);
+        // Emptying the selection leaves selection mode, same as mobile — an
+        // empty batch bar has nothing to offer.
+        if (_selectedIds.isEmpty) _section = null;
+      });
+
+  void _toggleAll(List<String> ids) => setState(() {
+        final all = ids.isNotEmpty && ids.every(_selectedIds.contains);
+        _selectedIds.clear();
+        if (!all) _selectedIds.addAll(ids);
+        if (_selectedIds.isEmpty) _section = null;
+      });
+
+  /// How [id] participates in the selection, or null when [section] isn't the
+  /// one selecting — which is what makes a row render normally.
+  WebRowSelection? _selectionFor(_BatchSection section, String id) {
+    if (!_picking(section)) return null;
+    return WebRowSelection(
+      active: true,
+      selected: _selectedIds.contains(id),
+      onToggle: () => _toggle(id),
+    );
+  }
+
+  /// The per-card "Select" / count / select-all control.
+  Widget _selectControl(_BatchSection section, List<String> ids) =>
+      WebBatchSelectControl(
+        active: _picking(section),
+        locked: _locked(section),
+        selectedCount: _selectedIds.length,
+        totalCount: ids.length,
+        onStart: () => _start(section),
+        onCancel: _exitSelection,
+        onToggleAll: () => _toggleAll(ids),
+      );
+
+  /// The action bar under a selecting card, or null when it isn't selecting.
+  Widget? _batchBar(_BatchSection section) {
+    if (!_picking(section)) return null;
+    final status = _batchStatus(section);
+    return WebBatchBar(
+      settleVerb: status.verb,
+      selectedCount: _selectedIds.length,
+      settleableCount: status.settleable,
+      undoableCount: status.undoable,
+      enabled: !_busy,
+      onSettle: _batchSettle,
+      onUndo: _batchUndo,
+      onDelete: _batchDelete,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,20 +195,39 @@ class _BillsBody extends StatelessWidget {
       const SizedBox(height: WebInsets.xl),
     ];
 
+    // Select-all covers every row of the section, in display order — including
+    // the paid bills, which live in their own card further down but are the
+    // same selection (that is what makes batch-undo reachable).
+    final billIds = [for (final b in [...unpaid, ...paid]) b.id];
+    final receivableIds = [for (final r in receivables) r.id];
+    final expenseIds = [for (final e in presenter.budgetedExpenses) e.id];
+    final installmentIds = [
+      for (final i in installmentPresenter.dueThisMonth) i.id
+    ];
+
     final creditCards = presenter.creditAccounts;
     final upcomingCard = _UpcomingCard(
       presenter: presenter,
       unpaid: unpaid,
       dueTotal: dueTotal,
+      batchControl: _selectControl(_BatchSection.bills, billIds),
+      batchBar: _batchBar(_BatchSection.bills),
+      selectionOf: (id) => _selectionFor(_BatchSection.bills, id),
     );
     final receivablesCard = _ReceivablesCard(
       presenter: presenter,
       receivables: receivables,
       pendingTotal: receiveTotal,
+      batchControl: _selectControl(_BatchSection.receivables, receivableIds),
+      batchBar: _batchBar(_BatchSection.receivables),
+      selectionOf: (id) => _selectionFor(_BatchSection.receivables, id),
     );
     final budgetedCard = _BudgetedExpensesCard(
       presenter: presenter,
       expenses: presenter.budgetedExpenses,
+      batchControl: _selectControl(_BatchSection.budgeted, expenseIds),
+      batchBar: _batchBar(_BatchSection.budgeted),
+      selectionOf: (id) => _selectionFor(_BatchSection.budgeted, id),
     );
 
     // Layout (top → bottom): Credit cards → [Upcoming bills | Set-asides] side
@@ -132,7 +241,12 @@ class _BillsBody extends StatelessWidget {
     // Installments follow the shared TreasuryMonthScope, so "due this month"
     // already lines up with the bills above — no month poke from `build` (which
     // mutated presenter state mid-frame to get the same effect).
-    final installmentsCard = _InstallmentsCard(presenter: installmentPresenter);
+    final installmentsCard = _InstallmentsCard(
+      presenter: installmentPresenter,
+      batchControl: _selectControl(_BatchSection.installments, installmentIds),
+      batchBar: _batchBar(_BatchSection.installments),
+      selectionOf: (id) => _selectionFor(_BatchSection.installments, id),
+    );
 
     children
       ..add(_SideBySideCards(left: upcomingCard, right: budgetedCard))
@@ -155,8 +269,12 @@ class _BillsBody extends StatelessWidget {
     if (paid.isNotEmpty) {
       children
         ..add(const SizedBox(height: WebInsets.xl))
-        ..add(
-            _PaidCard(presenter: presenter, paid: paid, paidTotal: paidTotal));
+        ..add(_PaidCard(
+          presenter: presenter,
+          paid: paid,
+          paidTotal: paidTotal,
+          selectionOf: (id) => _selectionFor(_BatchSection.bills, id),
+        ));
     }
 
     return Column(
@@ -171,7 +289,341 @@ class _BillsBody extends StatelessWidget {
       builder: (_) => _AddBillDialog(presenter: presenter),
     );
   }
+
+  // ─── Batch actions ─────────────────────────────────────────────────────────
+  //
+  // Everything below acts on the current selection. Each handler resolves the
+  // picked rows from the presenter's live lists (so an id that vanished under
+  // us is simply not there), asks once for whatever the whole batch shares,
+  // hands the work to a presenter batch method, then reports what happened and
+  // leaves selection mode. Deliberately the same shape as the mobile view's
+  // handlers, so the two can't drift on what a batch does.
+
+  List<Bill> get _selectedBills =>
+      presenter.bills.where((b) => _selectedIds.contains(b.id)).toList();
+
+  List<Receivable> get _selectedReceivables =>
+      presenter.receivables.where((r) => _selectedIds.contains(r.id)).toList();
+
+  List<BudgetedExpense> get _selectedExpenses => presenter.budgetedExpenses
+      .where((e) => _selectedIds.contains(e.id))
+      .toList();
+
+  List<Installment> get _selectedInstallments => installmentPresenter
+      .dueThisMonth
+      .where((i) => _selectedIds.contains(i.id))
+      .toList();
+
+  /// What the action bar needs: how many picked rows can still be settled, how
+  /// many can be reversed, and the settle verb. Computed here so `build` stays
+  /// declarative (Rule 1).
+  ({int settleable, int undoable, String verb}) _batchStatus(
+      _BatchSection section) {
+    switch (section) {
+      case _BatchSection.bills:
+        final picked = _selectedBills;
+        return (
+          settleable: picked.where((b) => !b.isPaid).length,
+          undoable: picked.where((b) => b.isPaid).length,
+          verb: 'Pay',
+        );
+      case _BatchSection.receivables:
+        final picked = _selectedReceivables;
+        return (
+          settleable: picked.where((r) => !r.isReceived).length,
+          undoable: picked.where((r) => r.isReceived).length,
+          verb: 'Receive',
+        );
+      case _BatchSection.budgeted:
+        final picked = _selectedExpenses;
+        return (
+          settleable: picked.where((e) => !e.isPaid).length,
+          undoable: picked.where((e) => e.isPaid).length,
+          verb: 'Fund',
+        );
+      case _BatchSection.installments:
+        final picked = _selectedInstallments;
+        final paid = picked
+            .where((i) => installmentPresenter.isPaidForMonth(i.id))
+            .length;
+        return (
+          settleable: picked.length - paid,
+          undoable: paid,
+          verb: 'Pay',
+        );
+    }
+  }
+
+  /// Reports a finished batch and leaves selection mode. [skipped] rows are
+  /// named explicitly — a batch that only half-applied must never read as a
+  /// clean success.
+  void _finishBatch(String message, {int skipped = 0}) {
+    if (!mounted) return;
+    _exitSelection();
+    AppToast.show(
+      context,
+      skipped == 0
+          ? message
+          : '$message $skipped couldn\'t be done — check their accounts.',
+    );
+  }
+
+  /// Runs [action] with the bar disabled, so a second click during the await
+  /// can't launch the same batch twice.
+  Future<void> _runBatch(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _batchSettle() => _runBatch(() async {
+        switch (_section!) {
+          case _BatchSection.bills:
+            await _batchPayBills();
+          case _BatchSection.receivables:
+            await _batchReceiveReceivables();
+          case _BatchSection.budgeted:
+            await _batchFundExpenses();
+          case _BatchSection.installments:
+            await _batchPayInstallments();
+        }
+      });
+
+  Future<void> _batchPayBills() async {
+    final targets = _selectedBills.where((b) => !b.isPaid).toList();
+    if (targets.isEmpty) return;
+    final choice = await showWebBatchSettleDialog(
+      context,
+      kind: BatchSettleKind.bills,
+      count: targets.length,
+      total: targets.fold(0.0, (sum, b) => sum + b.amount),
+      accounts: presenter.payerAccountsForAll(targets),
+      initialAccountId: presenter.preferredBatchPayerAccountId(targets),
+    );
+    if (choice == null) return;
+    // With no eligible account there is nothing to debit, so the bills are
+    // flagged paid without a ledger entry rather than failing.
+    final record = !choice.alreadyInLedger && choice.accountId != null;
+    final result = await presenter.markBillsPaid(
+      [for (final b in targets) b.id],
+      accountId: record ? choice.accountId : null,
+      paidDate: choice.date,
+      recordInLedger: record,
+    );
+    _finishBatch(
+      'Marked ${result.applied} ${_plural(result.applied, 'bill')} paid.',
+      skipped: result.skipped,
+    );
+  }
+
+  Future<void> _batchReceiveReceivables() async {
+    final targets = _selectedReceivables.where((r) => !r.isReceived).toList();
+    if (targets.isEmpty) return;
+    final choice = await showWebBatchSettleDialog(
+      context,
+      kind: BatchSettleKind.receivables,
+      count: targets.length,
+      total: targets.fold(0.0, (sum, r) => sum + r.amount),
+      accounts: presenter.depositAccountsFor(targets.first),
+      initialAccountId: presenter.preferredDepositAccountId(targets.first),
+    );
+    if (choice == null) return;
+    final record = !choice.alreadyInLedger && choice.accountId != null;
+    final result = await presenter.markReceivablesReceived(
+      [for (final r in targets) r.id],
+      accountId: record ? choice.accountId : null,
+      receivedDate: choice.date,
+      recordInLedger: record,
+    );
+    _finishBatch('Marked ${result.applied} received.');
+  }
+
+  Future<void> _batchFundExpenses() async {
+    final targets = _selectedExpenses.where((e) => !e.isPaid).toList();
+    if (targets.isEmpty) return;
+    final funders = presenter.setAsideFundingAccounts;
+    if (funders.isEmpty) {
+      AppToast.error(context, 'Add an account before funding.');
+      return;
+    }
+    // Rows that already know where they are going keep their own destination;
+    // the dialog only has to ask about the rest.
+    final withDestination = targets
+        .where((e) => presenter.preferredSetAsideDestinationId(e) != null)
+        .length;
+    final named = targets.map((e) => e.accountId).toSet();
+    final choice = await showWebBatchSettleDialog(
+      context,
+      kind: BatchSettleKind.setAsides,
+      count: targets.length,
+      total: targets.fold(0.0, (sum, e) => sum + e.allocatedAmount),
+      accounts: funders,
+      destinations: presenter.setAsideDestinationAccounts,
+      initialAccountId: named.length == 1 ? named.first : null,
+      savedDestinationCount: withDestination,
+    );
+    if (choice == null || choice.accountId == null) return;
+    final result = await presenter.markExpensesPaid(
+      [for (final e in targets) e.id],
+      accountId: choice.accountId!,
+      toAccountId: choice.toAccountId,
+      preferSavedDestination: choice.useSavedDestinations,
+      paidDate: choice.date,
+    );
+    _finishBatch(
+        'Funded ${result.applied} ${_plural(result.applied, 'set-aside')}.');
+  }
+
+  Future<void> _batchPayInstallments() async {
+    final targets = _selectedInstallments
+        .where((i) => !installmentPresenter.isPaidForMonth(i.id))
+        .toList();
+    if (targets.isEmpty) return;
+    final choice = await showWebBatchSettleDialog(
+      context,
+      kind: BatchSettleKind.installments,
+      count: targets.length,
+      total: targets.fold(0.0, (sum, i) => sum + i.monthlyAmount),
+    );
+    if (choice == null) return;
+    final applied = await installmentPresenter
+        .markManyPaid([for (final i in targets) i.id], date: choice.date);
+    _finishBatch(
+        'Paid $applied ${_plural(applied, 'installment')} this month.');
+  }
+
+  Future<void> _batchUndo() => _runBatch(() async {
+        switch (_section!) {
+          case _BatchSection.bills:
+            final targets = _selectedBills.where((b) => b.isPaid).toList();
+            if (targets.isEmpty) return;
+            final choice = await showUndoSettlementDialog(
+              context: context,
+              title: 'Undo ${targets.length} payments?',
+              name: _batchName(targets.length, 'bill'),
+              entryLabel: 'bill',
+              hasLedgerEntry: targets.any(presenter.billHasLedgerEntry),
+              ledgerEffect:
+                  '${formatPeso(targets.fold(0.0, (s, b) => s + (b.paidAmount ?? b.amount)))} '
+                  'goes back into the accounts they were paid from.',
+            );
+            if (choice == null) return;
+            final result = await presenter.markBillsUnpaid(
+              [for (final b in targets) b.id],
+              removeTransaction: choice.removeTransaction,
+            );
+            _finishBatch('Marked ${result.applied} '
+                '${_plural(result.applied, 'bill')} unpaid.');
+          case _BatchSection.receivables:
+            final targets =
+                _selectedReceivables.where((r) => r.isReceived).toList();
+            if (targets.isEmpty) return;
+            final choice = await showUndoSettlementDialog(
+              context: context,
+              title: 'Undo ${targets.length} receipts?',
+              name: _batchName(targets.length, 'receivable'),
+              entryLabel: 'receivable',
+              hasLedgerEntry:
+                  targets.any(presenter.receivableHasLedgerEntry),
+              ledgerEffect:
+                  '${formatPeso(targets.fold(0.0, (s, r) => s + (r.receivedAmount ?? r.amount)))} '
+                  'is taken back out of the accounts it was deposited into.',
+            );
+            if (choice == null) return;
+            final result = await presenter.markReceivablesUnreceived(
+              [for (final r in targets) r.id],
+              removeTransaction: choice.removeTransaction,
+            );
+            _finishBatch('Marked ${result.applied} not received.');
+          case _BatchSection.budgeted:
+            final targets = _selectedExpenses.where((e) => e.isPaid).toList();
+            if (targets.isEmpty) return;
+            final choice = await showUndoSettlementDialog(
+              context: context,
+              title: 'Undo ${targets.length} fundings?',
+              name: _batchName(targets.length, 'set-aside'),
+              entryLabel: 'set-aside',
+              hasLedgerEntry: targets.any(presenter.expenseHasLedgerEntry),
+              ledgerEffect:
+                  '${formatPeso(targets.fold(0.0, (s, e) => s + e.spentAmount))} '
+                  'is moved back to the accounts it was funded from.',
+            );
+            if (choice == null) return;
+            final result = await presenter.markExpensesUnpaid(
+              [for (final e in targets) e.id],
+              removeTransaction: choice.removeTransaction,
+            );
+            _finishBatch('Marked ${result.applied} '
+                '${_plural(result.applied, 'set-aside')} unfunded.');
+          case _BatchSection.installments:
+            final targets = _selectedInstallments
+                .where((i) => installmentPresenter.isPaidForMonth(i.id))
+                .toList();
+            if (targets.isEmpty) return;
+            final choice = await showUndoSettlementDialog(
+              context: context,
+              title: 'Undo ${targets.length} payments?',
+              name: _batchName(targets.length, 'installment payment'),
+              entryLabel: 'installment payment',
+              // An installment payment IS its transaction — there is no flag
+              // to reverse on its own, so the transaction always goes with it.
+              hasLedgerEntry: false,
+              ledgerEffect:
+                  "This month's payment transactions are removed and the "
+                  'accounts they were paid from are credited back.',
+            );
+            if (choice == null) return;
+            final applied = await installmentPresenter
+                .markManyUnpaid([for (final i in targets) i.id]);
+            _finishBatch('Marked $applied '
+                '${_plural(applied, 'installment')} unpaid this month.');
+        }
+      });
+
+  Future<void> _batchDelete() => _runBatch(() async {
+        final section = _section!;
+        final ids = _selectedIds.toList();
+        final label = switch (section) {
+          _BatchSection.bills => 'bill',
+          _BatchSection.receivables => 'receivable',
+          _BatchSection.budgeted => 'set-aside',
+          _BatchSection.installments => 'installment',
+        };
+        final ok = await AppConfirmDialog.confirm(
+          context: context,
+          title: 'Delete ${ids.length} ${_plural(ids.length, label)}?',
+          body: section == _BatchSection.installments
+              ? 'Their linked payment transactions are removed too. This '
+                  'cannot be undone.'
+              : 'This cannot be undone.',
+          confirmLabel: 'Delete',
+          cancelLabel: 'Cancel',
+          isDestructive: true,
+        );
+        if (!ok) return;
+        final deleted = switch (section) {
+          _BatchSection.bills => await presenter.deleteBills(ids),
+          _BatchSection.receivables => await presenter.deleteReceivables(ids),
+          _BatchSection.budgeted =>
+            await presenter.deleteBudgetedExpenses(ids),
+          _BatchSection.installments =>
+            await installmentPresenter.deleteInstallments(ids),
+        };
+        _finishBatch('Deleted $deleted ${_plural(deleted, label)}.');
+      });
 }
+
+/// "1 bill" / "3 bills" — batch messages count things constantly.
+String _plural(int n, String singular) => n == 1 ? singular : '${singular}s';
+
+/// Stand-in name for a multi-row undo dialog, which asks about a group rather
+/// than a named entry.
+String _batchName(int n, String singular) =>
+    '$n ${_plural(n, singular)}';
 
 /// Places two cards side by side on wide viewports and stacks them (left above
 /// right) once the page gets too narrow for two readable columns. On wide
@@ -1009,11 +1461,17 @@ class _UpcomingCard extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final List<Bill> unpaid;
   final double dueTotal;
+  final Widget batchControl;
+  final Widget? batchBar;
+  final WebRowSelection? Function(String id) selectionOf;
 
   const _UpcomingCard({
     required this.presenter,
     required this.unpaid,
     required this.dueTotal,
+    required this.batchControl,
+    required this.batchBar,
+    required this.selectionOf,
   });
 
   @override
@@ -1025,16 +1483,31 @@ class _UpcomingCard extends StatelessWidget {
       title: 'Upcoming',
       description:
           '${formatPeso(dueTotal)} across ${unpaid.length} ${unpaid.length == 1 ? 'bill' : 'bills'}',
-      trailing: TextButton.icon(
-        onPressed: () => showDialog<void>(
-          context: context,
-          builder: (_) => _AddBillDialog(presenter: presenter),
-        ),
-        icon: const Icon(Icons.add_rounded, size: 18),
-        label: const Text('Add bill'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          batchControl,
+          TextButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => _AddBillDialog(presenter: presenter),
+            ),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Add bill'),
+          ),
+        ],
       ),
+      // The batch bar lives here even when there are no unpaid bills to list:
+      // paid bills are the same selection (they render in the Paid card), so
+      // hiding the bar with the empty list would strand a selection made purely
+      // to undo payments.
       child: unpaid.isEmpty
-          ? const _EmptyHint('No bills due — you are all caught up.')
+          ? Column(
+              children: [
+                const _EmptyHint('No bills due — you are all caught up.'),
+                if (batchBar != null) batchBar!,
+              ],
+            )
           : Column(
               children: [
                 for (var i = 0; i < unpaid.length; i++)
@@ -1042,7 +1515,9 @@ class _UpcomingCard extends StatelessWidget {
                     presenter: presenter,
                     bill: unpaid[i],
                     showDivider: i > 0,
+                    selection: selectionOf(unpaid[i].id),
                   ),
+                if (batchBar != null) batchBar!,
                 const SizedBox(height: WebInsets.md),
                 Container(
                   padding: const EdgeInsets.only(top: WebInsets.md),
@@ -1082,10 +1557,17 @@ class _PaidCard extends StatelessWidget {
   final List<Bill> paid;
   final double paidTotal;
 
+  /// Paid bills belong to the *bills* selection even though they render in
+  /// their own card — selecting them here is how a batch undo is reached. The
+  /// Select control lives on the Upcoming card, so this card has none of its
+  /// own.
+  final WebRowSelection? Function(String id) selectionOf;
+
   const _PaidCard({
     required this.presenter,
     required this.paid,
     required this.paidTotal,
+    required this.selectionOf,
   });
 
   @override
@@ -1100,6 +1582,7 @@ class _PaidCard extends StatelessWidget {
               presenter: presenter,
               bill: paid[i],
               showDivider: i > 0,
+              selection: selectionOf(paid[i].id),
             ),
         ],
       ),
@@ -1114,10 +1597,16 @@ class _BillRow extends StatelessWidget {
   final Bill bill;
   final bool showDivider;
 
+  /// Non-null while this row's section is selecting: the settle checkbox
+  /// becomes a selection box and the per-row menu is hidden, so a click during
+  /// a batch can only ever mean "pick this row".
+  final WebRowSelection? selection;
+
   const _BillRow({
     required this.presenter,
     required this.bill,
     required this.showDivider,
+    this.selection,
   });
 
   @override
@@ -1149,11 +1638,17 @@ class _BillRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
       child: Row(
         children: [
-          _PaidCheckbox(
-            checked: paid,
-            tooltip: paid ? 'Mark unpaid' : 'Mark paid',
-            onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
-          ),
+          if (selection != null)
+            WebRowSelectBox(
+              selected: selection!.selected,
+              onTap: selection!.onToggle,
+            )
+          else
+            _PaidCheckbox(
+              checked: paid,
+              tooltip: paid ? 'Mark unpaid' : 'Mark paid',
+              onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
+            ),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -1184,12 +1679,13 @@ class _BillRow extends StatelessWidget {
           ),
           const SizedBox(width: WebInsets.md),
           Text(formatPeso(bill.amount), style: amountStyle),
-          _RowActions(
-            onEdit: () => _edit(context),
-            onDelete: () => _delete(context),
-            onUndo: paid ? () => _undoPaid(context) : null,
-            undoLabel: 'Mark unpaid',
-          ),
+          if (selection == null)
+            _RowActions(
+              onEdit: () => _edit(context),
+              onDelete: () => _delete(context),
+              onUndo: paid ? () => _undoPaid(context) : null,
+              undoLabel: 'Mark unpaid',
+            ),
         ],
       ),
     );
@@ -1322,11 +1818,17 @@ class _ReceivablesCard extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final List<Receivable> receivables;
   final double pendingTotal;
+  final Widget batchControl;
+  final Widget? batchBar;
+  final WebRowSelection? Function(String id) selectionOf;
 
   const _ReceivablesCard({
     required this.presenter,
     required this.receivables,
     required this.pendingTotal,
+    required this.batchControl,
+    required this.batchBar,
+    required this.selectionOf,
   });
 
   @override
@@ -1341,10 +1843,16 @@ class _ReceivablesCard extends StatelessWidget {
       accentColor: Theme.of(context).colorScheme.tertiary,
       title: 'Receivables',
       description: 'Money owed to you',
-      trailing: OutlinedButton.icon(
-        onPressed: () => _onAddReceivable(context, presenter),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add Receivable'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          batchControl,
+          OutlinedButton.icon(
+            onPressed: () => _onAddReceivable(context, presenter),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add Receivable'),
+          ),
+        ],
       ),
       child: receivables.isEmpty
           ? const _EmptyHint('Nothing owed to you this month.')
@@ -1355,7 +1863,9 @@ class _ReceivablesCard extends StatelessWidget {
                     presenter: presenter,
                     receivable: ordered[i],
                     showDivider: i > 0,
+                    selection: selectionOf(ordered[i].id),
                   ),
+                if (batchBar != null) batchBar!,
                 if (pending.isNotEmpty) ...[
                   const SizedBox(height: WebInsets.md),
                   Container(
@@ -1394,11 +1904,13 @@ class _ReceivableRow extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final Receivable receivable;
   final bool showDivider;
+  final WebRowSelection? selection;
 
   const _ReceivableRow({
     required this.presenter,
     required this.receivable,
     required this.showDivider,
+    this.selection,
   });
 
   @override
@@ -1419,13 +1931,19 @@ class _ReceivableRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
       child: Row(
         children: [
-          _PaidCheckbox(
-            checked: received,
-            tooltip: received ? 'Mark not received' : 'Mark received',
-            onTap: received
-                ? () => _undoReceived(context)
-                : () => _markReceived(context),
-          ),
+          if (selection != null)
+            WebRowSelectBox(
+              selected: selection!.selected,
+              onTap: selection!.onToggle,
+            )
+          else
+            _PaidCheckbox(
+              checked: received,
+              tooltip: received ? 'Mark not received' : 'Mark received',
+              onTap: received
+                  ? () => _undoReceived(context)
+                  : () => _markReceived(context),
+            ),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -1458,12 +1976,13 @@ class _ReceivableRow extends StatelessWidget {
               color: received ? cs.onSurfaceVariant : cs.tertiary,
             ),
           ),
-          _RowActions(
-            onEdit: () => _edit(context),
-            onDelete: () => _delete(context),
-            onUndo: received ? () => _undoReceived(context) : null,
-            undoLabel: 'Mark not received',
-          ),
+          if (selection == null)
+            _RowActions(
+              onEdit: () => _edit(context),
+              onDelete: () => _delete(context),
+              onUndo: received ? () => _undoReceived(context) : null,
+              undoLabel: 'Mark not received',
+            ),
         ],
       ),
     );
@@ -1587,9 +2106,17 @@ void _onAddBudgetedExpense(
 class _BudgetedExpensesCard extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final List<BudgetedExpense> expenses;
+  final Widget batchControl;
+  final Widget? batchBar;
+  final WebRowSelection? Function(String id) selectionOf;
 
-  const _BudgetedExpensesCard(
-      {required this.presenter, required this.expenses});
+  const _BudgetedExpensesCard({
+    required this.presenter,
+    required this.expenses,
+    required this.batchControl,
+    required this.batchBar,
+    required this.selectionOf,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1605,10 +2132,16 @@ class _BudgetedExpensesCard extends StatelessWidget {
       accentColor: cs.secondary,
       title: 'Budgeted Set-Asides',
       description: 'Savings, sinking funds & one-off plans',
-      trailing: OutlinedButton.icon(
-        onPressed: () => _onAddBudgetedExpense(context, presenter),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add Set-Aside'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          batchControl,
+          OutlinedButton.icon(
+            onPressed: () => _onAddBudgetedExpense(context, presenter),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add Set-Aside'),
+          ),
+        ],
       ),
       child: expenses.isEmpty
           ? const _EmptyHint('No set-asides budgeted this month.')
@@ -1619,7 +2152,9 @@ class _BudgetedExpensesCard extends StatelessWidget {
                     presenter: presenter,
                     expense: ordered[i],
                     showDivider: i > 0,
+                    selection: selectionOf(ordered[i].id),
                   ),
+                if (batchBar != null) batchBar!,
                 if (pending.isNotEmpty) ...[
                   const SizedBox(height: WebInsets.md),
                   Container(
@@ -1798,11 +2333,13 @@ class _BudgetedExpenseRow extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final BudgetedExpense expense;
   final bool showDivider;
+  final WebRowSelection? selection;
 
   const _BudgetedExpenseRow({
     required this.presenter,
     required this.expense,
     required this.showDivider,
+    this.selection,
   });
 
   @override
@@ -1830,13 +2367,19 @@ class _BudgetedExpenseRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
       child: Row(
         children: [
-          _PaidCheckbox(
-            checked: funded,
-            tooltip: funded ? 'Mark unfunded' : 'Mark funded',
-            onTap: funded
-                ? () => _undoFunded(context)
-                : () => _markFunded(context),
-          ),
+          if (selection != null)
+            WebRowSelectBox(
+              selected: selection!.selected,
+              onTap: selection!.onToggle,
+            )
+          else
+            _PaidCheckbox(
+              checked: funded,
+              tooltip: funded ? 'Mark unfunded' : 'Mark funded',
+              onTap: funded
+                  ? () => _undoFunded(context)
+                  : () => _markFunded(context),
+            ),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -1869,12 +2412,13 @@ class _BudgetedExpenseRow extends StatelessWidget {
               color: funded ? cs.onSurfaceVariant : cs.secondary,
             ),
           ),
-          _RowActions(
-            onEdit: () => _edit(context),
-            onDelete: () => _delete(context),
-            onUndo: funded ? () => _undoFunded(context) : null,
-            undoLabel: 'Mark unfunded',
-          ),
+          if (selection == null)
+            _RowActions(
+              onEdit: () => _edit(context),
+              onDelete: () => _delete(context),
+              onUndo: funded ? () => _undoFunded(context) : null,
+              undoLabel: 'Mark unfunded',
+            ),
         ],
       ),
     );
@@ -2308,8 +2852,16 @@ void _onAddInstallment(BuildContext context, InstallmentPresenter presenter) {
 /// mark-paid (and undo) wired to [InstallmentPresenter].
 class _InstallmentsCard extends StatelessWidget {
   final InstallmentPresenter presenter;
+  final Widget batchControl;
+  final Widget? batchBar;
+  final WebRowSelection? Function(String id) selectionOf;
 
-  const _InstallmentsCard({required this.presenter});
+  const _InstallmentsCard({
+    required this.presenter,
+    required this.batchControl,
+    required this.batchBar,
+    required this.selectionOf,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2325,10 +2877,16 @@ class _InstallmentsCard extends StatelessWidget {
       description: due.isEmpty
           ? 'No payments due this month'
           : '${formatPeso(load)} due across ${due.length} ${due.length == 1 ? 'plan' : 'plans'}',
-      trailing: OutlinedButton.icon(
-        onPressed: () => _onAddInstallment(context, presenter),
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add Installment'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          batchControl,
+          OutlinedButton.icon(
+            onPressed: () => _onAddInstallment(context, presenter),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add Installment'),
+          ),
+        ],
       ),
       child: due.isEmpty
           ? const _EmptyHint('No installment payments due this month.')
@@ -2339,7 +2897,9 @@ class _InstallmentsCard extends StatelessWidget {
                     presenter: presenter,
                     installment: due[i],
                     showDivider: i > 0,
+                    selection: selectionOf(due[i].id),
                   ),
+                if (batchBar != null) batchBar!,
                 const SizedBox(height: WebInsets.md),
                 Container(
                   padding: const EdgeInsets.only(top: WebInsets.md),
@@ -2376,11 +2936,13 @@ class _InstallmentRow extends StatelessWidget {
   final InstallmentPresenter presenter;
   final Installment installment;
   final bool showDivider;
+  final WebRowSelection? selection;
 
   const _InstallmentRow({
     required this.presenter,
     required this.installment,
     required this.showDivider,
+    this.selection,
   });
 
   @override
@@ -2406,11 +2968,17 @@ class _InstallmentRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PaidCheckbox(
-            checked: paid,
-            tooltip: paid ? 'Mark unpaid this month' : 'Mark paid',
-            onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
-          ),
+          if (selection != null)
+            WebRowSelectBox(
+              selected: selection!.selected,
+              onTap: selection!.onToggle,
+            )
+          else
+            _PaidCheckbox(
+              checked: paid,
+              tooltip: paid ? 'Mark unpaid this month' : 'Mark paid',
+              onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
+            ),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -2464,12 +3032,13 @@ class _InstallmentRow extends StatelessWidget {
               color: paid ? cs.onSurfaceVariant : cs.onSurface,
             ),
           ),
-          _RowActions(
-            onEdit: () => _edit(context),
-            onDelete: () => _delete(context),
-            onUndo: paid ? () => _undoPaid(context) : null,
-            undoLabel: 'Mark unpaid this month',
-          ),
+          if (selection == null)
+            _RowActions(
+              onEdit: () => _edit(context),
+              onDelete: () => _delete(context),
+              onUndo: paid ? () => _undoPaid(context) : null,
+              undoLabel: 'Mark unpaid this month',
+            ),
         ],
       ),
     );

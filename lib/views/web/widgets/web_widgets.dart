@@ -4,6 +4,8 @@ library;
 
 export '../design/web_breakpoints.dart';
 export 'web_badge.dart';
+export 'web_batch_bar.dart';
+export 'web_batch_settle_dialog.dart';
 export 'web_card.dart';
 export 'web_category_icon_picker.dart';
 export 'web_charts.dart';
