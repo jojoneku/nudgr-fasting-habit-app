@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart'
+    show RecurrenceType;
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -41,6 +43,8 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
   String? _selectedCategoryId;
   String? _selectedAccountId;
   String? _selectedDestinationId;
+  bool _isRecurring = false;
+  RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
   @override
@@ -55,8 +59,17 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
       _selectedAccountId = e.accountId;
       _selectedDestinationId = e.destinationAccountId;
+      _isRecurring = e.isRecurring;
+      _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
   }
+
+  String _recurrenceLabel(RecurrenceType r) => switch (r) {
+        RecurrenceType.monthly => 'Monthly',
+        RecurrenceType.weekly => 'Weekly',
+        RecurrenceType.yearly => 'Yearly',
+        RecurrenceType.custom => 'Custom',
+      };
 
   @override
   void dispose() {
@@ -86,10 +99,15 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
             : _noteController.text.trim(),
         accountId: _selectedAccountId,
         destinationAccountId: _selectedDestinationId,
-        // Preserve funded state + link when editing.
+        isRecurring: _isRecurring,
+        recurrenceType: _isRecurring ? _recurrenceType : null,
+        // Preserve funded state, links, and the next-month override when
+        // editing — this builds a fresh BudgetedExpense rather than copyWith,
+        // so anything not restated here is dropped.
         isPaid: e?.isPaid ?? false,
         spentAmount: e?.spentAmount ?? 0,
         transactionId: e?.transactionId,
+        nextMonthAmount: e?.nextMonthAmount,
       );
       if (e != null) {
         await widget.presenter.updateBudgetedExpense(expense);
@@ -247,6 +265,36 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
                 selectedId: _selectedCategoryId,
                 placeholder: 'None',
                 onChanged: (id) => setState(() => _selectedCategoryId = id),
+              ),
+            ),
+          ],
+
+          // Recurring toggle — a sinking fund that isn't marked recurring never
+          // regenerates, so this has to be settable here and not web-only.
+          const SizedBox(height: 16),
+          SwitchListTile(
+            value: _isRecurring,
+            onChanged: (v) => setState(() => _isRecurring = v),
+            title: const Text('Recurring', style: TextStyle(fontSize: 14)),
+            subtitle: Text('Auto-generate next month',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (_isRecurring) ...[
+            const SizedBox(height: 8),
+            SheetLabeledField(
+              label: 'Recurrence',
+              child: DropdownButtonFormField<RecurrenceType>(
+                initialValue: _recurrenceType,
+                decoration: sheetFieldDecoration(context),
+                items: RecurrenceType.values
+                    .map((r) => DropdownMenuItem(
+                        value: r, child: Text(_recurrenceLabel(r))))
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _recurrenceType = v ?? _recurrenceType),
               ),
             ),
           ],
