@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
+import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_budgeted_expense_sheet.dart';
@@ -406,6 +407,51 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       isDestructive: true,
     );
     if (ok) onConfirm();
+  }
+
+  /// Deleting a recurring row asks whether the months generated ahead of it go
+  /// too. A plain confirm would silently orphan them: the bill disappears from
+  /// the month you are looking at and quietly stays in the next three.
+  Future<void> _confirmDeleteBill(Bill b) async {
+    final scope = await confirmRecurringDelete(
+      context: context,
+      title: 'Delete Bill',
+      name: b.name,
+      futureMonthCount: widget.presenter.futureSeriesBills(b).length,
+    );
+    if (scope == null) return;
+    await widget.presenter.deleteBill(
+      b.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
+  }
+
+  Future<void> _confirmDeleteReceivable(Receivable r) async {
+    final scope = await confirmRecurringDelete(
+      context: context,
+      title: 'Delete Receivable',
+      name: r.name,
+      futureMonthCount: widget.presenter.futureSeriesReceivables(r).length,
+    );
+    if (scope == null) return;
+    await widget.presenter.deleteReceivable(
+      r.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
+  }
+
+  Future<void> _confirmDeleteExpense(BudgetedExpense e) async {
+    final scope = await confirmRecurringDelete(
+      context: context,
+      title: 'Delete Budgeted Expense',
+      name: e.name,
+      futureMonthCount: widget.presenter.futureSeriesExpenses(e).length,
+    );
+    if (scope == null) return;
+    await widget.presenter.deleteBudgetedExpense(
+      e.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
   }
 
   // A bill's type is a subset of its category — shown as a small badge after
@@ -837,13 +883,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       onUndo: b.isPaid && !locked ? () => _undoBillPayment(b) : null,
       undoLabel: 'Mark unpaid',
       onEdit: locked ? null : () => _showAddBillSheet(b),
-      onDelete: locked
-          ? null
-          : () => _confirmDelete(
-                title: 'Delete Bill',
-                body: 'Delete "${b.name}"?',
-                onConfirm: () => widget.presenter.deleteBill(b.id),
-              ),
+      onDelete: locked ? null : () => _confirmDeleteBill(b),
       onLongPress: locked ? null : sel.onLongPress,
       selectionMode: sel.mode,
       selected: sel.selected,
@@ -931,13 +971,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       onUndo: r.isReceived && !locked ? () => _undoReceivableReceipt(r) : null,
       undoLabel: 'Mark not received',
       onEdit: locked ? null : () => _showAddReceivableSheet(r),
-      onDelete: locked
-          ? null
-          : () => _confirmDelete(
-                title: 'Delete Receivable',
-                body: 'Delete "${r.name}"?',
-                onConfirm: () => widget.presenter.deleteReceivable(r.id),
-              ),
+      onDelete: locked ? null : () => _confirmDeleteReceivable(r),
       onLongPress: locked ? null : sel.onLongPress,
       // A row being dragged is not a row being picked.
       selectionMode: sel.mode && dragIndex == null,
@@ -1010,13 +1044,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       onUndo: e.isPaid && !locked ? () => _undoExpenseFunding(e) : null,
       undoLabel: 'Mark unfunded',
       onEdit: locked ? null : () => _showAddBudgetedExpenseSheet(e),
-      onDelete: locked
-          ? null
-          : () => _confirmDelete(
-                title: 'Delete Budgeted Expense',
-                body: 'Delete "${e.name}"?',
-                onConfirm: () => widget.presenter.deleteBudgetedExpense(e.id),
-              ),
+      onDelete: locked ? null : () => _confirmDeleteExpense(e),
       onLongPress: locked ? null : sel.onLongPress,
       selectionMode: sel.mode,
       selected: sel.selected,

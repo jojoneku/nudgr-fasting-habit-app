@@ -35,6 +35,11 @@ class Receivable {
   final String categoryId;
   final bool isRecurring;
   final RecurrenceType? recurrenceType;
+
+  /// Ties every monthly copy of one recurring receivable together — see the
+  /// note on [Bill.seriesId]. Null on one-off entries (reimbursements included)
+  /// and on rows saved before this field shipped, which are backfilled on load.
+  final String? seriesId;
   final bool isReceived;
   final DateTime? receivedDate;
   final double? receivedAmount; // may differ from expected
@@ -66,6 +71,7 @@ class Receivable {
     required this.categoryId,
     this.isRecurring = false,
     this.recurrenceType,
+    this.seriesId,
     this.isReceived = false,
     this.receivedDate,
     this.receivedAmount,
@@ -91,6 +97,7 @@ class Receivable {
       categoryId: json['categoryId'] as String? ?? '',
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
+      seriesId: json['seriesId'] as String?,
       isReceived: json['isReceived'] as bool? ?? false,
       receivedDate: json['receivedDate'] != null
           ? DateTime.parse(json['receivedDate'] as String)
@@ -116,6 +123,7 @@ class Receivable {
         'categoryId': categoryId,
         'isRecurring': isRecurring,
         'recurrenceType': recurrenceType?.name,
+        'seriesId': seriesId,
         'isReceived': isReceived,
         'receivedDate': receivedDate?.toIso8601String(),
         'receivedAmount': receivedAmount,
@@ -136,6 +144,9 @@ class Receivable {
     String? categoryId,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
+    // Sentinel-guarded so switching off recurring can drop the entry out of its
+    // series; `field ?? this.field` would leave the stale link behind.
+    Object? seriesId = _kUnset,
     bool? isReceived,
     // Sentinel-guarded so undoing a receipt can clear the settlement fields back
     // out; `field ?? this.field` never could, which left an un-received entry
@@ -161,6 +172,8 @@ class Receivable {
       categoryId: categoryId ?? this.categoryId,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
+      seriesId:
+          identical(seriesId, _kUnset) ? this.seriesId : seriesId as String?,
       isReceived: isReceived ?? this.isReceived,
       receivedDate: identical(receivedDate, _kUnset)
           ? this.receivedDate
