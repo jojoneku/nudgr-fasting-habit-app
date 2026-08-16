@@ -13,6 +13,13 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.64] - 2026-08-16
+
+### Added
+- finish the Nudgr parity pass across Budget, History and Ledger
+- let mobile set recurrence on a set-aside
+- carry the mobile Nudgr principles onto the web Bills page
+
 ## [1.1.63] - 2026-08-15
 
 - Maintenance and internal improvements.
@@ -639,7 +646,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.63...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.64...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -704,3 +711,4 @@ distributed via `manifest.json`.
 [1.1.61]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.61
 [1.1.62]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.62
 [1.1.63]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.63
+[1.1.64]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.64
