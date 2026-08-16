@@ -2411,6 +2411,38 @@ class MockNotificationService extends _i1.Mock
       ) as _i13.Future<void>);
 
   @override
+  _i13.Future<void> scheduleBillReminder({
+    required String? billId,
+    required String? billName,
+    required DateTime? dueDate,
+    required int? daysBefore,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #scheduleBillReminder,
+          [],
+          {
+            #billId: billId,
+            #billName: billName,
+            #dueDate: dueDate,
+            #daysBefore: daysBefore,
+          },
+        ),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
+  _i13.Future<void> cancelBillReminder(String? billId) => (super.noSuchMethod(
+        Invocation.method(
+          #cancelBillReminder,
+          [billId],
+        ),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
   _i13.Future<void> cancelBillsReminder() => (super.noSuchMethod(
         Invocation.method(
           #cancelBillsReminder,
@@ -6325,30 +6357,45 @@ class MockBillsReceivablesPresenter extends _i1.Mock
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> addBill(_i26.Bill? bill) => (super.noSuchMethod(
+  _i13.Future<void> addBill(
+    _i26.Bill? bill, {
+    bool? applyToFuture = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #addBill,
           [bill],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> updateBill(_i26.Bill? bill) => (super.noSuchMethod(
+  _i13.Future<void> updateBill(
+    _i26.Bill? bill, {
+    bool? applyToFuture = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #updateBill,
           [bill],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> deleteBill(String? id) => (super.noSuchMethod(
+  _i13.Future<void> deleteBill(
+    String? id, {
+    bool? applyToFuture = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #deleteBill,
           [id],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
@@ -6378,11 +6425,15 @@ class MockBillsReceivablesPresenter extends _i1.Mock
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> addReceivable(_i27.Receivable? receivable) =>
+  _i13.Future<void> addReceivable(
+    _i27.Receivable? receivable, {
+    bool? applyToFuture = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addReceivable,
           [receivable],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
@@ -6435,21 +6486,30 @@ class MockBillsReceivablesPresenter extends _i1.Mock
       ) as DateTime?);
 
   @override
-  _i13.Future<void> updateReceivable(_i27.Receivable? receivable) =>
+  _i13.Future<void> updateReceivable(
+    _i27.Receivable? receivable, {
+    bool? applyToFuture = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateReceivable,
           [receivable],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> deleteReceivable(String? id) => (super.noSuchMethod(
+  _i13.Future<void> deleteReceivable(
+    String? id, {
+    bool? applyToFuture = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #deleteReceivable,
           [id],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
@@ -6479,32 +6539,45 @@ class MockBillsReceivablesPresenter extends _i1.Mock
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> addBudgetedExpense(_i25.BudgetedExpense? expense) =>
+  _i13.Future<void> addBudgetedExpense(
+    _i25.BudgetedExpense? expense, {
+    bool? applyToFuture = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #addBudgetedExpense,
           [expense],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> updateBudgetedExpense(_i25.BudgetedExpense? expense) =>
+  _i13.Future<void> updateBudgetedExpense(
+    _i25.BudgetedExpense? expense, {
+    bool? applyToFuture = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateBudgetedExpense,
           [expense],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),
       ) as _i13.Future<void>);
 
   @override
-  _i13.Future<void> deleteBudgetedExpense(String? id) => (super.noSuchMethod(
+  _i13.Future<void> deleteBudgetedExpense(
+    String? id, {
+    bool? applyToFuture = false,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
           #deleteBudgetedExpense,
           [id],
+          {#applyToFuture: applyToFuture},
         ),
         returnValue: _i13.Future<void>.value(),
         returnValueForMissingStub: _i13.Future<void>.value(),

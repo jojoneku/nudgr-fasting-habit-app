@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
+import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -48,6 +49,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
   int _reminderDays = 2;
   bool _isSubmitting = false;
 
+  /// How far this save reaches. Defaults to carrying forward: a recurring bill
+  /// whose amount changed has almost always changed for good, and the months
+  /// already generated ahead would otherwise stay frozen at the old figure.
+  RecurringScope _scope = RecurringScope.thisAndFuture;
+
+  /// Later months the scope switch would touch, resolved once here rather than
+  /// recounted on every rebuild (Rule 1). The sheet is short-lived and is the
+  /// only thing editing these rows while it is open, so a snapshot is enough.
+  late final int _futureMonthCount;
+
   @override
   void initState() {
     super.initState();
@@ -74,7 +85,25 @@ class _AddBillSheetState extends State<AddBillSheet> {
           ? widget.presenter.accounts.first.id
           : null;
     }
+    _futureMonthCount = widget.presenter.futureBillReach(
+      month: b?.month ?? widget.presenter.selectedMonth,
+      existing: b,
+    );
   }
+
+  /// True when the bill recurs today, whatever the form's switch now says.
+  /// Turning recurrence *off* is the one case where the scope choice still
+  /// matters for a non-recurring bill: the months generated ahead are only
+  /// there because it used to recur.
+  bool get _wasRecurring => widget.existing?.isRecurring ?? false;
+
+  bool get _dropsFutureMonths => !_isRecurring && _wasRecurring;
+
+  /// The scope switch is only worth showing when there is something on the
+  /// other side of it: later months this save could reach. An edit that can
+  /// only touch the month in front of the user is not a choice.
+  bool get _showScopeField =>
+      (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
 
   @override
   void dispose() {
@@ -171,11 +200,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
         paidAmount: widget.existing?.paidAmount,
         transactionId: widget.existing?.transactionId,
         nextMonthAmount: widget.existing?.nextMonthAmount,
+        // Without this the fresh Bill would drop the series link and the save
+        // could no longer find the item's other months.
+        seriesId: widget.existing?.seriesId,
       );
+      final applyToFuture =
+          _showScopeField && _scope == RecurringScope.thisAndFuture;
       if (widget.existing != null) {
-        await widget.presenter.updateBill(bill);
+        await widget.presenter.updateBill(bill, applyToFuture: applyToFuture);
       } else {
-        await widget.presenter.addBill(bill);
+        await widget.presenter.addBill(bill, applyToFuture: applyToFuture);
       }
       if (mounted) await _offerToReplaceAutoStatement(bill);
       if (mounted) Navigator.pop(context);
@@ -318,7 +352,15 @@ class _AddBillSheetState extends State<AddBillSheet> {
           const SizedBox(height: 8),
           SwitchListTile(
             value: _isRecurring,
-            onChanged: (v) => setState(() => _isRecurring = v),
+            // Carrying an edit forward is the helpful default; carrying a
+            // *deletion* forward is not, so switching recurrence off resets the
+            // scope to opt-in rather than leaving a destructive switch armed.
+            onChanged: (v) => setState(() {
+              _isRecurring = v;
+              _scope = v
+                  ? RecurringScope.thisAndFuture
+                  : RecurringScope.thisMonthOnly;
+            }),
             title: const Text('Recurring', style: TextStyle(fontSize: 14)),
             subtitle: Text('Auto-generate next month',
                 style: TextStyle(
@@ -342,6 +384,20 @@ class _AddBillSheetState extends State<AddBillSheet> {
                     setState(() => _recurrenceType = v ?? _recurrenceType),
               ),
             ),
+          ],
+
+          // How far this save reaches across the months already generated.
+          if (_showScopeField) ...[
+            const SizedBox(height: 12),
+            RecurringScopeField(
+              futureMonthCount: _futureMonthCount,
+              month: widget.existing?.month ?? widget.presenter.selectedMonth,
+              value: _scope,
+              noun: 'amount',
+              removesFutureMonths: _dropsFutureMonths,
+              onChanged: (s) => setState(() => _scope = s),
+            ),
+            const SizedBox(height: 4),
           ],
 
           // Reminder toggle (per-bill lead-time)
