@@ -21,6 +21,7 @@ import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
+import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
@@ -854,9 +855,23 @@ class _AddBillDialogState extends State<_AddBillDialog> {
   int _reminderDays = 2;
   bool _isSubmitting = false;
 
+  /// How far this save reaches across the months already generated ahead —
+  /// mirrors the mobile sheet, defaulting to carrying forward.
+  RecurringScope _scope = RecurringScope.thisAndFuture;
+
+  /// Later months the scope switch would touch, resolved once (Rule 1).
+  late final int _futureMonthCount;
+
   /// Lead times offered for the due-date reminder, matching the mobile sheet's
   /// chips so the same bill can be set up identically on either platform.
   static const _reminderDayOptions = [1, 2, 3, 5, 7];
+
+  bool get _wasRecurring => widget.existing?.isRecurring ?? false;
+
+  bool get _dropsFutureMonths => !_isRecurring && _wasRecurring;
+
+  bool get _showScopeField =>
+      (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
 
   @override
   void initState() {
@@ -880,6 +895,10 @@ class _AddBillDialogState extends State<_AddBillDialog> {
       _reminderOn = b.reminderDaysBefore != null;
       _reminderDays = b.reminderDaysBefore ?? 2;
     }
+    _futureMonthCount = widget.presenter.futureBillReach(
+      month: b?.month ?? widget.presenter.selectedMonth,
+      existing: b,
+    );
   }
 
   @override
@@ -915,6 +934,9 @@ class _AddBillDialogState extends State<_AddBillDialog> {
       .where((c) => c.type == CategoryType.expense)
       .toList();
 
+  bool get _applyToFuture =>
+      _showScopeField && _scope == RecurringScope.thisAndFuture;
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
@@ -937,26 +959,29 @@ class _AddBillDialogState extends State<_AddBillDialog> {
           recurrenceType: _isRecurring ? _recurrenceType : null,
           reminderDaysBefore: _reminderOn ? _reminderDays : null,
         );
-        await widget.presenter.addBill(bill);
+        await widget.presenter.addBill(bill, applyToFuture: _applyToFuture);
       } else {
         // Edit in place — copyWith preserves fields the form doesn't expose
         // (paid state, linked transaction).
-        await widget.presenter.updateBill(existing.copyWith(
-          name: _nameController.text.trim(),
-          billType: _billType,
-          amount: amount,
-          dueDay: dueDay,
-          categoryId: _selectedCategoryId ?? '',
-          accountId: _selectedAccountId,
-          paymentNote: _resolvePaymentNote(),
-          isRecurring: _isRecurring,
-          recurrenceType: _isRecurring ? _recurrenceType : null,
-          // Now that the form owns this field, pass it explicitly on every
-          // save. The sentinel copyWith used to leave it untouched, which
-          // preserved a mobile-set reminder but also made switching it off
-          // here impossible.
-          reminderDaysBefore: _reminderOn ? _reminderDays : null,
-        ));
+        await widget.presenter.updateBill(
+          existing.copyWith(
+            name: _nameController.text.trim(),
+            billType: _billType,
+            amount: amount,
+            dueDay: dueDay,
+            categoryId: _selectedCategoryId ?? '',
+            accountId: _selectedAccountId,
+            paymentNote: _resolvePaymentNote(),
+            isRecurring: _isRecurring,
+            recurrenceType: _isRecurring ? _recurrenceType : null,
+            // Now that the form owns this field, pass it explicitly on every
+            // save. The sentinel copyWith used to leave it untouched, which
+            // preserved a mobile-set reminder but also made switching it off
+            // here impossible.
+            reminderDaysBefore: _reminderOn ? _reminderDays : null,
+          ),
+          applyToFuture: _applyToFuture,
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -1095,7 +1120,15 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                 const SizedBox(height: WebInsets.sm),
                 SwitchListTile(
                   value: _isRecurring,
-                  onChanged: (v) => setState(() => _isRecurring = v),
+                  // Carrying an edit forward is the helpful default; carrying a
+                  // *deletion* forward is not, so switching recurrence off
+                  // leaves the scope opt-in (mirrors the mobile sheet).
+                  onChanged: (v) => setState(() {
+                    _isRecurring = v;
+                    _scope = v
+                        ? RecurringScope.thisAndFuture
+                        : RecurringScope.thisMonthOnly;
+                  }),
                   title: const Text('Recurring'),
                   subtitle: const Text('Auto-generate next month'),
                   secondary: Icon(Icons.autorenew_rounded, color: cs.primary),
@@ -1113,6 +1146,19 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                     ],
                     onChanged: (v) =>
                         setState(() => _recurrenceType = v ?? _recurrenceType),
+                  ),
+                ],
+                // How far this save reaches across the months already generated.
+                if (_showScopeField) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  RecurringScopeField(
+                    futureMonthCount: _futureMonthCount,
+                    month: widget.existing?.month ??
+                        widget.presenter.selectedMonth,
+                    value: _scope,
+                    noun: 'amount',
+                    removesFutureMonths: _dropsFutureMonths,
+                    onChanged: (s) => setState(() => _scope = s),
                   ),
                 ],
                 // Per-bill reminder lead time. Mobile has had this since the
@@ -1222,6 +1268,20 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
+  /// How far this save reaches — see [_AddBillDialog].
+  RecurringScope _scope = RecurringScope.thisAndFuture;
+  late final int _futureMonthCount;
+
+  bool get _wasRecurring => widget.existing?.isRecurring ?? false;
+
+  bool get _dropsFutureMonths => !_isRecurring && _wasRecurring;
+
+  bool get _showScopeField =>
+      (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
+
+  bool get _applyToFuture =>
+      _showScopeField && _scope == RecurringScope.thisAndFuture;
+
   @override
   void initState() {
     super.initState();
@@ -1240,6 +1300,10 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
       _isRecurring = r.isRecurring;
       _recurrenceType = r.recurrenceType ?? RecurrenceType.monthly;
     }
+    _futureMonthCount = widget.presenter.futureReceivableReach(
+      month: r?.month ?? widget.presenter.selectedMonth,
+      existing: r,
+    );
   }
 
   String _recurrenceLabel(RecurrenceType r) => switch (r) {
@@ -1291,20 +1355,24 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
         );
-        await widget.presenter.addReceivable(receivable);
+        await widget.presenter
+            .addReceivable(receivable, applyToFuture: _applyToFuture);
       } else {
-        await widget.presenter.updateReceivable(existing.copyWith(
-          name: _nameController.text.trim(),
-          receivableType: _type,
-          amount: amount,
-          // Day only — a stored time of day is invisible on the card yet used
-          // to order same-day entries, same as the mobile sheet.
-          expectedDate: DateUtils.dateOnly(_expectedDate),
-          categoryId: _selectedCategoryId ?? '',
-          accountId: _selectedAccountId,
-          isRecurring: _isRecurring,
-          recurrenceType: _isRecurring ? _recurrenceType : null,
-        ));
+        await widget.presenter.updateReceivable(
+          existing.copyWith(
+            name: _nameController.text.trim(),
+            receivableType: _type,
+            amount: amount,
+            // Day only — a stored time of day is invisible on the card yet used
+            // to order same-day entries, same as the mobile sheet.
+            expectedDate: DateUtils.dateOnly(_expectedDate),
+            categoryId: _selectedCategoryId ?? '',
+            accountId: _selectedAccountId,
+            isRecurring: _isRecurring,
+            recurrenceType: _isRecurring ? _recurrenceType : null,
+          ),
+          applyToFuture: _applyToFuture,
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -1438,7 +1506,14 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                 const SizedBox(height: WebInsets.sm),
                 SwitchListTile(
                   value: _isRecurring,
-                  onChanged: (v) => setState(() => _isRecurring = v),
+                  // See [_AddBillDialog]: an edit carries forward by default,
+                  // a deletion does not.
+                  onChanged: (v) => setState(() {
+                    _isRecurring = v;
+                    _scope = v
+                        ? RecurringScope.thisAndFuture
+                        : RecurringScope.thisMonthOnly;
+                  }),
                   title: const Text('Recurring'),
                   subtitle: const Text('Auto-generate next month'),
                   contentPadding: EdgeInsets.zero,
@@ -1454,6 +1529,19 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _recurrenceType = v ?? _recurrenceType),
+                  ),
+                ],
+                // How far this save reaches across the months already generated.
+                if (_showScopeField) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  RecurringScopeField(
+                    futureMonthCount: _futureMonthCount,
+                    month: widget.existing?.month ??
+                        widget.presenter.selectedMonth,
+                    value: _scope,
+                    noun: 'amount',
+                    removesFutureMonths: _dropsFutureMonths,
+                    onChanged: (s) => setState(() => _scope = s),
                   ),
                 ],
                 if (accounts.isEmpty && categories.isEmpty) ...[
@@ -1875,26 +1963,19 @@ class _BillRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    // A recurring bill is asked about by series, so the months generated ahead
+    // aren't silently orphaned when this one goes.
+    final scope = await confirmRecurringDelete(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete bill?'),
-        content: Text('Remove "${bill.name}"? This cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete bill?',
+      name: bill.name,
+      futureMonthCount: presenter.futureSeriesBills(bill).length,
     );
-    if (confirmed != true) return;
-    await presenter.deleteBill(bill.id);
+    if (scope == null) return;
+    await presenter.deleteBill(
+      bill.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
     if (!context.mounted) return;
     AppToast.show(context, 'Deleted "${bill.name}".');
   }
@@ -2218,26 +2299,17 @@ class _ReceivableRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final scope = await confirmRecurringDelete(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete receivable?'),
-        content: Text('Remove "${receivable.name}"? This cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete receivable?',
+      name: receivable.name,
+      futureMonthCount: presenter.futureSeriesReceivables(receivable).length,
     );
-    if (confirmed != true) return;
-    await presenter.deleteReceivable(receivable.id);
+    if (scope == null) return;
+    await presenter.deleteReceivable(
+      receivable.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
     if (!context.mounted) return;
     AppToast.show(context, 'Deleted "${receivable.name}".');
   }
@@ -2653,26 +2725,17 @@ class _BudgetedExpenseRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final scope = await confirmRecurringDelete(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete set-aside?'),
-        content: Text('Remove "${expense.name}"? This cannot be undone.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+      title: 'Delete set-aside?',
+      name: expense.name,
+      futureMonthCount: presenter.futureSeriesExpenses(expense).length,
     );
-    if (confirmed != true) return;
-    await presenter.deleteBudgetedExpense(expense.id);
+    if (scope == null) return;
+    await presenter.deleteBudgetedExpense(
+      expense.id,
+      applyToFuture: scope == RecurringScope.thisAndFuture,
+    );
     if (!context.mounted) return;
     AppToast.show(context, 'Deleted "${expense.name}".');
   }
@@ -2773,6 +2836,20 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
+  /// How far this save reaches — see [_AddBillDialog].
+  RecurringScope _scope = RecurringScope.thisAndFuture;
+  late final int _futureMonthCount;
+
+  bool get _wasRecurring => widget.existing?.isRecurring ?? false;
+
+  bool get _dropsFutureMonths => !_isRecurring && _wasRecurring;
+
+  bool get _showScopeField =>
+      (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
+
+  bool get _applyToFuture =>
+      _showScopeField && _scope == RecurringScope.thisAndFuture;
+
   @override
   void initState() {
     super.initState();
@@ -2791,6 +2868,10 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
       _isRecurring = e.isRecurring;
       _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
+    _futureMonthCount = widget.presenter.futureExpenseReach(
+      month: e?.month ?? widget.presenter.selectedMonth,
+      existing: e,
+    );
   }
 
   String _recurrenceLabel(RecurrenceType r) => switch (r) {
@@ -2820,31 +2901,37 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
       final note = _noteController.text.trim();
       final existing = widget.existing;
       if (existing == null) {
-        await widget.presenter.addBudgetedExpense(BudgetedExpense(
-          id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-          name: _nameController.text.trim(),
-          budgetedType: _type,
-          month: widget.presenter.selectedMonth,
-          allocatedAmount: amount,
-          categoryId: _selectedCategoryId ?? '',
-          note: note.isEmpty ? null : note,
-          accountId: _selectedAccountId,
-          destinationAccountId: _selectedDestinationId,
-          isRecurring: _isRecurring,
-          recurrenceType: _isRecurring ? _recurrenceType : null,
-        ));
+        await widget.presenter.addBudgetedExpense(
+          BudgetedExpense(
+            id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+            name: _nameController.text.trim(),
+            budgetedType: _type,
+            month: widget.presenter.selectedMonth,
+            allocatedAmount: amount,
+            categoryId: _selectedCategoryId ?? '',
+            note: note.isEmpty ? null : note,
+            accountId: _selectedAccountId,
+            destinationAccountId: _selectedDestinationId,
+            isRecurring: _isRecurring,
+            recurrenceType: _isRecurring ? _recurrenceType : null,
+          ),
+          applyToFuture: _applyToFuture,
+        );
       } else {
-        await widget.presenter.updateBudgetedExpense(existing.copyWith(
-          name: _nameController.text.trim(),
-          budgetedType: _type,
-          allocatedAmount: amount,
-          categoryId: _selectedCategoryId ?? '',
-          note: note.isEmpty ? null : note,
-          accountId: _selectedAccountId,
-          destinationAccountId: _selectedDestinationId,
-          isRecurring: _isRecurring,
-          recurrenceType: _isRecurring ? _recurrenceType : null,
-        ));
+        await widget.presenter.updateBudgetedExpense(
+          existing.copyWith(
+            name: _nameController.text.trim(),
+            budgetedType: _type,
+            allocatedAmount: amount,
+            categoryId: _selectedCategoryId ?? '',
+            note: note.isEmpty ? null : note,
+            accountId: _selectedAccountId,
+            destinationAccountId: _selectedDestinationId,
+            isRecurring: _isRecurring,
+            recurrenceType: _isRecurring ? _recurrenceType : null,
+          ),
+          applyToFuture: _applyToFuture,
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
@@ -2985,7 +3072,14 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                 const SizedBox(height: WebInsets.sm),
                 SwitchListTile(
                   value: _isRecurring,
-                  onChanged: (v) => setState(() => _isRecurring = v),
+                  // See [_AddBillDialog]: an edit carries forward by default,
+                  // a deletion does not.
+                  onChanged: (v) => setState(() {
+                    _isRecurring = v;
+                    _scope = v
+                        ? RecurringScope.thisAndFuture
+                        : RecurringScope.thisMonthOnly;
+                  }),
                   title: const Text('Recurring'),
                   subtitle: const Text('Auto-generate next month'),
                   contentPadding: EdgeInsets.zero,
@@ -3001,6 +3095,19 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _recurrenceType = v ?? _recurrenceType),
+                  ),
+                ],
+                // How far this save reaches across the months already generated.
+                if (_showScopeField) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  RecurringScopeField(
+                    futureMonthCount: _futureMonthCount,
+                    month: widget.existing?.month ??
+                        widget.presenter.selectedMonth,
+                    value: _scope,
+                    noun: 'allocation',
+                    removesFutureMonths: _dropsFutureMonths,
+                    onChanged: (s) => setState(() => _scope = s),
                   ),
                 ],
                 const SizedBox(height: WebInsets.md),

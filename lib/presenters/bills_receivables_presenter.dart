@@ -606,6 +606,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       ..addAll(await _storage.loadAwardedXpKeys());
     _awardedXpLoaded = true;
 
+    // Join pre-existing recurring rows into series before anything reads them,
+    // so a long-standing user's months can be propagated across too.
+    await _backfillSeriesIds();
+
     // One-time removal of stale future-month credit-card statement copies the
     // recurring auto-copy used to proliferate before it excluded credit cards.
     await _cleanupFutureRecurringCreditStatements();
@@ -734,19 +738,52 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Bill CRUD ────────────────────────────────────────────────────────────────
 
-  Future<void> addBill(Bill bill) async {
-    _allBills = [..._allBills, bill];
+  /// Adds [bill]. When it recurs and [applyToFuture] is set, it is also seeded
+  /// into every later month that already holds bills — those months are skipped
+  /// by [_autoGenerateRecurringBills], which only seeds a month that is still
+  /// empty, so without this a bill added today would silently never appear in a
+  /// future month the user had already opened.
+  Future<void> addBill(Bill bill, {bool applyToFuture = false}) async {
+    final seeded = _withBillSeries(bill);
+    _allBills = [..._allBills, seeded];
+    final spread = applyToFuture
+        ? _propagateBillToFuture(seeded)
+        : (rewritten: <Bill>[], removedIds: <String>[]);
     safeNotify();
     await _storage.saveBills(_allBills);
-    await _syncBillReminder(bill);
+    await _syncBillReminder(seeded);
+    for (final b in spread.rewritten) {
+      await _syncBillReminder(b);
+    }
     await _notifyDependents();
   }
 
-  Future<void> updateBill(Bill bill) async {
-    _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
+  /// Saves [bill]. When [applyToFuture] is set, the same change is written
+  /// across every later month of its series that is still unsettled — the fix
+  /// for an edit that used to stop at the month it was made in, leaving already
+  /// generated future months frozen at the amount they were seeded with.
+  ///
+  /// Turning recurrence *off* with [applyToFuture] set removes those future
+  /// copies instead of rewriting them: they exist only because the bill
+  /// recurred, and the user has just said it no longer does.
+  Future<void> updateBill(Bill bill, {bool applyToFuture = false}) async {
+    final previous = _allBills.where((b) => b.id == bill.id).firstOrNull;
+    final saved = _withBillSeries(bill, previous: previous);
+    _allBills = [for (final b in _allBills) b.id == saved.id ? saved : b];
+    final spread = applyToFuture
+        ? _propagateBillToFuture(saved)
+        : (rewritten: <Bill>[], removedIds: <String>[]);
     safeNotify();
     await _storage.saveBills(_allBills);
-    await _syncBillReminder(bill);
+    await _syncBillReminder(saved);
+    // A rewritten row may carry a new name, due day or lead time, so its
+    // pending reminder is restated rather than left describing the old bill.
+    for (final b in spread.rewritten) {
+      await _syncBillReminder(b);
+    }
+    for (final id in spread.removedIds) {
+      await _notifications.cancelBillReminder(id);
+    }
     await _notifyDependents();
   }
 
@@ -779,11 +816,23 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .firstOrNull;
   }
 
-  Future<void> deleteBill(String id) async {
-    _allBills = _allBills.where((b) => b.id != id).toList();
+  /// Deletes [id]. With [applyToFuture] set, the unsettled later months of the
+  /// same series go with it, so ending a subscription doesn't leave its already
+  /// generated future copies behind as phantom obligations.
+  Future<void> deleteBill(String id, {bool applyToFuture = false}) async {
+    final target = _allBills.where((b) => b.id == id).firstOrNull;
+    final alsoRemove = applyToFuture && target != null
+        ? futureSeriesBills(target).map((b) => b.id).toSet()
+        : const <String>{};
+    _allBills = _allBills
+        .where((b) => b.id != id && !alsoRemove.contains(b.id))
+        .toList();
     safeNotify();
     await _storage.saveBills(_allBills);
     await _notifications.cancelBillReminder(id);
+    for (final removed in alsoRemove) {
+      await _notifications.cancelBillReminder(removed);
+    }
     await _notifyDependents();
   }
 
@@ -1134,8 +1183,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Receivable CRUD ─────────────────────────────────────────────────────────
 
-  Future<void> addReceivable(Receivable receivable) async {
-    _allReceivables = [..._allReceivables, receivable];
+  /// Adds [receivable], optionally seeding it into later months that already
+  /// hold receivables — see [addBill] for why that seeding is needed.
+  Future<void> addReceivable(
+    Receivable receivable, {
+    bool applyToFuture = false,
+  }) async {
+    final seeded = _withReceivableSeries(receivable);
+    _allReceivables = [..._allReceivables, seeded];
+    if (applyToFuture) _propagateReceivableToFuture(seeded);
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
@@ -1223,17 +1279,34 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return 'Reimbursement';
   }
 
-  Future<void> updateReceivable(Receivable receivable) async {
+  /// Saves [receivable], optionally writing the change across the unsettled
+  /// later months of its series — see [updateBill] for the full contract.
+  Future<void> updateReceivable(
+    Receivable receivable, {
+    bool applyToFuture = false,
+  }) async {
+    final previous =
+        _allReceivables.where((r) => r.id == receivable.id).firstOrNull;
+    final saved = _withReceivableSeries(receivable, previous: previous);
     _allReceivables = [
-      for (final r in _allReceivables) r.id == receivable.id ? receivable : r,
+      for (final r in _allReceivables) r.id == saved.id ? saved : r,
     ];
+    if (applyToFuture) _propagateReceivableToFuture(saved);
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
   }
 
-  Future<void> deleteReceivable(String id) async {
-    _allReceivables = _allReceivables.where((r) => r.id != id).toList();
+  /// Deletes [id], optionally taking the unsettled later months of its series
+  /// with it — see [deleteBill].
+  Future<void> deleteReceivable(String id, {bool applyToFuture = false}) async {
+    final target = _allReceivables.where((r) => r.id == id).firstOrNull;
+    final alsoRemove = applyToFuture && target != null
+        ? futureSeriesReceivables(target).map((r) => r.id).toSet()
+        : const <String>{};
+    _allReceivables = _allReceivables
+        .where((r) => r.id != id && !alsoRemove.contains(r.id))
+        .toList();
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
@@ -1300,24 +1373,50 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Budgeted Expense CRUD ────────────────────────────────────────────────────
 
-  Future<void> addBudgetedExpense(BudgetedExpense expense) async {
-    _allExpenses = [..._allExpenses, expense];
+  /// Adds [expense], optionally seeding it into later months that already hold
+  /// set-asides — see [addBill] for why that seeding is needed.
+  Future<void> addBudgetedExpense(
+    BudgetedExpense expense, {
+    bool applyToFuture = false,
+  }) async {
+    final seeded = _withExpenseSeries(expense);
+    _allExpenses = [..._allExpenses, seeded];
+    if (applyToFuture) _propagateExpenseToFuture(seeded);
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 
-  Future<void> updateBudgetedExpense(BudgetedExpense expense) async {
+  /// Saves [expense], optionally writing the change across the unfunded later
+  /// months of its series — see [updateBill] for the full contract.
+  Future<void> updateBudgetedExpense(
+    BudgetedExpense expense, {
+    bool applyToFuture = false,
+  }) async {
+    final previous = _allExpenses.where((e) => e.id == expense.id).firstOrNull;
+    final saved = _withExpenseSeries(expense, previous: previous);
     _allExpenses = [
-      for (final e in _allExpenses) e.id == expense.id ? expense : e,
+      for (final e in _allExpenses) e.id == saved.id ? saved : e,
     ];
+    if (applyToFuture) _propagateExpenseToFuture(saved);
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 
-  Future<void> deleteBudgetedExpense(String id) async {
-    _allExpenses = _allExpenses.where((e) => e.id != id).toList();
+  /// Deletes [id], optionally taking the unfunded later months of its series
+  /// with it — see [deleteBill].
+  Future<void> deleteBudgetedExpense(
+    String id, {
+    bool applyToFuture = false,
+  }) async {
+    final target = _allExpenses.where((e) => e.id == id).firstOrNull;
+    final alsoRemove = applyToFuture && target != null
+        ? futureSeriesExpenses(target).map((e) => e.id).toSet()
+        : const <String>{};
+    _allExpenses = _allExpenses
+        .where((e) => e.id != id && !alsoRemove.contains(e.id))
+        .toList();
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
@@ -1682,6 +1781,541 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final saved = expense.destinationAccountId;
     if (saved == null || saved == fromAccountId) return null;
     return setAsideDestinationAccounts.any((a) => a.id == saved) ? saved : null;
+  }
+
+  // ─── Recurring series propagation ─────────────────────────────────────────────
+  //
+  // A recurring item is not one record: every month is its own row, seeded once
+  // by the auto-generation pass and then frozen. Editing August therefore used
+  // to leave an already-seeded September sitting at the amount it was born with,
+  // forever. These helpers let a save carry forward instead.
+  //
+  // "This and future months" means: every later month that already exists ends
+  // up carrying this item, matching what was just saved. That covers both
+  // rewriting the copies that are there and seeding the months that are missing
+  // one — a distinction the user has no reason to care about.
+  //
+  // Three rules hold throughout:
+  //   * Only *later* months move. A past month is history and is never touched.
+  //   * Only *unsettled* rows move. A paid bill, a received receivable or a
+  //     funded set-aside is money that already changed hands and is backed by a
+  //     ledger transaction; rewriting it would contradict the ledger.
+  //   * Rows are matched by [Bill.seriesId], never by name — the edit being
+  //     spread is very often a rename, which is exactly when name-matching
+  //     would lose the series or, worse, hit a same-named unrelated item.
+
+  /// True when [month] falls strictly after [reference]. `YYYY-MM` keys are
+  /// fixed-width and zero-padded, so lexicographic order is chronological.
+  bool _isLaterMonth(String month, String reference) =>
+      month.compareTo(reference) > 0;
+
+  /// A day pinned into [month], clamped to that month's length so a 31st-of-the
+  /// -month entry copied into February lands on the 28th instead of drifting
+  /// into March.
+  DateTime _dateInMonth(String month, int day) {
+    final parts = month.split('-');
+    final year = int.parse(parts[0]);
+    final monthNum = int.parse(parts[1]);
+    final lastDay = DateTime(year, monthNum + 1, 0).day;
+    return DateTime(year, monthNum, day.clamp(1, lastDay));
+  }
+
+  bool _billIsOpen(Bill b) => !b.isPaid && b.transactionId == null;
+
+  bool _receivableIsOpen(Receivable r) =>
+      !r.isReceived && r.transactionId == null;
+
+  bool _expenseIsOpen(BudgetedExpense e) =>
+      !e.isPaid && e.spentAmount == 0 && e.transactionId == null;
+
+  /// Stamps a series onto a recurring row that has none, so a later edit can
+  /// find its other months. The row's own id doubles as the series token: it is
+  /// already unique, and reusing it keeps the value identical on every device
+  /// rather than inventing a random one each would disagree about.
+  ///
+  /// An existing series is never overwritten or cleared — including when the
+  /// user switches recurrence off, so switching it back on rejoins the same
+  /// series instead of orphaning the months already generated from it.
+  Bill _withBillSeries(Bill bill, {Bill? previous}) {
+    final existing = bill.seriesId ?? previous?.seriesId;
+    if (existing != null) {
+      return bill.seriesId == existing
+          ? bill
+          : bill.copyWith(seriesId: existing);
+    }
+    return bill.isRecurring ? bill.copyWith(seriesId: bill.id) : bill;
+  }
+
+  Receivable _withReceivableSeries(
+    Receivable receivable, {
+    Receivable? previous,
+  }) {
+    final existing = receivable.seriesId ?? previous?.seriesId;
+    if (existing != null) {
+      return receivable.seriesId == existing
+          ? receivable
+          : receivable.copyWith(seriesId: existing);
+    }
+    return receivable.isRecurring
+        ? receivable.copyWith(seriesId: receivable.id)
+        : receivable;
+  }
+
+  BudgetedExpense _withExpenseSeries(
+    BudgetedExpense expense, {
+    BudgetedExpense? previous,
+  }) {
+    final existing = expense.seriesId ?? previous?.seriesId;
+    if (existing != null) {
+      return expense.seriesId == existing
+          ? expense
+          : expense.copyWith(seriesId: existing);
+    }
+    return expense.isRecurring
+        ? expense.copyWith(seriesId: expense.id)
+        : expense;
+  }
+
+  /// Every later-month row of [bill]'s series, settled ones included. Settled
+  /// rows are excluded from *editing* but still count as months the series
+  /// covers, so propagation never drops a second copy alongside a paid one.
+  List<Bill> _laterSeriesBills(Bill bill) {
+    final series = bill.seriesId;
+    if (series == null) return const [];
+    return _allBills
+        .where((b) =>
+            b.id != bill.id &&
+            b.seriesId == series &&
+            _isLaterMonth(b.month, bill.month))
+        .toList();
+  }
+
+  List<Receivable> _laterSeriesReceivables(Receivable receivable) {
+    final series = receivable.seriesId;
+    if (series == null) return const [];
+    return _allReceivables
+        .where((r) =>
+            r.id != receivable.id &&
+            r.seriesId == series &&
+            _isLaterMonth(r.month, receivable.month))
+        .toList();
+  }
+
+  List<BudgetedExpense> _laterSeriesExpenses(BudgetedExpense expense) {
+    final series = expense.seriesId;
+    if (series == null) return const [];
+    return _allExpenses
+        .where((e) =>
+            e.id != expense.id &&
+            e.seriesId == series &&
+            _isLaterMonth(e.month, expense.month))
+        .toList();
+  }
+
+  /// The later-month rows a "this and future months" save of [bill] may edit or
+  /// delete. Public so the View can offer the choice and name its blast radius
+  /// without doing the filtering itself.
+  List<Bill> futureSeriesBills(Bill bill) =>
+      _laterSeriesBills(bill).where(_billIsOpen).toList()
+        ..sort((a, b) => a.month.compareTo(b.month));
+
+  List<Receivable> futureSeriesReceivables(Receivable receivable) =>
+      _laterSeriesReceivables(receivable).where(_receivableIsOpen).toList()
+        ..sort((a, b) => a.month.compareTo(b.month));
+
+  List<BudgetedExpense> futureSeriesExpenses(BudgetedExpense expense) =>
+      _laterSeriesExpenses(expense).where(_expenseIsOpen).toList()
+        ..sort((a, b) => a.month.compareTo(b.month));
+
+  /// How many later months a "this and future months" save would reach for an
+  /// item saved into [month]: the open rows of its series it would rewrite,
+  /// plus the already-seeded months it would create a copy in. Pass [existing]
+  /// when editing; omit it for a brand-new item, which has no series yet and so
+  /// can only reach months by seeding.
+  ///
+  /// Views call this once, off the build path, to decide whether the scope
+  /// choice is worth showing at all — reaching nothing means there is nothing
+  /// to choose between.
+  int futureBillReach({required String month, Bill? existing}) {
+    final later =
+        existing == null ? const <Bill>[] : _laterSeriesBills(existing);
+    return _reachCount(
+      editableMonths: later.where(_billIsOpen).map((b) => b.month),
+      coveredMonths: later.map((b) => b.month),
+      seededMonths: seededFutureBillMonths(month),
+    );
+  }
+
+  int futureReceivableReach({required String month, Receivable? existing}) {
+    final later = existing == null
+        ? const <Receivable>[]
+        : _laterSeriesReceivables(existing);
+    return _reachCount(
+      editableMonths: later.where(_receivableIsOpen).map((r) => r.month),
+      coveredMonths: later.map((r) => r.month),
+      seededMonths: seededFutureReceivableMonths(month),
+    );
+  }
+
+  int futureExpenseReach({required String month, BudgetedExpense? existing}) {
+    final later = existing == null
+        ? const <BudgetedExpense>[]
+        : _laterSeriesExpenses(existing);
+    return _reachCount(
+      editableMonths: later.where(_expenseIsOpen).map((e) => e.month),
+      coveredMonths: later.map((e) => e.month),
+      seededMonths: seededFutureExpenseMonths(month),
+    );
+  }
+
+  int _reachCount({
+    required Iterable<String> editableMonths,
+    required Iterable<String> coveredMonths,
+    required Iterable<String> seededMonths,
+  }) {
+    final covered = coveredMonths.toSet();
+    return {
+      ...editableMonths,
+      ...seededMonths.where((m) => !covered.contains(m)),
+    }.length;
+  }
+
+  /// Spreads [bill] across its later months: open copies are restated to match
+  /// it, and already-seeded months with no copy get one. Dropping recurrence
+  /// instead removes the open copies — they exist only because the bill
+  /// recurred, and the user has just said it no longer does.
+  ///
+  /// Returns the rows it added or rewrote, plus the ids it removed, so the
+  /// caller can re-point the affected reminders.
+  ({List<Bill> rewritten, List<String> removedIds}) _propagateBillToFuture(
+    Bill bill,
+  ) {
+    final later = _laterSeriesBills(bill);
+    if (bill.seriesId == null) {
+      return (rewritten: <Bill>[], removedIds: <String>[]);
+    }
+    if (!bill.isRecurring) {
+      final removable = later.where(_billIsOpen).map((b) => b.id).toSet();
+      if (removable.isEmpty) {
+        return (rewritten: <Bill>[], removedIds: <String>[]);
+      }
+      _allBills = _allBills.where((b) => !removable.contains(b.id)).toList();
+      return (rewritten: <Bill>[], removedIds: removable.toList());
+    }
+
+    final targetIds = later.where(_billIsOpen).map((b) => b.id).toSet();
+    final touched = <Bill>[];
+    final next = <Bill>[];
+    for (final b in _allBills) {
+      if (!targetIds.contains(b.id)) {
+        next.add(b);
+        continue;
+      }
+      final updated = _rewriteBillFrom(b, bill);
+      touched.add(updated);
+      next.add(updated);
+    }
+
+    final covered = later.map((b) => b.month).toSet();
+    for (final month in seededFutureBillMonths(bill.month)) {
+      if (covered.contains(month)) continue;
+      final seed = _billForMonth(bill, month);
+      touched.add(seed);
+      next.add(seed);
+    }
+    _allBills = next;
+    return (rewritten: touched, removedIds: <String>[]);
+  }
+
+  void _propagateReceivableToFuture(Receivable receivable) {
+    final later = _laterSeriesReceivables(receivable);
+    if (receivable.seriesId == null) return;
+    if (!receivable.isRecurring) {
+      final removable = later.where(_receivableIsOpen).map((r) => r.id).toSet();
+      if (removable.isEmpty) return;
+      _allReceivables =
+          _allReceivables.where((r) => !removable.contains(r.id)).toList();
+      return;
+    }
+
+    final targetIds = later.where(_receivableIsOpen).map((r) => r.id).toSet();
+    final next = [
+      for (final r in _allReceivables)
+        targetIds.contains(r.id) ? _rewriteReceivableFrom(r, receivable) : r,
+    ];
+    final covered = later.map((r) => r.month).toSet();
+    for (final month in seededFutureReceivableMonths(receivable.month)) {
+      if (covered.contains(month)) continue;
+      next.add(_receivableForMonth(receivable, month));
+    }
+    _allReceivables = next;
+  }
+
+  void _propagateExpenseToFuture(BudgetedExpense expense) {
+    final later = _laterSeriesExpenses(expense);
+    if (expense.seriesId == null) return;
+    if (!expense.isRecurring) {
+      final removable = later.where(_expenseIsOpen).map((e) => e.id).toSet();
+      if (removable.isEmpty) return;
+      _allExpenses =
+          _allExpenses.where((e) => !removable.contains(e.id)).toList();
+      return;
+    }
+
+    final targetIds = later.where(_expenseIsOpen).map((e) => e.id).toSet();
+    final next = [
+      for (final e in _allExpenses)
+        targetIds.contains(e.id) ? _rewriteExpenseFrom(e, expense) : e,
+    ];
+    final covered = later.map((e) => e.month).toSet();
+    for (final month in seededFutureExpenseMonths(expense.month)) {
+      if (covered.contains(month)) continue;
+      next.add(_expenseForMonth(expense, month));
+    }
+    _allExpenses = next;
+  }
+
+  /// [target] restated from [template]: every planning field comes from the
+  /// template, while identity ([Bill.id], [Bill.month]) and settlement state
+  /// stay the target's own. A staged [Bill.nextMonthAmount] is dropped — the
+  /// user has just named an amount for every future month, which supersedes an
+  /// override staged against the old one.
+  Bill _rewriteBillFrom(Bill target, Bill template) => Bill(
+        id: target.id,
+        month: target.month,
+        name: template.name,
+        billType: template.billType,
+        amount: template.amount,
+        dueDay: template.dueDay,
+        categoryId: template.categoryId,
+        accountId: template.accountId,
+        paymentNote: template.paymentNote,
+        isRecurring: template.isRecurring,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+        reminderDaysBefore: template.reminderDaysBefore,
+        isPaid: target.isPaid,
+        paidDate: target.paidDate,
+        paidAmount: target.paidAmount,
+        transactionId: target.transactionId,
+      );
+
+  Receivable _rewriteReceivableFrom(Receivable target, Receivable template) =>
+      Receivable(
+        id: target.id,
+        month: target.month,
+        name: template.name,
+        receivableType: template.receivableType,
+        amount: template.amount,
+        // The template's day-of-month, re-pinned into the target's own month.
+        expectedDate: template.expectedDate == null
+            ? null
+            : _dateInMonth(target.month, template.expectedDate!.day),
+        categoryId: template.categoryId,
+        accountId: template.accountId,
+        isRecurring: template.isRecurring,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+        isReceived: target.isReceived,
+        receivedDate: target.receivedDate,
+        receivedAmount: target.receivedAmount,
+        transactionId: target.transactionId,
+        reimbursementForTxnId: target.reimbursementForTxnId,
+        // Rank is the user's arrangement of *that* month's list, not a property
+        // of the series, so it stays where they put it.
+        sortIndex: target.sortIndex,
+      );
+
+  BudgetedExpense _rewriteExpenseFrom(
+    BudgetedExpense target,
+    BudgetedExpense template,
+  ) =>
+      BudgetedExpense(
+        id: target.id,
+        month: target.month,
+        name: template.name,
+        budgetedType: template.budgetedType,
+        allocatedAmount: template.allocatedAmount,
+        categoryId: template.categoryId,
+        note: template.note,
+        accountId: template.accountId,
+        destinationAccountId: template.destinationAccountId,
+        isRecurring: template.isRecurring,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+        isPaid: target.isPaid,
+        spentAmount: target.spentAmount,
+        transactionId: target.transactionId,
+      );
+
+  /// A fresh copy of [template] for [month]. Nothing settlement-related is
+  /// carried: a month this seeds into starts unpaid.
+  Bill _billForMonth(Bill template, String month) => Bill(
+        id: _generateId(),
+        month: month,
+        name: template.name,
+        billType: template.billType,
+        amount: template.amount,
+        dueDay: template.dueDay,
+        categoryId: template.categoryId,
+        accountId: template.accountId,
+        paymentNote: template.paymentNote,
+        isRecurring: true,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+        reminderDaysBefore: template.reminderDaysBefore,
+      );
+
+  Receivable _receivableForMonth(Receivable template, String month) =>
+      Receivable(
+        id: _generateId(),
+        month: month,
+        name: template.name,
+        receivableType: template.receivableType,
+        amount: template.amount,
+        expectedDate: template.expectedDate == null
+            ? null
+            : _dateInMonth(month, template.expectedDate!.day),
+        categoryId: template.categoryId,
+        accountId: template.accountId,
+        isRecurring: true,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+        sortIndex: template.sortIndex,
+      );
+
+  BudgetedExpense _expenseForMonth(BudgetedExpense template, String month) =>
+      BudgetedExpense(
+        id: _generateId(),
+        month: month,
+        name: template.name,
+        budgetedType: template.budgetedType,
+        allocatedAmount: template.allocatedAmount,
+        categoryId: template.categoryId,
+        note: template.note,
+        accountId: template.accountId,
+        destinationAccountId: template.destinationAccountId,
+        isRecurring: true,
+        recurrenceType: template.recurrenceType,
+        seriesId: template.seriesId,
+      );
+
+  /// Later months that already hold bills. [_autoGenerateRecurringBills] only
+  /// seeds a month with nothing in it, so these are exactly the months a bill
+  /// added now would otherwise never reach.
+  List<String> seededFutureBillMonths(String month) => _allBills
+      .where((b) => !_isAutoStatement(b) && _isLaterMonth(b.month, month))
+      .map((b) => b.month)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> seededFutureReceivableMonths(String month) => _allReceivables
+      .where((r) => _isLaterMonth(r.month, month))
+      .map((r) => r.month)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<String> seededFutureExpenseMonths(String month) => _allExpenses
+      .where((e) => _isLaterMonth(e.month, month))
+      .map((e) => e.month)
+      .toSet()
+      .toList()
+    ..sort();
+
+  /// Joins recurring rows saved before [Bill.seriesId] existed into series, so
+  /// propagation reaches the months a long-standing user already has on disk.
+  ///
+  /// Rows are grouped by the only thing that ever linked them — name and type —
+  /// and each group adopts the id of its earliest month. That choice is what
+  /// makes the repair safe to run on every device: two phones backfilling the
+  /// same data independently arrive at the same series token and stay in step,
+  /// where a freshly generated id would have left them disagreeing forever.
+  Future<void> _backfillSeriesIds() async {
+    final bills = _stampMissingSeries<Bill>(
+      _allBills,
+      // An auto-generated statement is reissued from the card's real balance
+      // every month, so it is not a series anyone edits forward.
+      isSeriesMember: (b) => b.isRecurring && !b.isAutoStatement,
+      keyOf: (b) => '${b.name.trim().toLowerCase()}|${b.billType.name}',
+      monthOf: (b) => b.month,
+      idOf: (b) => b.id,
+      seriesOf: (b) => b.seriesId,
+      withSeries: (b, series) => b.copyWith(seriesId: series),
+    );
+    if (bills != null) {
+      _allBills = bills;
+      await _storage.saveBills(_allBills);
+    }
+
+    final receivables = _stampMissingSeries<Receivable>(
+      _allReceivables,
+      isSeriesMember: (r) => r.isRecurring,
+      keyOf: (r) => '${r.name.trim().toLowerCase()}|${r.receivableType.name}',
+      monthOf: (r) => r.month,
+      idOf: (r) => r.id,
+      seriesOf: (r) => r.seriesId,
+      withSeries: (r, series) => r.copyWith(seriesId: series),
+    );
+    if (receivables != null) {
+      _allReceivables = receivables;
+      await _storage.saveReceivables(_allReceivables);
+    }
+
+    final expenses = _stampMissingSeries<BudgetedExpense>(
+      _allExpenses,
+      isSeriesMember: (e) => e.isRecurring,
+      keyOf: (e) => '${e.name.trim().toLowerCase()}|${e.budgetedType.name}',
+      monthOf: (e) => e.month,
+      idOf: (e) => e.id,
+      seriesOf: (e) => e.seriesId,
+      withSeries: (e, series) => e.copyWith(seriesId: series),
+    );
+    if (expenses != null) {
+      _allExpenses = expenses;
+      await _storage.saveBudgetedExpenses(_allExpenses);
+    }
+  }
+
+  /// Groups [rows] into series and stamps the ones missing a series id.
+  /// Returns null — "nothing to save" — when every member already has one,
+  /// which is the steady state after the first run.
+  List<T>? _stampMissingSeries<T>(
+    List<T> rows, {
+    required bool Function(T) isSeriesMember,
+    required String Function(T) keyOf,
+    required String Function(T) monthOf,
+    required String Function(T) idOf,
+    required String? Function(T) seriesOf,
+    required T Function(T, String) withSeries,
+  }) {
+    final groups = <String, List<T>>{};
+    var anyMissing = false;
+    for (final row in rows) {
+      if (!isSeriesMember(row)) continue;
+      groups.putIfAbsent(keyOf(row), () => []).add(row);
+      if (seriesOf(row) == null) anyMissing = true;
+    }
+    if (!anyMissing) return null;
+
+    final seriesByKey = <String, String>{};
+    groups.forEach((key, group) {
+      // An id already agreed on by part of the group wins, so a half-migrated
+      // set converges on one series instead of splitting into two.
+      final adopted = group.map(seriesOf).whereType<String>().toList()..sort();
+      final earliestFirst = group.toList()
+        ..sort((a, b) => monthOf(a).compareTo(monthOf(b)));
+      seriesByKey[key] = adopted.firstOrNull ?? idOf(earliestFirst.first);
+    });
+
+    return [
+      for (final row in rows)
+        if (!isSeriesMember(row) || seriesOf(row) != null)
+          row
+        else
+          withSeries(row, seriesByKey[keyOf(row)]!),
+    ];
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -2158,6 +2792,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           paymentNote: b.paymentNote,
           isRecurring: b.isRecurring,
           recurrenceType: b.recurrenceType,
+          // Inherit the series so a later edit can find this copy again. Fall
+          // back to the source's id for a row that predates seriesId and has
+          // not been through the backfill yet.
+          seriesId: b.seriesId ?? b.id,
           reminderDaysBefore: b.reminderDaysBefore,
         ));
     _allBills = [..._allBills, ...copies];
@@ -2194,6 +2832,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         accountId: r.accountId,
         isRecurring: r.isRecurring,
         recurrenceType: r.recurrenceType,
+        seriesId: r.seriesId ?? r.id,
         // Carry the hand-set rank forward so a grouping the user arranged last
         // month isn't shuffled the moment the new month seeds itself.
         sortIndex: r.sortIndex,
@@ -2229,6 +2868,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           destinationAccountId: e.destinationAccountId,
           isRecurring: e.isRecurring,
           recurrenceType: e.recurrenceType,
+          seriesId: e.seriesId ?? e.id,
         ));
     _allExpenses = [..._allExpenses, ...copies];
     await _storage.saveBudgetedExpenses(_allExpenses);

@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
+import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -47,6 +48,13 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
+  /// How far this save reaches — see [AddBillSheet] for why it defaults to
+  /// carrying forward.
+  RecurringScope _scope = RecurringScope.thisAndFuture;
+
+  /// Later months the scope switch would touch, snapshotted once (Rule 1).
+  late final int _futureMonthCount;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +70,20 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
       _isRecurring = e.isRecurring;
       _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
+    _futureMonthCount = widget.presenter.futureExpenseReach(
+      month: e?.month ?? widget.presenter.selectedMonth,
+      existing: e,
+    );
   }
+
+  /// See [AddBillSheet]: turning recurrence off still needs the choice, because
+  /// the months generated ahead exist only because it used to recur.
+  bool get _wasRecurring => widget.existing?.isRecurring ?? false;
+
+  bool get _dropsFutureMonths => !_isRecurring && _wasRecurring;
+
+  bool get _showScopeField =>
+      (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
 
   String _recurrenceLabel(RecurrenceType r) => switch (r) {
         RecurrenceType.monthly => 'Monthly',
@@ -108,11 +129,18 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
         spentAmount: e?.spentAmount ?? 0,
         transactionId: e?.transactionId,
         nextMonthAmount: e?.nextMonthAmount,
+        // Without this the fresh BudgetedExpense would drop the series link and
+        // the save could no longer find the set-aside's other months.
+        seriesId: e?.seriesId,
       );
+      final applyToFuture =
+          _showScopeField && _scope == RecurringScope.thisAndFuture;
       if (e != null) {
-        await widget.presenter.updateBudgetedExpense(expense);
+        await widget.presenter
+            .updateBudgetedExpense(expense, applyToFuture: applyToFuture);
       } else {
-        await widget.presenter.addBudgetedExpense(expense);
+        await widget.presenter
+            .addBudgetedExpense(expense, applyToFuture: applyToFuture);
       }
       if (mounted) Navigator.pop(context);
     } finally {
@@ -274,7 +302,15 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
           const SizedBox(height: 16),
           SwitchListTile(
             value: _isRecurring,
-            onChanged: (v) => setState(() => _isRecurring = v),
+            // Carrying an edit forward is the helpful default; carrying a
+            // *deletion* forward is not, so switching recurrence off leaves the
+            // scope opt-in rather than arming a destructive switch.
+            onChanged: (v) => setState(() {
+              _isRecurring = v;
+              _scope = v
+                  ? RecurringScope.thisAndFuture
+                  : RecurringScope.thisMonthOnly;
+            }),
             title: const Text('Recurring', style: TextStyle(fontSize: 14)),
             subtitle: Text('Auto-generate next month',
                 style: TextStyle(
@@ -296,6 +332,19 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
                 onChanged: (v) =>
                     setState(() => _recurrenceType = v ?? _recurrenceType),
               ),
+            ),
+          ],
+
+          // How far this save reaches across the months already generated.
+          if (_showScopeField) ...[
+            const SizedBox(height: 12),
+            RecurringScopeField(
+              futureMonthCount: _futureMonthCount,
+              month: widget.existing?.month ?? widget.presenter.selectedMonth,
+              value: _scope,
+              noun: 'allocation',
+              removesFutureMonths: _dropsFutureMonths,
+              onChanged: (s) => setState(() => _scope = s),
             ),
           ],
         ],

@@ -50,6 +50,16 @@ class Bill {
   final String? paymentNote; // e.g. "Gcash 120263075639"
   final bool isRecurring;
   final RecurrenceType? recurrenceType;
+
+  /// Ties every monthly copy of one recurring bill together. Each month is a
+  /// separate row, so without this the only thing linking August's "Internet"
+  /// to September's is that they happen to share a name — which breaks the
+  /// moment the edit being propagated *is* a rename, or two bills share a name.
+  ///
+  /// Stamped once when a recurring bill is created and inherited by every
+  /// generated copy. Null on one-off bills, and on recurring rows saved before
+  /// this field shipped — [BillsReceivablesPresenter] backfills those on load.
+  final String? seriesId;
   final bool isPaid;
   final DateTime? paidDate;
   final double? paidAmount; // may differ from billed amount (partial pay)
@@ -73,6 +83,7 @@ class Bill {
     this.paymentNote,
     this.isRecurring = false,
     this.recurrenceType,
+    this.seriesId,
     this.isPaid = false,
     this.paidDate,
     this.paidAmount,
@@ -110,6 +121,7 @@ class Bill {
       paymentNote: json['paymentNote'] as String?,
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
+      seriesId: json['seriesId'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       paidDate: json['paidDate'] != null
           ? DateTime.parse(json['paidDate'] as String)
@@ -135,6 +147,7 @@ class Bill {
         'paymentNote': paymentNote,
         'isRecurring': isRecurring,
         'recurrenceType': recurrenceType?.name,
+        'seriesId': seriesId,
         'isPaid': isPaid,
         'paidDate': paidDate?.toIso8601String(),
         'paidAmount': paidAmount,
@@ -155,6 +168,9 @@ class Bill {
     String? paymentNote,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
+    // Sentinel-guarded so switching a bill off recurring can drop it out of its
+    // series; `field ?? this.field` would leave the stale link behind.
+    Object? seriesId = _kUnset,
     bool? isPaid,
     // Sentinel-guarded so undoing a payment can clear the settlement fields back
     // out; `field ?? this.field` never could, which left an un-paid bill still
@@ -179,6 +195,8 @@ class Bill {
       paymentNote: paymentNote ?? this.paymentNote,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
+      seriesId:
+          identical(seriesId, _kUnset) ? this.seriesId : seriesId as String?,
       isPaid: isPaid ?? this.isPaid,
       paidDate:
           identical(paidDate, _kUnset) ? this.paidDate : paidDate as DateTime?,

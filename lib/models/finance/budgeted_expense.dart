@@ -54,6 +54,11 @@ class BudgetedExpense {
   final bool isPaid;
   final bool isRecurring; // re-created each month via auto-generation
   final RecurrenceType? recurrenceType;
+
+  /// Ties every monthly copy of one recurring set-aside together — see the note
+  /// on [Bill.seriesId]. Null on one-off entries and on rows saved before this
+  /// field shipped, which are backfilled on load.
+  final String? seriesId;
   final String? transactionId; // linked TransactionRecord
   final DateTime updatedAt;
 
@@ -72,6 +77,7 @@ class BudgetedExpense {
     this.isPaid = false,
     this.isRecurring = false,
     this.recurrenceType,
+    this.seriesId,
     this.transactionId,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -92,6 +98,7 @@ class BudgetedExpense {
       isPaid: json['isPaid'] as bool? ?? false,
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
+      seriesId: json['seriesId'] as String?,
       transactionId: json['transactionId'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -113,6 +120,7 @@ class BudgetedExpense {
         'isPaid': isPaid,
         'isRecurring': isRecurring,
         'recurrenceType': recurrenceType?.name,
+        'seriesId': seriesId,
         'transactionId': transactionId,
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -133,6 +141,9 @@ class BudgetedExpense {
     bool? isPaid,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
+    // Sentinel-guarded so switching off recurring can drop the set-aside out of
+    // its series; `field ?? this.field` would leave the stale link behind.
+    Object? seriesId = _kUnset,
     // Sentinel-guarded so undoing a funding can clear the ledger link back out;
     // `field ?? this.field` never could, which left an unfunded set-aside still
     // pointing at a transaction that no longer exists.
@@ -157,6 +168,8 @@ class BudgetedExpense {
       isPaid: isPaid ?? this.isPaid,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
+      seriesId:
+          identical(seriesId, _kUnset) ? this.seriesId : seriesId as String?,
       transactionId: identical(transactionId, _kUnset)
           ? this.transactionId
           : transactionId as String?,
