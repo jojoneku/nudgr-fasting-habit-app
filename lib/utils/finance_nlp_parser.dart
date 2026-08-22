@@ -13,6 +13,7 @@ import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/finance/transaction_record.dart';
+import 'amount_input_formatter.dart';
 import 'food_fuzzy.dart';
 
 const int _maxInputLength = 500;
@@ -37,12 +38,14 @@ const int _maxBatchSegments = 10;
 ///
 /// [viewingPastDate] short-circuits to the corresponding hard error so views
 /// can disable logging while a past day is selected.
+/// [now] is injectable so relative dates ("yesterday") are testable.
 PreparseResult preparseFinanceInput({
   required String input,
   required List<FinanceCategory> categories,
   required List<FinancialAccount> accounts,
   required Map<String, String> learnedDict,
   bool viewingPastDate = false,
+  DateTime? now,
 }) {
   final raw = input.trim();
   if (viewingPastDate) {
@@ -64,11 +67,20 @@ PreparseResult preparseFinanceInput({
       .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
       .toList();
 
-  final normalized = _normalize(raw);
+  // Pre-pass: lift the note, the dates and the beneficiary out before any
+  // transaction pattern runs, so a date phrase can never be mistaken for an
+  // amount and "3 days ago" doesn't read as a second transaction.
+  final extras = _extractExtras(
+    raw: raw,
+    normalized: _normalize(raw),
+    now: now ?? DateTime.now(),
+    accountWords: _accountWords(activeAccounts),
+  );
+  final normalized = extras.text;
 
   // Pattern A — transfer
   final transfer = _tryTransfer(normalized, activeAccounts);
-  if (transfer != null) return transfer.copyWith(rawInput: raw);
+  if (transfer != null) return transfer.copyWith(rawInput: raw, extras: extras);
 
   // Pattern A1 — paid on your card FOR someone who paid you back in cash. This
   // is never your spending or income, so it routes to a Credit Card → Cash
@@ -76,14 +88,18 @@ PreparseResult preparseFinanceInput({
   // distinguishes it from paying DOWN a card. ("paid 800 on my cc for jana,
   // she paid me back" → card→cash; "paid bpi cc 5000 from gcash" → pay-down.)
   final paidForSomeone = _tryPaidForSomeone(normalized, activeAccounts);
-  if (paidForSomeone != null) return paidForSomeone.copyWith(rawInput: raw);
+  if (paidForSomeone != null) {
+    return paidForSomeone.copyWith(rawInput: raw, extras: extras);
+  }
 
   // Pattern A2 — pay a credit account ("paid bpi cc 5000 from gcash"). Resolves
   // to a transfer that tops up (pays down) the credit account. Only fires when a
   // liability account is the clear target; otherwise falls through to amounts so
   // ordinary "pay jeepney 20" stays an expense.
   final payCredit = _tryPayCredit(normalized, activeAccounts);
-  if (payCredit != null) return payCredit.copyWith(rawInput: raw);
+  if (payCredit != null) {
+    return payCredit.copyWith(rawInput: raw, extras: extras);
+  }
 
   // Patterns B + C — signed / unsigned amount
   return _tryAmount(
@@ -92,8 +108,18 @@ PreparseResult preparseFinanceInput({
     categories: categories,
     accounts: activeAccounts,
     learnedDict: learnedDict,
+    extras: extras,
   );
 }
+
+/// Every single word appearing in an account name, lowercased. Used to stop the
+/// date and beneficiary extractors from claiming a word that is really part of
+/// an account the user named.
+Set<String> _accountWords(List<FinancialAccount> accounts) => {
+      for (final a in accounts)
+        for (final w in a.name.toLowerCase().split(RegExp(r'\s+')))
+          if (w.isNotEmpty) w,
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Batch entry point — one message, one or more transactions
@@ -123,6 +149,7 @@ PreparseBatch preparseFinanceBatch({
   required List<FinancialAccount> accounts,
   required Map<String, String> learnedDict,
   bool viewingPastDate = false,
+  DateTime? now,
 }) {
   final raw = input.trim();
   // Whole-message errors first: they don't depend on segmentation, and
@@ -143,6 +170,7 @@ PreparseBatch preparseFinanceBatch({
             categories: categories,
             accounts: accounts,
             learnedDict: learnedDict,
+            now: now,
           ),
         ],
       );
@@ -171,10 +199,355 @@ PreparseBatch preparseFinanceBatch({
           categories: categories,
           accounts: accounts,
           learnedDict: learnedDict,
+          now: now,
         ),
   ];
   if (segments.length < 2) return single();
   return PreparseBatch(rawInput: raw, segments: segments);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pre-pass extractions — note, dates, owedBy, arithmetic
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Extras pulled out of the text before the transaction patterns run, plus the
+/// text with the consumed spans removed.
+class _Extras {
+  final String text;
+  final String? note;
+  final DateTime? date;
+  final String? owedBy;
+  final DateTime? paybackDate;
+  const _Extras(this.text, this.note, this.date, this.owedBy, this.paybackDate);
+}
+
+const _kWeekdays = <String, int>{
+  'monday': DateTime.monday,
+  'tuesday': DateTime.tuesday,
+  'wednesday': DateTime.wednesday,
+  'thursday': DateTime.thursday,
+  'friday': DateTime.friday,
+  'saturday': DateTime.saturday,
+  'sunday': DateTime.sunday,
+};
+
+const _kMonths = <String, int>{
+  'january': 1,
+  'february': 2,
+  'march': 3,
+  'april': 4,
+  'may': 5,
+  'june': 6,
+  'july': 7,
+  'august': 8,
+  'september': 9,
+  'october': 10,
+  'november': 11,
+  'december': 12,
+  'jan': 1,
+  'feb': 2,
+  'mar': 3,
+  'apr': 4,
+  'jun': 6,
+  'jul': 7,
+  'aug': 8,
+  'sep': 9,
+  'sept': 9,
+  'oct': 10,
+  'nov': 11,
+  'dec': 12,
+};
+
+/// A date phrase found in [text]: the value, and the span to remove.
+class _DateHit {
+  final DateTime date;
+  final int start;
+  final int end;
+  const _DateHit(this.date, this.start, this.end);
+}
+
+DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// Most recent [weekday] at or before [now]. `last friday` forces a step back a
+/// full week when today already is that weekday, which is how people say it.
+DateTime _recentWeekday(DateTime now, int weekday, {required bool forcePast}) {
+  final today = _dayOf(now);
+  var delta = today.weekday - weekday;
+  if (delta < 0) delta += 7;
+  if (delta == 0 && forcePast) delta = 7;
+  return today.subtract(Duration(days: delta));
+}
+
+/// Finds the first date phrase in [text].
+///
+/// Deliberately conservative about what counts as a date, because a false
+/// positive silently back-dates money:
+///
+///  * Weekday names must be spelled in full — a three-letter "sun" or "mar"
+///    collides with real account names.
+///  * A month abbreviation is skipped when it prefix-matches an account name
+///    ([accountWords]), so "mar 20" stays Maribank rather than becoming March.
+///  * Slash forms ("08/20") are not read at all: they are indistinguishable
+///    from the division the calculator syntax allows.
+_DateHit? _findDate(String text, DateTime now, Set<String> accountWords) {
+  final today = _dayOf(now);
+
+  final relative = RegExp(
+    r'\b(?:(today)|(yesterday)|day before yesterday|last week'
+    r'|(\d{1,3})\s+days?\s+ago)\b',
+  ).firstMatch(text);
+  if (relative != null) {
+    final whole = relative.group(0)!;
+    final DateTime value;
+    if (relative.group(1) != null) {
+      value = today;
+    } else if (relative.group(2) != null) {
+      value = today.subtract(const Duration(days: 1));
+    } else if (relative.group(3) != null) {
+      value = today.subtract(Duration(days: int.parse(relative.group(3)!)));
+    } else if (whole == 'last week') {
+      value = today.subtract(const Duration(days: 7));
+    } else {
+      value = today.subtract(const Duration(days: 2)); // day before yesterday
+    }
+    return _DateHit(value, relative.start, relative.end);
+  }
+
+  final weekday = RegExp(
+    '\\b(last\\s+)?(${_kWeekdays.keys.join('|')})\\b',
+  ).firstMatch(text);
+  if (weekday != null) {
+    final value = _recentWeekday(now, _kWeekdays[weekday.group(2)!]!,
+        forcePast: weekday.group(1) != null);
+    return _DateHit(value, weekday.start, weekday.end);
+  }
+
+  final iso = RegExp(r'\b(\d{4})-(\d{1,2})-(\d{1,2})\b').firstMatch(text);
+  if (iso != null) {
+    final value = _safeDate(int.parse(iso.group(1)!), int.parse(iso.group(2)!),
+        int.parse(iso.group(3)!));
+    if (value != null) return _DateHit(value, iso.start, iso.end);
+  }
+
+  final monthNames = _kMonths.keys.join('|');
+  final named = RegExp(
+    '\\b(?:($monthNames)\\s+(\\d{1,2})|(\\d{1,2})\\s+($monthNames))\\b',
+  ).firstMatch(text);
+  if (named != null) {
+    final monthWord = named.group(1) ?? named.group(4)!;
+    final dayStr = named.group(2) ?? named.group(3)!;
+    // A short month name that could be an account prefix is not a date.
+    if (!(monthWord.length <= 4 && accountWords.contains(monthWord))) {
+      var value =
+          _safeDate(today.year, _kMonths[monthWord]!, int.parse(dayStr));
+      // A date later this year is far more likely last year's than the future.
+      if (value != null && value.isAfter(today)) {
+        value =
+            _safeDate(today.year - 1, _kMonths[monthWord]!, int.parse(dayStr));
+      }
+      if (value != null) return _DateHit(value, named.start, named.end);
+    }
+  }
+
+  return null;
+}
+
+/// Builds a date, returning null when the day overflows its month (so "feb 31"
+/// is treated as not-a-date rather than silently rolling into March).
+DateTime? _safeDate(int year, int month, int day) {
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  final d = DateTime(year, month, day);
+  if (d.month != month || d.day != day) return null;
+  return d;
+}
+
+/// A `note:` or `//` marker and everything after it, to the end of the segment.
+final _noteMarker = RegExp(r'(?:\bnote\s*:|//)\s*(.*)$', caseSensitive: false);
+
+/// Cue words that mark a following date as the *payback* date rather than the
+/// transaction date ("spotted jana 800, she'll pay me back friday").
+final _paybackCue = RegExp(
+  r'pay(?:s|ing)?\s+(?:me\s+)?back|paid\s+(?:me\s+)?back|payback'
+  r'|reimburse\w*|owes?\s+me',
+);
+
+/// Verbs that name a person outright — the word after one is who owes you.
+final _lendVerb = RegExp(
+  r'\b(?:spotted|lent|loaned|fronted|sponsored)\s+([a-z][\w\x27-]*)',
+);
+
+/// "<name> owes me" / "owed by <name>".
+final _owesMe = RegExp(r'\b([a-z][\w\x27-]*)\s+owes?\s+me\b');
+final _owedBy = RegExp(r'\bowed\s+by\s+([a-z][\w\x27-]*)\b');
+final _forSomeone = RegExp(r'\bfor\s+([a-z][\w\x27-]*)');
+
+/// Words that are never a person's name in this context, so `for <word>` can't
+/// mistake a purpose for a beneficiary.
+const _kNotNames = {
+  'me',
+  'my',
+  'myself',
+  'us',
+  'the',
+  'a',
+  'an',
+  'this',
+  'that',
+  'it',
+  'work',
+  'business',
+  'food',
+  'lunch',
+  'dinner',
+  'breakfast',
+  'gas',
+  'fuel',
+  'rent',
+  'bills',
+  'bill',
+  'groceries',
+  'grocery',
+  'now',
+  'later',
+  'today',
+  'tomorrow',
+  'free',
+};
+
+/// Collapses a calculator-style expression to a single number.
+///
+/// Only expressions with **no whitespace around the operator** are read, which
+/// is what keeps "-500 -300" two amounts (a genuine ambiguity the caller must
+/// reject) while "285+15" becomes one. A leading sign stays attached to the
+/// result so "-285+15" is still an outflow.
+String _collapseArithmetic(String text) => text.replaceAllMapped(
+      RegExp(
+          r'(?<=^|\s)([+-]?)(\d+(?:\.\d+)?(?:[+\-*/×÷]\d+(?:\.\d+)?)+)(?=\s|$)'),
+      (m) {
+        final value = evalAmountExpression(m.group(2)!);
+        if (value == null) return m.group(0)!;
+        final text = value == value.roundToDouble()
+            ? value.toStringAsFixed(0)
+            : value.toString();
+        return '${m.group(1)}$text';
+      },
+    );
+
+/// Pulls note, dates and the beneficiary out of [normalized], returning the
+/// text the transaction patterns should parse.
+///
+/// Only the note and the date spans are removed. Everything else stays put:
+/// the transfer patterns downstream key off words like "for" and "paid me
+/// back", so consuming those would stop a card→cash wash transfer being
+/// recognised at all.
+_Extras _extractExtras({
+  required String raw,
+  required String normalized,
+  required DateTime now,
+  required Set<String> accountWords,
+}) {
+  var text = normalized;
+
+  // 1. Note — `note:` or `//` to the end of the segment. Taken from the raw
+  // string so the note keeps its capitalisation.
+  String? note;
+  final noteRe = _noteMarker;
+  final rawNote = noteRe.firstMatch(raw);
+  if (rawNote != null) {
+    final captured = rawNote.group(1)?.trim() ?? '';
+    if (captured.isNotEmpty) note = captured;
+  }
+  text = text.replaceAll(noteRe, ' ').trim();
+
+  // 2. Payback date — a date that follows a payback cue belongs to the
+  // receivable, not the transaction, so it is claimed first.
+  DateTime? paybackDate;
+  final cue = _paybackCue.firstMatch(text);
+  if (cue != null) {
+    final after = text.substring(cue.end);
+    final hit = _findDate(after, now, accountWords);
+    if (hit != null) {
+      paybackDate = hit.date;
+      // Remove only the date span. The cue words stay: downstream patterns
+      // (and the reimbursable detector) match on them.
+      text = text.replaceRange(cue.end + hit.start, cue.end + hit.end, ' ');
+    }
+  }
+
+  // 3. Transaction date — from whatever text is left.
+  DateTime? date;
+  final hit = _findDate(text, now, accountWords);
+  if (hit != null) {
+    date = hit.date;
+    text = text.replaceRange(hit.start, hit.end, ' ');
+  }
+
+  // 4. Beneficiary. Matched on the normalized text for position, then read back
+  // out of the raw string so "Jana" is stored as the user wrote it.
+  String? owedBy;
+  for (final re in [_lendVerb, _owesMe, _owedBy]) {
+    final m = re.firstMatch(text);
+    if (m == null) continue;
+    final candidate = m.group(1)!;
+    if (_kNotNames.contains(candidate) || accountWords.contains(candidate)) {
+      continue;
+    }
+    owedBy = candidate;
+    break;
+  }
+  // "for <someone>" is only a beneficiary when the text says the money is
+  // coming back — otherwise "for food" would name food as the debtor.
+  if (owedBy == null && _paybackCue.hasMatch(text)) {
+    final m = _forSomeone.firstMatch(text);
+    final candidate = m?.group(1);
+    if (candidate != null &&
+        !_kNotNames.contains(candidate) &&
+        !accountWords.contains(candidate)) {
+      owedBy = candidate;
+    }
+  }
+  if (owedBy != null) owedBy = _originalCasing(raw, owedBy);
+
+  // 5. Calculator expressions, last: the date pass must see "3 days ago"
+  // before the digits could be folded into an amount.
+  text = _collapseArithmetic(text);
+
+  return _Extras(text.replaceAll(RegExp(r'\s+'), ' ').trim(), note, date,
+      owedBy, paybackDate);
+}
+
+/// The part of [rawInput] that can still serve as a description, with the spans
+/// the preparser turned into structured fields removed — the `note:` / `//`
+/// tail and up to two date phrases (a payback date and a transaction date).
+///
+/// The commit path derives a description from raw input, so without this the
+/// note text and the words "yesterday" would be repeated in the label of a
+/// transaction that already carries them as a note and a date.
+String chatDescriptionSource({
+  required String rawInput,
+  required List<FinancialAccount> accounts,
+  DateTime? now,
+}) {
+  var s = rawInput.replaceAll(_noteMarker, ' ');
+  final words = _accountWords(accounts);
+  final clock = now ?? DateTime.now();
+  // Find on a lowercased copy, cut from the original. Bail out if lowercasing
+  // changed the length, since the indices would no longer line up.
+  for (var pass = 0; pass < 2; pass++) {
+    final lower = s.toLowerCase();
+    if (lower.length != s.length) break;
+    final hit = _findDate(lower, clock, words);
+    if (hit == null) break;
+    s = s.replaceRange(hit.start, hit.end, ' ');
+  }
+  return s.replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+/// Recovers how the user actually capitalised [lowercased] in [raw].
+String _originalCasing(String raw, String lowercased) {
+  final m = RegExp('\\b${RegExp.escape(lowercased)}\\b', caseSensitive: false)
+      .firstMatch(raw);
+  return m?.group(0) ?? lowercased;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -460,6 +833,7 @@ PreparseResult _tryAmount({
   required List<FinanceCategory> categories,
   required List<FinancialAccount> accounts,
   required Map<String, String> learnedDict,
+  required _Extras extras,
 }) {
   // Strict: at most one optional sign + integer/decimal at a word boundary.
   // Lookbehind/lookahead so adjacent tokens (e.g. "-500 -300") both match.
@@ -578,6 +952,19 @@ PreparseResult _tryAmount({
   final reimbursable = _detectReimbursable(normalized) &&
       (inferredType == null || inferredType == TransactionType.outflow);
 
+  // The beneficiary is only meaningful on an expense you expect back, so it
+  // rides along only when the reimbursable signal fired. Storing a name on an
+  // ordinary purchase would put a debtor on money nobody owes.
+  final owedBy = reimbursable ? extras.owedBy : null;
+  final paybackDate = reimbursable ? extras.paybackDate : null;
+
+  // A name the beneficiary extractor claimed is not an unresolved token — it is
+  // already accounted for, so asking the AI about it would be a wasted turn.
+  final owedByToken = extras.owedBy?.toLowerCase();
+  final remainingUnresolved = owedByToken == null
+      ? unresolved
+      : unresolved.where((t) => t != owedByToken).toList();
+
   return PreparseResult(
     rawInput: raw,
     amount: amount,
@@ -585,7 +972,11 @@ PreparseResult _tryAmount({
     accountId: accountId,
     categoryId: categoryId,
     reimbursable: reimbursable,
-    unresolvedTokens: unresolved,
+    date: extras.date,
+    note: extras.note,
+    owedBy: owedBy,
+    expectedReimbursementDate: paybackDate,
+    unresolvedTokens: remainingUnresolved,
     ambiguousAccountTokens: ambiguous,
   );
 }
@@ -596,7 +987,11 @@ PreparseResult _tryAmount({
 bool _detectReimbursable(String normalized) {
   return RegExp(
     r'reimburs' // reimburse / reimbursable / reimbursement / reimbursed
-    r'|will pay me back|gonna pay me back|pay me back'
+    // Conjugated, so the natural "she pays me back" / "paying me back" are
+    // recognised too. Missing them meant the payback cue fired for the date
+    // but the reimbursable flag did not, and the whole chain — flag, debtor,
+    // payback date — was then discarded downstream.
+    r'|pay(?:s|ing)?\s+me\s+back'
     r'|owes? me|owe me back|to be paid back'
     r'|claim it back|get it back|expense it'
     r'|work expense|business expense',
@@ -800,13 +1195,24 @@ String? _resolveCategoryToken(String token, List<FinanceCategory> categories) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 extension on PreparseResult {
-  PreparseResult copyWith({String? rawInput}) => PreparseResult(
+  /// Stamps the raw input, and folds in what the pre-pass lifted out of the
+  /// text. The transfer patterns build their result from the stripped text and
+  /// know nothing about the note or dates, so this is where those rejoin.
+  ///
+  /// [_Extras.owedBy] is deliberately NOT applied here: a transfer has no
+  /// debtor. Only the expense path in [_tryAmount] carries it.
+  PreparseResult copyWith({String? rawInput, _Extras? extras}) =>
+      PreparseResult(
         amount: amount,
         type: type,
         accountId: accountId,
         transferToAccountId: transferToAccountId,
         categoryId: categoryId,
         reimbursable: reimbursable,
+        date: extras?.date ?? date,
+        note: extras?.note ?? note,
+        owedBy: owedBy,
+        expectedReimbursementDate: expectedReimbursementDate,
         unresolvedTokens: unresolvedTokens,
         ambiguousAccountTokens: ambiguousAccountTokens,
         hardError: hardError,

@@ -1386,9 +1386,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       }
       final step = steps[i];
       if (step is StepResolved) {
-        drafts.add(step.transaction);
+        // Merged onto this segment's own draft, for the same reason the
+        // single-entry path merges: the preparser's date/note/debtor/
+        // reimbursable findings are not restated by the model.
+        final merged = segment.toDraft().mergeWith(step.transaction);
+        drafts.add(merged);
         final token = step.learnedToken;
-        final categoryId = step.transaction.categoryId;
+        final categoryId = merged.categoryId;
         // Pair each token with ITS OWN segment's category. Collecting bare
         // tokens and pairing them with the batch's first category would teach
         // the dictionary a mapping the user never confirmed.
@@ -1537,6 +1541,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _fallbackToForm(_chatState.draft, 'AI unavailable.');
       return;
     }
+    // A resolved step refines the draft; it does not replace it. The clarify and
+    // give-up branches already merged, and taking the resolved one wholesale was
+    // the odd one out: fields the preparser derived deterministically — the
+    // reimbursable flag, a parsed date, a note, the debtor — are not things the
+    // model is asked to restate, so overwriting the draft with its answer
+    // silently dropped them.
+    step = switch (step) {
+      StepResolved s when !s.isBatch => StepResolved(
+          transaction: _chatState.draft.mergeWith(s.transaction),
+          learnedToken: s.learnedToken,
+          summaryText: s.summaryText,
+        ),
+      _ => step,
+    };
     _chatState = _chatState.copyWith(
       phase: ChatPhase.clarifying,
       lastStep: step,
@@ -1697,6 +1715,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Same calendar day, ignoring time of day.
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   bool get isSelectedDateToday {
     final d = _selectedDate;
     if (d == null) return true;
@@ -1713,7 +1735,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _fallbackToForm(draft, 'Missing required fields.');
       return;
     }
+    // A date named in the message wins; otherwise "now", as chat always did.
+    // The time-of-day is kept for today's entries so same-day ordering still
+    // reflects when you logged; a back-dated entry lands at midday, which keeps
+    // it clear of both day boundaries whatever the reader's timezone.
     final now = DateTime.now();
+    final parsed = draft.date;
+    final date = parsed == null
+        ? now
+        : (_isSameDay(parsed, now)
+            ? now
+            : DateTime(parsed.year, parsed.month, parsed.day, 12));
+    final note = draft.note?.trim();
     // The AI classifier writes a clean, meaningful label — use it as-is. Only
     // raw chat input needs the extraction tokens (amount/account/…) stripped.
     final description = draft.descriptionIsClean
@@ -1725,48 +1758,54 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         toAccountId: draft.transferToAccountId!,
         amount: draft.amount!,
         description: description,
-        date: now,
+        date: date,
+        note: (note == null || note.isEmpty) ? null : note,
       );
     } else if (draft.reimbursable && draft.type == TransactionType.outflow) {
       // Chat suggested a reimbursable expense — log it as one (spawns the
-      // linked receivable). No payback date from chat, so it's "ASAP" and
-      // surfaces in the current month. Reversible via edit if the guess was
-      // wrong (a fixed payback date can be set there).
+      // linked receivable). A payback date is only set when the message named
+      // one behind a payback cue; otherwise null keeps the form's "ASAP"
+      // default. Reversible via edit either way.
+      final owedBy = draft.owedBy?.trim();
       await addReimbursableExpense(
         TransactionRecord(
           id: _generateId(),
-          date: now,
+          date: date,
           accountId: draft.accountId!,
           categoryId: draft.categoryId!,
           amount: draft.amount!,
           type: TransactionType.outflow,
           description: description,
-          month: toMonthKey(now),
+          note: (note == null || note.isEmpty) ? null : note,
+          month: toMonthKey(date),
           reimbursable: true,
           reimbursementReceivableId: _generateId(),
+          owedBy: (owedBy == null || owedBy.isEmpty) ? null : owedBy,
         ),
-        expectedReimbursementDate: null,
+        expectedReimbursementDate: draft.expectedReimbursementDate,
       );
     } else {
       await addTransaction(TransactionRecord(
         id: _generateId(),
-        date: now,
+        date: date,
         accountId: draft.accountId!,
         categoryId: draft.categoryId!,
         amount: draft.amount!,
         type: draft.type!,
         description: description,
-        month: toMonthKey(now),
+        note: (note == null || note.isEmpty) ? null : note,
+        month: toMonthKey(date),
       ));
     }
     if (announce) _lastCommittedSummary = _summaryFor(draft);
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
-    // Chat / Quick-Add always logs into the current real month. If the user is
-    // browsing a different month, snap the ledger to "now" so the just-logged
-    // row is actually visible instead of silently landing off-screen (the toast
-    // fired but no row appeared).
-    final nowKey = toMonthKey(now);
+    // Snap the ledger to the month the entry actually landed in, if the user is
+    // reading a different one, so the new row is visible instead of silently
+    // landing off-screen (the toast fired but no row appeared). With dates now
+    // parseable from the text, that month is the entry's — not necessarily this
+    // one: "500 food gcash yesterday" on the 1st belongs to last month.
+    final nowKey = toMonthKey(date);
     final snappedFrom = _selectedMonth;
     _lastCommitSnappedFromMonth = null;
     if (_selectedMonth != nowKey) {
@@ -1809,10 +1848,27 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  /// Plan 026 §4 — description captured from raw input, capped at 60.
+  /// Longest description chat will store. The manual form is uncapped, but a
+  /// chat description is derived from free text that can run to 500 characters,
+  /// so some ceiling is needed. 120 fits every realistic entry.
+  static const _maxDescriptionLength = 120;
+
+  /// Caps the description, cutting on a word boundary and marking the cut.
+  ///
+  /// The old 60-character hard slice was silent and mid-word: a long entry lost
+  /// its tail with nothing to say so had happened. An ellipsis makes the
+  /// truncation visible in the ledger row, which is the difference between a
+  /// shortened label and a corrupted one.
   String _truncateDescription(String raw) {
     final trimmed = raw.trim();
-    return trimmed.length <= 60 ? trimmed : trimmed.substring(0, 60);
+    if (trimmed.length <= _maxDescriptionLength) return trimmed;
+    final cut = trimmed.substring(0, _maxDescriptionLength);
+    final lastSpace = cut.lastIndexOf(' ');
+    // Only honour a word boundary that isn't hacking the label in half.
+    final body = lastSpace > _maxDescriptionLength * 0.6
+        ? cut.substring(0, lastSpace)
+        : cut;
+    return '${body.trimRight()}…';
   }
 
   /// Strips the parsed amount, account name(s), and parser connector/verb words
@@ -1820,7 +1876,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// actually described (e.g. "-500 jollibee gcash" → "jollibee"). Falls back to
   /// the category name when nothing descriptive remains.
   String _cleanDescription(ParsedTransaction draft) {
-    var s = draft.description.trim();
+    // Drop the spans the preparser already turned into a note and a date, so
+    // the label doesn't repeat fields the transaction now carries structurally.
+    var s = chatDescriptionSource(
+      rawInput: draft.description.trim(),
+      accounts: _accounts,
+    );
     if (s.isEmpty) return s;
 
     // Amount token (optional ₱/p prefix, optional sign, thousands commas).
@@ -1841,9 +1902,22 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       }
     }
 
-    // Parser connector / verb words that carry no description meaning.
+    // Parser connector / verb words that carry no description meaning. The
+    // payback phrasing goes too: it is why the entry is reimbursable, which the
+    // toggle already records, so leaving it in made labels like
+    // "jana she'll pay me back".
     s = s.replaceAll(
       RegExp(r'\b(?:from|to|transfer|paid|pay|settle)\b', caseSensitive: false),
+      ' ',
+    );
+    s = s.replaceAll(
+      RegExp(
+        r"(?:i'?ll\s+|she'?ll\s+|he'?ll\s+|they'?ll\s+|will\s+|gonna\s+)?"
+        r'(?:pay|pays|paying)\s+(?:me\s+)?back'
+        r'|paid\s+(?:me\s+)?back|payback|owes?\s+me'
+        r'|reimbursable|reimbursement|reimbursed?',
+        caseSensitive: false,
+      ),
       ' ',
     );
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();

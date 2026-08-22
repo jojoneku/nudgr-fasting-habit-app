@@ -42,13 +42,15 @@ void main() {
       {Map<String, String> dict = const {},
       List<FinancialAccount>? overrideAccounts,
       List<FinanceCategory>? overrideCategories,
-      bool viewingPastDate = false}) {
+      bool viewingPastDate = false,
+      DateTime? now}) {
     return preparseFinanceInput(
       input: input,
       categories: overrideCategories ?? categories,
       accounts: overrideAccounts ?? accounts,
       learnedDict: dict,
       viewingPastDate: viewingPastDate,
+      now: now,
     );
   }
 
@@ -649,6 +651,339 @@ void main() {
       final r = run('-500 food');
       expect(r.accountId, isNull);
       expect(r.isFullyResolved, isFalse);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Calculator-style amounts.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('amount arithmetic', () {
+    test('addition collapses to one amount', () {
+      final r = run('-285+15 food gcash');
+      expect(r.amount, 300);
+      expect(r.hardError, isNull);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('an unsigned expression works too', () {
+      expect(run('285+15 food gcash').amount, 300);
+    });
+
+    test('multiplication and division', () {
+      expect(run('150*3 food gcash').amount, 450);
+      expect(run('1500/3 food gcash').amount, 500);
+      expect(run('150×2 food gcash').amount, 300);
+      expect(run('900÷3 food gcash').amount, 300);
+    });
+
+    test('operator precedence holds', () {
+      expect(run('100+50*2 food gcash').amount, 200);
+    });
+
+    test('a decimal expression keeps its fraction', () {
+      expect(run('10.50+4.50 food gcash').amount, 15);
+      expect(run('10.25+1 food gcash').amount, 11.25);
+    });
+
+    test('two spaced signed amounts are still ambiguous, not subtracted', () {
+      // The whole reason expressions must be whitespace-free: "-500 -300"
+      // means two transactions, and silently collapsing it to 200 would log a
+      // number the user never typed.
+      expect(run('-500 -300 food gcash').hardError,
+          FinanceParseError.multipleAmounts);
+    });
+
+    test('a spaced expression is not read as arithmetic', () {
+      expect(run('285 + 15 food gcash').hardError,
+          FinanceParseError.multipleAmounts);
+    });
+
+    test('division by zero is rejected, not silently zero', () {
+      final r = run('500/0 food gcash');
+      expect(r.amount, isNot(0));
+      expect(r.isFullyResolved, isFalse);
+    });
+
+    test('an expression resolving to zero is an invalid amount', () {
+      expect(
+          run('500-500 food gcash').hardError, FinanceParseError.invalidAmount);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Dates.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('date parsing', () {
+    // A Wednesday, so weekday arithmetic is unambiguous in both directions.
+    final wed = DateTime(2026, 8, 19, 14, 30);
+
+    test('no date phrase leaves the date null (commit stamps now)', () {
+      expect(run('-500 food gcash', now: wed).date, isNull);
+    });
+
+    test('"yesterday"', () {
+      expect(run('-500 food gcash yesterday', now: wed).date,
+          DateTime(2026, 8, 18));
+    });
+
+    test('"today"', () {
+      expect(
+          run('-500 food gcash today', now: wed).date, DateTime(2026, 8, 19));
+    });
+
+    test('"day before yesterday"', () {
+      expect(run('-500 food gcash day before yesterday', now: wed).date,
+          DateTime(2026, 8, 17));
+    });
+
+    test('"N days ago"', () {
+      expect(run('-500 food gcash 5 days ago', now: wed).date,
+          DateTime(2026, 8, 14));
+      expect(run('-500 food gcash 1 day ago', now: wed).date,
+          DateTime(2026, 8, 18));
+    });
+
+    test('"last week"', () {
+      expect(run('-500 food gcash last week', now: wed).date,
+          DateTime(2026, 8, 12));
+    });
+
+    test('a bare weekday is the most recent one', () {
+      expect(
+          run('-500 food gcash monday', now: wed).date, DateTime(2026, 8, 17));
+      // Naming today's weekday means today.
+      expect(run('-500 food gcash wednesday', now: wed).date,
+          DateTime(2026, 8, 19));
+    });
+
+    test('"last <weekday>" steps back a full week when it is today', () {
+      expect(run('-500 food gcash last wednesday', now: wed).date,
+          DateTime(2026, 8, 12));
+      expect(run('-500 food gcash last monday', now: wed).date,
+          DateTime(2026, 8, 17));
+    });
+
+    test('a named month and day', () {
+      expect(
+          run('-500 food gcash august 3', now: wed).date, DateTime(2026, 8, 3));
+      expect(
+          run('-500 food gcash 3 august', now: wed).date, DateTime(2026, 8, 3));
+      expect(run('-500 food gcash aug 3', now: wed).date, DateTime(2026, 8, 3));
+    });
+
+    test('a future-looking month/day is read as last year', () {
+      expect(run('-500 food gcash december 25', now: wed).date,
+          DateTime(2025, 12, 25));
+    });
+
+    test('an ISO date', () {
+      expect(run('-500 food gcash 2026-07-04', now: wed).date,
+          DateTime(2026, 7, 4));
+    });
+
+    test('an impossible day is not a date', () {
+      expect(run('-500 food gcash february 31', now: wed).date, isNull);
+    });
+
+    test('the date phrase does not become a second amount', () {
+      // "3 days ago" carries a digit; if it survived into amount extraction
+      // this would be a multipleAmounts error instead of a back-dated entry.
+      final r = run('-500 food gcash 3 days ago', now: wed);
+      expect(r.hardError, isNull);
+      expect(r.amount, 500);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('a short month name that is really an account is not a date', () {
+      final mari = _acc('Maribank', id: 'mari');
+      final r = run('-500 food mari 20',
+          overrideAccounts: [mari, gcash, cash], now: wed);
+      expect(r.date, isNull);
+      // "20" stays a second amount rather than being eaten as March's day,
+      // which surfaces the real ambiguity instead of silently back-dating.
+      expect(r.hardError, FinanceParseError.multipleAmounts);
+    });
+
+    test('a slash form is left to arithmetic, never read as a date', () {
+      // "08/20" is indistinguishable from division, so it must not back-date.
+      final r = run('-1500/3 food gcash', now: wed);
+      expect(r.date, isNull);
+      expect(r.amount, 500);
+    });
+
+    test('a date works on a transfer too', () {
+      final r = run('transfer 1000 bpi to gcash yesterday', now: wed);
+      expect(r.type, TransactionType.transfer);
+      expect(r.date, DateTime(2026, 8, 18));
+      expect(r.isFullyResolved, isTrue);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Notes.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('notes', () {
+    test('"note:" captures to the end, keeping its casing', () {
+      final r = run('-500 food gcash note: Split with Mika');
+      expect(r.note, 'Split with Mika');
+      expect(r.amount, 500);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('"//" is shorthand for the same thing', () {
+      final r = run('-500 food gcash // Split with Mika');
+      expect(r.note, 'Split with Mika');
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('note text never leaks into account or category matching', () {
+      // "bpi" inside the note must not become the account.
+      final r = run('-500 food gcash note: reimburse from bpi later');
+      expect(r.accountId, gcash.id);
+      expect(r.note, 'reimburse from bpi later');
+    });
+
+    test('a note digit is not a second amount', () {
+      final r = run('-500 food gcash note: 3 of us split it');
+      expect(r.hardError, isNull);
+      expect(r.amount, 500);
+      expect(r.note, '3 of us split it');
+    });
+
+    test('no marker means no note', () {
+      expect(run('-500 food gcash').note, isNull);
+    });
+
+    test('an empty note marker yields null, not an empty string', () {
+      expect(run('-500 food gcash note:').note, isNull);
+    });
+
+    test('a note and a date coexist', () {
+      final r = run('-500 food gcash yesterday note: Split with Mika',
+          now: DateTime(2026, 8, 19));
+      expect(r.date, DateTime(2026, 8, 18));
+      expect(r.note, 'Split with Mika');
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Who owes it back.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('owedBy and payback date', () {
+    final wed = DateTime(2026, 8, 19, 14, 30);
+
+    test('"spotted <name>" names the debtor', () {
+      final r = run('-800 food gcash spotted jana, she owes me');
+      expect(r.reimbursable, isTrue);
+      expect(r.owedBy, 'jana');
+    });
+
+    test('casing is preserved from the raw input', () {
+      final r = run('-800 food gcash spotted Jana, she owes me');
+      expect(r.owedBy, 'Jana');
+    });
+
+    test('"lent <name>"', () {
+      final r = run('-500 food gcash lent Maria, she will pay me back');
+      expect(r.owedBy, 'Maria');
+      expect(r.reimbursable, isTrue);
+    });
+
+    test('"<name> owes me"', () {
+      final r = run('-500 food gcash Jana owes me');
+      expect(r.owedBy, 'Jana');
+    });
+
+    test('"for <name>" only counts with a payback signal', () {
+      final withSignal = run('-500 food gcash for Jana, she will pay me back');
+      expect(withSignal.owedBy, 'Jana');
+      // No payback signal → "for" names a purpose, not a person.
+      final without = run('-500 food gcash for Jana');
+      expect(without.owedBy, isNull);
+    });
+
+    test('"for <purpose>" never names a purpose as the debtor', () {
+      final r = run('-500 gcash for lunch, work expense');
+      expect(r.reimbursable, isTrue);
+      expect(r.owedBy, isNull);
+    });
+
+    test('an account name is never taken as the debtor', () {
+      final r = run('-500 food gcash lent gcash, owes me');
+      expect(r.owedBy, isNull);
+    });
+
+    test('owedBy is dropped when the expense is not reimbursable', () {
+      // No payback phrasing at all: nobody owes anything, so no debtor.
+      final r = run('-500 food gcash sponsored lunch');
+      expect(r.reimbursable, isFalse);
+      expect(r.owedBy, isNull);
+    });
+
+    test('the debtor name is not left as an unresolved token', () {
+      final r = run('-800 food gcash spotted jana, she owes me');
+      expect(r.unresolvedTokens, isNot(contains('jana')));
+    });
+
+    test('a payback date behind a cue sets the receivable date, not the txn',
+        () {
+      final r = run('-800 food gcash spotted Jana, she pays me back friday',
+          now: wed);
+      expect(r.owedBy, 'Jana');
+      expect(r.expectedReimbursementDate, DateTime(2026, 8, 14));
+      // The transaction itself is undated — it happened now, not on Friday.
+      expect(r.date, isNull);
+    });
+
+    test('a transaction date and a payback date can both appear', () {
+      final r = run(
+          '-800 food gcash yesterday, spotted Jana, she pays me back monday',
+          now: wed);
+      expect(r.date, DateTime(2026, 8, 18));
+      expect(r.expectedReimbursementDate, DateTime(2026, 8, 17));
+    });
+
+    test('no payback date stays null, which the form reads as ASAP', () {
+      final r = run('-800 food gcash spotted Jana, she owes me');
+      expect(r.expectedReimbursementDate, isNull);
+    });
+
+    test('a payback date is dropped when the expense is not reimbursable', () {
+      final r = run('-500 food gcash monday', now: wed);
+      expect(r.expectedReimbursementDate, isNull);
+    });
+  });
+
+  group('chatDescriptionSource', () {
+    test('strips the note tail and the date phrase', () {
+      final out = chatDescriptionSource(
+        rawInput: 'Jollibee yesterday note: split with Mika',
+        accounts: accounts,
+        now: DateTime(2026, 8, 19),
+      );
+      expect(out, 'Jollibee');
+    });
+
+    test('leaves text with no metadata untouched', () {
+      expect(
+        chatDescriptionSource(
+            rawInput: 'coffee and donuts', accounts: accounts),
+        'coffee and donuts',
+      );
+    });
+
+    test('removes a payback date and a transaction date', () {
+      final out = chatDescriptionSource(
+        rawInput: 'lunch yesterday pays me back friday',
+        accounts: accounts,
+        now: DateTime(2026, 8, 19),
+      );
+      expect(out, isNot(contains('yesterday')));
+      expect(out, isNot(contains('friday')));
     });
   });
 }

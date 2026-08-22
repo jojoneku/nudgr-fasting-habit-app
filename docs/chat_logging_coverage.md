@@ -4,7 +4,7 @@ What the chat/quick-log parser can and cannot set, measured field by field
 against the manual ledger form (`lib/views/treasury/ledger/add_transaction_sheet.dart`).
 
 Read this before sending a user to chat for something, or before assuming chat
-is a full replacement for the form. It is not — and two of the gaps are silent.
+is a full replacement for the form.
 
 **Pipeline:** regex + dictionary preparse (`lib/utils/finance_nlp_parser.dart`)
 → AI classifier, cloud then on-device (`lib/utils/finance_classifier_parser.dart`)
@@ -17,34 +17,25 @@ is a full replacement for the form. It is not — and two of the gaps are silent
 Every field the form writes onto a `TransactionRecord`, and whether chat can
 reach it.
 
-| Field | Manual form | Chat | Gap |
-|---|---|---|---|
-| **type** | 3-way toggle | Sign (`-500`/`+5000`), category type, transfer keywords | — |
-| **amount** | Calculator field: `285+15`, `× ÷` | Plain number only | Chat has no arithmetic |
-| **account** | Dropdown, all active non-sub | Exact / prefix / fuzzy / multi-word span; sole-account fallback | Chat excludes custodians |
-| **transferTo** | Dropdown | `to` / `into` / `from` markers, else word order | — |
-| **category** | Picker sheet | Name, prefix, learned dictionary (typo-tolerant), AI inference | — |
-| **description** | Free text, uncapped | Derived from raw input, extraction tokens stripped, **capped at 60 chars** | Silent truncation |
-| **note** | Free text | **Cannot set** | Chat-blind field |
-| **date** | Date picker, any date | **Always today** | Cannot back-date |
-| **reimbursable** | Switch | Auto-detected from phrasing | — |
-| **expectedReimbursementDate** | Date picker | **Always null ("ASAP")** | Chat-blind field |
-| **owedBy** | Free text | **Cannot set** | Chat-blind field |
+| Field | Manual form | Chat |
+|---|---|---|
+| **type** | 3-way toggle | Sign (`-500`/`+5000`), category type, transfer keywords |
+| **amount** | Calculator field: `285+15`, `× ÷` | Same expressions, evaluated by the same `evalAmountExpression` |
+| **account** | Dropdown, all active non-sub | Exact / prefix / fuzzy / multi-word span; sole-account fallback |
+| **transferTo** | Dropdown | `to` / `into` / `from` markers, else word order |
+| **category** | Picker sheet | Name, prefix, learned dictionary (typo-tolerant), AI inference |
+| **description** | Free text, uncapped | Derived from raw input, metadata stripped, capped at 120 with an ellipsis |
+| **note** | Free text | `note: …` or `// …` to end of segment |
+| **date** | Date picker, any date | Relative and named date phrases — see §4 |
+| **reimbursable** | Switch | Auto-detected from phrasing |
+| **expectedReimbursementDate** | Date picker | A date behind a payback cue ("pays me back friday") |
+| **owedBy** | Free text | Extracted from lend/payback phrasing, or supplied by the AI |
 
 `billId`, `receivableId` and `installmentId` are set by neither surface — they
 are written by the Bills and Installments pages.
 
-### The two silent gaps
-
-Everything above is either visible or harmless except these, which produce a
-committed transaction that quietly differs from what the form would have made:
-
-1. **Description over 60 characters is truncated** without a word to the user
-   (`_truncateDescription`, `ledger_presenter.dart`). A long chat entry loses
-   its tail.
-2. **A reimbursable logged from chat is always "ASAP"** with no `owedBy`. The
-   linked receivable lands in the current month and names nobody, so
-   "spotted Jana 800, she'll pay me back" tracks the money but not who owes it.
+Field parity is now complete except **custodian accounts** (§3) and the
+operations chat structurally cannot perform: **edit and delete**.
 
 ---
 
@@ -55,7 +46,7 @@ committed transaction that quietly differs from what the form would have made:
 | **Several entries per message** | `-500 food gcash and -300 grab bpi` → two transactions, one confirm | `preparseFinanceBatch` |
 | **Credit-card pay-down** | `paid bpi cc 5000 from gcash` → transfer that pays the card down, not an expense | `_tryPayCredit` |
 | **Spotted-for-someone wash** | `paid 800 on my cc for jana, she paid me back` → card→cash transfer, neither spending nor income | `_tryPaidForSomeone` |
-| **Reimbursable detection** | "work expense", "owes me", "will pay me back" pre-arms the toggle | `_detectReimbursable` |
+| **Reimbursable detection** | "work expense", "owes me", "pays me back" arms the toggle and pulls out the debtor | `_detectReimbursable`, `_extractExtras` |
 | **Learned categories** | Confirmed token→category mappings resolve later entries with no AI call; survives one typo | `FinancePersonalDictionary`, `_lookupLearned` |
 | **Receipt photo** | Merchant + total seed the same confirm pipeline | `logReceiptPhoto` |
 | **Currency noise** | `₱120`, `php120`, `120 pesos`, `1,500` all normalize | `_normalize` |
@@ -66,31 +57,93 @@ is a shortcut rather than an exclusive.
 ## 3. The form can do things chat cannot
 
 - **Edit or delete.** Chat only ever creates. Every correction is a form trip.
-- **Back-date.** Chat stamps `DateTime.now()`, and refuses outright while you
-  are browsing a past date (`viewingPastDate`).
+  This is structural, not a gap to close: a chat line names no existing row.
 - **Custodian accounts.** The form offers them; chat's account pool excludes
-  them by design (Plan 026 §4).
-- **Convert between kinds.** Transfer ↔ expense/income re-typing is form-only.
-- **Note, owedBy, expected payback date, amount arithmetic** — see §1.
-
-Neither surface reaches **sub-accounts** (savings pockets). Both filter them out.
+  them, and deliberately so. Custodian accounts are usually named after people
+  ("Jana's money"), and chat text mentions people constantly — putting them in
+  the fuzzy-matching pool would make `spotted jana 800` resolve *jana* to an
+  account instead of a debtor. Use the form for money you hold for someone.
+- **Reach sub-accounts** (savings pockets) — excluded from both surfaces.
 
 ---
 
-## 4. Hard limits
+## 4. Dates
+
+| Phrase | Result |
+|---|---|
+| *(none)* | Now, as before |
+| `today` | Today |
+| `yesterday` | −1 day |
+| `day before yesterday` | −2 days |
+| `5 days ago` | −5 days |
+| `last week` | −7 days |
+| `friday` | The most recent Friday (today, if today is Friday) |
+| `last friday` | The Friday before that — a full week back when today is Friday |
+| `august 3`, `3 august`, `aug 3` | That day this year, or last year if it would be in the future |
+| `2026-07-04` | That day |
+
+A back-dated entry is stamped at midday, keeping it clear of both day boundaries
+whatever the reader's timezone; an entry dated today keeps the real clock time so
+same-day ordering still reflects when you logged. The ledger snaps to the
+entry's month, not the current one, so `yesterday` on the 1st is visible where it
+actually landed.
+
+Deliberately **not** read as dates, because a false positive silently moves
+money to the wrong month:
+
+- **Three-letter weekday abbreviations** (`sun`, `mar`) — they collide with real
+  account names. Weekdays must be spelled in full.
+- **A month abbreviation that prefix-matches an account name** — `mari 20` stays
+  Maribank, not 20 March.
+- **Slash forms** (`08/20`) — indistinguishable from the division the calculator
+  syntax allows.
+- **An impossible day** (`february 31`) — treated as not-a-date rather than
+  rolled into March.
+
+A date phrase is consumed before amount extraction, so the digits in
+`3 days ago` can never be read as a second amount.
+
+## 5. Who owes it back
+
+`owedBy` comes from, in order: `spotted|lent|loaned|fronted|sponsored <name>`,
+`<name> owes me`, `owed by <name>`, then `for <name>` — that last one **only**
+when the text also says the money is coming back, so `for lunch` never names
+lunch as the debtor. Account names and a stop-list of common non-names are
+rejected as candidates. Casing is read back from the raw input, so "Jana" stays
+"Jana". If the preparser finds nothing, the AI may supply one; it is instructed
+never to guess when no person is named.
+
+Both `owedBy` and the payback date are dropped unless the entry is actually
+reimbursable — a debtor on money nobody owes is worse than no debtor.
+
+A date is the **payback** date only when it follows a payback cue; otherwise it
+is the transaction date. `spotted Jana 800 yesterday, she pays me back monday`
+sets both, correctly and separately.
+
+---
+
+## 6. Hard limits
 
 | Limit | Value | Behaviour past it |
 |---|---|---|
 | Message length | 500 chars | `tooLong` error, no AI call |
 | Segments per message | 10 | Parsed as one entry instead of a list |
 | Amounts per segment | 1 | `multipleAmounts` error — `-500 -300 food gcash` is rejected |
+| Description | 120 chars | Cut on a word boundary, marked with `…` |
 | Clarify turns | 3 | Gives up, opens the prefilled form |
 | Account prefix match | ≥3 chars | Below that: ambiguous, not resolved |
 | Account fuzzy match | ≥4 chars, edit distance ≤1, unique | Ties are ambiguous, not a guess |
 | Account name width | 4 words | A 5-word account name is never matched whole |
 | Confidence floor | 0.6 | Below: downgraded to a clarifying question |
 
-### Segmentation rules
+### Arithmetic
+
+`285+15`, `150*3`, `1500/3`, `150×2`, `900÷3` all evaluate, with normal
+precedence. The operator must carry **no surrounding whitespace** — that is
+what keeps `-500 -300` two ambiguous amounts rather than silently becoming 200.
+So `285 + 15` is *not* read as arithmetic; it is two amounts, and rejected.
+
+### Segmentation
 
 A message splits on newline, `;`, `,`, and ` and / then / also / plus ` — but
 **only if at least two pieces carry a digit.** That guard is what keeps prose
@@ -122,7 +175,7 @@ Cancel drops the whole message, queued leftovers included.
 
 ---
 
-## 5. Ambiguity: what gets asked vs assumed
+## 7. Ambiguity: what gets asked vs assumed
 
 Chat resolves without asking when:
 
@@ -144,18 +197,16 @@ Chat never guesses:
   fallback, deliberately — a wrong account is a wrong balance on two accounts.
 - A category whose type contradicts the sign (`+500` with an expense category is
   a hard error, not a correction).
+- A date, from anything on the not-read list in §4.
+- A debtor, on an entry that isn't reimbursable.
 
----
+## 8. One rule worth remembering
 
-## 6. Known asymmetries worth a decision
+**The preparser's findings are never overwritten by the model.** A resolved
+classifier step is *merged* onto the existing draft, not substituted for it, and
+the fields the preparser derives deterministically — the reimbursable flag, the
+dates, the note, the debtor — are not things the model is asked to restate.
+Rebuilding the draft from the response alone is what used to drop them.
 
-Not bugs today, but each is a place chat and the form disagree:
-
-1. **Description truncation is silent.** Either warn at 60 chars or raise the
-   cap to match the form.
-2. **Reimbursables lose `owedBy`.** The phrasing usually contains the name
-   ("spotted **Jana** 800") — the classifier could extract it.
-3. **Back-dating is impossible.** "yesterday" / "last friday" is common
-   phrasing the parser does not read.
-4. **No amount arithmetic.** The form's calculator field accepts `285+15`;
-   chat rejects it as two amounts.
+The one exception is `owedBy`, which the model may supply when the preparser
+found none.

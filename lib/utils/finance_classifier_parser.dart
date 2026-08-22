@@ -140,6 +140,9 @@ String buildFinanceClassifierPrompt({
       'item/merchant/purpose only — never include the amount, the account name, '
       'or a bare restatement of the category, and never echo the raw input '
       'verbatim. Keep it under ~5 words.\n'
+      '- owedBy: only when this is money someone owes back ("spotted Jana 800", '
+      '"lent Maria 500"), the person\'s name as written. Null otherwise. Never '
+      'an account name, and never a guess when no person is named.\n'
       '\n'
       'Required fields:\n'
       '- inflow/outflow: amount, type, account, category, description\n'
@@ -149,6 +152,7 @@ String buildFinanceClassifierPrompt({
       '  {"step":"resolved","amount":number,"type":"outflow|inflow|transfer",\n'
       '   "account":"<name>","transferTo":"<name>|null","category":"<name>|null",\n'
       '   "description":"<short Title Case label, e.g. Lunch>",\n'
+      '   "owedBy":"<person name>|null",\n'
       '   "learnedToken":"<lowercase>|null","confidence":0.0-1.0,\n'
       '   "summaryText":"Log ₱500 outflow → Food (GCash)?"}\n'
       '  {"step":"clarify","question":"...",'
@@ -267,6 +271,11 @@ ClassifierStep? parseFinanceClassifierResponse({
       final hasAiDescription =
           aiDescription != null && aiDescription.isNotEmpty;
 
+      // The model is asked for owedBy but never for the date or note: those the
+      // preparser extracts deterministically, and a model that omitted them
+      // would silently erase them.
+      final aiOwedBy = (decoded['owedBy'] as String?)?.trim();
+
       return StepResolved(
         transaction: ParsedTransaction(
           amount: amount,
@@ -274,6 +283,18 @@ ClassifierStep? parseFinanceClassifierResponse({
           accountId: accountId,
           transferToAccountId: transferToId,
           categoryId: categoryId,
+          // Carried from the preparse, not rebuilt from the response. These
+          // were previously dropped whenever the AI resolved a turn, so a
+          // "work expense" the preparser had already flagged reimbursable
+          // committed as an ordinary expense with no linked receivable.
+          reimbursable:
+              preparse.reimbursable && type == TransactionType.outflow,
+          date: preparse.date,
+          note: preparse.note,
+          owedBy: (aiOwedBy != null && aiOwedBy.isNotEmpty)
+              ? aiOwedBy
+              : preparse.owedBy,
+          expectedReimbursementDate: preparse.expectedReimbursementDate,
           description: hasAiDescription ? aiDescription : preparse.rawInput,
           descriptionIsClean: hasAiDescription,
         ),

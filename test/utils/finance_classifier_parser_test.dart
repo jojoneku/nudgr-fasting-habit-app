@@ -248,4 +248,101 @@ void main() {
       expect(p, contains('transferTo (GCash)'));
     });
   });
+
+  group('preparse fields survive the response', () {
+    ClassifierStep? parseWith(String text, PreparseResult preparse) =>
+        parseFinanceClassifierResponse(
+          text: text,
+          accounts: accounts,
+          categories: categories,
+          preparse: preparse,
+        );
+
+    const resolved = '{"step":"resolved","amount":500,"type":"outflow",'
+        '"account":"GCash","category":"Food","description":"Lunch",'
+        '"confidence":0.9,"summaryText":"ok"}';
+
+    test('the reimbursable flag is not dropped', () {
+      // The model is never asked about this; the preparser decided it. Losing
+      // it committed a plain expense with no linked receivable.
+      final step = parseWith(
+        resolved,
+        const PreparseResult(
+            rawInput: '500 gcash lunch work expense',
+            amount: 500,
+            reimbursable: true),
+      );
+      expect((step as StepResolved).transaction.reimbursable, isTrue);
+    });
+
+    test('reimbursable is refused on anything but an outflow', () {
+      const asInflow = '{"step":"resolved","amount":500,"type":"inflow",'
+          '"account":"GCash","category":"Salary","description":"Pay",'
+          '"confidence":0.9,"summaryText":"ok"}';
+      final step = parseWith(
+        asInflow,
+        const PreparseResult(rawInput: 'x', amount: 500, reimbursable: true),
+      );
+      expect((step as StepResolved).transaction.reimbursable, isFalse);
+    });
+
+    test('the parsed date and note survive', () {
+      final when = DateTime(2026, 8, 18);
+      final step = parseWith(
+        resolved,
+        PreparseResult(
+            rawInput: 'x', amount: 500, date: when, note: 'Split with Mika'),
+      );
+      final txn = (step as StepResolved).transaction;
+      expect(txn.date, when);
+      expect(txn.note, 'Split with Mika');
+    });
+
+    test('the model may supply owedBy', () {
+      const withOwedBy = '{"step":"resolved","amount":500,"type":"outflow",'
+          '"account":"GCash","category":"Food","description":"Lunch",'
+          '"owedBy":"Jana","confidence":0.9,"summaryText":"ok"}';
+      final step = parseWith(
+        withOwedBy,
+        const PreparseResult(rawInput: 'x', amount: 500),
+      );
+      expect((step as StepResolved).transaction.owedBy, 'Jana');
+    });
+
+    test('the preparser wins when the model omits owedBy', () {
+      final step = parseWith(
+        resolved,
+        const PreparseResult(rawInput: 'x', amount: 500, owedBy: 'Jana'),
+      );
+      expect((step as StepResolved).transaction.owedBy, 'Jana');
+    });
+
+    test('the payback date survives', () {
+      final payback = DateTime(2026, 8, 21);
+      final step = parseWith(
+        resolved,
+        PreparseResult(
+            rawInput: 'x',
+            amount: 500,
+            reimbursable: true,
+            expectedReimbursementDate: payback),
+      );
+      expect((step as StepResolved).transaction.expectedReimbursementDate,
+          payback);
+    });
+
+    test('the prompt asks for owedBy and warns against guessing one', () {
+      final p = buildFinanceClassifierPrompt(
+        conversation: [
+          LedgerChatTurn(text: 'x', isUser: true, at: DateTime(2026)),
+        ],
+        preparse: const PreparseResult(rawInput: 'x'),
+        categories: categories,
+        accounts: accounts,
+        learnedMappings: const {},
+      );
+      expect(p, contains('"owedBy"'));
+      expect(p, contains('never a guess when no person is named'));
+    });
+  });
 }

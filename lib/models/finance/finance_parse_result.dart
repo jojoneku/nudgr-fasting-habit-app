@@ -14,6 +14,23 @@ class PreparseResult {
   /// back). A non-binding suggestion — the form pre-checks the toggle so the
   /// user confirms. Orthogonal to [isFullyResolved].
   final bool reimbursable;
+
+  /// Transaction date parsed from the text ("yesterday", "last friday",
+  /// "aug 20"). Null means the message named no date, and the commit path
+  /// stamps "now" as it always has.
+  final DateTime? date;
+
+  /// Free-text note, from a `note:` or `//` marker. Kept apart from the
+  /// description, exactly as the manual form keeps them apart.
+  final String? note;
+
+  /// Who owes the money back, for a reimbursable expense ("spotted Jana 800").
+  final String? owedBy;
+
+  /// When the payback is expected. Null is "ASAP" — the same default the form
+  /// uses — and is only set when the text names a date behind a payback cue.
+  final DateTime? expectedReimbursementDate;
+
   final List<String> unresolvedTokens;
   final List<String> ambiguousAccountTokens;
   final FinanceParseError? hardError;
@@ -26,6 +43,10 @@ class PreparseResult {
     this.transferToAccountId,
     this.categoryId,
     this.reimbursable = false,
+    this.date,
+    this.note,
+    this.owedBy,
+    this.expectedReimbursementDate,
     this.unresolvedTokens = const [],
     this.ambiguousAccountTokens = const [],
     this.hardError,
@@ -51,6 +72,10 @@ class PreparseResult {
         transferToAccountId: transferToAccountId,
         categoryId: categoryId,
         reimbursable: reimbursable,
+        date: date,
+        note: note,
+        owedBy: owedBy,
+        expectedReimbursementDate: expectedReimbursementDate,
         description: rawInput,
       );
 }
@@ -116,6 +141,18 @@ class ParsedTransaction {
   /// path strips extraction tokens (amount/account/etc.) out of it first.
   final bool descriptionIsClean;
 
+  /// Transaction date. Null means "no date named" — the commit path stamps now.
+  final DateTime? date;
+
+  /// Free-text note, kept apart from [description] as the form keeps them.
+  final String? note;
+
+  /// Who owes a reimbursable expense back.
+  final String? owedBy;
+
+  /// Expected payback date; null is "ASAP".
+  final DateTime? expectedReimbursementDate;
+
   const ParsedTransaction({
     this.amount,
     this.type,
@@ -123,6 +160,10 @@ class ParsedTransaction {
     this.transferToAccountId,
     this.categoryId,
     this.reimbursable = false,
+    this.date,
+    this.note,
+    this.owedBy,
+    this.expectedReimbursementDate,
     this.description = '',
     this.descriptionIsClean = false,
   });
@@ -143,6 +184,10 @@ class ParsedTransaction {
     String? transferToAccountId,
     String? categoryId,
     bool? reimbursable,
+    DateTime? date,
+    String? note,
+    String? owedBy,
+    DateTime? expectedReimbursementDate,
     String? description,
     bool? descriptionIsClean,
   }) =>
@@ -153,6 +198,11 @@ class ParsedTransaction {
         transferToAccountId: transferToAccountId ?? this.transferToAccountId,
         categoryId: categoryId ?? this.categoryId,
         reimbursable: reimbursable ?? this.reimbursable,
+        date: date ?? this.date,
+        note: note ?? this.note,
+        owedBy: owedBy ?? this.owedBy,
+        expectedReimbursementDate:
+            expectedReimbursementDate ?? this.expectedReimbursementDate,
         description: description ?? this.description,
         descriptionIsClean: descriptionIsClean ?? this.descriptionIsClean,
       );
@@ -160,6 +210,11 @@ class ParsedTransaction {
   /// Merge non-null fields from [other] onto this draft. [reimbursable] is
   /// sticky — once suggested it stays on (a later turn never silently clears
   /// it), so we only forward a `true`.
+  ///
+  /// [date], [note], [owedBy] and [expectedReimbursementDate] merge the same
+  /// way as every other field: a later turn that says nothing about them leaves
+  /// what the preparser deterministically extracted in place, rather than
+  /// letting the model's silence erase it.
   ParsedTransaction mergeWith(ParsedTransaction other) => copyWith(
         amount: other.amount,
         type: other.type,
@@ -167,6 +222,10 @@ class ParsedTransaction {
         transferToAccountId: other.transferToAccountId,
         categoryId: other.categoryId,
         reimbursable: other.reimbursable ? true : null,
+        date: other.date,
+        note: other.note,
+        owedBy: other.owedBy,
+        expectedReimbursementDate: other.expectedReimbursementDate,
         description: other.description.isEmpty ? null : other.description,
         descriptionIsClean:
             other.description.isEmpty ? null : other.descriptionIsClean,
