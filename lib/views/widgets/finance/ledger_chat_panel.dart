@@ -46,7 +46,7 @@ class LedgerChatPanel extends StatelessWidget {
         ],
       );
     } else if (step is StepResolved) {
-      body = _ResolvedBody(ledger: ledger, summary: step.summaryText);
+      body = _ResolvedBody(ledger: ledger, step: step);
     } else if (step is StepClarify) {
       body = _ClarifyBody(ledger: ledger, step: step);
     }
@@ -72,10 +72,10 @@ class LedgerChatPanel extends StatelessWidget {
 }
 
 class _ResolvedBody extends StatelessWidget {
-  const _ResolvedBody({required this.ledger, required this.summary});
+  const _ResolvedBody({required this.ledger, required this.step});
 
   final LedgerPresenter ledger;
-  final String summary;
+  final StepResolved step;
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +83,9 @@ class _ResolvedBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(summary,
+        // For a batch the summary is already one line per transaction, so this
+        // reads as a list rather than needing a separate layout.
+        Text(step.summaryText,
             style: AppTextStyles.bodySmall.copyWith(color: cs.onSurface)),
         const SizedBox(height: AppSpacing.xs),
         Row(
@@ -96,7 +98,11 @@ class _ResolvedBody extends StatelessWidget {
             const SizedBox(width: 4),
             FilledButton(
               onPressed: ledger.confirmResolved,
-              child: const Text('Log it'),
+              // Naming the count matters here: the button commits every
+              // transaction the step carries, not just the first.
+              child: Text(step.isBatch
+                  ? 'Log all ${step.transactions.length}'
+                  : 'Log it'),
             ),
           ],
         ),

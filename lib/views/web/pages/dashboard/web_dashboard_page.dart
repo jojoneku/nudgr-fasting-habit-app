@@ -118,17 +118,11 @@ class _PositionRow extends StatelessWidget {
         icon: Icons.savings_outlined,
         iconColor: context.appColors.treasury,
       ),
-      // Budget Left — how much of this month's plan is still unspent. Shown
-      // instead of total allocated so it reconciles with the Month-End Outlook:
-      // this same remaining figure is what "Proj. Month-End Cash" reserves, so
-      // as you spend it down the forecast reflects your real spendable cash.
-      WebStatTile(
-        label: 'Budget Left',
-        value: formatPeso(p.totalBudgetRemaining),
-        sub: 'Left to spend this month',
-        icon: Icons.pie_chart_outline_rounded,
-        iconColor: context.appColors.treasury,
-      ),
+      // "Budget Left" deliberately does NOT live here. It is a term of the
+      // month-end projection, and the Month-End Outlook row below now shows it
+      // in that chain (net of bills/set-asides that already reserve the same
+      // peso). Two tiles under one label with two different values is the exact
+      // confusion this row used to create.
     ];
 
     return LayoutBuilder(
@@ -145,7 +139,7 @@ class _PositionRow extends StatelessWidget {
 }
 
 // ===========================================================================
-// 1b — Month-End Outlook (the 4 forecast tiles moved out of Cash Flow)
+// 1b — Month-End Outlook (the projection chain, tile by tile)
 // ===========================================================================
 
 class _MonthEndOutlookRow extends StatelessWidget {
@@ -159,27 +153,48 @@ class _MonthEndOutlookRow extends StatelessWidget {
     final appColors = context.appColors;
     final p = presenter;
 
+    // An arithmetic chain, in the same order and under the same labels the
+    // mobile grid uses (`metric_cards_grid.dart`):
+    //   Liquid Now + To Receive − Upcoming Bills − Budget/Savings Due
+    //     − Budget Left = Proj. Month-End Cash
+    // Every deduction is shown so the drop from liquid cash to the projection
+    // is accountable. "Budget Left" is budgetRemainingNetOfObligations, not raw
+    // totalBudgetRemaining, so the chain closes exactly — see that getter.
     final tiles = <Widget>[
       WebStatTile(
-        label: 'Upcoming Bills',
-        value: formatPeso(p.monthUnpaidBills),
-        sub: 'Unpaid this month',
-        icon: Icons.receipt_long_outlined,
-        iconColor: appColors.bills,
+        label: 'Liquid Now',
+        value: formatPeso(p.totalLiquidCash),
+        sub: 'Cash across accounts',
+        icon: Icons.account_balance_wallet_outlined,
+        iconColor: appColors.fast,
       ),
       WebStatTile(
         label: 'To Receive',
-        value: formatPeso(p.pendingReceivables),
+        value: '+ ${formatPeso(p.pendingReceivables)}',
         sub: 'Money owed to you',
         icon: Icons.south_rounded,
         iconColor: appColors.success,
       ),
       WebStatTile(
+        label: 'Upcoming Bills',
+        value: '− ${formatPeso(p.monthUnpaidBills)}',
+        sub: 'Unpaid this month',
+        icon: Icons.receipt_long_outlined,
+        iconColor: appColors.bills,
+      ),
+      WebStatTile(
         label: 'Budget / Savings Due',
-        value: formatPeso(p.budgetedExpensesRemaining),
+        value: '− ${formatPeso(p.budgetedExpensesRemaining)}',
         sub: 'Set-asides still to fund',
         icon: Icons.savings_outlined,
         iconColor: appColors.treasury,
+      ),
+      WebStatTile(
+        label: 'Budget Left',
+        value: '− ${formatPeso(p.budgetRemainingNetOfObligations)}',
+        sub: 'Still budgeted to spend',
+        icon: Icons.pie_chart_outline,
+        iconColor: appColors.weight,
       ),
       WebStatTile(
         label: 'Proj. Month-End Cash',
@@ -204,8 +219,10 @@ class _MonthEndOutlookRow extends StatelessWidget {
         ),
         LayoutBuilder(
           builder: (context, constraints) {
+            // Six tiles → 3 columns lays them out as a clean 3×2 instead of
+            // the ragged 4+2 a 4-column flow would give.
             final cols = constraints.maxWidth >= 1040
-                ? 4
+                ? 3
                 : constraints.maxWidth >= 560
                     ? 2
                     : 1;

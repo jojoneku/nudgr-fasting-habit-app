@@ -188,4 +188,64 @@ void main() {
       expect((step as StepClarify).quickReplies, isNull);
     });
   });
+
+  group('prompt construction', () {
+    String prompt(PreparseResult preparse) => buildFinanceClassifierPrompt(
+          conversation: [
+            LedgerChatTurn(
+                text: preparse.rawInput, isUser: true, at: DateTime(2026)),
+          ],
+          preparse: preparse,
+          categories: categories,
+          accounts: accounts,
+          learnedMappings: const {},
+        );
+
+    test('the stated confidence bar matches the one actually enforced', () {
+      // A higher bar in the prompt than in the parser makes the model ask a
+      // clarifying question for answers that would have been accepted.
+      final p = prompt(_preparse());
+      expect(
+          p,
+          contains('confidence >= '
+              '${kFinanceClassifierConfidenceFloor.toStringAsFixed(1)}'));
+      expect(p, isNot(contains('confidence >= 0.8')));
+    });
+
+    test('accounts carry their kind so siblings can be told apart', () {
+      final p = prompt(_preparse());
+      expect(p, contains('"name":"BPI"'));
+      expect(p, contains('"kind":"bank"'));
+    });
+
+    test('fields the preparser settled are marked off-limits to ask about', () {
+      final p = prompt(PreparseResult(
+        rawInput: '500 gcash food',
+        amount: 500,
+        type: TransactionType.outflow,
+        accountId: gcash.id,
+      ));
+      expect(p, contains('ALREADY SETTLED'));
+      expect(p, contains('account (GCash)'));
+      // The category is genuinely unknown here, so it must NOT be listed.
+      expect(p, isNot(contains('category (')));
+    });
+
+    test('with nothing settled the model is told to infer instead', () {
+      final p = prompt(const PreparseResult(rawInput: 'something'));
+      expect(p, contains('Nothing is settled yet'));
+      expect(p, isNot(contains('ALREADY SETTLED')));
+    });
+
+    test('a resolved transfer destination is passed through', () {
+      final p = prompt(PreparseResult(
+        rawInput: 'transfer 500 bpi to gcash',
+        amount: 500,
+        type: TransactionType.transfer,
+        accountId: bpi.id,
+        transferToAccountId: gcash.id,
+      ));
+      expect(p, contains('transferTo (GCash)'));
+    });
+  });
 }

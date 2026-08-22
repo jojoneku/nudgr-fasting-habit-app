@@ -19,6 +19,15 @@ const int _maxInputLength = 500;
 const int _minAccountPrefixLength = 3;
 const int _minAccountFuzzyLength = 4;
 
+/// Longest account name, in words, the span matcher will try to match. Covers
+/// "BPI Personal", "BPI Credit Card", "Maya Savings Pocket".
+const int _maxAccountSpanWords = 4;
+
+/// Hard cap on segments in one chat message. A message that splits into more
+/// than this is almost certainly punctuation being read as a separator rather
+/// than a genuine list, so it's parsed as a single entry instead.
+const int _maxBatchSegments = 10;
+
 /// Resolves [input] using the account/category lists and the personal
 /// dictionary, returning a [PreparseResult] that may be:
 ///
@@ -87,6 +96,88 @@ PreparseResult preparseFinanceInput({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Batch entry point — one message, one or more transactions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Separators that can introduce a second transaction in one message. Commas
+/// are handled here too, but only after thousand-commas have been collapsed so
+/// "1,500 food gcash" isn't torn in half.
+final _segmentSplitter = RegExp(
+  r'[\n;,]|\s+(?:and|then|also|plus)\s+',
+  caseSensitive: false,
+);
+
+/// Splits [input] into one segment per transaction and preparses each.
+///
+/// A message only counts as a list when at least two segments carry a digit.
+/// That single guard is what keeps ordinary prose intact: "coffee and donuts
+/// 150 gcash" splits into "coffee" / "donuts 150 gcash", only one of which has
+/// an amount, so it is parsed whole and the description survives. Likewise
+/// "paid 800 on my cc for jana, she paid me back" stays one entry.
+///
+/// Prefer this over [preparseFinanceInput] on any surface that accepts free
+/// text — a single-transaction message is just the length-1 case.
+PreparseBatch preparseFinanceBatch({
+  required String input,
+  required List<FinanceCategory> categories,
+  required List<FinancialAccount> accounts,
+  required Map<String, String> learnedDict,
+  bool viewingPastDate = false,
+}) {
+  final raw = input.trim();
+  // Whole-message errors first: they don't depend on segmentation, and
+  // reporting them per segment would multiply one problem into several.
+  if (viewingPastDate) {
+    return PreparseBatch.error(FinanceParseError.viewingPastDate, raw);
+  }
+  if (raw.isEmpty) return PreparseBatch.error(FinanceParseError.empty, raw);
+  if (raw.length > _maxInputLength) {
+    return PreparseBatch.error(FinanceParseError.tooLong, raw);
+  }
+
+  PreparseBatch single() => PreparseBatch(
+        rawInput: raw,
+        segments: [
+          preparseFinanceInput(
+            input: raw,
+            categories: categories,
+            accounts: accounts,
+            learnedDict: learnedDict,
+          ),
+        ],
+      );
+
+  // Collapse thousand-commas before splitting, on the raw string so casing
+  // (and therefore descriptions) survive.
+  final decommad =
+      raw.replaceAllMapped(RegExp(r'(\d),(?=\d{3}(?:\D|$))'), (m) => m[1]!);
+
+  final pieces = decommad
+      .split(_segmentSplitter)
+      .map((p) => p.trim())
+      .where((p) => p.isNotEmpty)
+      .toList();
+
+  final withDigits = pieces.where((p) => RegExp(r'\d').hasMatch(p)).length;
+  if (withDigits < 2 || pieces.length > _maxBatchSegments) return single();
+
+  // Only amount-bearing pieces become transactions. A trailing "…and that's
+  // it" or a leading "logged:" is noise, not an entry.
+  final segments = [
+    for (final p in pieces)
+      if (RegExp(r'\d').hasMatch(p))
+        preparseFinanceInput(
+          input: p,
+          categories: categories,
+          accounts: accounts,
+          learnedDict: learnedDict,
+        ),
+  ];
+  if (segments.length < 2) return single();
+  return PreparseBatch(rawInput: raw, segments: segments);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Normalization
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -119,63 +210,101 @@ String _normalize(String input) {
 // Pattern A — transfer
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Directional-marker tokens that split a transfer's source from its
+/// destination. `into`/`->`(→ "transfer") behave like `to`.
+const _kTransferToMarkers = {'to', 'into'};
+const _kTransferFromMarker = 'from';
+
 PreparseResult? _tryTransfer(
     String normalized, List<FinancialAccount> accounts) {
-  // Two shapes after normalization (arrow aliases → "transfer"):
-  //   A. transfer <amount> <from> [to] <to>
-  //   B. <amount> <from> transfer <to>
-  // Reject any input that doesn't contain the literal word "transfer".
+  // Reject any input that doesn't contain the literal word "transfer" (arrow
+  // and abbreviation aliases were normalized into it upstream).
   if (!RegExp(r'\btransfer\b').hasMatch(normalized)) return null;
 
-  // Try shape A first.
-  var m =
-      RegExp(r'^transfer\s+(-?\d+(?:\.\d+)?)\s+(.+)$').firstMatch(normalized);
-  // Shape B — amount leads, "transfer" sits between the two account labels.
-  m ??= RegExp(r'^(-?\d+(?:\.\d+)?)\s+(.+?)\s+transfer\s+(.+)$')
-      .firstMatch(normalized);
-  if (m == null) return null;
-
-  final amount = double.tryParse(m.group(1)!);
-  if (amount == null) {
+  final amounts =
+      RegExp(r'(?<=^|\s)(-?\d+(?:\.\d+)?)(?=\s|$)').allMatches(normalized);
+  if (amounts.isEmpty) return null;
+  if (amounts.length > 1) {
     return const PreparseResult(
-        rawInput: '', hardError: FinanceParseError.invalidAmount);
+        rawInput: '', hardError: FinanceParseError.multipleAmounts);
   }
-  if (amount <= 0) {
+  final amount = double.tryParse(amounts.first.group(1)!);
+  if (amount == null || amount <= 0) {
     return const PreparseResult(
         rawInput: '', hardError: FinanceParseError.invalidAmount);
   }
 
-  // Shape B captures `from` and `to` in groups 2 and 3; shape A captures all
-  // remaining labels in group 2.
-  final String remainder;
-  if (m.groupCount >= 3 && m.group(3) != null) {
-    remainder = '${m.group(2)!} ${m.group(3)!}';
-  } else {
-    remainder = m.group(2)!;
+  // Everything that isn't the amount or the word "transfer" is a label, with
+  // direction markers left in place to segment on.
+  final labels = normalized
+      .replaceRange(amounts.first.start, amounts.first.end, ' ')
+      .split(RegExp(r'\s+'))
+      .where((t) => t.isNotEmpty && t != 'transfer')
+      .toList();
+
+  // Segment on direction markers, tagging each run of tokens with the marker
+  // that introduced it. The run before any marker is untagged.
+  final segments = <(String? marker, List<String> tokens)>[];
+  String? marker;
+  var current = <String>[];
+  for (final tok in labels) {
+    if (_kTransferToMarkers.contains(tok) || tok == _kTransferFromMarker) {
+      segments.add((marker, current));
+      marker = tok == _kTransferFromMarker ? _kTransferFromMarker : 'to';
+      current = <String>[];
+    } else {
+      current.add(tok);
+    }
   }
-  final parts = remainder.contains(' to ')
-      ? remainder.split(' to ')
-      : remainder.split(RegExp(r'\s+'));
+  segments.add((marker, current));
 
-  final tokens = parts.expand((p) => p.trim().split(RegExp(r'\s+'))).toList()
-    ..removeWhere((t) => t.isEmpty);
+  List<String>? fromTokens;
+  List<String>? toTokens;
+  List<String>? leading;
+  for (final (m, toks) in segments) {
+    if (toks.isEmpty) continue;
+    if (m == _kTransferFromMarker) {
+      fromTokens ??= toks;
+    } else if (m == 'to') {
+      toTokens ??= toks;
+    } else {
+      leading ??= toks;
+    }
+  }
 
+  // The untagged run fills whichever side is still open. "500 gcash from bpi"
+  // makes gcash the destination; "transfer 500 bpi to gcash" makes it the
+  // source. Word order, not resolution order, decides — resolving in order and
+  // filling `from` first (as this used to) silently swapped the legs whenever
+  // the source label was ambiguous and the destination happened to resolve.
+  if (leading != null) {
+    if (fromTokens == null) {
+      fromTokens = leading;
+    } else {
+      toTokens ??= leading;
+    }
+  }
+
+  final ambiguous = <String>[];
   String? fromId;
   String? toId;
-  final ambiguous = <String>[];
 
-  for (final tok in tokens) {
-    final r = _resolveAccount(tok, accounts);
-    if (r.id == null) {
-      if (r.wasAmbiguous) ambiguous.add(tok);
-      continue;
-    }
-    if (fromId == null) {
-      fromId = r.id;
-    } else if (toId == null && r.id != fromId) {
-      toId = r.id;
+  if (fromTokens != null) {
+    final scan = _scanAccounts(fromTokens, accounts);
+    ambiguous.addAll(scan.ambiguous);
+    if (scan.spans.isNotEmpty) fromId = scan.spans.first.accountId;
+    // No explicit destination marker: both accounts sit in the same run, so the
+    // second name found is the destination ("transfer 1000 bpi gcash").
+    if (toTokens == null && scan.spans.length > 1) {
+      toId = scan.spans[1].accountId;
     }
   }
+  if (toTokens != null) {
+    final scan = _scanAccounts(toTokens, accounts);
+    ambiguous.addAll(scan.ambiguous);
+    if (scan.spans.isNotEmpty) toId = scan.spans.first.accountId;
+  }
+  if (toId == fromId) toId = null;
 
   return PreparseResult(
     rawInput: '',
@@ -383,27 +512,28 @@ PreparseResult _tryAmount({
     ...after.split(RegExp(r'\s+')),
   ]..removeWhere((t) => t.isEmpty);
 
-  String? accountId;
+  // Accounts first, over phrases rather than lone tokens, so a multi-word
+  // account name is matched whole before its words are offered to anything
+  // else. Only the first account matters here — a second name in a non-transfer
+  // entry has no field to land in.
+  final scan = _scanAccounts(tokens, accounts);
+  // With exactly one loggable account there is nothing to disambiguate, so
+  // naming it is optional — "500 food" resolves. Only applied as a fallback, so
+  // an explicitly named account always wins.
+  final String? accountId = scan.spans.isNotEmpty
+      ? scan.spans.first.accountId
+      : (accounts.length == 1 ? accounts.first.id : null);
   final categoryHits = <String>{};
   final unresolved = <String>[];
-  final ambiguous = <String>[];
+  final ambiguous = <String>[...scan.ambiguous];
 
-  for (final tok in tokens) {
-    final accRes = _resolveAccount(tok, accounts);
-    if (accRes.id != null) {
-      accountId ??= accRes.id;
-      continue;
-    }
-    if (accRes.wasAmbiguous) {
-      ambiguous.add(tok);
-      continue;
-    }
+  for (final tok in scan.leftover) {
     final catId = _resolveCategoryToken(tok, categories);
     if (catId != null) {
       categoryHits.add(catId);
       continue;
     }
-    final dictHit = learnedDict[tok];
+    final dictHit = _lookupLearned(tok, learnedDict);
     if (dictHit != null && categories.any((c) => c.id == dictHit)) {
       categoryHits.add(dictHit);
       continue;
@@ -489,8 +619,18 @@ class _AccountMatch {
         wasAmbiguous = true;
 }
 
-_AccountMatch _resolveAccount(String token, List<FinancialAccount> accounts) {
-  final t = token.toLowerCase();
+/// Resolves a whole phrase — one or more adjacent tokens joined by a space —
+/// against the account list.
+///
+/// Single-token behaviour is identical to matching one word; the point of
+/// accepting a phrase is that multi-word account names ("BPI Personal") can
+/// only ever be matched as one. Matching them token by token is what used to
+/// make "500 bpi personal food" ask "BPI Personal or BPI Vybe?" — "bpi" alone
+/// is genuinely ambiguous, and "personal" alone matches nothing, so the name
+/// the user actually typed in full was never considered.
+_AccountMatch _resolveAccountPhrase(
+    String phrase, List<FinancialAccount> accounts) {
+  final t = phrase.toLowerCase().trim();
   if (t.isEmpty) return const _AccountMatch.miss();
 
   // 1. Exact case-insensitive name match.
@@ -508,7 +648,7 @@ _AccountMatch _resolveAccount(String token, List<FinancialAccount> accounts) {
     return _AccountMatch.hit(prefixHits.first.id);
   }
 
-  // 3. Fuzzy match (Damerau–Levenshtein ≤ 1, token ≥ _minAccountFuzzyLength).
+  // 3. Fuzzy match (Damerau–Levenshtein ≤ 1, phrase ≥ _minAccountFuzzyLength).
   if (t.length >= _minAccountFuzzyLength) {
     FinancialAccount? best;
     var bestD = 2;
@@ -530,6 +670,112 @@ _AccountMatch _resolveAccount(String token, List<FinancialAccount> accounts) {
   }
 
   return const _AccountMatch.miss();
+}
+
+/// One account name found inside a token list, and the tokens it occupied.
+class _AccountSpan {
+  final String accountId;
+  final int start; // inclusive
+  final int end; // exclusive
+  const _AccountSpan(this.accountId, this.start, this.end);
+}
+
+/// Result of sweeping a token list for account names.
+class _AccountScan {
+  /// Spans in left-to-right order of appearance. Word order is the only signal
+  /// transfer direction has, so this list must stay ordered.
+  final List<_AccountSpan> spans;
+
+  /// Tokens no account claimed, in order — candidates for category / dict /
+  /// unresolved classification.
+  final List<String> leftover;
+
+  /// Phrases that matched more than one account, for the AI to disambiguate.
+  final List<String> ambiguous;
+
+  const _AccountScan(this.spans, this.leftover, this.ambiguous);
+}
+
+/// Finds every account name in [tokens], preferring the longest phrase.
+///
+/// Longest-first is what makes multi-word names win over their own first word:
+/// with accounts "BPI Personal" and "BPI Vybe", the two-token phrase
+/// "bpi personal" resolves and consumes both tokens, so the ambiguous
+/// single token "bpi" is never evaluated on its own.
+_AccountScan _scanAccounts(
+    List<String> tokens, List<FinancialAccount> accounts) {
+  final claimed = List<bool>.filled(tokens.length, false);
+  final spans = <_AccountSpan>[];
+  final ambiguous = <String>[];
+
+  final maxSpan = tokens.length < _maxAccountSpanWords
+      ? tokens.length
+      : _maxAccountSpanWords;
+
+  for (var width = maxSpan; width >= 1; width--) {
+    for (var start = 0; start + width <= tokens.length; start++) {
+      final end = start + width;
+      if (claimed.getRange(start, end).any((c) => c)) continue;
+      final phrase = tokens.getRange(start, end).join(' ');
+      final match = _resolveAccountPhrase(phrase, accounts);
+      if (match.id != null) {
+        spans.add(_AccountSpan(match.id!, start, end));
+        for (var i = start; i < end; i++) {
+          claimed[i] = true;
+        }
+      } else if (match.wasAmbiguous && width == 1) {
+        // Only record single-token ambiguity. A multi-token phrase that matched
+        // several accounts isn't a token the user can be asked about, and its
+        // words may still resolve individually on a narrower pass.
+        ambiguous.add(phrase);
+      }
+    }
+  }
+
+  spans.sort((a, b) => a.start.compareTo(b.start));
+  final leftover = <String>[];
+  for (var i = 0; i < tokens.length; i++) {
+    if (!claimed[i]) leftover.add(tokens[i]);
+  }
+  // A token that resolved on a wider pass isn't ambiguous after all.
+  ambiguous.removeWhere((t) => !leftover.contains(t));
+  return _AccountScan(spans, leftover, ambiguous);
+}
+
+/// Looks [token] up in the learned dictionary, matching how the dictionary
+/// stores its keys, and tolerating a typo.
+///
+/// [FinancePersonalDictionary] normalizes every key by stripping non-alphanumeric
+/// characters, so a raw indexed lookup missed any token carrying punctuation —
+/// "jollibee," never found the "jollibee" the user had already taught it, and
+/// the input went to the AI for a category it already knew.
+///
+/// The fuzzy pass exists for the same reason: these are mappings the user
+/// confirmed themselves, so honouring "jollibe" is recalling their own answer,
+/// not guessing. It needs a unique nearest key, matching how account names are
+/// resolved — two equally-near keys are ambiguous, not a match.
+String? _lookupLearned(String token, Map<String, String> learnedDict) {
+  final direct = learnedDict[token];
+  if (direct != null) return direct;
+  final key = token.toLowerCase().replaceAll(RegExp(r"[^a-z0-9ñ']"), '');
+  if (key.isEmpty) return null;
+  final normalized = learnedDict[key];
+  if (normalized != null) return normalized;
+  if (key.length < _minAccountFuzzyLength) return null;
+
+  String? best;
+  var ties = 0;
+  for (final entry in learnedDict.entries) {
+    if (entry.key.length < _minAccountFuzzyLength) continue;
+    if (damerauLevenshtein(key, entry.key, maxDistance: 1) > 1) continue;
+    if (best == null) {
+      best = entry.value;
+      ties = 1;
+    } else if (entry.value != best) {
+      ties++;
+    }
+  }
+  return ties == 1 ? best : null;
 }
 
 String? _resolveCategoryToken(String token, List<FinanceCategory> categories) {

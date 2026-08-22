@@ -55,6 +55,48 @@ class PreparseResult {
       );
 }
 
+/// What the preprocessor produces from one chat message, which may describe
+/// more than one transaction ("500 food gcash and 300 grab bpi").
+///
+/// [segments] is never empty unless [hardError] is set: a message with no
+/// recognised separator yields exactly one segment, so the single-entry path is
+/// just the length-1 case of this and needs no special handling upstream.
+class PreparseBatch {
+  /// One result per transaction described, in the order they were written.
+  final List<PreparseResult> segments;
+
+  /// An error covering the whole message (empty, too long, viewing a past
+  /// date). Per-segment problems live on each [PreparseResult] instead.
+  final FinanceParseError? hardError;
+
+  /// The original, unsegmented message.
+  final String rawInput;
+
+  const PreparseBatch({
+    required this.segments,
+    this.hardError,
+    required this.rawInput,
+  });
+
+  const PreparseBatch.error(FinanceParseError error, this.rawInput)
+      : segments = const [],
+        hardError = error;
+
+  bool get isMulti => segments.length > 1;
+
+  /// Segments the regex+dictionary layer resolved completely — committable
+  /// without consulting the AI at all.
+  List<PreparseResult> get resolved =>
+      segments.where((s) => s.hardError == null && s.isFullyResolved).toList();
+
+  /// Segments still needing the AI (or the form): partially resolved, or
+  /// individually hard-errored.
+  List<PreparseResult> get unresolved =>
+      segments.where((s) => s.hardError != null || !s.isFullyResolved).toList();
+
+  bool get allResolved => segments.isNotEmpty && unresolved.isEmpty;
+}
+
 /// Accumulating draft of a transaction across one or more parse turns.
 /// Each AI classifier turn merges new non-null fields onto the prior state.
 class ParsedTransaction {
@@ -178,7 +220,9 @@ sealed class ClassifierStep {
 /// AI is confident — has all required fields. Presenter shows summary +
 /// [Yes/Edit/Cancel] row; commits only on user Yes.
 class StepResolved extends ClassifierStep {
-  final ParsedTransaction transaction;
+  /// Every transaction being confirmed together. Length 1 for the ordinary
+  /// single-entry case; longer when one chat message described several.
+  final List<ParsedTransaction> transactions;
 
   /// Token to learn into the personal dictionary on confirm (e.g. "hamburger"
   /// → "Food"). Null when nothing new was learned this turn.
@@ -186,11 +230,52 @@ class StepResolved extends ClassifierStep {
 
   final String summaryText;
 
-  const StepResolved({
-    required this.transaction,
+  /// Segments of a multi-transaction message that could NOT be resolved. They
+  /// are not part of [transactions] and are not committed on confirm — the
+  /// presenter hands the first one to the clarify loop afterwards so the user
+  /// settles them one at a time.
+  final List<PreparseResult> deferred;
+
+  StepResolved({
+    required ParsedTransaction transaction,
     this.learnedToken,
     required this.summaryText,
-  });
+  })  : transactions = List.unmodifiable([transaction]),
+        deferred = const [],
+        _learnedPairs = null;
+
+  StepResolved.batch({
+    required List<ParsedTransaction> transactions,
+    required this.summaryText,
+    List<PreparseResult> deferred = const [],
+    Map<String, String> learnedPairs = const {},
+  })  : transactions = List.unmodifiable(transactions),
+        deferred = List.unmodifiable(deferred),
+        learnedToken = null,
+        _learnedPairs = Map.unmodifiable(learnedPairs);
+
+  /// Explicit token→categoryId pairs to learn on confirm.
+  ///
+  /// A batch needs these rather than a bare [learnedToken]: each segment learns
+  /// against *its own* category, and pairing one segment's token with another
+  /// segment's category would persist a mapping the user never confirmed.
+  final Map<String, String>? _learnedPairs;
+
+  /// Everything to learn on confirm, as token → categoryId. Derived from
+  /// [learnedToken] for a single transaction, explicit for a batch.
+  Map<String, String> get learnedPairs {
+    final pairs = _learnedPairs;
+    if (pairs != null) return pairs;
+    final token = learnedToken;
+    final categoryId = transactions.first.categoryId;
+    if (token == null || categoryId == null) return const {};
+    return {token: categoryId};
+  }
+
+  /// The first (and usually only) transaction.
+  ParsedTransaction get transaction => transactions.first;
+
+  bool get isBatch => transactions.length > 1;
 }
 
 /// AI needs more info. Render [question] above the input and optionally render

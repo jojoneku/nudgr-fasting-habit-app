@@ -370,4 +370,285 @@ void main() {
       expect(r.accountId, isNull);
     });
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Multi-word account names — the "BPI Personal vs BPI Vybe" complaint.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('multi-word account names', () {
+    final bpiPersonal = _acc('BPI Personal', id: 'bpi-personal');
+    final bpiVybe = _acc('BPI Vybe', id: 'bpi-vybe');
+    final bpiCc = _acc('BPI CC', id: 'bpi-cc', cat: AccountCategory.creditCard);
+    final multi = [bpiPersonal, bpiVybe, bpiCc, gcash, cash];
+
+    test('the full name resolves instead of asking which BPI', () {
+      final r = run('-500 food bpi personal', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.ambiguousAccountTokens, isEmpty);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('word order inside the message does not matter', () {
+      final r = run('bpi personal -500 food', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('a sibling multi-word name resolves to itself, not its sibling', () {
+      final r = run('-500 food bpi vybe', overrideAccounts: multi);
+      expect(r.accountId, bpiVybe.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('the shared first word alone is still ambiguous', () {
+      final r = run('-500 food bpi', overrideAccounts: multi);
+      expect(r.accountId, isNull);
+      expect(r.ambiguousAccountTokens, contains('bpi'));
+    });
+
+    test('a partial second word still resolves ("bpi pers")', () {
+      final r = run('-500 food bpi pers', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+    });
+
+    test('matching the name whole does not eat the category token', () {
+      final r = run('bpi personal 500 food', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.categoryId, food.id);
+      expect(r.unresolvedTokens, isEmpty);
+    });
+
+    test('unknown words survive the account sweep for the AI', () {
+      final r = run('500 bpi personal jollibee', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.unresolvedTokens, contains('jollibee'));
+    });
+  });
+
+  group('transfer direction', () {
+    final bpiPersonal = _acc('BPI Personal', id: 'bpi-personal');
+    final bpiVybe = _acc('BPI Vybe', id: 'bpi-vybe');
+    final multi = [bpiPersonal, bpiVybe, gcash, cash];
+
+    test('both legs resolve when the source name is multi-word', () {
+      final r =
+          run('transfer 1000 bpi personal to gcash', overrideAccounts: multi);
+      expect(r.type, TransactionType.transfer);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.transferToAccountId, gcash.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('both legs resolve when the destination name is multi-word', () {
+      final r = run('transfer 1000 gcash to bpi vybe', overrideAccounts: multi);
+      expect(r.accountId, gcash.id);
+      expect(r.transferToAccountId, bpiVybe.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('"from" marks the source even when it comes second', () {
+      final r = run('transfer 500 to gcash from bpi personal',
+          overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.transferToAccountId, gcash.id);
+    });
+
+    test('a bare "from" makes the leading label the destination', () {
+      final r =
+          run('transfer 500 gcash from bpi vybe', overrideAccounts: multi);
+      expect(r.accountId, bpiVybe.id);
+      expect(r.transferToAccountId, gcash.id);
+    });
+
+    test('"into" behaves like "to"', () {
+      final r =
+          run('transfer 250 bpi personal into cash', overrideAccounts: multi);
+      expect(r.accountId, bpiPersonal.id);
+      expect(r.transferToAccountId, cash.id);
+    });
+
+    test('an ambiguous source no longer steals the destination slot', () {
+      // "bpi" matches two accounts. Previously the resolver filled `from` with
+      // the first thing that resolved — gcash, the stated destination — and
+      // left `to` empty, silently reversing the transfer.
+      final r = run('transfer 1000 bpi to gcash', overrideAccounts: multi);
+      expect(r.accountId, isNull);
+      expect(r.transferToAccountId, gcash.id);
+      expect(r.ambiguousAccountTokens, contains('bpi'));
+      expect(r.isFullyResolved, isFalse);
+    });
+
+    test('same account on both sides leaves the destination unset', () {
+      final r = run('transfer 100 gcash to gcash', overrideAccounts: multi);
+      expect(r.accountId, gcash.id);
+      expect(r.transferToAccountId, isNull);
+    });
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Multiple transactions in one message.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('batch segmentation', () {
+    PreparseBatch batch(String input,
+        {Map<String, String> dict = const {},
+        List<FinancialAccount>? overrideAccounts,
+        bool viewingPastDate = false}) {
+      return preparseFinanceBatch(
+        input: input,
+        categories: categories,
+        accounts: overrideAccounts ?? accounts,
+        learnedDict: dict,
+        viewingPastDate: viewingPastDate,
+      );
+    }
+
+    test('a single transaction is a one-segment batch', () {
+      final b = batch('-500 food gcash');
+      expect(b.isMulti, isFalse);
+      expect(b.segments, hasLength(1));
+      expect(b.allResolved, isTrue);
+    });
+
+    test('"and" splits two fully-resolved entries', () {
+      final b = batch('-500 food gcash and -300 transportation bpi');
+      expect(b.segments, hasLength(2));
+      expect(b.allResolved, isTrue);
+      expect(b.segments[0].accountId, gcash.id);
+      expect(b.segments[0].categoryId, food.id);
+      expect(b.segments[1].accountId, bpi.id);
+      expect(b.segments[1].categoryId, transport.id);
+    });
+
+    test('commas, semicolons and newlines all split', () {
+      for (final sep in [', ', '; ', '\n']) {
+        final b =
+            batch(['-500 food gcash', '-300 transportation bpi'].join(sep));
+        expect(b.segments, hasLength(2), reason: 'separator "$sep"');
+        expect(b.allResolved, isTrue, reason: 'separator "$sep"');
+      }
+    });
+
+    test('three entries in one message', () {
+      final b =
+          batch('-500 food gcash; -300 transportation bpi; +5000 salary bdo');
+      expect(b.segments, hasLength(3));
+      expect(b.allResolved, isTrue);
+      expect(b.segments[2].type, TransactionType.inflow);
+    });
+
+    test('a transfer and an expense in one message', () {
+      final b = batch('transfer 1000 bpi to gcash and -200 food cash');
+      expect(b.segments, hasLength(2));
+      expect(b.segments[0].type, TransactionType.transfer);
+      expect(b.segments[0].transferToAccountId, gcash.id);
+      expect(b.segments[1].type, TransactionType.outflow);
+      expect(b.allResolved, isTrue);
+    });
+
+    test('a partially-resolved segment is reported, not fatal', () {
+      final b = batch('-500 food gcash and -300 hamburger bpi');
+      expect(b.segments, hasLength(2));
+      expect(b.resolved, hasLength(1));
+      expect(b.unresolved, hasLength(1));
+      expect(b.unresolved.first.unresolvedTokens, contains('hamburger'));
+      expect(b.allResolved, isFalse);
+    });
+
+    test('"and" inside a description does not split it', () {
+      // Only one piece carries a digit, so this is one transaction and the
+      // description stays whole.
+      final b = batch('coffee and donuts 150 gcash');
+      expect(b.isMulti, isFalse);
+      expect(b.segments.first.rawInput, 'coffee and donuts 150 gcash');
+      expect(b.segments.first.amount, 150);
+    });
+
+    test('a thousand-comma is not a separator', () {
+      final b = batch('-1,500 food gcash');
+      expect(b.isMulti, isFalse);
+      expect(b.segments.first.amount, 1500);
+      expect(b.segments.first.isFullyResolved, isTrue);
+    });
+
+    test('the payback wash transfer survives its comma', () {
+      final b = batch('paid 800 on my cc for jana, she paid me back',
+          overrideAccounts: [
+            bpi,
+            gcash,
+            cash,
+            _acc('CC', id: 'cc', cat: AccountCategory.creditCard),
+          ]);
+      expect(b.isMulti, isFalse);
+      expect(b.segments.first.type, TransactionType.transfer);
+    });
+
+    test('two amounts with no separator stay one ambiguous entry', () {
+      final b = batch('-500 -300 food gcash');
+      expect(b.isMulti, isFalse);
+      expect(b.segments.first.hardError, FinanceParseError.multipleAmounts);
+    });
+
+    test('whole-message errors are reported once, not per segment', () {
+      expect(batch('').hardError, FinanceParseError.empty);
+      expect(batch('').segments, isEmpty);
+      expect(
+          batch('-500 food gcash and -300 transportation bpi',
+                  viewingPastDate: true)
+              .hardError,
+          FinanceParseError.viewingPastDate);
+      expect(batch('x' * 501).hardError, FinanceParseError.tooLong);
+    });
+
+    test('non-amount noise pieces are dropped, not parsed', () {
+      final b = batch('logged: -500 food gcash and -300 transportation bpi');
+      expect(b.segments, hasLength(2));
+      expect(b.allResolved, isTrue);
+    });
+  });
+
+  group('smarter no-AI fallback', () {
+    test('a learned token survives a typo', () {
+      final r = run('-500 gcash jollibe', dict: {'jollibee': food.id});
+      expect(r.categoryId, food.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('a learned token survives trailing punctuation', () {
+      final r = run('-500 gcash jollibee!', dict: {'jollibee': food.id});
+      expect(r.categoryId, food.id);
+    });
+
+    test('two learned tokens equally near a typo do not resolve it', () {
+      // "grab" and "crab" are both one edit from "arab" — recalling the user's
+      // own mapping is fine, picking between two of them is not.
+      final r =
+          run('-500 gcash arab', dict: {'grab': transport.id, 'crab': food.id});
+      expect(r.categoryId, isNull);
+      expect(r.unresolvedTokens, contains('arab'));
+    });
+
+    test('a typo near two tokens sharing one category still resolves', () {
+      final r = run('-500 gcash arab',
+          dict: {'grab': transport.id, 'crab': transport.id});
+      expect(r.categoryId, transport.id);
+    });
+
+    test('the sole loggable account needs no naming', () {
+      final r = run('-500 food', overrideAccounts: [gcash]);
+      expect(r.accountId, gcash.id);
+      expect(r.isFullyResolved, isTrue);
+    });
+
+    test('a named account still wins over the sole-account fallback', () {
+      final r = run('-500 food gcash', overrideAccounts: [gcash]);
+      expect(r.accountId, gcash.id);
+    });
+
+    test('with several accounts an unnamed one stays unresolved', () {
+      final r = run('-500 food');
+      expect(r.accountId, isNull);
+      expect(r.isFullyResolved, isFalse);
+    });
+  });
 }

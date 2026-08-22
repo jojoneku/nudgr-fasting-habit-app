@@ -536,4 +536,230 @@ void main() {
       expect(outcome, ReceiptScanOutcome.unavailable);
     });
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Several transactions in one message.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  group('multi-transaction messages', () {
+    test('two fully-resolved entries commit with no AI call', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash and -300 food bpi');
+
+      expect(ai.callCount, 0);
+      expect(presenter.allTransactions, hasLength(2));
+      expect(presenter.lastCommittedSummary, 'Logged 2 transactions');
+      expect(presenter.chatState.phase, ChatPhase.idle);
+    });
+
+    test('each entry lands on its own account', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash; -300 food bpi');
+
+      final byAccount = {
+        for (final t in presenter.allTransactions) t.accountId: t.amount,
+      };
+      expect(byAccount[gcash.id], 500);
+      expect(byAccount[bpi.id], 300);
+    });
+
+    test('a transfer alongside an expense writes both transfer legs', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter
+          .sendChatInput('transfer 200 bpi to gcash and -100 food gcash');
+
+      // Two transfer legs + one expense. A transfer that logged only one leg
+      // was the old failure here.
+      expect(presenter.allTransactions, hasLength(3));
+      final transferLegs = presenter.allTransactions
+          .where((t) => t.transferGroupId != null)
+          .toList();
+      expect(transferLegs, hasLength(2));
+      expect(transferLegs.map((t) => t.type).toSet(),
+          {TransactionType.outflow, TransactionType.inflow});
+      expect(transferLegs.every((t) => t.amount == 200), isTrue);
+    });
+
+    test('one AI call per unresolved segment, resolved ones stay free',
+        () async {
+      final ai = FakeAiCoachService([
+        StepResolved(
+          transaction: ParsedTransaction(
+            amount: 300,
+            type: TransactionType.outflow,
+            accountId: bpi.id,
+            categoryId: food.id,
+            description: 'Hamburger',
+            descriptionIsClean: true,
+          ),
+          summaryText: 'Log ₱300 → Food (BPI)?',
+        ),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash and -300 hamburger bpi');
+
+      // Only the "hamburger" segment needed the model.
+      expect(ai.callCount, 1);
+      final step = presenter.chatState.lastStep;
+      expect(step, isA<StepResolved>());
+      step as StepResolved;
+      expect(step.isBatch, isTrue);
+      expect(step.transactions, hasLength(2));
+      expect(step.deferred, isEmpty);
+      // Nothing commits until the user confirms.
+      expect(presenter.allTransactions, isEmpty);
+
+      await presenter.confirmResolved();
+      expect(presenter.allTransactions, hasLength(2));
+      expect(presenter.lastCommittedSummary, 'Logged 2 transactions');
+    });
+
+    test('the confirm card keeps the written order', () async {
+      final ai = FakeAiCoachService([
+        StepResolved(
+          transaction: ParsedTransaction(
+            amount: 300,
+            type: TransactionType.outflow,
+            accountId: bpi.id,
+            categoryId: food.id,
+            description: 'Hamburger',
+            descriptionIsClean: true,
+          ),
+          summaryText: 'Log ₱300 → Food (BPI)?',
+        ),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      // The AI-resolved segment is written FIRST; the parser-resolved one
+      // second. Rebuilding by segment order (not by who answered) keeps them
+      // in the order the user typed.
+      await presenter.sendChatInput('-300 hamburger bpi and -500 food gcash');
+
+      final step = presenter.chatState.lastStep as StepResolved;
+      expect(step.transactions.map((t) => t.amount).toList(), [300, 500]);
+    });
+
+    test('a segment the AI gives up on is deferred, then asked about',
+        () async {
+      final ai = FakeAiCoachService([
+        // First call: the "hamburger" segment — no idea.
+        const StepGiveUp(reason: 'no clue', partialDraft: ParsedTransaction()),
+        // Second call: the deferred segment's own clarify conversation.
+        const StepClarify(
+          question: 'Which account?',
+          partialDraft: ParsedTransaction(),
+        ),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash and -300 hamburger bpi');
+
+      final step = presenter.chatState.lastStep as StepResolved;
+      expect(step.transactions, hasLength(1)); // just the parser-resolved one
+      expect(step.deferred, hasLength(1));
+      expect(step.deferred.first.rawInput, contains('hamburger'));
+
+      // Confirming logs the good one AND picks the leftover back up, rather
+      // than dropping it silently.
+      await presenter.confirmResolved();
+      expect(presenter.allTransactions, hasLength(1));
+      expect(presenter.chatState.lastStep, isA<StepClarify>());
+      expect(presenter.chatState.phase, ChatPhase.clarifying);
+    });
+
+    test('cancel drops the queued leftovers too', () async {
+      final ai = FakeAiCoachService([
+        const StepGiveUp(reason: 'no clue', partialDraft: ParsedTransaction()),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash and -300 hamburger bpi');
+      expect((presenter.chatState.lastStep as StepResolved).deferred,
+          hasLength(1));
+
+      presenter.cancelChat();
+      expect(presenter.chatState.phase, ChatPhase.idle);
+      expect(presenter.allTransactions, isEmpty);
+
+      // A fresh single entry behaves normally — no ambush from the old queue.
+      await presenter.sendChatInput('-100 food gcash');
+      expect(presenter.allTransactions, hasLength(1));
+      expect(presenter.chatState.phase, ChatPhase.idle);
+    });
+
+    test('a learned token is paired with its own segment\'s category',
+        () async {
+      final ai = FakeAiCoachService([
+        StepResolved(
+          transaction: ParsedTransaction(
+            amount: 5000,
+            type: TransactionType.inflow,
+            accountId: bpi.id,
+            categoryId: salary.id,
+            description: 'Freelance',
+            descriptionIsClean: true,
+          ),
+          learnedToken: 'upwork',
+          summaryText: 'Log ₱5000 → Salary (BPI)?',
+        ),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      // Segment 1 is a Food expense the parser resolves; segment 2 is the
+      // income the AI resolves, and the token belongs to THAT one. Pairing the
+      // token with the batch's first category would teach upwork → Food.
+      await presenter.sendChatInput('-500 food gcash and +5000 upwork bpi');
+      await presenter.confirmResolved();
+
+      expect(presenter.allTransactions, hasLength(2));
+      verify(storage.saveFinanceDictionary(argThat(predicate((dynamic list) {
+        final entries = list as List;
+        return entries.length == 1 &&
+            entries.first.token == 'upwork' &&
+            entries.first.categoryId == salary.id;
+      })))).called(1);
+    });
+
+    test('an "and" inside a description is not a separator', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-150 food gcash coffee and donuts');
+
+      expect(presenter.allTransactions, hasLength(1));
+      expect(presenter.allTransactions.first.amount, 150);
+      expect(presenter.allTransactions.first.description,
+          contains('coffee and donuts'));
+    });
+
+    test('viewing a past date still blocks the whole message', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+      presenter
+          .setSelectedDate(DateTime.now().subtract(const Duration(days: 3)));
+
+      await presenter.sendChatInput('-500 food gcash and -300 food bpi');
+
+      expect(presenter.chatHardError, FinanceParseError.viewingPastDate);
+      expect(presenter.allTransactions, isEmpty);
+      expect(ai.callCount, 0);
+    });
+  });
 }

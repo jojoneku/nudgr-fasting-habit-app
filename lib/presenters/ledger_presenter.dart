@@ -162,6 +162,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   DateTime? _pausedAt;
   static const _staleConversationThreshold = Duration(minutes: 5);
 
+  /// Segments of a multi-transaction message that still need a clarify turn,
+  /// in written order. Filled when a batch confirm card is built and drained
+  /// one at a time after the confirmed transactions are committed. Cleared
+  /// whenever the user cancels or a fresh message arrives — a queue that
+  /// outlived its conversation would ambush the next entry.
+  List<PreparseResult> _deferredSegments = const [];
+
   LedgerChatState get chatState => _chatState;
   FinanceParseError? get chatHardError => _chatHardError;
   String? get lastCommittedSummary => _lastCommittedSummary;
@@ -1246,20 +1253,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final viewingPast = !isSelectedDateToday;
 
     if (!isReply) {
-      // Fresh input — preprocess.
-      final preparse = preparseFinanceInput(
+      // Fresh input — preprocess. One message may describe several
+      // transactions; a single one is just the length-1 batch.
+      final batch = preparseFinanceBatch(
         input: text,
         categories: _categories,
         accounts: _accounts,
         learnedDict: _financeDict.snapshot(),
         viewingPastDate: viewingPast,
       );
+      // A brand-new message supersedes any leftovers still queued from a
+      // previous one.
+      _deferredSegments = const [];
+      if (batch.hardError != null) {
+        _chatHardError = batch.hardError;
+        safeNotify();
+        return;
+      }
+      _chatHardError = null;
+
+      if (batch.isMulti) {
+        await _startBatch(batch, text, autoResolve: autoResolve);
+        return;
+      }
+
+      final preparse = batch.segments.first;
       if (preparse.hardError != null) {
         _chatHardError = preparse.hardError;
         safeNotify();
         return;
       }
-      _chatHardError = null;
       // A fully-resolved parse commits directly (the AI is only consulted for
       // ambiguous input). The old `a && b || a` clause collapsed to this. (C12)
       if (preparse.isFullyResolved) {
@@ -1300,6 +1323,188 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       );
       await _runClassifier(preparse, autoResolve: autoResolve);
     }
+  }
+
+  /// Handles a message that described more than one transaction.
+  ///
+  /// Segments the regex+dictionary layer already resolved cost nothing, so when
+  /// *every* segment resolved the whole lot commits straight away — the same
+  /// rule the single-entry path uses, applied to the list.
+  ///
+  /// Otherwise each unresolved segment gets its own classifier turn, run
+  /// concurrently. One call per segment rather than one call describing the
+  /// whole list is deliberate: it reuses the single-transaction prompt and its
+  /// entity validation unchanged, so a batch can't degrade into a shape the
+  /// response parser has to guess at. Segments the AI couldn't pin down are
+  /// carried on [StepResolved.deferred] and handed to the ordinary clarify loop
+  /// once the confirmed ones are logged — a batch never blocks on its worst
+  /// segment.
+  Future<void> _startBatch(
+    PreparseBatch batch,
+    String rawText, {
+    bool autoResolve = false,
+  }) async {
+    if (batch.allResolved) {
+      await _commitBatch([for (final s in batch.segments) s.toDraft()]);
+      return;
+    }
+
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [LedgerChatTurn(text: rawText, isUser: true, at: DateTime.now())],
+      draft: batch.segments.first.toDraft(),
+      turnCount: 0,
+    );
+    safeNotify();
+
+    // A segment with its own hard error (two amounts, a sign that contradicts
+    // its category) can't be fixed by asking a question — it needs a retype —
+    // so it never reaches the AI and never joins the clarify queue. It is
+    // reported on the confirm card instead, where the user can see it and
+    // retype just that entry.
+    final askable = batch.unresolved.where((s) => s.hardError == null).toList();
+    final malformed =
+        batch.unresolved.where((s) => s.hardError != null).toList();
+    final steps = await Future.wait(
+      askable.map((s) => _classifyOnce(s, rawText)),
+    );
+
+    final drafts = <ParsedTransaction>[];
+    final deferred = <PreparseResult>[];
+    final learnedPairs = <String, String>{};
+
+    // Walk the segments in written order so the confirm card reads like the
+    // message, rather than grouping by which layer answered.
+    for (final segment in batch.segments) {
+      if (segment.hardError != null) continue;
+      // Identity lookup: `askable` holds the very instances from
+      // `batch.segments`, and PreparseResult has no value equality.
+      final i = askable.indexOf(segment);
+      if (i < 0) {
+        drafts.add(segment.toDraft()); // resolved by the parser alone
+        continue;
+      }
+      final step = steps[i];
+      if (step is StepResolved) {
+        drafts.add(step.transaction);
+        final token = step.learnedToken;
+        final categoryId = step.transaction.categoryId;
+        // Pair each token with ITS OWN segment's category. Collecting bare
+        // tokens and pairing them with the batch's first category would teach
+        // the dictionary a mapping the user never confirmed.
+        if (token != null && categoryId != null) {
+          learnedPairs[token] = categoryId;
+        }
+      } else {
+        deferred.add(segment);
+      }
+    }
+
+    if (drafts.isEmpty) {
+      // Nothing survived. Treat it as the single-entry ambiguous case so the
+      // user gets the normal clarify conversation rather than a dead end.
+      final first = batch.segments.first;
+      _chatState = _chatState.copyWith(draft: first.toDraft());
+      await _runClassifier(first, autoResolve: autoResolve);
+      return;
+    }
+
+    final step = StepResolved.batch(
+      transactions: drafts,
+      summaryText: _batchSummaryFor(drafts, deferred.length, malformed.length),
+      deferred: deferred,
+      learnedPairs: learnedPairs,
+    );
+
+    // One-shot surfaces (web Quick Add) have no clarify UI, so an unresolved
+    // leftover would vanish. Commit what's confirmed, then hand the first
+    // leftover to the prefilled form rather than dropping it.
+    if (autoResolve) {
+      await _commitBatch(drafts);
+      final leftover = [...deferred, ...malformed];
+      if (leftover.isNotEmpty) {
+        _fallbackToForm(leftover.first.toDraft(), 'Needs more detail.');
+      }
+      return;
+    }
+
+    _chatState = _chatState.copyWith(
+      phase: ChatPhase.clarifying,
+      lastStep: step,
+      draft: drafts.first,
+      turns: [
+        ..._chatState.turns,
+        LedgerChatTurn(
+            text: step.summaryText, isUser: false, at: DateTime.now()),
+      ],
+    );
+    safeNotify();
+  }
+
+  /// One classifier turn for [segment], independent of the chat transcript.
+  /// Used only by the batch path, where segments are resolved side by side.
+  Future<ClassifierStep?> _classifyOnce(
+      PreparseResult segment, String rawText) async {
+    Future<ClassifierStep?> run(AiCoachService svc) =>
+        svc.runFinanceClassifierStep(
+          conversation: [
+            LedgerChatTurn(
+                text: segment.rawInput, isUser: true, at: DateTime.now()),
+          ],
+          preparse: segment,
+          categories: _categories,
+          accounts: _accounts,
+          learnedMappings: _financeDict.snapshot(),
+          turnCount: 0,
+        );
+
+    final cloud = _cloudAi;
+    final onDevice = _ai;
+    ClassifierStep? step;
+    if (cloud != null) step = await run(cloud);
+    if (step == null && onDevice != null && onDevice.isAvailable) {
+      step = await run(onDevice);
+    }
+    return step;
+  }
+
+  /// Commits several drafts as one user action, then reports them as one line.
+  Future<void> _commitBatch(List<ParsedTransaction> drafts) async {
+    final complete = drafts.where((d) => d.isComplete).toList();
+    if (complete.isEmpty) {
+      if (drafts.isNotEmpty) {
+        _fallbackToForm(drafts.first, 'Missing required fields.');
+      }
+      return;
+    }
+    for (final draft in complete) {
+      await _commitParsed(draft, announce: false);
+    }
+    _lastCommittedSummary = complete.length == 1
+        ? _summaryFor(complete.first)
+        : 'Logged ${complete.length} transactions';
+    safeNotify();
+  }
+
+  String _batchSummaryFor(
+    List<ParsedTransaction> drafts,
+    int deferredCount,
+    int malformedCount,
+  ) {
+    final lines = [for (final d in drafts) '\u2022 ${_summaryFor(d)}'];
+    final parts = <String>['Log these ${drafts.length}?', ...lines];
+    if (deferredCount > 0) {
+      parts.add('$deferredCount more need${deferredCount == 1 ? 's' : ''} '
+          'a detail \u2014 I\'ll ask after.');
+    }
+    // Malformed entries can't be asked about, so say so here: this is the only
+    // place the user learns they didn't log, and it names how many to retype.
+    if (malformedCount > 0) {
+      parts.add(malformedCount == 1
+          ? "1 entry I couldn't read \u2014 retype that one."
+          : "$malformedCount entries I couldn't read \u2014 retype those.");
+    }
+    return parts.join('\n');
   }
 
   Future<void> _runClassifier(
@@ -1372,14 +1577,58 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// User tapped "Yes" on the resolving turn — commit + learn + reset.
+  ///
+  /// Commits every transaction the step carries, which is one in the ordinary
+  /// case and several when the message described a list. Any segment the AI
+  /// couldn't resolve is then handed to the clarify loop, so confirming the
+  /// good ones never silently drops the rest.
   Future<void> confirmResolved() async {
     final step = _chatState.lastStep;
     if (step is! StepResolved) return;
-    await _commitParsed(step.transaction);
-    if (step.learnedToken != null && step.transaction.categoryId != null) {
-      await _financeDict.learn(
-          step.learnedToken!, step.transaction.categoryId!);
+
+    final deferred = step.deferred;
+    if (step.isBatch) {
+      await _commitBatch(step.transactions);
+    } else {
+      await _commitParsed(step.transaction);
     }
+    for (final pair in step.learnedPairs.entries) {
+      await _financeDict.learn(pair.key, pair.value);
+    }
+    // Queue this step's leftovers behind anything already waiting, then take
+    // the next one. _commitBatch/_commitParsed reset the chat to idle, so each
+    // leftover gets a clean conversation of its own.
+    if (deferred.isNotEmpty) {
+      _deferredSegments = [..._deferredSegments, ...deferred];
+    }
+    await _advanceDeferred();
+  }
+
+  /// Starts a clarify conversation for the next queued segment of a
+  /// multi-transaction message, if any. No-op when the queue is empty.
+  Future<bool> _advanceDeferred() async {
+    // Only clarifiable segments are ever queued (malformed ones are reported on
+    // the confirm card instead), but skip any that slipped through rather than
+    // stalling the queue on one that can't be asked about.
+    final queue = _deferredSegments.where((s) => s.hardError == null).toList();
+    if (queue.isEmpty) {
+      _deferredSegments = const [];
+      return false;
+    }
+    final next = queue.first;
+    _deferredSegments = queue.skip(1).toList();
+    _chatHardError = null;
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [
+        LedgerChatTurn(text: next.rawInput, isUser: true, at: DateTime.now()),
+      ],
+      draft: next.toDraft(),
+      turnCount: 0,
+    );
+    safeNotify();
+    await _runClassifier(next);
+    return true;
   }
 
   /// User tapped "Edit" — close drawer and surface a draft for the form to
@@ -1389,14 +1638,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final draft = step is StepResolved ? step.transaction : _chatState.draft;
     _pendingFormPrefill = draft;
     _chatState = const LedgerChatState.idle();
+    // Editing takes the user into the form, away from the conversation, so any
+    // queued leftovers are abandoned rather than fired at an absent chat.
+    _deferredSegments = const [];
     safeNotify();
   }
 
   /// User tapped Cancel — drop conversation, clear input. No commit, no learn.
+  /// Also drops any queued leftovers from a multi-transaction message: cancel
+  /// means cancel the message, not just the segment on screen.
   void cancelChat() {
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
     _pendingFormPrefill = null;
+    _deferredSegments = const [];
     safeNotify();
   }
 
@@ -1437,6 +1692,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (_chatState.phase == ChatPhase.idle) return;
     if (DateTime.now().difference(pausedAt) > _staleConversationThreshold) {
       _chatState = const LedgerChatState.idle();
+      _deferredSegments = const [];
       safeNotify();
     }
   }
@@ -1448,7 +1704,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 
-  Future<void> _commitParsed(ParsedTransaction draft) async {
+  /// [announce] false suppresses the per-transaction toast summary so a batch
+  /// commit can report once ("Logged 3 transactions") instead of flashing a
+  /// separate confirmation for every entry.
+  Future<void> _commitParsed(ParsedTransaction draft,
+      {bool announce = true}) async {
     if (!draft.isComplete) {
       _fallbackToForm(draft, 'Missing required fields.');
       return;
@@ -1499,7 +1759,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         month: toMonthKey(now),
       ));
     }
-    _lastCommittedSummary = _summaryFor(draft);
+    if (announce) _lastCommittedSummary = _summaryFor(draft);
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
     // Chat / Quick-Add always logs into the current real month. If the user is
