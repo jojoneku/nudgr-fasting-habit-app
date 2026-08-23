@@ -87,7 +87,77 @@ class _Resolved extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final txn = step.transaction;
+    final txns = step.transactions;
+    final deferred = step.deferred.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // One message can describe several transactions. Rendering only the
+        // first while "Log it" commits all of them would misreport what the
+        // button does, so every entry gets a row.
+        if (step.isBatch) ...[
+          Text(
+            '${txns.length} entries',
+            style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6),
+          ),
+          const SizedBox(height: 8),
+        ],
+        for (var i = 0; i < txns.length; i++) ...[
+          if (i > 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1, color: cs.outlineVariant),
+            ),
+          _ResolvedEntry(ledger: ledger, txn: txns[i], money: money),
+        ],
+        if (deferred > 0) ...[
+          const SizedBox(height: 10),
+          Text(
+            deferred == 1
+                ? '1 more needs a detail — I\'ll ask next.'
+                : '$deferred more need a detail — I\'ll ask next.',
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: ledger.cancelChat,
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(width: 4),
+            FilledButton.icon(
+              onPressed: ledger.confirmResolved,
+              icon: const Icon(Icons.check, size: 18),
+              label: Text(step.isBatch ? 'Log all ${txns.length}' : 'Log it'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One transaction inside a confirm card: description + amount, then the
+/// account / destination / category chips.
+class _ResolvedEntry extends StatelessWidget {
+  const _ResolvedEntry(
+      {required this.ledger, required this.txn, required this.money});
+
+  final LedgerPresenter ledger;
+  final ParsedTransaction txn;
+  final NumberFormat money;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final type = txn.type ?? TransactionType.outflow;
 
     final amountColor = switch (type) {
@@ -141,22 +211,6 @@ class _Resolved extends StatelessWidget {
               _Chip(icon: Icons.arrow_forward, label: toAccountName),
             if (categoryName != null)
               _Chip(icon: Icons.label_outline, label: categoryName),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: ledger.cancelChat,
-              child: const Text('Cancel'),
-            ),
-            const SizedBox(width: 4),
-            FilledButton.icon(
-              onPressed: ledger.confirmResolved,
-              icon: const Icon(Icons.check, size: 18),
-              label: const Text('Log it'),
-            ),
           ],
         ),
       ],

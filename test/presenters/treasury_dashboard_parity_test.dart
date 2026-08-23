@@ -277,6 +277,154 @@ void main() {
       // 10000 liquid − 0 bills − 1000 set-aside − 3000 remaining budget = 6000.
       expect(p.forecastedNetBalance, 6000);
     });
+
+    test(
+        'an unfunded set-aside is not deducted twice when its category also '
+        'carries a monthly budget', () async {
+      final month = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts())
+          .thenAnswer((_) async => [_account(id: 'acc1', balance: 10000)]);
+      // Food budget: 5000 allocated, nothing spent → 5000 remaining.
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [
+            Budget(
+              id: 'b1',
+              categoryId: 'food',
+              month: month,
+              allocatedAmount: 5000,
+              group: BudgetGroupDef.idVariableOptional,
+              budgetType: BudgetType.monthly,
+            ),
+          ]);
+      // A 2000 set-aside in that SAME category, still unfunded.
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            BudgetedExpense(
+              id: 'e1',
+              name: 'Grocery run',
+              budgetedType: SetAsideType.sinkingFund,
+              month: month,
+              allocatedAmount: 2000,
+              categoryId: 'food',
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.budgetedExpensesRemaining, 2000);
+      expect(p.totalBudgetRemaining, 5000);
+      // Naively: 10000 − 2000 − 5000 = 3000, which reserves the same 2000
+      // twice. The overlap credit brings it back: 10000 − 5000 = 5000.
+      expect(p.forecastedNetBalance, 5000);
+      // And the tile figure closes the chain the grid displays.
+      expect(p.budgetRemainingNetOfObligations, 3000);
+      expect(
+        p.totalLiquidCash +
+            p.pendingReceivables -
+            p.monthUnpaidBills -
+            p.budgetedExpensesRemaining -
+            p.budgetRemainingNetOfObligations,
+        p.forecastedNetBalance,
+      );
+    });
+
+    test(
+        'a bill and a set-aside in one category share a single overlap credit, '
+        'clamped to that budget\'s remaining', () async {
+      final month = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts())
+          .thenAnswer((_) async => [_account(id: 'acc1', balance: 10000)]);
+      // Food budget: 3000 remaining.
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [
+            Budget(
+              id: 'b1',
+              categoryId: 'food',
+              month: month,
+              allocatedAmount: 3000,
+              group: BudgetGroupDef.idVariableOptional,
+              budgetType: BudgetType.monthly,
+            ),
+          ]);
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            Bill(
+              id: 'bill1',
+              name: 'Grocery tab',
+              billType: BillType.other,
+              amount: 2000,
+              dueDay: 10,
+              month: month,
+              categoryId: 'food',
+            ),
+          ]);
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            BudgetedExpense(
+              id: 'e1',
+              name: 'Grocery sinking fund',
+              budgetedType: SetAsideType.sinkingFund,
+              month: month,
+              allocatedAmount: 2000,
+              categoryId: 'food',
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      // Obligations pool to 4000 in one category, but only 3000 of budget was
+      // ever deducted — so the credit is 3000, not 4000. Each claiming its own
+      // min() would credit 2000 + 2000 and overshoot.
+      // 10000 − 2000 bill − 2000 set-aside − 3000 budget + 3000 credit = 6000.
+      expect(p.forecastedNetBalance, 6000);
+      expect(p.budgetRemainingNetOfObligations, 0);
+    });
+
+    test(
+        'the overlap credit never exceeds the budget actually deducted when '
+        'another category is overspent', () async {
+      final month = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts())
+          .thenAnswer((_) async => [_account(id: 'acc1', balance: 10000)]);
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [
+            // Overspent: 1000 allocated, 3000 spent. Individually clamps to 0
+            // remaining, but drags the summed total negative.
+            Budget(
+              id: 'b1',
+              categoryId: 'cat',
+              month: month,
+              allocatedAmount: 1000,
+              group: BudgetGroupDef.idVariableOptional,
+              budgetType: BudgetType.monthly,
+            ),
+            // Untouched, and carrying a bill.
+            Budget(
+              id: 'b2',
+              categoryId: 'food',
+              month: month,
+              allocatedAmount: 500,
+              group: BudgetGroupDef.idVariableOptional,
+              budgetType: BudgetType.monthly,
+            ),
+          ]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async =>
+          [_txn(id: 't1', amount: 3000, type: TransactionType.outflow)]);
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            Bill(
+              id: 'bill1',
+              name: 'Grocery tab',
+              billType: BillType.other,
+              amount: 500,
+              dueDay: 10,
+              month: month,
+              categoryId: 'food',
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      // totalBudgetRemaining = clamp(1500 − 3000) = 0, so nothing was deducted
+      // for budget and there is nothing to credit back. Uncapped, the per-budget
+      // overlap would have credited 500 and inflated the forecast to 10000.
+      expect(p.totalBudgetRemaining, 0);
+      expect(p.forecastedNetBalance, 9500); // 10000 − 500 unpaid bill
+      expect(p.budgetRemainingNetOfObligations, 0);
+    });
   });
 
   group('custodian KPIs (audit #8)', () {

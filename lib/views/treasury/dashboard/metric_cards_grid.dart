@@ -4,10 +4,24 @@ import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dar
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
-/// The Month-End Outlook grid — the four figures that make up the month-end
+/// The Month-End Outlook grid — every figure that makes up the month-end
 /// projection, in the same order and under the same labels the web companion
 /// uses (`web_dashboard_page.dart` → `_MonthEndOutlookRow`), so the same number
 /// carries the same name on both platforms.
+///
+/// The tiles are an arithmetic chain, not an unordered set of stats, and they
+/// reconcile exactly:
+///
+///   Liquid Now + To Receive − Upcoming Bills − Budget/Savings Due
+///     − Budget Left = Proj. Month-End Cash
+///
+/// Every deduction is on screen for that reason. "Budget Left" is
+/// [TreasuryDashboardPresenter.budgetRemainingNetOfObligations] rather than raw
+/// `totalBudgetRemaining` precisely so the chain closes — the raw figure
+/// double-counts a bill or set-aside whose category also carries a budget, and
+/// the projection credits that overlap back. Leaving the term off screen (as
+/// this grid did) is what made the drop from liquid cash to the projection look
+/// unaccountable.
 ///
 /// The grid deliberately does NOT show raw [TreasuryDashboardPresenter.endingCash]:
 /// it does not reserve the remaining monthly budget, so as a headline it reads
@@ -39,15 +53,15 @@ class MetricCardsGrid extends StatelessWidget {
         children: [
           _MetricRow(
             left: _MetricCard(
-              label: 'Upcoming Bills',
-              value: formatPeso(presenter.monthUnpaidBills),
-              sub: 'Unpaid this month',
-              color: appColors.bills,
-              icon: Icons.receipt_long_outlined,
+              label: 'Liquid Now',
+              value: formatPeso(presenter.totalLiquidCash),
+              sub: 'Cash across accounts',
+              color: appColors.fast,
+              icon: Icons.account_balance_wallet_outlined,
             ),
             right: _MetricCard(
               label: 'To Receive',
-              value: formatPeso(presenter.pendingReceivables),
+              value: '+ ${formatPeso(presenter.pendingReceivables)}',
               sub: 'Money owed to you',
               color: appColors.success,
               icon: Icons.south_rounded,
@@ -56,11 +70,29 @@ class MetricCardsGrid extends StatelessWidget {
           const SizedBox(height: 8),
           _MetricRow(
             left: _MetricCard(
+              label: 'Upcoming Bills',
+              value: '− ${formatPeso(presenter.monthUnpaidBills)}',
+              sub: 'Unpaid this month',
+              color: appColors.bills,
+              icon: Icons.receipt_long_outlined,
+            ),
+            right: _MetricCard(
               label: 'Budget / Savings Due',
-              value: formatPeso(presenter.budgetedExpensesRemaining),
+              value: '− ${formatPeso(presenter.budgetedExpensesRemaining)}',
               sub: 'Set-asides still to fund',
               color: appColors.treasury,
               icon: Icons.savings_outlined,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _MetricRow(
+            left: _MetricCard(
+              label: 'Budget Left',
+              value:
+                  '− ${formatPeso(presenter.budgetRemainingNetOfObligations)}',
+              sub: 'Still budgeted to spend',
+              color: appColors.weight,
+              icon: Icons.pie_chart_outline,
             ),
             right: _MetricCard(
               label: 'Proj. Month-End Cash',
@@ -76,7 +108,7 @@ class MetricCardsGrid extends StatelessWidget {
   }
 }
 
-/// One row of the 2×2 grid. [IntrinsicHeight] + stretch keeps the pair the same
+/// One row of the 2×3 grid. [IntrinsicHeight] + stretch keeps the pair the same
 /// height when one card's label or sub-copy wraps to a second line.
 class _MetricRow extends StatelessWidget {
   final Widget left;

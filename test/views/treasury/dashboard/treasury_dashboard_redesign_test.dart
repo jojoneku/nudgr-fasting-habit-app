@@ -108,14 +108,19 @@ void main() {
     expect(find.text('Local only'), findsOneWidget);
   });
 
-  testWidgets('Month-End Outlook shows the four forecast tiles',
+  testWidgets('Month-End Outlook shows every term of the projection',
       (tester) async {
     await pumpDashboard(tester);
 
     expect(find.text('Month-End Outlook'), findsOneWidget);
-    expect(find.text('UPCOMING BILLS'), findsOneWidget);
+    // The full chain: start, one tile per adjustment, result. Every deduction
+    // is on screen so the drop from liquid cash to the projection reconciles —
+    // "Budget Left" in particular used to be deducted invisibly.
+    expect(find.text('LIQUID NOW'), findsOneWidget);
     expect(find.text('TO RECEIVE'), findsOneWidget);
+    expect(find.text('UPCOMING BILLS'), findsOneWidget);
     expect(find.text('BUDGET / SAVINGS DUE'), findsOneWidget);
+    expect(find.text('BUDGET LEFT'), findsOneWidget);
     expect(find.text('PROJ. MONTH-END CASH'), findsOneWidget);
 
     // Raw ending cash is no longer a headline tile — it does not reserve the
@@ -162,15 +167,23 @@ void main() {
     expect(presenter.endingCash, 60500);
     expect(presenter.forecastedNetBalance, 52500);
 
-    // The grid's tile shows the budget-deducted figure, and the un-deducted one
-    // appears nowhere in the grid. Scoped to the grid deliberately: 60,500 is
-    // also this fixture's net worth, which the hero legitimately shows.
+    // The grid shows the whole chain, so both figures appear — but each under a
+    // label that says which it is, and the un-deducted one never unlabelled.
+    // Scoped to the grid deliberately: 60,500 is also this fixture's net worth,
+    // which the hero legitimately shows.
     Finder inGrid(String text) => find.descendant(
           of: find.byType(MetricCardsGrid),
           matching: find.text(text),
         );
+    // The projection itself: budget deducted, no sign prefix.
     expect(inGrid(formatPeso(52500)), findsOneWidget);
-    expect(inGrid(formatPeso(60500)), findsNothing);
+    // The un-deducted figure appears only as the chain's labelled starting
+    // point, and the 8,000 it loses is on screen as the deduction that does it.
+    expect(inGrid(formatPeso(60500)), findsOneWidget);
+    expect(inGrid('LIQUID NOW'), findsOneWidget);
+    expect(inGrid('BUDGET LEFT'), findsOneWidget);
+    expect(inGrid('− ${formatPeso(8000)}'), findsOneWidget);
+    expect(presenter.budgetRemainingNetOfObligations, 8000);
   });
 
   testWidgets('shows the account overflow expander beyond three accounts',
