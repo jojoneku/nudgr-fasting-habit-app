@@ -13,6 +13,14 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.66] - 2026-08-23
+
+### Added
+- close the chat-vs-form field gaps in quick logging
+
+### Fixed
+- reconcile projected cash, and make chat logging multi-entry
+
 ## [1.1.65] - 2026-08-16
 
 ### Fixed
@@ -651,7 +659,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.65...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.66...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -718,3 +726,4 @@ distributed via `manifest.json`.
 [1.1.63]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.63
 [1.1.64]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.64
 [1.1.65]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.65
+[1.1.66]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.66
