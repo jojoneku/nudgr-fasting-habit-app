@@ -162,6 +162,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   DateTime? _pausedAt;
   static const _staleConversationThreshold = Duration(minutes: 5);
 
+  /// Segments of a multi-transaction message that still need a clarify turn,
+  /// in written order. Filled when a batch confirm card is built and drained
+  /// one at a time after the confirmed transactions are committed. Cleared
+  /// whenever the user cancels or a fresh message arrives — a queue that
+  /// outlived its conversation would ambush the next entry.
+  List<PreparseResult> _deferredSegments = const [];
+
   LedgerChatState get chatState => _chatState;
   FinanceParseError? get chatHardError => _chatHardError;
   String? get lastCommittedSummary => _lastCommittedSummary;
@@ -1246,20 +1253,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final viewingPast = !isSelectedDateToday;
 
     if (!isReply) {
-      // Fresh input — preprocess.
-      final preparse = preparseFinanceInput(
+      // Fresh input — preprocess. One message may describe several
+      // transactions; a single one is just the length-1 batch.
+      final batch = preparseFinanceBatch(
         input: text,
         categories: _categories,
         accounts: _accounts,
         learnedDict: _financeDict.snapshot(),
         viewingPastDate: viewingPast,
       );
+      // A brand-new message supersedes any leftovers still queued from a
+      // previous one.
+      _deferredSegments = const [];
+      if (batch.hardError != null) {
+        _chatHardError = batch.hardError;
+        safeNotify();
+        return;
+      }
+      _chatHardError = null;
+
+      if (batch.isMulti) {
+        await _startBatch(batch, text, autoResolve: autoResolve);
+        return;
+      }
+
+      final preparse = batch.segments.first;
       if (preparse.hardError != null) {
         _chatHardError = preparse.hardError;
         safeNotify();
         return;
       }
-      _chatHardError = null;
       // A fully-resolved parse commits directly (the AI is only consulted for
       // ambiguous input). The old `a && b || a` clause collapsed to this. (C12)
       if (preparse.isFullyResolved) {
@@ -1302,6 +1325,192 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Handles a message that described more than one transaction.
+  ///
+  /// Segments the regex+dictionary layer already resolved cost nothing, so when
+  /// *every* segment resolved the whole lot commits straight away — the same
+  /// rule the single-entry path uses, applied to the list.
+  ///
+  /// Otherwise each unresolved segment gets its own classifier turn, run
+  /// concurrently. One call per segment rather than one call describing the
+  /// whole list is deliberate: it reuses the single-transaction prompt and its
+  /// entity validation unchanged, so a batch can't degrade into a shape the
+  /// response parser has to guess at. Segments the AI couldn't pin down are
+  /// carried on [StepResolved.deferred] and handed to the ordinary clarify loop
+  /// once the confirmed ones are logged — a batch never blocks on its worst
+  /// segment.
+  Future<void> _startBatch(
+    PreparseBatch batch,
+    String rawText, {
+    bool autoResolve = false,
+  }) async {
+    if (batch.allResolved) {
+      await _commitBatch([for (final s in batch.segments) s.toDraft()]);
+      return;
+    }
+
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [LedgerChatTurn(text: rawText, isUser: true, at: DateTime.now())],
+      draft: batch.segments.first.toDraft(),
+      turnCount: 0,
+    );
+    safeNotify();
+
+    // A segment with its own hard error (two amounts, a sign that contradicts
+    // its category) can't be fixed by asking a question — it needs a retype —
+    // so it never reaches the AI and never joins the clarify queue. It is
+    // reported on the confirm card instead, where the user can see it and
+    // retype just that entry.
+    final askable = batch.unresolved.where((s) => s.hardError == null).toList();
+    final malformed =
+        batch.unresolved.where((s) => s.hardError != null).toList();
+    final steps = await Future.wait(
+      askable.map((s) => _classifyOnce(s, rawText)),
+    );
+
+    final drafts = <ParsedTransaction>[];
+    final deferred = <PreparseResult>[];
+    final learnedPairs = <String, String>{};
+
+    // Walk the segments in written order so the confirm card reads like the
+    // message, rather than grouping by which layer answered.
+    for (final segment in batch.segments) {
+      if (segment.hardError != null) continue;
+      // Identity lookup: `askable` holds the very instances from
+      // `batch.segments`, and PreparseResult has no value equality.
+      final i = askable.indexOf(segment);
+      if (i < 0) {
+        drafts.add(segment.toDraft()); // resolved by the parser alone
+        continue;
+      }
+      final step = steps[i];
+      if (step is StepResolved) {
+        // Merged onto this segment's own draft, for the same reason the
+        // single-entry path merges: the preparser's date/note/debtor/
+        // reimbursable findings are not restated by the model.
+        final merged = segment.toDraft().mergeWith(step.transaction);
+        drafts.add(merged);
+        final token = step.learnedToken;
+        final categoryId = merged.categoryId;
+        // Pair each token with ITS OWN segment's category. Collecting bare
+        // tokens and pairing them with the batch's first category would teach
+        // the dictionary a mapping the user never confirmed.
+        if (token != null && categoryId != null) {
+          learnedPairs[token] = categoryId;
+        }
+      } else {
+        deferred.add(segment);
+      }
+    }
+
+    if (drafts.isEmpty) {
+      // Nothing survived. Treat it as the single-entry ambiguous case so the
+      // user gets the normal clarify conversation rather than a dead end.
+      final first = batch.segments.first;
+      _chatState = _chatState.copyWith(draft: first.toDraft());
+      await _runClassifier(first, autoResolve: autoResolve);
+      return;
+    }
+
+    final step = StepResolved.batch(
+      transactions: drafts,
+      summaryText: _batchSummaryFor(drafts, deferred.length, malformed.length),
+      deferred: deferred,
+      learnedPairs: learnedPairs,
+    );
+
+    // One-shot surfaces (web Quick Add) have no clarify UI, so an unresolved
+    // leftover would vanish. Commit what's confirmed, then hand the first
+    // leftover to the prefilled form rather than dropping it.
+    if (autoResolve) {
+      await _commitBatch(drafts);
+      final leftover = [...deferred, ...malformed];
+      if (leftover.isNotEmpty) {
+        _fallbackToForm(leftover.first.toDraft(), 'Needs more detail.');
+      }
+      return;
+    }
+
+    _chatState = _chatState.copyWith(
+      phase: ChatPhase.clarifying,
+      lastStep: step,
+      draft: drafts.first,
+      turns: [
+        ..._chatState.turns,
+        LedgerChatTurn(
+            text: step.summaryText, isUser: false, at: DateTime.now()),
+      ],
+    );
+    safeNotify();
+  }
+
+  /// One classifier turn for [segment], independent of the chat transcript.
+  /// Used only by the batch path, where segments are resolved side by side.
+  Future<ClassifierStep?> _classifyOnce(
+      PreparseResult segment, String rawText) async {
+    Future<ClassifierStep?> run(AiCoachService svc) =>
+        svc.runFinanceClassifierStep(
+          conversation: [
+            LedgerChatTurn(
+                text: segment.rawInput, isUser: true, at: DateTime.now()),
+          ],
+          preparse: segment,
+          categories: _categories,
+          accounts: _accounts,
+          learnedMappings: _financeDict.snapshot(),
+          turnCount: 0,
+        );
+
+    final cloud = _cloudAi;
+    final onDevice = _ai;
+    ClassifierStep? step;
+    if (cloud != null) step = await run(cloud);
+    if (step == null && onDevice != null && onDevice.isAvailable) {
+      step = await run(onDevice);
+    }
+    return step;
+  }
+
+  /// Commits several drafts as one user action, then reports them as one line.
+  Future<void> _commitBatch(List<ParsedTransaction> drafts) async {
+    final complete = drafts.where((d) => d.isComplete).toList();
+    if (complete.isEmpty) {
+      if (drafts.isNotEmpty) {
+        _fallbackToForm(drafts.first, 'Missing required fields.');
+      }
+      return;
+    }
+    for (final draft in complete) {
+      await _commitParsed(draft, announce: false);
+    }
+    _lastCommittedSummary = complete.length == 1
+        ? _summaryFor(complete.first)
+        : 'Logged ${complete.length} transactions';
+    safeNotify();
+  }
+
+  String _batchSummaryFor(
+    List<ParsedTransaction> drafts,
+    int deferredCount,
+    int malformedCount,
+  ) {
+    final lines = [for (final d in drafts) '\u2022 ${_summaryFor(d)}'];
+    final parts = <String>['Log these ${drafts.length}?', ...lines];
+    if (deferredCount > 0) {
+      parts.add('$deferredCount more need${deferredCount == 1 ? 's' : ''} '
+          'a detail \u2014 I\'ll ask after.');
+    }
+    // Malformed entries can't be asked about, so say so here: this is the only
+    // place the user learns they didn't log, and it names how many to retype.
+    if (malformedCount > 0) {
+      parts.add(malformedCount == 1
+          ? "1 entry I couldn't read \u2014 retype that one."
+          : "$malformedCount entries I couldn't read \u2014 retype those.");
+    }
+    return parts.join('\n');
+  }
+
   Future<void> _runClassifier(
     PreparseResult preparse, {
     bool autoResolve = false,
@@ -1332,6 +1541,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _fallbackToForm(_chatState.draft, 'AI unavailable.');
       return;
     }
+    // A resolved step refines the draft; it does not replace it. The clarify and
+    // give-up branches already merged, and taking the resolved one wholesale was
+    // the odd one out: fields the preparser derived deterministically — the
+    // reimbursable flag, a parsed date, a note, the debtor — are not things the
+    // model is asked to restate, so overwriting the draft with its answer
+    // silently dropped them.
+    step = switch (step) {
+      StepResolved s when !s.isBatch => StepResolved(
+          transaction: _chatState.draft.mergeWith(s.transaction),
+          learnedToken: s.learnedToken,
+          summaryText: s.summaryText,
+        ),
+      _ => step,
+    };
     _chatState = _chatState.copyWith(
       phase: ChatPhase.clarifying,
       lastStep: step,
@@ -1372,14 +1595,58 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// User tapped "Yes" on the resolving turn — commit + learn + reset.
+  ///
+  /// Commits every transaction the step carries, which is one in the ordinary
+  /// case and several when the message described a list. Any segment the AI
+  /// couldn't resolve is then handed to the clarify loop, so confirming the
+  /// good ones never silently drops the rest.
   Future<void> confirmResolved() async {
     final step = _chatState.lastStep;
     if (step is! StepResolved) return;
-    await _commitParsed(step.transaction);
-    if (step.learnedToken != null && step.transaction.categoryId != null) {
-      await _financeDict.learn(
-          step.learnedToken!, step.transaction.categoryId!);
+
+    final deferred = step.deferred;
+    if (step.isBatch) {
+      await _commitBatch(step.transactions);
+    } else {
+      await _commitParsed(step.transaction);
     }
+    for (final pair in step.learnedPairs.entries) {
+      await _financeDict.learn(pair.key, pair.value);
+    }
+    // Queue this step's leftovers behind anything already waiting, then take
+    // the next one. _commitBatch/_commitParsed reset the chat to idle, so each
+    // leftover gets a clean conversation of its own.
+    if (deferred.isNotEmpty) {
+      _deferredSegments = [..._deferredSegments, ...deferred];
+    }
+    await _advanceDeferred();
+  }
+
+  /// Starts a clarify conversation for the next queued segment of a
+  /// multi-transaction message, if any. No-op when the queue is empty.
+  Future<bool> _advanceDeferred() async {
+    // Only clarifiable segments are ever queued (malformed ones are reported on
+    // the confirm card instead), but skip any that slipped through rather than
+    // stalling the queue on one that can't be asked about.
+    final queue = _deferredSegments.where((s) => s.hardError == null).toList();
+    if (queue.isEmpty) {
+      _deferredSegments = const [];
+      return false;
+    }
+    final next = queue.first;
+    _deferredSegments = queue.skip(1).toList();
+    _chatHardError = null;
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [
+        LedgerChatTurn(text: next.rawInput, isUser: true, at: DateTime.now()),
+      ],
+      draft: next.toDraft(),
+      turnCount: 0,
+    );
+    safeNotify();
+    await _runClassifier(next);
+    return true;
   }
 
   /// User tapped "Edit" — close drawer and surface a draft for the form to
@@ -1389,14 +1656,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final draft = step is StepResolved ? step.transaction : _chatState.draft;
     _pendingFormPrefill = draft;
     _chatState = const LedgerChatState.idle();
+    // Editing takes the user into the form, away from the conversation, so any
+    // queued leftovers are abandoned rather than fired at an absent chat.
+    _deferredSegments = const [];
     safeNotify();
   }
 
   /// User tapped Cancel — drop conversation, clear input. No commit, no learn.
+  /// Also drops any queued leftovers from a multi-transaction message: cancel
+  /// means cancel the message, not just the segment on screen.
   void cancelChat() {
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
     _pendingFormPrefill = null;
+    _deferredSegments = const [];
     safeNotify();
   }
 
@@ -1437,9 +1710,14 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (_chatState.phase == ChatPhase.idle) return;
     if (DateTime.now().difference(pausedAt) > _staleConversationThreshold) {
       _chatState = const LedgerChatState.idle();
+      _deferredSegments = const [];
       safeNotify();
     }
   }
+
+  /// Same calendar day, ignoring time of day.
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   bool get isSelectedDateToday {
     final d = _selectedDate;
@@ -1448,12 +1726,27 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return d.year == now.year && d.month == now.month && d.day == now.day;
   }
 
-  Future<void> _commitParsed(ParsedTransaction draft) async {
+  /// [announce] false suppresses the per-transaction toast summary so a batch
+  /// commit can report once ("Logged 3 transactions") instead of flashing a
+  /// separate confirmation for every entry.
+  Future<void> _commitParsed(ParsedTransaction draft,
+      {bool announce = true}) async {
     if (!draft.isComplete) {
       _fallbackToForm(draft, 'Missing required fields.');
       return;
     }
+    // A date named in the message wins; otherwise "now", as chat always did.
+    // The time-of-day is kept for today's entries so same-day ordering still
+    // reflects when you logged; a back-dated entry lands at midday, which keeps
+    // it clear of both day boundaries whatever the reader's timezone.
     final now = DateTime.now();
+    final parsed = draft.date;
+    final date = parsed == null
+        ? now
+        : (_isSameDay(parsed, now)
+            ? now
+            : DateTime(parsed.year, parsed.month, parsed.day, 12));
+    final note = draft.note?.trim();
     // The AI classifier writes a clean, meaningful label — use it as-is. Only
     // raw chat input needs the extraction tokens (amount/account/…) stripped.
     final description = draft.descriptionIsClean
@@ -1465,48 +1758,54 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         toAccountId: draft.transferToAccountId!,
         amount: draft.amount!,
         description: description,
-        date: now,
+        date: date,
+        note: (note == null || note.isEmpty) ? null : note,
       );
     } else if (draft.reimbursable && draft.type == TransactionType.outflow) {
       // Chat suggested a reimbursable expense — log it as one (spawns the
-      // linked receivable). No payback date from chat, so it's "ASAP" and
-      // surfaces in the current month. Reversible via edit if the guess was
-      // wrong (a fixed payback date can be set there).
+      // linked receivable). A payback date is only set when the message named
+      // one behind a payback cue; otherwise null keeps the form's "ASAP"
+      // default. Reversible via edit either way.
+      final owedBy = draft.owedBy?.trim();
       await addReimbursableExpense(
         TransactionRecord(
           id: _generateId(),
-          date: now,
+          date: date,
           accountId: draft.accountId!,
           categoryId: draft.categoryId!,
           amount: draft.amount!,
           type: TransactionType.outflow,
           description: description,
-          month: toMonthKey(now),
+          note: (note == null || note.isEmpty) ? null : note,
+          month: toMonthKey(date),
           reimbursable: true,
           reimbursementReceivableId: _generateId(),
+          owedBy: (owedBy == null || owedBy.isEmpty) ? null : owedBy,
         ),
-        expectedReimbursementDate: null,
+        expectedReimbursementDate: draft.expectedReimbursementDate,
       );
     } else {
       await addTransaction(TransactionRecord(
         id: _generateId(),
-        date: now,
+        date: date,
         accountId: draft.accountId!,
         categoryId: draft.categoryId!,
         amount: draft.amount!,
         type: draft.type!,
         description: description,
-        month: toMonthKey(now),
+        note: (note == null || note.isEmpty) ? null : note,
+        month: toMonthKey(date),
       ));
     }
-    _lastCommittedSummary = _summaryFor(draft);
+    if (announce) _lastCommittedSummary = _summaryFor(draft);
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
-    // Chat / Quick-Add always logs into the current real month. If the user is
-    // browsing a different month, snap the ledger to "now" so the just-logged
-    // row is actually visible instead of silently landing off-screen (the toast
-    // fired but no row appeared).
-    final nowKey = toMonthKey(now);
+    // Snap the ledger to the month the entry actually landed in, if the user is
+    // reading a different one, so the new row is visible instead of silently
+    // landing off-screen (the toast fired but no row appeared). With dates now
+    // parseable from the text, that month is the entry's — not necessarily this
+    // one: "500 food gcash yesterday" on the 1st belongs to last month.
+    final nowKey = toMonthKey(date);
     final snappedFrom = _selectedMonth;
     _lastCommitSnappedFromMonth = null;
     if (_selectedMonth != nowKey) {
@@ -1549,10 +1848,27 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  /// Plan 026 §4 — description captured from raw input, capped at 60.
+  /// Longest description chat will store. The manual form is uncapped, but a
+  /// chat description is derived from free text that can run to 500 characters,
+  /// so some ceiling is needed. 120 fits every realistic entry.
+  static const _maxDescriptionLength = 120;
+
+  /// Caps the description, cutting on a word boundary and marking the cut.
+  ///
+  /// The old 60-character hard slice was silent and mid-word: a long entry lost
+  /// its tail with nothing to say so had happened. An ellipsis makes the
+  /// truncation visible in the ledger row, which is the difference between a
+  /// shortened label and a corrupted one.
   String _truncateDescription(String raw) {
     final trimmed = raw.trim();
-    return trimmed.length <= 60 ? trimmed : trimmed.substring(0, 60);
+    if (trimmed.length <= _maxDescriptionLength) return trimmed;
+    final cut = trimmed.substring(0, _maxDescriptionLength);
+    final lastSpace = cut.lastIndexOf(' ');
+    // Only honour a word boundary that isn't hacking the label in half.
+    final body = lastSpace > _maxDescriptionLength * 0.6
+        ? cut.substring(0, lastSpace)
+        : cut;
+    return '${body.trimRight()}…';
   }
 
   /// Strips the parsed amount, account name(s), and parser connector/verb words
@@ -1560,7 +1876,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// actually described (e.g. "-500 jollibee gcash" → "jollibee"). Falls back to
   /// the category name when nothing descriptive remains.
   String _cleanDescription(ParsedTransaction draft) {
-    var s = draft.description.trim();
+    // Drop the spans the preparser already turned into a note and a date, so
+    // the label doesn't repeat fields the transaction now carries structurally.
+    var s = chatDescriptionSource(
+      rawInput: draft.description.trim(),
+      accounts: _accounts,
+    );
     if (s.isEmpty) return s;
 
     // Amount token (optional ₱/p prefix, optional sign, thousands commas).
@@ -1581,9 +1902,22 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       }
     }
 
-    // Parser connector / verb words that carry no description meaning.
+    // Parser connector / verb words that carry no description meaning. The
+    // payback phrasing goes too: it is why the entry is reimbursable, which the
+    // toggle already records, so leaving it in made labels like
+    // "jana she'll pay me back".
     s = s.replaceAll(
       RegExp(r'\b(?:from|to|transfer|paid|pay|settle)\b', caseSensitive: false),
+      ' ',
+    );
+    s = s.replaceAll(
+      RegExp(
+        r"(?:i'?ll\s+|she'?ll\s+|he'?ll\s+|they'?ll\s+|will\s+|gonna\s+)?"
+        r'(?:pay|pays|paying)\s+(?:me\s+)?back'
+        r'|paid\s+(?:me\s+)?back|payback|owes?\s+me'
+        r'|reimbursable|reimbursement|reimbursed?',
+        caseSensitive: false,
+      ),
       ' ',
     );
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();

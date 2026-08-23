@@ -947,44 +947,100 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get totalBudgetRemaining =>
       (totalBudgetAllocated - totalBudgetSpent).clamp(0.0, double.infinity);
 
-  /// Overlap between unpaid bills and category budgets, so the forecast doesn't
-  /// deduct the same obligation twice. An unpaid bill is already subtracted via
-  /// [endingCash]; if its category also carries a monthly budget, that budget's
-  /// remaining would subtract it a second time. We credit back the smaller of
-  /// (unpaid-bill total in that category) and (that category's remaining budget).
-  double get _unpaidBillBudgetOverlap {
-    final unpaidByCategory = <String, double>{};
+  /// Named obligations still outstanding this month, totalled per category:
+  /// unpaid bills plus unfunded budgeted-expense set-asides. Both are already
+  /// subtracted from the forecast in their own right — bills through
+  /// [endingCash], set-asides through [budgetedExpensesRemaining] — so this map
+  /// is what [_obligationBudgetOverlap] credits back where a category budget
+  /// would otherwise reserve the same peso a second time.
+  Map<String, double> get _outstandingObligationsByCategory {
+    final byCategory = <String, double>{};
     for (final b in _bills) {
       if (b.month != _currentMonth || b.isPaid || b.categoryId.isEmpty) {
         continue;
       }
-      unpaidByCategory[b.categoryId] =
-          (unpaidByCategory[b.categoryId] ?? 0) + b.amount;
+      byCategory[b.categoryId] = (byCategory[b.categoryId] ?? 0) + b.amount;
     }
-    if (unpaidByCategory.isEmpty) return 0.0;
+    for (final e in _budgetedExpenses) {
+      if (e.month != _currentMonth || e.isPaid || e.categoryId.isEmpty) {
+        continue;
+      }
+      final unfunded =
+          (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity);
+      if (unfunded <= 0) continue;
+      byCategory[e.categoryId] = (byCategory[e.categoryId] ?? 0) + unfunded;
+    }
+    return byCategory;
+  }
+
+  /// Overlap between this month's named obligations and its category budgets,
+  /// so the forecast doesn't deduct the same peso twice.
+  ///
+  /// An unpaid bill is already subtracted via [endingCash], and an unfunded
+  /// set-aside via [budgetedExpensesRemaining]; if either one's category also
+  /// carries a monthly budget, [totalBudgetRemaining] would subtract it again.
+  /// We credit back the smaller of (obligations in that category) and (that
+  /// category's remaining budget).
+  ///
+  /// Obligations are pooled per category *before* the clamp, which is the whole
+  /// reason bills and set-asides can't each own a credit: a category holding a
+  /// ₱2,000 bill and a ₱2,000 set-aside against ₱3,000 of remaining budget has
+  /// only ₱3,000 of double-counting to undo, not ₱4,000.
+  ///
+  /// Savings groups are skipped — a savings budget's `categoryId` is an
+  /// *account* id (see [_budgetSpentFor]), so it shares no key space with the
+  /// category ids bills and set-asides carry.
+  double get _obligationBudgetOverlap {
+    final obligations = _outstandingObligationsByCategory;
+    if (obligations.isEmpty) return 0.0;
     var overlap = 0.0;
     for (final budget in _budgets.where((b) => b.month == _currentMonth)) {
       if (_isSavingsGroup(budget.group)) continue;
-      final unpaid = unpaidByCategory[budget.categoryId];
-      if (unpaid == null) continue;
+      final owed = obligations[budget.categoryId];
+      if (owed == null) continue;
       final remaining = (budget.allocatedAmount - _budgetSpentFor(budget))
           .clamp(0.0, double.infinity);
-      overlap += unpaid < remaining ? unpaid : remaining;
+      overlap += owed < remaining ? owed : remaining;
     }
-    return overlap;
+    // Never credit back more than [totalBudgetRemaining] actually deducted.
+    // Each budget's remaining is clamped at zero individually here, while the
+    // deduction is one clamp over the summed total — so a category overspent
+    // elsewhere could otherwise let the credit exceed the charge and inflate
+    // the forecast above your real cash.
+    final cap = totalBudgetRemaining;
+    return overlap < cap ? overlap : cap;
   }
+
+  /// [totalBudgetRemaining] less the slice already reserved by an outstanding
+  /// bill or unfunded set-aside in the same category — the budget's own
+  /// marginal claim on month-end cash.
+  ///
+  /// This is what the Month-End Outlook grid shows as "Budget Left", so the
+  /// tiles reconcile to [forecastedNetBalance] exactly:
+  ///
+  ///   liquid + toReceive − bills − setAsides − thisFigure = forecast
+  ///
+  /// Never negative: [_obligationBudgetOverlap] is capped at
+  /// [totalBudgetRemaining].
+  double get budgetRemainingNetOfObligations =>
+      totalBudgetRemaining - _obligationBudgetOverlap;
 
   /// Projected month-end cash: current liquid + incoming receivables, minus
   /// everything still expected to leave this month —
   ///   • unpaid bills (already netted in [endingCash]),
   ///   • budgeted set-asides not yet funded ([budgetedExpensesRemaining]),
   ///   • the remaining monthly category budget you still plan to spend
-  ///     ([totalBudgetRemaining]) — which shrinks as actual spending accrues.
+  ///     ([totalBudgetRemaining]) — which shrinks as actual spending accrues,
+  ///   • less [_obligationBudgetOverlap], so a bill or set-aside whose category
+  ///     also carries a budget isn't reserved twice.
+  ///
+  /// Every term is surfaced as its own tile in the Month-End Outlook grid, so
+  /// the drop from [totalLiquidCash] to this figure is always accountable.
   double get forecastedNetBalance =>
       endingCash -
       budgetedExpensesRemaining -
       totalBudgetRemaining +
-      _unpaidBillBudgetOverlap;
+      _obligationBudgetOverlap;
 
   Map<String, double> get budgetAllocatedByGroup {
     final result = <String, double>{};

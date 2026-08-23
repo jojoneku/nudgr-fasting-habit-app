@@ -41,8 +41,16 @@ String buildFinanceClassifierPrompt({
     return null;
   }
 
-  final accountsJson =
-      jsonEncode(accounts.map((a) => a.name).toList(growable: false));
+  // Each account carries its kind, so a model asked about "bpi personal" can
+  // tell a bank account from a credit card without being told twice. Names
+  // alone left it guessing between siblings that share a prefix.
+  final accountsJson = jsonEncode(accounts
+      .map((a) => {
+            'name': a.name,
+            'kind': a.category.name,
+            if (a.isLiability) 'liability': true,
+          })
+      .toList(growable: false));
   final categoriesJson = jsonEncode(categories
       .map((c) => {'name': c.name, 'type': c.type.name})
       .toList(growable: false));
@@ -55,22 +63,49 @@ String buildFinanceClassifierPrompt({
     );
   }
 
+  final resolvedAccount =
+      preparse.accountId == null ? null : accountName(preparse.accountId!);
+  final resolvedTransferTo = preparse.transferToAccountId == null
+      ? null
+      : accountName(preparse.transferToAccountId!);
+  final resolvedCategory = preparse.categoryId == null
+      ? null
+      : categories
+          .firstWhere(
+            (c) => c.id == preparse.categoryId,
+            orElse: () => categories.first,
+          )
+          .name;
+
   final preparseSummary = jsonEncode({
     'amount': preparse.amount,
     'type': preparse.type?.name,
-    'account':
-        preparse.accountId == null ? null : accountName(preparse.accountId!),
-    'category': preparse.categoryId == null
-        ? null
-        : categories
-            .firstWhere(
-              (c) => c.id == preparse.categoryId,
-              orElse: () => categories.first,
-            )
-            .name,
+    'account': resolvedAccount,
+    'transferTo': resolvedTransferTo,
+    'category': resolvedCategory,
     'unresolved': preparse.unresolvedTokens,
     'ambiguous': preparse.ambiguousAccountTokens,
   });
+
+  // Spell out what is already known and therefore off-limits as a question.
+  // The preparser resolves the fields it can before the model is ever called,
+  // so re-asking about one is pure friction — the user already said it.
+  final settled = <String>[
+    if (preparse.amount != null) 'amount',
+    if (preparse.type != null) 'type',
+    if (resolvedAccount != null) 'account ($resolvedAccount)',
+    if (resolvedTransferTo != null) 'transferTo ($resolvedTransferTo)',
+    if (resolvedCategory != null) 'category ($resolvedCategory)',
+  ];
+  final settledLine = settled.isEmpty
+      ? '- Nothing is settled yet; infer what you can.\n'
+      : '- ALREADY SETTLED — reuse verbatim, never ask about these: '
+          '${settled.join(', ')}.\n';
+
+  // The floor the response parser actually enforces. Naming a higher bar here
+  // (it used to say 0.8) made the model ask a clarifying question for answers
+  // that would have been accepted, which reads as it ignoring what you typed.
+  final floor = kFinanceClassifierConfidenceFloor.toStringAsFixed(1);
 
   return 'You are a finance transaction assistant. Output JSON only.\n'
       '\n'
@@ -82,10 +117,22 @@ String buildFinanceClassifierPrompt({
       'Preparser knowledge: $preparseSummary\n'
       '\n'
       'Rules:\n'
-      '- Pick accounts ONLY from the existing list. Never invent.\n'
+      '- Pick accounts ONLY from the existing list, matching on "name". Never '
+      'invent.\n'
       '- Pick categories ONLY from the existing list. Never invent.\n'
-      '- If a token is unknown, infer or ask — don\'t guess silently.\n'
-      '- If you have all required fields with confidence >= 0.8, return step:"resolved".\n'
+      '$settledLine'
+      '- Resolve rather than ask whenever you reasonably can. Ask only when the '
+      'answer would change which account or category is used AND the message '
+      'genuinely does not say.\n'
+      '- Infer the category from what was bought: the merchant, item, or '
+      'purpose, then the learned token→category map above, then the closest '
+      'existing category by meaning. A category is a near-certain inference for '
+      'most everyday purchases — do not ask for one you can name.\n'
+      '- When several accounts share a name prefix, use the rest of the '
+      'message and each account\'s "kind" to choose (e.g. a card payment means '
+      'the liability account). Ask only if nothing distinguishes them.\n'
+      '- If you have all required fields with confidence >= $floor, return '
+      'step:"resolved".\n'
       '- If unsure, return step:"clarify" with one question and optional quickReplies.\n'
       '- After $kMaxFinanceClarifyTurns clarify turns total, return step:"give_up".\n'
       '- description: a short, natural Title Case label for what the money was '
@@ -93,6 +140,9 @@ String buildFinanceClassifierPrompt({
       'item/merchant/purpose only — never include the amount, the account name, '
       'or a bare restatement of the category, and never echo the raw input '
       'verbatim. Keep it under ~5 words.\n'
+      '- owedBy: only when this is money someone owes back ("spotted Jana 800", '
+      '"lent Maria 500"), the person\'s name as written. Null otherwise. Never '
+      'an account name, and never a guess when no person is named.\n'
       '\n'
       'Required fields:\n'
       '- inflow/outflow: amount, type, account, category, description\n'
@@ -102,6 +152,7 @@ String buildFinanceClassifierPrompt({
       '  {"step":"resolved","amount":number,"type":"outflow|inflow|transfer",\n'
       '   "account":"<name>","transferTo":"<name>|null","category":"<name>|null",\n'
       '   "description":"<short Title Case label, e.g. Lunch>",\n'
+      '   "owedBy":"<person name>|null",\n'
       '   "learnedToken":"<lowercase>|null","confidence":0.0-1.0,\n'
       '   "summaryText":"Log ₱500 outflow → Food (GCash)?"}\n'
       '  {"step":"clarify","question":"...",'
@@ -220,6 +271,11 @@ ClassifierStep? parseFinanceClassifierResponse({
       final hasAiDescription =
           aiDescription != null && aiDescription.isNotEmpty;
 
+      // The model is asked for owedBy but never for the date or note: those the
+      // preparser extracts deterministically, and a model that omitted them
+      // would silently erase them.
+      final aiOwedBy = (decoded['owedBy'] as String?)?.trim();
+
       return StepResolved(
         transaction: ParsedTransaction(
           amount: amount,
@@ -227,6 +283,18 @@ ClassifierStep? parseFinanceClassifierResponse({
           accountId: accountId,
           transferToAccountId: transferToId,
           categoryId: categoryId,
+          // Carried from the preparse, not rebuilt from the response. These
+          // were previously dropped whenever the AI resolved a turn, so a
+          // "work expense" the preparser had already flagged reimbursable
+          // committed as an ordinary expense with no linked receivable.
+          reimbursable:
+              preparse.reimbursable && type == TransactionType.outflow,
+          date: preparse.date,
+          note: preparse.note,
+          owedBy: (aiOwedBy != null && aiOwedBy.isNotEmpty)
+              ? aiOwedBy
+              : preparse.owedBy,
+          expectedReimbursementDate: preparse.expectedReimbursementDate,
           description: hasAiDescription ? aiDescription : preparse.rawInput,
           descriptionIsClean: hasAiDescription,
         ),
