@@ -179,7 +179,14 @@ class _BudgetBody extends StatelessWidget {
           ],
           // The setup card always renders so the trailing "Add a category…"
           // row is available even with no budget set yet.
+          //
+          // Keyed because the siblings around it come and go with `rows`: the
+          // pace ring and the empty state swap on the first budget of a month,
+          // which shifts this card's index and, unkeyed, hands the add-row a
+          // fresh State — silently dropping the user out of Savings mode
+          // between their first entry and their second.
           _SetupCard(
+            key: const ValueKey('budget-setup-card'),
             presenter: presenter,
             rows: rows,
             allocated: allocated,
@@ -448,6 +455,7 @@ class _SetupCard extends StatelessWidget {
   final double remaining;
 
   const _SetupCard({
+    super.key,
     required this.presenter,
     required this.rows,
     required this.allocated,
@@ -1085,10 +1093,16 @@ class _AddRowState extends State<_AddRow> {
   String? _selectedCategoryId;
   bool _busy = false;
 
-  /// Savings mode mirrors mobile's `_isSavings` segment: the picker swaps to
-  /// savings/goal *accounts* (account ids, not expense categories) and the
-  /// budget is persisted under [BudgetGroupDef.idSavings].
-  bool _isSavings = false;
+  /// Savings mode mirrors mobile's segment: the picker swaps to savings/goal
+  /// *accounts* (account ids, not expense categories) and the budget is
+  /// persisted under [BudgetGroupDef.idSavings].
+  ///
+  /// Derived from [_groupId] rather than held alongside it, exactly as the
+  /// mobile add-budget sheet does. When the two were separate fields they could
+  /// disagree — the toggle read Savings while the group had reset to Variable —
+  /// and the row was then written with an account id under an expense group,
+  /// where neither the savings list nor the category list could find it again.
+  bool get _isSavings => widget.presenter.isSavingsGroup(_groupId);
 
   @override
   void dispose() {
@@ -1126,7 +1140,6 @@ class _AddRowState extends State<_AddRow> {
   void _setSavingsMode(bool savings) {
     if (savings == _isSavings) return;
     setState(() {
-      _isSavings = savings;
       _selectedCategoryId = null;
       _groupId = savings
           ? BudgetGroupDef.idSavings
@@ -1244,7 +1257,16 @@ class _AddRowState extends State<_AddRow> {
       // removed mid-save, in which case the controller is disposed. (C11)
       if (!mounted) return;
       _amountController.clear();
-      setState(() => _groupId = BudgetGroupDef.idVariableOptional);
+      setState(() {
+        // The just-budgeted id drops out of the picker's entries, so leaving it
+        // selected left the field showing its hint while a stale id was still
+        // armed — pressing ✓ again would silently re-write that budget.
+        _selectedCategoryId = null;
+        // Stay in whichever mode the user is working in. Resetting the group
+        // unconditionally is what used to strand the next savings entry under
+        // an expense group while the toggle still read Savings.
+        if (!_isSavings) _groupId = BudgetGroupDef.idVariableOptional;
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
