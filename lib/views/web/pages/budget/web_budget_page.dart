@@ -53,6 +53,10 @@ class _Row {
   final Color color;
   final bool accountBacked;
 
+  /// Savings rows: money that left the target this month. Shown beside what
+  /// went in rather than netted off it — see [BudgetPresenter.fundedInto].
+  final double withdrawn;
+
   const _Row({
     required this.id,
     required this.name,
@@ -61,20 +65,36 @@ class _Row {
     required this.spent,
     required this.color,
     required this.accountBacked,
+    this.withdrawn = 0.0,
   });
 
   double get used => allocated > 0 ? spent / allocated : 0;
   double get remaining => allocated - spent;
 }
 
-({WebBadgeTone tone, String label}) _statusFor(double used) {
+/// Status pill for one row. [isSavings] flips the meaning of a full bar:
+/// spending past an expense budget is the problem the badge exists to flag,
+/// while funding past a savings goal is the point of the goal — so a savings
+/// row never turns red, matching what [BudgetPresenter.budgetRows] already says
+/// by pinning `isOver: false` on those rows.
+({WebBadgeTone tone, String label}) _statusFor(
+  double used, {
+  bool isSavings = false,
+}) {
+  if (isSavings) {
+    return used >= 1
+        ? (tone: WebBadgeTone.success, label: 'Funded')
+        : (tone: WebBadgeTone.info, label: 'On track');
+  }
   if (used >= 1) return (tone: WebBadgeTone.danger, label: 'Over');
   if (used >= 0.75) return (tone: WebBadgeTone.warning, label: 'Watch');
   return (tone: WebBadgeTone.success, label: 'On track');
 }
 
-Color _statusColor(BuildContext context, double used) {
+Color _statusColor(BuildContext context, double used,
+    {bool isSavings = false}) {
   final cs = Theme.of(context).colorScheme;
+  if (isSavings) return cs.tertiary;
   if (used >= 1) return cs.error;
   if (used >= 0.75) return cs.secondary;
   return cs.tertiary;
@@ -106,9 +126,10 @@ class _BudgetBody extends StatelessWidget {
       rows.add(_Row(
         id: entry.account.id,
         name: entry.account.name,
-        groupId: BudgetGroupDef.idSavings,
+        groupId: entry.budget.group,
         allocated: entry.budget.allocatedAmount,
-        spent: presenter.contributedTo(entry.account.id),
+        spent: presenter.fundedInto(entry.account.id),
+        withdrawn: presenter.withdrawnFrom(entry.account.id),
         color: Theme.of(context).colorScheme.tertiary,
         accountBacked: true,
       ));
@@ -668,7 +689,7 @@ class _DataRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final status = _statusFor(row.used);
+    final status = _statusFor(row.used, isSavings: row.accountBacked);
     final remaining = row.remaining;
 
     return Container(
@@ -697,12 +718,30 @@ class _DataRow extends StatelessWidget {
                 ),
                 const SizedBox(width: WebInsets.sm),
                 Expanded(
-                  child: Text(
-                    row.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        row.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      // Money out of a fund no longer subtracts from its
+                      // progress, so it has to be said out loud here — netted
+                      // away it was invisible, and the row just looked unfunded.
+                      if (row.withdrawn > 0)
+                        Text(
+                          '${formatPeso(row.spent)} in · '
+                          '${formatPeso(row.withdrawn)} out',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -769,7 +808,8 @@ class _DataRow extends StatelessWidget {
                   Expanded(
                     child: WebProgressBar(
                       value: row.used,
-                      color: _statusColor(context, row.used),
+                      color: _statusColor(context, row.used,
+                          isSavings: row.accountBacked),
                     ),
                   ),
                   const SizedBox(width: WebInsets.sm),

@@ -911,22 +911,45 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
       .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
 
+  /// True when [leg] is one side of a transfer whose *other* side is also a
+  /// savings or goal account — money shuffled between two funds rather than
+  /// moved into savings from outside.
+  bool _isInternalSavingsTransferLeg(TransactionRecord leg) {
+    final groupId = leg.transferGroupId;
+    if (groupId == null) return false;
+    for (final other in _transactions) {
+      if (other.transferGroupId != groupId) continue;
+      if (other.id == leg.id) continue;
+      final account =
+          _accounts.where((a) => a.id == other.accountId).firstOrNull;
+      if (account == null) continue;
+      return account.category == AccountCategory.savings ||
+          account.category == AccountCategory.goal;
+    }
+    return false;
+  }
+
   double _budgetSpentFor(Budget b) {
     if (_isSavingsGroup(b.group)) {
-      // Savings budgets track NET contributions INTO the target account (here
-      // the "categoryId" is an account id): inflow legs add, outflow legs
-      // subtract. This mirrors [monthSavingsContributions] and the Budget
-      // page's `contributedTo` so all three surfaces report the same number —
-      // a transfer between two savings accounts nets to zero, not double-count.
+      // Savings budgets track what was funded INTO the target account (here the
+      // "categoryId" is an account id): inflow legs only, minus the legs of a
+      // transfer between two savings/goal accounts, which fund neither. Mirrors
+      // `BudgetPresenter.fundedInto` so both surfaces report the same number.
+      //
+      // Withdrawals deliberately do not subtract. They used to, and it made the
+      // forecast reserve money already moved: fund ₱3,000 into Braces, pay the
+      // dentist ₱1,800 out of it, and the net ₱1,200 left ₱1,800 of the budget
+      // reading as "still to set aside" — deducted from projected cash a second
+      // time, on top of the withdrawal that had already reduced it.
+      // [monthSavingsContributions] still nets, because "how much did savings
+      // grow" is a different question from "did I fund the plan".
       var total = 0.0;
       for (final t in _transactions) {
         if (t.month != _currentMonth) continue;
         if (t.accountId != b.categoryId) continue;
-        if (t.type == TransactionType.inflow) {
-          total += t.amount;
-        } else if (t.type == TransactionType.outflow) {
-          total -= t.amount;
-        }
+        if (t.type != TransactionType.inflow) continue;
+        if (_isInternalSavingsTransferLeg(t)) continue;
+        total += t.amount;
       }
       return total;
     }
