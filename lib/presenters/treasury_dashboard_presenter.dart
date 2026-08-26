@@ -1068,6 +1068,54 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<(FinanceCategory, double)> get categorySpendThisMonth =>
       _categorySpendRanked(limit: 10);
 
+  /// Average monthly spend per category over the [months] complete months
+  /// BEFORE the current one, keyed by category id.
+  ///
+  /// The current month is excluded on purpose: it is the thing being compared,
+  /// and folding it in would drag the baseline toward whatever is being judged.
+  /// Months with no spend on a category still count in the divisor — a category
+  /// bought twice a year averages low, which is the honest reading.
+  ///
+  /// Divides by however many months of history actually exist, so a two-month-old
+  /// ledger reports a two-month average rather than a figure quietly diluted by
+  /// four empty months.
+  ({Map<String, double> averages, int months}) categoryTrailingAverage({
+    int months = 3,
+  }) {
+    final excluded = _excludedCategoryIds;
+    final keys = <String>[];
+    var cursor = previousMonth(_currentMonth);
+    for (var i = 0; i < months; i++) {
+      keys.add(cursor);
+      cursor = previousMonth(cursor);
+    }
+    // Only count months the ledger could actually have covered.
+    final firstMonth = _transactions.isEmpty
+        ? null
+        : _transactions
+            .map((t) => t.month)
+            .reduce((a, b) => a.compareTo(b) < 0 ? a : b);
+    final usable = firstMonth == null
+        ? <String>[]
+        : keys.where((k) => k.compareTo(firstMonth) >= 0).toList();
+    if (usable.isEmpty) {
+      return (averages: const <String, double>{}, months: 0);
+    }
+    final totals = <String, double>{};
+    for (final t in _transactions) {
+      if (!usable.contains(t.month)) continue;
+      if (!isSpendingOutflow(t, excluded)) continue;
+      totals[t.categoryId] = (totals[t.categoryId] ?? 0) + t.amount;
+    }
+    final divisor = usable.length;
+    return (
+      averages: {
+        for (final e in totals.entries) e.key: e.value / divisor,
+      },
+      months: divisor,
+    );
+  }
+
   /// All categories with spend, no limit — used by the full breakdown sheet.
   List<(FinanceCategory, double)> get allCategorySpendThisMonth =>
       _categorySpendRanked(limit: null);
