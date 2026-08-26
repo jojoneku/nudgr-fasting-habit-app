@@ -15,6 +15,9 @@
 # the template's CORS block has never applied to production. Hence this check
 # reads the LIVE API rather than trusting the template.
 #
+# The expected config lives in backend/ai-coach/cors.json, so the fix command is
+# copy-pasteable and version-controlled rather than retyped out of a comment.
+#
 # Exit codes: 0 = fine (or not checkable), 1 = misconfigured.
 set -uo pipefail
 
@@ -25,9 +28,11 @@ API_ID=$(aws apigatewayv2 get-apis \
   --output text 2>/dev/null || echo "")
 
 if [ -z "$API_ID" ] || [ "$API_ID" = "None" ]; then
-  # Read access is not guaranteed by the deploy credentials, and a missing
-  # permission is not evidence of a missing config — warn, never fail.
-  echo "::warning::Could not resolve the '${API_NAME}' API id; skipping the CORS check. Grant apigatewayv2:GetApis to enable it."
+  # Two very different causes, neither of which is evidence of a missing CORS
+  # config, so warn rather than fail: the deploy credentials may lack
+  # apigatewayv2:GetApis, or the API may live in another region than the one the
+  # CLI defaults to (production is ap-southeast-1).
+  echo "::warning::Could not resolve the '${API_NAME}' API id in region '${AWS_REGION:-default}'; skipping the CORS check. Needs apigatewayv2:GetApis, and the right region."
   exit 0
 fi
 
@@ -46,12 +51,18 @@ try:
 except json.JSONDecodeError:
     cfg = None
 
-FIX = (
-    "  aws apigatewayv2 update-api --api-id <id> --cors-configuration "
-    'AllowOrigins="https://nudgr-app.web.app",'
-    'AllowHeaders="content-type,authorization",'
-    'AllowMethods="POST,OPTIONS"'
-)
+# Passed by file:// rather than inline shorthand. The shorthand form
+# (AllowOrigins=a,AllowHeaders=b) cannot express a LIST unambiguously — the
+# comma separates keys AND values — and quoting inline JSON through PowerShell
+# drops the quotes. A file sidesteps both.
+FIX = "\n".join([
+    "  aws apigatewayv2 update-api --api-id API_ID --region REGION \\",
+    "    --cors-configuration file://backend/ai-coach/cors.json",
+    "",
+    "Find API_ID and REGION with:",
+    "  aws apigatewayv2 get-apis --region REGION \\",
+    '    --query "Items[].{Name:Name,Id:ApiId}" --output table',
+])
 
 if not cfg:
     print(

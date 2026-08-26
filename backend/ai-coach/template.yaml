@@ -120,8 +120,12 @@ Resources:
             IdentitySource: "$request.header.Authorization"
         DefaultAuthorizer: SupabaseJWT
       # NOT in effect on production — see the warning at the top of this file.
-      # The live food-coach-api needs the equivalent applied directly:
-      #   aws apigatewayv2 update-api --api-id <id> --cors-configuration       #     AllowOrigins="https://nudgr-app.web.app",      #     AllowHeaders="content-type,authorization",      #     AllowMethods="POST,OPTIONS"
+      # The live food-coach-api needs the equivalent applied directly, from the
+      # committed cors.json beside this file:
+      #   aws apigatewayv2 update-api --api-id API_ID --region ap-southeast-1       #     --cors-configuration file://backend/ai-coach/cors.json
+      # By file, not inline shorthand: AllowOrigins=a,AllowHeaders=b cannot
+      # express a list unambiguously (the comma separates keys and values), and
+      # inline JSON loses its quotes through PowerShell.
       # Authorization has to be named explicitly: a wildcard does not cover it
       # once the request is authenticated, and every call carries a bearer token.
       CorsConfiguration:
