@@ -13,6 +13,24 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.67] - 2026-08-26
+
+### Added
+- widen the snapshot so it can tell a spike from a habit
+- let it answer at length, and in tables
+- one assistant — merge Quick Add into the advisor, and name it Nudgy
+- let the parser decide what to log, not a keyword list
+- savings progress counts what you funded in, not net movement
+
+### Fixed
+- give the CORS fix a runnable command and a committed config
+- make the AI endpoint reachable from a browser, and guard the drift
+- ask the recurring question on multi-select delete too
+- make deleting a recurring item actually end the series
+- log to the account the words actually name, and clean the prefill
+- stop Quick Add dropping the rest of a multi-entry message
+- stop the web add-row stranding savings goals outside Savings
+
 ## [1.1.66] - 2026-08-23
 
 ### Added
@@ -659,7 +677,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.66...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.67...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -727,3 +745,4 @@ distributed via `manifest.json`.
 [1.1.64]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.64
 [1.1.65]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.65
 [1.1.66]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.66
+[1.1.67]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.67
