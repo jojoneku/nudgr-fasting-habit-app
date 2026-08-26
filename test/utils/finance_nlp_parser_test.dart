@@ -54,6 +54,62 @@ void main() {
     );
   }
 
+  // ── An account named out of order ──────────────────────────────────────────
+  //
+  // The span matcher tries the widest phrase first, so a name typed exactly is
+  // matched whole. Typed loosely it is not: "maya credit card" against accounts
+  // "MAYA" and "Credit Card (Maya)" matches no phrase entire, falls to the
+  // narrower passes, and comes back as TWO spans — "credit card" (a prefix of
+  // the card) and "maya" (the wallet, exactly). Taking the leftmost then logged
+  // card spending against the wallet, from words that named the card three
+  // times over.
+  group('an account named loosely', () {
+    final maya = _acc('MAYA', id: 'maya', cat: AccountCategory.ewallet);
+    final mayaCard = _acc('Credit Card (Maya)',
+        id: 'mayacc', cat: AccountCategory.creditCard);
+    final pool = [maya, mayaCard, bpi, gcash];
+
+    PreparseResult parse(String input) => run(input, overrideAccounts: pool);
+
+    test('words spanning two matches resolve to the account they all name', () {
+      // Every word of "Credit Card (Maya)" is present; "MAYA" accounts for one.
+      expect(parse('207 food maya credit card').accountId, 'mayacc');
+      expect(parse('207 food credit card maya').accountId, 'mayacc');
+    });
+
+    test('the reported case reaches the form on the right account', () {
+      final r = parse('207 lunch at alturas maya credit card');
+      expect(r.accountId, 'mayacc');
+      expect(r.amount, 207);
+      // "lunch" is not a category here, so this still needs the AI or the form —
+      // it just must not arrive pointed at the wrong account.
+      expect(r.isFullyResolved, isFalse);
+    });
+
+    test('the shorter name still wins when only it is named', () {
+      expect(parse('207 food maya').accountId, 'maya');
+    });
+
+    test('the longer name still resolves from its own words alone', () {
+      expect(parse('207 food credit card').accountId, 'mayacc');
+      expect(parse('207 food credit card (maya)').accountId, 'mayacc');
+    });
+
+    test('two genuinely different accounts side by side stay two', () {
+      // "bpi gcash" touches the same way, but no account is named by both
+      // words — collapsing here would silently eat a transfer's direction.
+      final r = run('transfer 200 bpi gcash', overrideAccounts: pool);
+      expect(r.accountId, 'bpi');
+      expect(r.transferToAccountId, 'gcash');
+    });
+
+    test('an explicit transfer keeps its direction', () {
+      final r = run('transfer 200 gcash to bpi', overrideAccounts: pool);
+      expect(r.accountId, 'gcash');
+      expect(r.transferToAccountId, 'bpi');
+    });
+  });
+
   group('hard errors', () {
     test('empty input', () {
       expect(run('').hardError, FinanceParseError.empty);

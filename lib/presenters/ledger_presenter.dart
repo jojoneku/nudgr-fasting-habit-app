@@ -1430,7 +1430,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // The rest of the message would otherwise end here, unlogged and unsaid.
       if (autoResolve) {
         _queuedFormPrefills = [
-          for (final s in batch.segments.skip(1)) s.toDraft(),
+          for (final s in batch.segments.skip(1))
+            _withCleanDescription(s.toDraft()),
         ];
         safeNotify();
       }
@@ -1871,7 +1872,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// rest wait their turn. No-op on an empty list, so the caller needn't guard.
   void _queueForForm(List<PreparseResult> leftovers) {
     if (leftovers.isEmpty) return;
-    _queuedFormPrefills = [for (final s in leftovers.skip(1)) s.toDraft()];
+    _queuedFormPrefills = [
+      for (final s in leftovers.skip(1)) _withCleanDescription(s.toDraft()),
+    ];
     _fallbackToForm(leftovers.first.toDraft(), 'Needs more detail.');
   }
 
@@ -1888,10 +1891,26 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Falls back to the form prefilled with the partial draft, clears chat.
+  ///
+  /// The draft's description is still the raw message at this point — that is
+  /// what `PreparseResult.toDraft` puts there — so it is cleaned on the way in.
+  /// Only the commit path used to clean it, which left the form showing
+  /// "207 lunch at alturas maya credit card" in a Description field sitting
+  /// right beside the Amount and Account fields holding those very values.
   void _fallbackToForm(ParsedTransaction draft, String reason) {
-    _pendingFormPrefill = draft;
+    _pendingFormPrefill = _withCleanDescription(draft);
     _chatState = const LedgerChatState.idle();
     safeNotify();
+  }
+
+  /// [draft] with its description reduced to what the user actually described.
+  /// A draft the AI wrote already carries a clean label, so it is left alone.
+  ParsedTransaction _withCleanDescription(ParsedTransaction draft) {
+    if (draft.descriptionIsClean || draft.description.isEmpty) return draft;
+    return draft.copyWith(
+      description: _truncateDescription(_cleanDescription(draft)),
+      descriptionIsClean: true,
+    );
   }
 
   /// Longest description chat will store. The manual form is uncapped, but a
