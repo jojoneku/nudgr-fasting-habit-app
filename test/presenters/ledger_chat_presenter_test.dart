@@ -542,6 +542,64 @@ void main() {
   // Several transactions in one message.
   // ───────────────────────────────────────────────────────────────────────────
 
+  // Which messages the assistant should log rather than answer.
+  //
+  // The advisor used to decide from the words alone (a spend verb, or a short
+  // "coffee 120"), so a plainly-stated entry was answered as a question: "207
+  // lunch at alturas maya credit card" has no spend verb and seven tokens, and
+  // went to the advice model. Asking the preparser instead is stronger
+  // evidence, because it knows the user's real accounts and categories.
+  group('recognisesLoggableEntry', () {
+    Future<LedgerPresenter> presenter() async {
+      final p = LedgerPresenter(storage, stats, ai: FakeAiCoachService([]));
+      await _waitForLoad(p);
+      return p;
+    }
+
+    test('an entry stated plainly, with no spend verb, is a log', () async {
+      final p = await presenter();
+      // Amount + an account it can name. This is the case that regressed.
+      expect(p.recognisesLoggableEntry('207 lunch at alturas gcash'), isTrue);
+      expect(p.recognisesLoggableEntry('207 food gcash'), isTrue);
+      expect(p.recognisesLoggableEntry('-500 food gcash'), isTrue);
+    });
+
+    test('a question is never a log, however much it looks like one', () async {
+      final p = await presenter();
+      // Names an amount AND a category, but it is asking.
+      expect(
+          p.recognisesLoggableEntry('can I afford 4000 food gcash?'), isFalse);
+      expect(
+          p.recognisesLoggableEntry('how much on food this month?'), isFalse);
+    });
+
+    test('conversation with a number in it is not a log', () async {
+      final p = await presenter();
+      // An amount alone proves nothing — nothing here names where it went.
+      expect(p.recognisesLoggableEntry('i have 12000 saved'), isFalse);
+      expect(p.recognisesLoggableEntry('12000'), isFalse);
+      expect(p.recognisesLoggableEntry('should I start investing'), isFalse);
+      expect(p.recognisesLoggableEntry(''), isFalse);
+    });
+
+    test('a multi-entry message counts if any segment is loggable', () async {
+      final p = await presenter();
+      expect(
+        p.recognisesLoggableEntry('-500 food gcash and -300 food bpi'),
+        isTrue,
+      );
+    });
+
+    test('it does not depend on which day the ledger is parked on', () async {
+      final p = await presenter();
+      p.setSelectedDate(DateTime.now().subtract(const Duration(days: 5)));
+      // Viewing a past date changes whether a log is ALLOWED, not whether the
+      // words are one — sendChatInput reports that error itself. Routing on it
+      // would silently turn an entry into a chat answer.
+      expect(p.recognisesLoggableEntry('207 food gcash'), isTrue);
+    });
+  });
+
   group('multi-transaction messages', () {
     test('two fully-resolved entries commit with no AI call', () async {
       final ai = FakeAiCoachService([]);

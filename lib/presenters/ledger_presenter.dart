@@ -1141,6 +1141,35 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────
 
+  /// Whether the rule-based preparser can already see a transaction in [text] —
+  /// an amount together with an account or a category it recognises.
+  ///
+  /// Used to decide whether a message typed into the assistant is something to
+  /// log or something to answer. It is far stronger evidence than a keyword
+  /// list, because it is the very layer that would do the logging: it knows the
+  /// user's real account and category names. "207 lunch at alturas maya credit
+  /// card" reads as a log with no spend verb anywhere in it, while "i have 12k
+  /// saved" does not, because nothing in it names an account or a category.
+  ///
+  /// A question is never a log, however much of one the parser can see in it:
+  /// "can I afford a ₱4000 dinner?" is asking, not reporting.
+  bool recognisesLoggableEntry(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || trimmed.contains('?')) return false;
+    // `viewingPastDate` is deliberately false: whether the ledger is parked on
+    // an old day changes whether a log is ALLOWED, not whether the words are
+    // one. sendChatInput re-parses with the real value and reports that error.
+    final batch = preparseFinanceBatch(
+      input: trimmed,
+      categories: _categories,
+      accounts: _accounts,
+      learnedDict: _financeDict.snapshot(),
+    );
+    if (batch.hardError != null) return false;
+    return batch.segments.any((s) =>
+        s.amount != null && (s.accountId != null || s.categoryId != null));
+  }
+
   /// Handles every user message in the chat input row — whether starting a
   /// new conversation or replying to a clarifying question.
   ///

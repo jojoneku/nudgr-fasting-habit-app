@@ -203,16 +203,25 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final trimmed = text.trim();
     if ((trimmed.isEmpty && image == null) || _isResponding) return;
 
-    // Advisor logging: a clear expense-log intent — or any reply while the
-    // ledger is mid-clarify — goes through the ledger's confirm-before-commit
-    // pipeline instead of the advice model. The sheet renders the confirm card.
-    // An attached image is always advice, never an expense log — skip routing.
+    // Logging intent — or any reply while the ledger is mid-clarify — goes
+    // through the ledger's confirm-before-commit pipeline instead of the advice
+    // model. The sheet renders the confirm card. An attached image is always
+    // advice, never an expense log, so routing is skipped for one.
+    //
+    // Two tests, because they catch different things. [looksLikeExpenseLog]
+    // reads the words alone (a spend verb, or a short "coffee 120"), which is
+    // all it can do as a pure function. `recognisesLoggableEntry` asks the
+    // preparser, which knows the user's actual accounts and categories — so a
+    // plainly-stated entry with no spend verb in it, like "207 lunch at alturas
+    // maya credit card", is recognised as the log it obviously is instead of
+    // being answered as a question.
     final ledger = _ledger;
     if (image == null &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         (ledger.chatState.phase == ChatPhase.clarifying ||
-            looksLikeExpenseLog(trimmed))) {
+            looksLikeExpenseLog(trimmed) ||
+            ledger.recognisesLoggableEntry(trimmed))) {
       _messages.add(AiChatMessage.user(trimmed));
       _errorMessage = null;
       _isResponding = true;
