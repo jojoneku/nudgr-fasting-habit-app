@@ -38,7 +38,7 @@ import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
 import 'pages/setup/web_setup_page.dart';
 import 'web_login_view.dart';
-import 'widgets/web_advisor_panel.dart';
+import 'widgets/web_nudgy_dock.dart';
 import 'widgets/web_widgets.dart';
 
 /// App-level theme mode for the web companion. Lifted out of the widget tree so
@@ -97,6 +97,10 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final AuthPresenter _authPresenter;
   late final AiCoachPresenter _advisorPresenter;
 
+  /// Shared open/closed state for Nudgy — the launcher floats over the content
+  /// while the panel is a column in the shell's row, so neither can own it.
+  late final NudgyController _nudgy;
+
   /// The Treasury presenter graph. The individual fields above are views onto
   /// it, kept because the widget tree threads them around individually.
   late final TreasuryPresenters _treasury;
@@ -153,7 +157,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     _historyPresenter = _treasury.history;
     _installmentPresenter = _treasury.installments;
     _groceryCartPresenter = _treasury.groceryCart;
-    // Money Mentor. `fasting` and `nutrition` are omitted: both are optional,
+    // Nudgy. `fasting` and `nutrition` are omitted: both are optional,
     // and constructing them here would init NotificationService / the sqflite
     // food DB — neither of which has a web implementation. The advisor entry
     // point reads neither.
@@ -172,6 +176,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       ledger: _ledgerPresenter,
       storage: _storage,
     );
+    _nudgy = NudgyController(_advisorPresenter);
     _authPresenter = AuthPresenter(
       _authService,
       onFirstSignIn: (userId) => _initSync(userId),
@@ -210,6 +215,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     WidgetsBinding.instance.removeObserver(this);
     _statsPresenter.dispose();
     _treasury.dispose(); // every Treasury presenter + the shared month scope
+    _nudgy.dispose();
     _advisorPresenter.dispose();
     _authPresenter.dispose();
     unawaited(_realtime?.dispose() ?? Future.value());
@@ -400,6 +406,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
           groceryCartPresenter: _groceryCartPresenter,
           authPresenter: _authPresenter,
           advisorPresenter: _advisorPresenter,
+          nudgy: _nudgy,
         );
       },
     );
@@ -419,6 +426,7 @@ class _TreasuryWebHome extends StatefulWidget {
   final GroceryCartPresenter groceryCartPresenter;
   final AuthPresenter authPresenter;
   final AiCoachPresenter advisorPresenter;
+  final NudgyController nudgy;
 
   /// Null until the sync stack is up (or when it failed) — the dashboard's
   /// status pill reports that instead of claiming everything is synced.
@@ -435,6 +443,7 @@ class _TreasuryWebHome extends StatefulWidget {
     required this.groceryCartPresenter,
     required this.authPresenter,
     required this.advisorPresenter,
+    required this.nudgy,
   });
 
   @override
@@ -566,7 +575,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
             installmentPresenter: widget.installmentPresenter,
             groceryCartPresenter: widget.groceryCartPresenter,
             // Narrow web has no sidebar, so sign-out, the theme toggle and the
-            // Money Mentor get a tab of their own. Occupies the same index as
+            // Nudgy get a tab of their own. Occupies the same index as
             // the rail's trailing destination, keeping the mapping 1:1.
             extraTabs: [
               TreasuryModuleTab(
@@ -620,7 +629,8 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           body: _page(_index),
           // Persistent across every destination, so a question about a bill can
           // be asked while the Bills table is still on screen.
-          dock: WebAdvisorPanel(presenter: widget.advisorPresenter),
+          dock: NudgyPanel(controller: widget.nudgy),
+          dockLauncher: NudgyLauncher(controller: widget.nudgy),
         );
       },
     );

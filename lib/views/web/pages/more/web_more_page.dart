@@ -11,7 +11,7 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 /// Below the desktop breakpoint the browser renders the mobile Treasury module
 /// instead of the sidebar shell — and the sidebar is the only place the web
 /// build puts the signed-in account, sign-out, the light/dark toggle and the
-/// Money Mentor. Without this page a mobile-web user could not sign out at all.
+/// Nudgy. Without this page a mobile-web user could not sign out at all.
 /// Everything here is a narrow-viewport mirror of the sidebar, nothing new.
 class WebMorePage extends StatelessWidget {
   final AuthPresenter authPresenter;
@@ -60,7 +60,7 @@ class WebMorePage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
             children: [
               AppSection(
-                title: 'Money Mentor',
+                title: 'Nudgy',
                 child: AppCard(
                   variant: AppCardVariant.elevated,
                   child: Column(
@@ -75,7 +75,7 @@ class WebMorePage extends StatelessWidget {
                       FilledButton.tonalIcon(
                         onPressed: () => _openAdvisor(context),
                         icon: const Icon(Icons.savings_outlined, size: 18),
-                        label: const Text('Open Money Mentor'),
+                        label: const Text('Open Nudgy'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(44),
                         ),
