@@ -30,8 +30,14 @@ Parameters:
       request access in the Bedrock console if you want to upgrade later.
   AdvisorMaxTokens:
     Type: Number
-    Default: 900
-    Description: Max output tokens for the adviseFinance op (multi-section diagnostic).
+    Default: 3000
+    Description: >
+      Max output tokens for the adviseFinance op. 900 forced the model to choose
+      between covering a five-section financial position and showing its
+      arithmetic, and clipped answers mid-sentence. Billing follows tokens
+      actually emitted, so a higher ceiling costs nothing on short answers.
+      Production sets this env var directly (there is no stack) — see the
+      warning at the top of this file.
 
 Globals:
   Function:

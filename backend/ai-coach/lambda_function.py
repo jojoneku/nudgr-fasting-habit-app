@@ -14,7 +14,18 @@ _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 # Falls back to the base model when unset so the op still works pre-config.
 _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
 # Longer than chat's 512 — the "financial position" diagnostic is multi-section.
-_ADVISOR_MAX_TOKENS = int(os.environ.get("ADVISOR_MAX_TOKENS", "900"))
+# 900 was too tight to answer a real question well: a full financial-position
+# walkthrough is five sections, and the model had to choose between covering
+# them and showing its arithmetic, so answers came back clipped mid-sentence.
+# Cost scales with tokens ACTUALLY emitted, not with the ceiling, so a higher
+# cap costs nothing on the short answers that make up most turns.
+#
+# NOTE: production sets this env var explicitly, so the value here is only the
+# fallback. Raising the ceiling live also needs update-function-configuration
+# on food-coach-handler in ap-southeast-1 — and that call REPLACES the whole
+# environment map, so read the current one first and put every existing key
+# back, or the function loses the rest of its config.
+_ADVISOR_MAX_TOKENS = int(os.environ.get("ADVISOR_MAX_TOKENS", "3000"))
 _DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
 # Verbose request logging, OFF by default. Even when enabled it never logs the
 # Authorization header (a live Supabase JWT) or the request body (chat text,
@@ -968,15 +979,23 @@ _ADVISOR_SYSTEM_PREFIX = (
     "due soon and any card minimums/due dates; (4) Burn Rate — the top 2 categories closest to "
     "their target budget; (5) Behavioral Audit — one actionable tie to identity capital. "
     "Otherwise answer conversationally, pulling only the figures the question needs.\n\n"
-    "FORMATTING (this renders in a NARROW mobile chat bubble — write for that, not a document):\n"
-    "- NO markdown headings ('#', '##', '###') and NO horizontal rules ('---'). They render as "
-    "literal characters here and look broken.\n"
-    "- Lead a short section with a plain **bold label** on its own line (e.g. '**Liquidity**'), "
-    "not a heading.\n"
-    "- Use simple '- ' bullets for lists; keep each bullet to one line. Use **bold** sparingly for "
-    "the single number that matters in a sentence.\n"
-    "- Keep it tight and skimmable: short sentences, blank line between sections, at most one emoji "
-    "for the whole reply. No walls of text.\n\n"
+    "FORMATTING (a narrow chat bubble, not a document — but it IS a real renderer):\n"
+    "- Supported: **bold**, *italic*, `code`, '- ' and '1. ' lists, '> ' quotes, "
+    "'##' headings, '---' rules, and GFM pipe tables. Write these freely; they render.\n"
+    "- USE A TABLE whenever the answer compares the same few fields across rows — budget "
+    "vs actual per category, card vs card, month vs month. Four numbers in prose are hard "
+    "to read; a table is not. Include the delimiter row, and right-align money columns "
+    "with '---:' so the figures line up:\n"
+    "    | Category | Budget | Actual |\n"
+    "    |---|---:|---:|\n"
+    "    | Food | ₱6,000 | ₱5,240 |\n"
+    "- Keep a table narrow: at most 4 columns and about 8 rows, short headers. A wide one "
+    "scrolls sideways in the bubble, which is worse than two tables.\n"
+    "- Prefer a **bold label** on its own line over a heading for a single short section; "
+    "reach for '##' only when the answer genuinely has several parts.\n"
+    "- Still be tight and skimmable: short sentences, a blank line between sections, at most "
+    "one emoji for the whole reply. Length is available now — spend it on substance, on more "
+    "reasoning and arithmetic shown, never on padding.\n\n"
     "All money is in Philippine pesos (₱). Be warm, direct, and concrete. You are not a licensed "
     "investment, tax, legal, or medical professional — caveat and redirect if asked for those."
 )
