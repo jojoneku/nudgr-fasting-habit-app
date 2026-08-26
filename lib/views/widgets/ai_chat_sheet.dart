@@ -200,11 +200,22 @@ class _AiChatBodyState extends State<AiChatBody> {
       _followTail = true;
       _scrollToBottom();
     }
-    if (ledger.pendingFormPrefill != null) {
-      ledger.consumeFormPrefill();
-      _presenter.appendAssistantNote(
-          "I couldn't pin that down — try rephrasing the amount and where it "
-          "came from, and I'll prepare it again.");
+    // A message can be part committed and part unresolved. Consuming the
+    // prefill here dropped whatever the parser couldn't pin down — including
+    // the rest of a multi-entry message, which the presenter had queued
+    // precisely so it wouldn't vanish. Leave the queue alone: the surface that
+    // owns the transaction form drains it. Say what is still outstanding so a
+    // partial result never reads as a whole one.
+    final pending = ledger.pendingFormPrefill;
+    if (pending != null) {
+      final outstanding = 1 + ledger.queuedFormPrefillCount;
+      _presenter.appendAssistantNote(outstanding == 1
+          ? "One entry needs details I couldn't infer — I've opened the form "
+              'for it.'
+          : "$outstanding entries need details I couldn't infer — I've opened "
+              'the form for them.');
+      _followTail = true;
+      _scrollToBottom();
     }
   }
 

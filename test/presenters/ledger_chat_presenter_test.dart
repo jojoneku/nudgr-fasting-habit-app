@@ -739,6 +739,190 @@ void main() {
       expect(presenter.chatState.phase, ChatPhase.clarifying);
     });
 
+    // ── One-shot surfaces (web Quick Add) ───────────────────────────────────
+    //
+    // No clarify UI: confident entries commit and unresolved ones go to the
+    // prefilled form. Only the first leftover used to be kept, and the web view
+    // then never opened the form at all when anything had committed — so the
+    // rest of a multi-entry message disappeared without a word.
+    group('autoResolve', () {
+      test('every unresolved entry is queued for the form, not just the first',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '-500 food gcash and -300 hamburger bpi and -200 kwek kwek bpi',
+          autoResolve: true,
+        );
+
+        // The one the parser could resolve is logged outright.
+        expect(presenter.allTransactions, hasLength(1));
+        expect(presenter.lastCommittedSummary, isNotNull);
+        // Both leftovers survive: one in hand, one behind it.
+        expect(presenter.pendingFormPrefill, isNotNull);
+        expect(presenter.queuedFormPrefillCount, 1);
+
+        // Draining hands them over one at a time, then reports empty.
+        presenter.consumeFormPrefill();
+        expect(presenter.takeNextFormPrefill(), isNotNull);
+        expect(presenter.takeNextFormPrefill(), isNull);
+      });
+
+      test('a committed entry and a leftover are reported independently',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '-500 food gcash and -300 hamburger bpi',
+          autoResolve: true,
+        );
+
+        // Both signals are set at once. The view used to read them as an
+        // either/or and, seeing the summary, never looked for the prefill.
+        expect(presenter.lastCommittedSummary, isNotNull);
+        expect(presenter.pendingFormPrefill, isNotNull);
+      });
+
+      test('when nothing resolves, the later entries are still queued',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '-300 hamburger bpi and -200 kwek kwek bpi',
+          autoResolve: true,
+        );
+
+        expect(presenter.allTransactions, isEmpty);
+        expect(presenter.pendingFormPrefill, isNotNull);
+        expect(presenter.queuedFormPrefillCount, 1);
+      });
+
+      test('a new message clears leftovers the user walked away from',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '-500 food gcash and -300 hamburger bpi and -200 kwek kwek bpi',
+          autoResolve: true,
+        );
+        expect(presenter.queuedFormPrefillCount, 1);
+
+        // Abandon the form flow and type something else. The old queue must not
+        // ambush the new entry with a form from the previous message.
+        await presenter.sendChatInput('-100 food gcash', autoResolve: true);
+        expect(presenter.queuedFormPrefillCount, 0);
+        expect(presenter.pendingFormPrefill, isNull);
+      });
+
+      test('cancel drops the queued form prefills too', () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '-500 food gcash and -300 hamburger bpi and -200 kwek kwek bpi',
+          autoResolve: true,
+        );
+        expect(presenter.queuedFormPrefillCount, 1);
+
+        presenter.cancelChat();
+        expect(presenter.queuedFormPrefillCount, 0);
+        expect(presenter.pendingFormPrefill, isNull);
+      });
+
+      test('a single entry that resolves leaves nothing for the form',
+          () async {
+        final ai = FakeAiCoachService([]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('-500 food gcash', autoResolve: true);
+
+        expect(presenter.allTransactions, hasLength(1));
+        expect(presenter.pendingFormPrefill, isNull);
+        expect(presenter.queuedFormPrefillCount, 0);
+      });
+    });
+
+    // The form the chat hands off to used to show the raw message in its
+    // Description field — sitting right beside the Amount and Account fields
+    // holding those very values. Only the commit path cleaned the label.
+    group('the prefilled form', () {
+      test('gets a description without the amount or the account in it',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('207 lunch at alturas gcash',
+            autoResolve: true);
+
+        final prefill = presenter.pendingFormPrefill!;
+        expect(prefill.amount, 207);
+        expect(prefill.accountId, gcash.id);
+        expect(prefill.description, 'lunch at alturas');
+        expect(prefill.description, isNot(contains('207')));
+        expect(prefill.description.toLowerCase(), isNot(contains('gcash')));
+      });
+
+      test('every queued leftover is cleaned too, not just the first',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '207 lunch at alturas gcash and 89 merienda at bos bpi',
+          autoResolve: true,
+        );
+
+        expect(presenter.pendingFormPrefill!.description, 'lunch at alturas');
+        presenter.consumeFormPrefill();
+        final next = presenter.takeNextFormPrefill()!;
+        expect(next.description, isNot(contains('89')));
+        expect(next.description.toLowerCase(), isNot(contains('bpi')));
+      });
+    });
+
     test('cancel drops the queued leftovers too', () async {
       final ai = FakeAiCoachService([
         const StepGiveUp(reason: 'no clue', partialDraft: ParsedTransaction()),

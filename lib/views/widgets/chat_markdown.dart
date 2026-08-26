@@ -16,6 +16,8 @@ import 'package:flutter/material.dart';
 ///   - unordered bullets `- ` / `* `    → `•` with hanging indent
 ///   - ordered items `1. `              → number with hanging indent
 ///   - blank lines                      → paragraph spacing
+///   - GFM pipe tables                  → a real bordered table, scrolled
+///                                        horizontally when it will not fit
 /// Supported inline spans: `**bold**`, `__bold__`, `*italic*`, `_italic_`,
 /// and `` `code` `` (nested emphasis inside bold is parsed too).
 class ChatMarkdown extends StatelessWidget {
@@ -51,8 +53,10 @@ class ChatMarkdown extends StatelessWidget {
       if (blocks.isNotEmpty) blocks.add(const SizedBox(height: 8));
     }
 
-    for (final raw in lines) {
-      final line = raw.trimRight();
+    // Indexed rather than a for-in: a table is several lines and has to be able
+    // to consume them together.
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i].trimRight();
       final trimmed = line.trim();
 
       if (trimmed.isEmpty) {
@@ -62,6 +66,20 @@ class ChatMarkdown extends StatelessWidget {
       if (pendingGap) {
         addGap();
         pendingGap = false;
+      }
+
+      // Table: a header row of pipes followed by a |---|:--:| delimiter row.
+      // Checked before every other block, because a row's cells can start with
+      // characters the line-based branches below would claim first.
+      final consumed = _tableRowSpan(lines, i);
+      if (consumed > 1) {
+        blocks.add(_table(
+          lines.sublist(i, i + consumed),
+          base,
+          cs,
+        ));
+        i += consumed - 1;
+        continue;
       }
 
       // Horizontal rule: --- / *** / ___ (3+).
@@ -141,6 +159,114 @@ class ChatMarkdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: blocks,
+    );
+  }
+
+  /// How many lines from [start] form a GFM pipe table, or 0 if none does.
+  ///
+  /// Requires the delimiter row, not just pipes: a sentence like "cash | credit"
+  /// is prose, and a one-line "table" is a sentence with a pipe in it. Rows stop
+  /// at the first line without a pipe, so a table needs no blank line after it.
+  static int _tableRowSpan(List<String> lines, int start) {
+    if (start + 1 >= lines.length) return 0;
+    if (!lines[start].contains('|')) return 0;
+    final delimiter = lines[start + 1].trim();
+    if (!RegExp(r'^\|?[\s:|-]+\|?$').hasMatch(delimiter) ||
+        !delimiter.contains('-') ||
+        !delimiter.contains('|')) {
+      return 0;
+    }
+    var end = start + 2;
+    while (end < lines.length && lines[end].contains('|')) {
+      end++;
+    }
+    return end - start;
+  }
+
+  /// Splits one table row into cells, dropping the leading and trailing pipes
+  /// models usually write but Markdown does not require.
+  static List<String> _cells(String row) {
+    var t = row.trim();
+    if (t.startsWith('|')) t = t.substring(1);
+    if (t.endsWith('|')) t = t.substring(0, t.length - 1);
+    return t.split('|').map((c) => c.trim()).toList();
+  }
+
+  /// Alignment per column, read off the delimiter row (`---:` right, `:-:`
+  /// centre). Numbers in a money table read far better right-aligned, and the
+  /// model is the only thing that knows which columns hold them.
+  static List<TextAlign> _alignments(String delimiter, int columns) {
+    final specs = _cells(delimiter);
+    return [
+      for (var i = 0; i < columns; i++)
+        if (i >= specs.length)
+          TextAlign.left
+        else if (specs[i].endsWith(':') && specs[i].startsWith(':'))
+          TextAlign.center
+        else if (specs[i].endsWith(':'))
+          TextAlign.right
+        else
+          TextAlign.left,
+    ];
+  }
+
+  Widget _table(List<String> rows, TextStyle base, ColorScheme cs) {
+    final header = _cells(rows.first);
+    final body = [for (final r in rows.skip(2)) _cells(r)];
+    // Ragged rows are common in generated tables. Pad rather than drop, so a
+    // missing trailing cell costs an empty box instead of the whole row.
+    final columns = [
+      header.length,
+      for (final r in body) r.length,
+    ].reduce((a, b) => a > b ? a : b);
+    final align = _alignments(rows[1], columns);
+
+    List<Widget> cellsFor(List<String> cells, {required bool isHeader}) => [
+          for (var i = 0; i < columns; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              child: Text.rich(
+                _inline(
+                  i < cells.length ? cells[i] : '',
+                  isHeader
+                      ? base.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: cs.onSurfaceVariant,
+                          fontSize: base.fontSize! - 1,
+                        )
+                      : base,
+                ),
+                textAlign: align[i],
+              ),
+            ),
+        ];
+
+    final table = Table(
+      // Sized to content, not stretched: a two-column money table stretched to
+      // the bubble width leaves a gulf between label and figure.
+      defaultColumnWidth: const IntrinsicColumnWidth(),
+      border: TableBorder(
+        horizontalInside: BorderSide(color: cs.outlineVariant, width: 0.5),
+        top: BorderSide(color: cs.outlineVariant, width: 0.5),
+        bottom: BorderSide(color: cs.outlineVariant, width: 0.5),
+      ),
+      children: [
+        TableRow(
+          decoration: BoxDecoration(color: cs.surfaceContainerHighest),
+          children: cellsFor(header, isHeader: true),
+        ),
+        for (final r in body) TableRow(children: cellsFor(r, isHeader: false)),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      // A chat bubble is narrow and a table has a minimum width it cannot go
+      // below, so let it scroll sideways rather than overflow the bubble.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: table,
+      ),
     );
   }
 

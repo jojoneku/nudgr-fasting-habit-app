@@ -20,10 +20,25 @@ class AdvisorCategoryLine {
   /// Actual spend this month (transfers already excluded upstream).
   final double actual;
 
+  /// Average monthly spend on this category over the preceding complete months,
+  /// or null when there is no history to average.
+  ///
+  /// This is what lets the advisor tell a spike from a habit. Without it, every
+  /// category over budget reads the same — and "Food is ₱5,240 against a ₱3,900
+  /// three-month average" is a different conversation from "Food is ₱5,240,
+  /// same as always, the budget is simply wrong".
+  final double? trailingAverage;
+
+  /// How many complete months [trailingAverage] covers, so the advisor can say
+  /// how much weight it deserves rather than treating one month as a trend.
+  final int trailingMonths;
+
   const AdvisorCategoryLine({
     required this.name,
     this.target,
     required this.actual,
+    this.trailingAverage,
+    this.trailingMonths = 0,
   });
 }
 
@@ -706,11 +721,29 @@ class AiCoachContext {
       }
     }
     if (topCategories.isNotEmpty) {
-      buf.writeln('Top spending categories (actual vs target this month):');
+      buf.writeln('Spending by category this month (actual vs target, and vs '
+          'the recent average for that same category — use the average to tell '
+          'a one-off spike from a standing habit):');
       for (final c in topCategories) {
-        final line = c.target == null
+        final line = StringBuffer(c.target == null
             ? '${_peso(c.actual)} spent (no budget set)'
-            : '${_peso(c.actual)} of ${_peso(c.target!)} target';
+            : '${_peso(c.actual)} of ${_peso(c.target!)} target');
+        final avg = c.trailingAverage;
+        if (avg != null && avg > 0) {
+          line.write('; ${_peso(avg)}/mo average over the previous '
+              '${c.trailingMonths} month${c.trailingMonths == 1 ? '' : 's'}');
+          // The comparison, stated rather than left to be derived — the model
+          // is told not to compute figures that are not in the snapshot.
+          final delta = c.actual - avg;
+          final pct = (delta.abs() / avg * 100).round();
+          if (pct >= 15) {
+            line.write(delta > 0
+                ? ' (running $pct% ABOVE its usual)'
+                : ' (running $pct% below its usual)');
+          } else {
+            line.write(' (in line with its usual)');
+          }
+        }
         buf.writeln('  - ${c.name}: $line');
       }
     }

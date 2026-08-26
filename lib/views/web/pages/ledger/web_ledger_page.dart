@@ -274,6 +274,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _searchController.text = _f.query;
     _searchController.addListener(_onSearchChanged);
     _f.addListener(_onFiltersChanged);
+    _p.addListener(_onLedgerNeedsForm);
   }
 
   @override
@@ -283,8 +284,57 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _gridHScroll.dispose();
     _gridVScroll.dispose();
     _f.removeListener(_onFiltersChanged);
+    _p.removeListener(_onLedgerNeedsForm);
     if (_ownsFilters) _f.dispose();
     super.dispose();
+  }
+
+  /// True while [_drainToForm] is walking the queue, so a notify raised by the
+  /// form's own commit doesn't start a second, overlapping walk.
+  bool _drainingToForm = false;
+
+  /// The web surface that owns the transaction form, so it is the one that
+  /// answers when the parser hands an entry back.
+  ///
+  /// Quick Add used to do this itself, from inside its own send(). Now that the
+  /// assistant is the only place you type an entry, and it lives in the shell
+  /// rather than on this page, the drain has to live with the form instead —
+  /// otherwise a message the assistant only partly resolved leaves its
+  /// leftovers queued in the presenter with nothing on web to open them.
+  void _onLedgerNeedsForm() {
+    if (!mounted || _drainingToForm) return;
+    if (_p.pendingFormPrefill == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _drainToForm();
+    });
+  }
+
+  /// Opens the prefilled form for the pending leftover, then for each one still
+  /// queued behind it. Awaiting each dialog is what lets every unresolved entry
+  /// from one message get filled in, rather than only the first.
+  Future<void> _drainToForm() async {
+    if (_drainingToForm) return;
+    _drainingToForm = true;
+    try {
+      var prefill = _p.pendingFormPrefill;
+      _p.consumeFormPrefill();
+      while (prefill != null && mounted) {
+        final remaining = _p.queuedFormPrefillCount;
+        if (remaining > 0) {
+          // Say a second form is coming. Two dialogs in a row with no warning
+          // reads as the first one failing to close.
+          AppToast.show(
+            context,
+            '$remaining more from that message after this one',
+          );
+        }
+        await _openAddDialog(prefill);
+        if (!mounted) return;
+        prefill = _p.takeNextFormPrefill();
+      }
+    } finally {
+      _drainingToForm = false;
+    }
   }
 
   void _onFiltersChanged() {

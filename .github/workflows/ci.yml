@@ -497,6 +497,13 @@ jobs:
           aws lambda wait function-updated \
             --function-name food-coach-handler
 
+      # Pushing function code says nothing about whether a browser can reach
+      # it. See scripts/check_api_cors.sh for why this is asserted against the
+      # live API rather than read off template.yaml.
+      - name: Verify the production API allows browser calls (CORS)
+        if: steps.changes.outputs.changed == 'true'
+        run: scripts/check_api_cors.sh
+
   deploy_web:
     name: Deploy Treasury Web (Firebase Hosting)
     runs-on: ubuntu-latest

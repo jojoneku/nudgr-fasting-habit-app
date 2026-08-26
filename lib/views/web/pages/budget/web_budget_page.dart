@@ -53,6 +53,10 @@ class _Row {
   final Color color;
   final bool accountBacked;
 
+  /// Savings rows: money that left the target this month. Shown beside what
+  /// went in rather than netted off it — see [BudgetPresenter.fundedInto].
+  final double withdrawn;
+
   const _Row({
     required this.id,
     required this.name,
@@ -61,20 +65,36 @@ class _Row {
     required this.spent,
     required this.color,
     required this.accountBacked,
+    this.withdrawn = 0.0,
   });
 
   double get used => allocated > 0 ? spent / allocated : 0;
   double get remaining => allocated - spent;
 }
 
-({WebBadgeTone tone, String label}) _statusFor(double used) {
+/// Status pill for one row. [isSavings] flips the meaning of a full bar:
+/// spending past an expense budget is the problem the badge exists to flag,
+/// while funding past a savings goal is the point of the goal — so a savings
+/// row never turns red, matching what [BudgetPresenter.budgetRows] already says
+/// by pinning `isOver: false` on those rows.
+({WebBadgeTone tone, String label}) _statusFor(
+  double used, {
+  bool isSavings = false,
+}) {
+  if (isSavings) {
+    return used >= 1
+        ? (tone: WebBadgeTone.success, label: 'Funded')
+        : (tone: WebBadgeTone.info, label: 'On track');
+  }
   if (used >= 1) return (tone: WebBadgeTone.danger, label: 'Over');
   if (used >= 0.75) return (tone: WebBadgeTone.warning, label: 'Watch');
   return (tone: WebBadgeTone.success, label: 'On track');
 }
 
-Color _statusColor(BuildContext context, double used) {
+Color _statusColor(BuildContext context, double used,
+    {bool isSavings = false}) {
   final cs = Theme.of(context).colorScheme;
+  if (isSavings) return cs.tertiary;
   if (used >= 1) return cs.error;
   if (used >= 0.75) return cs.secondary;
   return cs.tertiary;
@@ -106,9 +126,10 @@ class _BudgetBody extends StatelessWidget {
       rows.add(_Row(
         id: entry.account.id,
         name: entry.account.name,
-        groupId: BudgetGroupDef.idSavings,
+        groupId: entry.budget.group,
         allocated: entry.budget.allocatedAmount,
-        spent: presenter.contributedTo(entry.account.id),
+        spent: presenter.fundedInto(entry.account.id),
+        withdrawn: presenter.withdrawnFrom(entry.account.id),
         color: Theme.of(context).colorScheme.tertiary,
         accountBacked: true,
       ));
@@ -179,7 +200,14 @@ class _BudgetBody extends StatelessWidget {
           ],
           // The setup card always renders so the trailing "Add a category…"
           // row is available even with no budget set yet.
+          //
+          // Keyed because the siblings around it come and go with `rows`: the
+          // pace ring and the empty state swap on the first budget of a month,
+          // which shifts this card's index and, unkeyed, hands the add-row a
+          // fresh State — silently dropping the user out of Savings mode
+          // between their first entry and their second.
           _SetupCard(
+            key: const ValueKey('budget-setup-card'),
             presenter: presenter,
             rows: rows,
             allocated: allocated,
@@ -448,6 +476,7 @@ class _SetupCard extends StatelessWidget {
   final double remaining;
 
   const _SetupCard({
+    super.key,
     required this.presenter,
     required this.rows,
     required this.allocated,
@@ -660,7 +689,7 @@ class _DataRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final status = _statusFor(row.used);
+    final status = _statusFor(row.used, isSavings: row.accountBacked);
     final remaining = row.remaining;
 
     return Container(
@@ -689,12 +718,30 @@ class _DataRow extends StatelessWidget {
                 ),
                 const SizedBox(width: WebInsets.sm),
                 Expanded(
-                  child: Text(
-                    row.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        row.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      // Money out of a fund no longer subtracts from its
+                      // progress, so it has to be said out loud here — netted
+                      // away it was invisible, and the row just looked unfunded.
+                      if (row.withdrawn > 0)
+                        Text(
+                          '${formatPeso(row.spent)} in · '
+                          '${formatPeso(row.withdrawn)} out',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -761,7 +808,8 @@ class _DataRow extends StatelessWidget {
                   Expanded(
                     child: WebProgressBar(
                       value: row.used,
-                      color: _statusColor(context, row.used),
+                      color: _statusColor(context, row.used,
+                          isSavings: row.accountBacked),
                     ),
                   ),
                   const SizedBox(width: WebInsets.sm),
@@ -1085,10 +1133,16 @@ class _AddRowState extends State<_AddRow> {
   String? _selectedCategoryId;
   bool _busy = false;
 
-  /// Savings mode mirrors mobile's `_isSavings` segment: the picker swaps to
-  /// savings/goal *accounts* (account ids, not expense categories) and the
-  /// budget is persisted under [BudgetGroupDef.idSavings].
-  bool _isSavings = false;
+  /// Savings mode mirrors mobile's segment: the picker swaps to savings/goal
+  /// *accounts* (account ids, not expense categories) and the budget is
+  /// persisted under [BudgetGroupDef.idSavings].
+  ///
+  /// Derived from [_groupId] rather than held alongside it, exactly as the
+  /// mobile add-budget sheet does. When the two were separate fields they could
+  /// disagree — the toggle read Savings while the group had reset to Variable —
+  /// and the row was then written with an account id under an expense group,
+  /// where neither the savings list nor the category list could find it again.
+  bool get _isSavings => widget.presenter.isSavingsGroup(_groupId);
 
   @override
   void dispose() {
@@ -1126,7 +1180,6 @@ class _AddRowState extends State<_AddRow> {
   void _setSavingsMode(bool savings) {
     if (savings == _isSavings) return;
     setState(() {
-      _isSavings = savings;
       _selectedCategoryId = null;
       _groupId = savings
           ? BudgetGroupDef.idSavings
@@ -1244,7 +1297,16 @@ class _AddRowState extends State<_AddRow> {
       // removed mid-save, in which case the controller is disposed. (C11)
       if (!mounted) return;
       _amountController.clear();
-      setState(() => _groupId = BudgetGroupDef.idVariableOptional);
+      setState(() {
+        // The just-budgeted id drops out of the picker's entries, so leaving it
+        // selected left the field showing its hint while a stale id was still
+        // armed — pressing ✓ again would silently re-write that budget.
+        _selectedCategoryId = null;
+        // Stay in whichever mode the user is working in. Resetting the group
+        // unconditionally is what used to strand the next savings entry under
+        // an expense group while the toggle still read Savings.
+        if (!_isSavings) _groupId = BudgetGroupDef.idVariableOptional;
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }

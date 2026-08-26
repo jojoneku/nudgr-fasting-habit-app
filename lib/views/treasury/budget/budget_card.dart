@@ -137,6 +137,19 @@ class BudgetCard extends StatelessWidget {
                       text: 'Goal reached',
                     ),
                   ],
+                  // Money drawn out of a fund no longer subtracts from its
+                  // progress — spending a fund on what it is for is the fund
+                  // working. It still has to be visible, though: netted into
+                  // the bar it was silent, and the row read as underfunded.
+                  if (row.isSavings && row.withdrawn > 0) ...[
+                    const SizedBox(height: 6),
+                    _HintLine(
+                      icon: Icons.call_made_rounded,
+                      color: cs.onSurfaceVariant,
+                      text: '${formatPeso(row.withdrawn)} used from this fund '
+                          'this month',
+                    ),
+                  ],
                 ],
               ),
             ),

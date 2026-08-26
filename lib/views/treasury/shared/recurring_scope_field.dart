@@ -22,15 +22,25 @@ enum RecurringScope {
 /// the button your thumb lands on by reflex. Returns null when the user backs
 /// out.
 ///
-/// Falls back to the ordinary confirm when nothing lies ahead — offering a
-/// choice between two identical outcomes is just a harder dialog to read.
+/// [isRecurring] is what decides whether the choice is worth asking, not
+/// [futureMonthCount]. A recurring item that happens to have no later month
+/// generated *yet* still has a future to speak for: months are seeded from the
+/// previous month on demand, so deleting one row of a live series and stopping
+/// the series are different outcomes even when the count is zero. Asking only
+/// when a copy already existed is what left users deleting the same salary
+/// again every month.
+///
+/// Falls back to the ordinary confirm for a one-off item with nothing ahead of
+/// it — there, offering a choice between two identical outcomes is just a
+/// harder dialog to read.
 Future<RecurringScope?> confirmRecurringDelete({
   required BuildContext context,
   required String title,
   required String name,
   required int futureMonthCount,
+  required bool isRecurring,
 }) async {
-  if (futureMonthCount == 0) {
+  if (futureMonthCount == 0 && !isRecurring) {
     final ok = await AppConfirmDialog.confirm(
       context: context,
       title: title,
@@ -42,19 +52,101 @@ Future<RecurringScope?> confirmRecurringDelete({
     return ok ? RecurringScope.thisMonthOnly : null;
   }
 
+  // Two different truths to tell. With copies already generated the blast
+  // radius is a number the user can picture; with none yet the thing worth
+  // saying is that it will come back on its own.
+  final body = futureMonthCount == 0
+      ? '"$name" repeats, so it will keep coming back each month. '
+          'Delete just this month, or all of them?'
+      : '"$name" repeats — it is also set up in '
+          '${_laterMonths(futureMonthCount)}. How much of it should go?';
+  return _askScope(context: context, title: title, body: body);
+}
+
+/// The same question for a multi-select delete, where [selectedCount] rows are
+/// going and [recurringCount] of them repeat.
+///
+/// Ticking a recurring salary in the batch bar used to be a quieter delete than
+/// opening it and choosing "All months" — same row, same outcome asked about in
+/// one place and not the other. This closes that, and delegates to
+/// [confirmRecurringDelete] for a single selection so the copy can name the
+/// item rather than counting to one.
+///
+/// [extraMonthCount] is how many *additional* later-month rows the all-months
+/// option would take, resolved per series by the presenter — so two selected
+/// months of one series don't count their shared future twice.
+///
+/// [plainBody] is the ordinary confirmation text, used verbatim when nothing in
+/// the selection repeats (installments, one-offs) and there is no scope to ask
+/// about.
+Future<RecurringScope?> confirmRecurringBatchDelete({
+  required BuildContext context,
+  required String title,
+  required int selectedCount,
+  required int recurringCount,
+  required int extraMonthCount,
+  required String plainBody,
+  String? soleName,
+}) async {
+  if (recurringCount == 0) {
+    final ok = await AppConfirmDialog.confirm(
+      context: context,
+      title: title,
+      body: plainBody,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+    );
+    return ok ? RecurringScope.thisMonthOnly : null;
+  }
+
+  if (selectedCount == 1 && soleName != null) {
+    return confirmRecurringDelete(
+      context: context,
+      title: title,
+      name: soleName,
+      futureMonthCount: extraMonthCount,
+      isRecurring: true,
+    );
+  }
+
+  final repeats = recurringCount == selectedCount
+      ? (selectedCount == 2 ? 'Both repeat' : 'All $selectedCount repeat')
+      : (recurringCount == 1
+          ? '1 of them repeats'
+          : '$recurringCount of them repeat');
+  final ahead = extraMonthCount == 0
+      ? ', so they will keep coming back each month.'
+      : ' — with ${_laterMonths(extraMonthCount)} already set up ahead.';
+  return _askScope(
+    context: context,
+    title: title,
+    body: '$repeats$ahead Delete this month only, or all months?',
+  );
+}
+
+String _laterMonths(int count) =>
+    count == 1 ? '1 later month' : '$count later months';
+
+/// The two-outcome delete dialog itself. Neither outcome is the button your
+/// thumb lands on by reflex, and both are named — a delete cannot be reviewed
+/// afterwards the way an edit can. Returns null when the user backs out.
+Future<RecurringScope?> _askScope({
+  required BuildContext context,
+  required String title,
+  required String body,
+}) async {
   if (!context.mounted) return null;
   return showDialog<RecurringScope>(
     context: context,
     builder: (ctx) {
       final theme = Theme.of(ctx);
-      final months = futureMonthCount == 1
-          ? '1 later month'
-          : '$futureMonthCount later months';
       return AlertDialog(
         title: Text(title, style: AppTextStyles.titleLarge),
         content: Text(
-          '"$name" repeats — it is also set up in $months. '
-          'How much of it should go?',
+          // Always say what "all months" spares: deleting the rows ahead is not
+          // deleting the history behind.
+          '$body\nEarlier months are left as they are.',
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
@@ -74,7 +166,10 @@ Future<RecurringScope?> confirmRecurringDelete({
             ),
             onPressed: () =>
                 Navigator.of(ctx).pop(RecurringScope.thisAndFuture),
-            child: const Text('This and future'),
+            // "All months" rather than "This and future": the user thinks in
+            // terms of the repeating thing, not the row in front of them, and
+            // the body copy already says history is spared.
+            child: const Text('All months'),
           ),
         ],
       );
