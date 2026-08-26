@@ -685,6 +685,111 @@ void main() {
     });
   });
 
+  // The batch bar is the delete most people reach for, and it used to be the
+  // one that never asked. These pin that ticking a recurring row in
+  // multi-select reaches as far as opening it and choosing "All months" does.
+  group('batch delete', () {
+    test('takes the series with it and ends it', () async {
+      receivables = [
+        salary(id: 'jul', month: jul, seriesId: 's1'),
+        salary(id: 'aug', month: aug, seriesId: 's1'),
+        salary(id: 'sep', month: sep, seriesId: 's1'),
+      ];
+      final p = await load();
+
+      final deleted = await p.deleteReceivables(['aug'], applyToFuture: true);
+      await p.setMonth(aug);
+
+      expect(deleted, 2, reason: 'August, and the September row ahead of it');
+      expect(p.allReceivables.map((r) => r.id), ['jul']);
+      expect(p.allReceivables.single.isRecurring, isFalse);
+    });
+
+    test('leaves the series running when scoped to this month', () async {
+      bills = [
+        rent(id: 'aug', month: aug, seriesId: 's1'),
+        rent(id: 'sep', month: sep, seriesId: 's1'),
+      ];
+      final p = await load();
+
+      final deleted = await p.deleteBills(['aug']);
+
+      expect(deleted, 1);
+      expect(billIn(p, sep).isRecurring, isTrue);
+    });
+
+    test('only ends the series in a mixed selection that has one', () async {
+      bills = [
+        rent(id: 'vet', month: aug, isRecurring: false, name: 'Vet'),
+        rent(id: 'aug', month: aug, seriesId: 's1'),
+        rent(id: 'sep', month: sep, seriesId: 's1'),
+      ];
+      final p = await load();
+
+      final deleted = await p.deleteBills(['vet', 'aug'], applyToFuture: true);
+
+      expect(deleted, 3,
+          reason: 'the one-off, August, and September ahead of it');
+      expect(p.allBills, isEmpty);
+    });
+
+    test('a set-aside selection ends its series too', () async {
+      expenses = [
+        fund(id: 'aug', month: aug, seriesId: 'e1'),
+        fund(id: 'sep', month: sep, seriesId: 'e1'),
+      ];
+      final p = await load();
+
+      final deleted =
+          await p.deleteBudgetedExpenses(['aug'], applyToFuture: true);
+      await p.setMonth(sep);
+
+      expect(deleted, 2);
+      expect(p.allBudgetedExpenses, isEmpty);
+    });
+
+    test('two selected months of one series do not double-count its future',
+        () async {
+      bills = [
+        rent(id: 'aug', month: aug, seriesId: 's1'),
+        rent(id: 'sep', month: sep, seriesId: 's1'),
+        rent(id: 'oct', month: oct, seriesId: 's1'),
+      ];
+      final p = await load();
+
+      final reach = p.billBatchSeriesReach(['aug', 'sep']);
+
+      expect(reach.recurring, 2);
+      // September and October lie ahead of August, October ahead of September.
+      // Only October is a month the selection doesn't already cover.
+      expect(reach.extraMonths, 1);
+    });
+
+    test('a selection with nothing recurring has nothing to ask about',
+        () async {
+      bills = [rent(id: 'vet', month: aug, isRecurring: false, name: 'Vet')];
+      final p = await load();
+
+      final reach = p.billBatchSeriesReach(['vet']);
+
+      expect(reach.recurring, 0);
+      expect(reach.extraMonths, 0);
+    });
+
+    test('a settled month ahead is not counted as reachable', () async {
+      receivables = [
+        salary(id: 'aug', month: aug, seriesId: 's1'),
+        salary(id: 'sep', month: sep, seriesId: 's1', isReceived: true),
+      ];
+      final p = await load();
+
+      final reach = p.receivableBatchSeriesReach(['aug']);
+
+      expect(reach.recurring, 1);
+      expect(reach.extraMonths, 0, reason: 'money already received stays put');
+    });
+  });
+
   group('seriesId', () {
     test('backfills rows saved before the field existed', () async {
       bills = [

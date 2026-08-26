@@ -1613,12 +1613,35 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return (applied: reopened.length, skipped: 0);
   }
 
-  /// Deletes every bill in [billIds], returning how many existed.
-  Future<int> deleteBills(Iterable<String> billIds) async {
+  /// Deletes every bill in [billIds], returning how many rows went. With
+  /// [applyToFuture] set, each selected row takes the unsettled later months of
+  /// its series with it and ends that series' recurrence — the multi-select
+  /// equivalent of [deleteBill], so ticking a recurring bill in the batch bar
+  /// is not a quieter delete than opening it and choosing "All months".
+  ///
+  /// The count can therefore exceed [billIds]'s length: it reports what was
+  /// actually removed, which is what the caller tells the user.
+  Future<int> deleteBills(
+    Iterable<String> billIds, {
+    bool applyToFuture = false,
+  }) async {
     final ids = billIds.toSet();
-    final doomed = _allBills.where((b) => ids.contains(b.id)).toList();
-    if (doomed.isEmpty) return 0;
-    _allBills = _allBills.where((b) => !ids.contains(b.id)).toList();
+    final selected = _allBills.where((b) => ids.contains(b.id)).toList();
+    if (selected.isEmpty) return 0;
+    final reach = _seriesReach<Bill>(
+      selected,
+      seriesOf: (b) => b.seriesId,
+      laterOpen: futureSeriesBills,
+      idOf: (b) => b.id,
+      applyToFuture: applyToFuture,
+    );
+    final doomed = _allBills.where((b) => reach.ids.contains(b.id)).toList();
+    _allBills = _allBills
+        .where((b) => !reach.ids.contains(b.id))
+        .map((b) => reach.endedSeries.contains(b.seriesId)
+            ? b.copyWith(isRecurring: false)
+            : b)
+        .toList();
     safeNotify();
     await _storage.saveBills(_allBills);
     for (final bill in doomed) {
@@ -1675,13 +1698,31 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return (applied: targets.length, skipped: 0);
   }
 
-  /// Deletes every receivable in [receivableIds], returning how many existed.
-  Future<int> deleteReceivables(Iterable<String> receivableIds) async {
+  /// Deletes every receivable in [receivableIds], returning how many rows went.
+  /// [applyToFuture] carries each one's series with it — see [deleteBills].
+  Future<int> deleteReceivables(
+    Iterable<String> receivableIds, {
+    bool applyToFuture = false,
+  }) async {
     final ids = receivableIds.toSet();
-    final count = _allReceivables.where((r) => ids.contains(r.id)).length;
-    if (count == 0) return 0;
-    _allReceivables =
-        _allReceivables.where((r) => !ids.contains(r.id)).toList();
+    final selected =
+        _allReceivables.where((r) => ids.contains(r.id)).toList();
+    if (selected.isEmpty) return 0;
+    final reach = _seriesReach<Receivable>(
+      selected,
+      seriesOf: (r) => r.seriesId,
+      laterOpen: futureSeriesReceivables,
+      idOf: (r) => r.id,
+      applyToFuture: applyToFuture,
+    );
+    final count =
+        _allReceivables.where((r) => reach.ids.contains(r.id)).length;
+    _allReceivables = _allReceivables
+        .where((r) => !reach.ids.contains(r.id))
+        .map((r) => reach.endedSeries.contains(r.seriesId)
+            ? r.copyWith(isRecurring: false)
+            : r)
+        .toList();
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
@@ -1745,12 +1786,29 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return (applied: targets.length, skipped: 0);
   }
 
-  /// Deletes every set-aside in [expenseIds], returning how many existed.
-  Future<int> deleteBudgetedExpenses(Iterable<String> expenseIds) async {
+  /// Deletes every set-aside in [expenseIds], returning how many rows went.
+  /// [applyToFuture] carries each one's series with it — see [deleteBills].
+  Future<int> deleteBudgetedExpenses(
+    Iterable<String> expenseIds, {
+    bool applyToFuture = false,
+  }) async {
     final ids = expenseIds.toSet();
-    final count = _allExpenses.where((e) => ids.contains(e.id)).length;
-    if (count == 0) return 0;
-    _allExpenses = _allExpenses.where((e) => !ids.contains(e.id)).toList();
+    final selected = _allExpenses.where((e) => ids.contains(e.id)).toList();
+    if (selected.isEmpty) return 0;
+    final reach = _seriesReach<BudgetedExpense>(
+      selected,
+      seriesOf: (e) => e.seriesId,
+      laterOpen: futureSeriesExpenses,
+      idOf: (e) => e.id,
+      applyToFuture: applyToFuture,
+    );
+    final count = _allExpenses.where((e) => reach.ids.contains(e.id)).length;
+    _allExpenses = _allExpenses
+        .where((e) => !reach.ids.contains(e.id))
+        .map((e) => reach.endedSeries.contains(e.seriesId)
+            ? e.copyWith(isRecurring: false)
+            : e)
+        .toList();
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
@@ -1945,6 +2003,96 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   List<BudgetedExpense> futureSeriesExpenses(BudgetedExpense expense) =>
       _laterSeriesExpenses(expense).where(_expenseIsOpen).toList()
         ..sort((a, b) => a.month.compareTo(b.month));
+
+  /// What a batch delete of [selected] actually touches: every row id to
+  /// remove, and every series whose recurrence ends. Shared by the three batch
+  /// deletes so multi-select and single-row deletes can't drift apart.
+  ///
+  /// With [applyToFuture] off this is just the selection — the helper still
+  /// runs, so there is one path through the delete rather than two.
+  ({Set<String> ids, Set<String> endedSeries}) _seriesReach<T>(
+    List<T> selected, {
+    required String? Function(T) seriesOf,
+    required List<T> Function(T) laterOpen,
+    required String Function(T) idOf,
+    required bool applyToFuture,
+  }) {
+    final ids = selected.map(idOf).toSet();
+    if (!applyToFuture) {
+      return (ids: ids, endedSeries: const <String>{});
+    }
+    final endedSeries = <String>{};
+    for (final item in selected) {
+      final series = seriesOf(item);
+      // A row with no series has nothing ahead of it and nothing to end, so it
+      // must not be matched by a null — that would sweep up every other
+      // unstamped row in the list.
+      if (series == null) continue;
+      endedSeries.add(series);
+      ids.addAll(laterOpen(item).map(idOf));
+    }
+    return (ids: ids, endedSeries: endedSeries);
+  }
+
+  /// How far an "all months" batch delete of [billIds] would reach: how many
+  /// of the selected rows recur (so the batch bar knows whether to ask at
+  /// all), and how many *extra* later-month rows would go with them.
+  ///
+  /// The View asks rather than counting rows itself, and the count is resolved
+  /// per series so two selected months of the same series don't double up.
+  ({int recurring, int extraMonths}) billBatchSeriesReach(
+      Iterable<String> billIds) {
+    final ids = billIds.toSet();
+    final selected = _allBills.where((b) => ids.contains(b.id)).toList();
+    final reach = _seriesReach<Bill>(
+      selected,
+      seriesOf: (b) => b.seriesId,
+      laterOpen: futureSeriesBills,
+      idOf: (b) => b.id,
+      applyToFuture: true,
+    );
+    return (
+      recurring: selected.where((b) => b.isRecurring).length,
+      extraMonths: reach.ids.length - selected.length,
+    );
+  }
+
+  /// See [billBatchSeriesReach].
+  ({int recurring, int extraMonths}) receivableBatchSeriesReach(
+      Iterable<String> receivableIds) {
+    final ids = receivableIds.toSet();
+    final selected =
+        _allReceivables.where((r) => ids.contains(r.id)).toList();
+    final reach = _seriesReach<Receivable>(
+      selected,
+      seriesOf: (r) => r.seriesId,
+      laterOpen: futureSeriesReceivables,
+      idOf: (r) => r.id,
+      applyToFuture: true,
+    );
+    return (
+      recurring: selected.where((r) => r.isRecurring).length,
+      extraMonths: reach.ids.length - selected.length,
+    );
+  }
+
+  /// See [billBatchSeriesReach].
+  ({int recurring, int extraMonths}) expenseBatchSeriesReach(
+      Iterable<String> expenseIds) {
+    final ids = expenseIds.toSet();
+    final selected = _allExpenses.where((e) => ids.contains(e.id)).toList();
+    final reach = _seriesReach<BudgetedExpense>(
+      selected,
+      seriesOf: (e) => e.seriesId,
+      laterOpen: futureSeriesExpenses,
+      idOf: (e) => e.id,
+      applyToFuture: true,
+    );
+    return (
+      recurring: selected.where((e) => e.isRecurring).length,
+      extraMonths: reach.ids.length - selected.length,
+    );
+  }
 
   /// How many later months a "this and future months" save would reach for an
   /// item saved into [month]: the open rows of its series it would rewrite,

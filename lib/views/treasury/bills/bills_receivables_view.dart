@@ -813,28 +813,63 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       _BatchSection.budgeted => 'set-aside',
       _BatchSection.installments => 'installment',
     };
-    final ok = await AppConfirmDialog.confirm(
+    // Ticking a recurring row here has to ask the same question opening it
+    // does, or the batch bar is the quiet way to leave a series running.
+    // Installments are one record spanning months rather than a row per month,
+    // so they have no series to scope and keep the plain confirm.
+    final reach = switch (section) {
+      _BatchSection.bills => widget.presenter.billBatchSeriesReach(ids),
+      _BatchSection.receivables =>
+        widget.presenter.receivableBatchSeriesReach(ids),
+      _BatchSection.budgeted => widget.presenter.expenseBatchSeriesReach(ids),
+      _BatchSection.installments => (recurring: 0, extraMonths: 0),
+    };
+    final scope = await confirmRecurringBatchDelete(
       context: context,
       title: 'Delete ${ids.length} ${_plural(ids.length, label)}?',
-      body: section == _BatchSection.installments
+      selectedCount: ids.length,
+      recurringCount: reach.recurring,
+      extraMonthCount: reach.extraMonths,
+      plainBody: section == _BatchSection.installments
           ? 'Their linked payment transactions are removed too. This cannot be '
               'undone.'
           : 'This cannot be undone.',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      isDestructive: true,
+      soleName: ids.length == 1 ? _batchSoleName(section, ids.first) : null,
     );
-    if (!ok) return;
+    if (scope == null) return;
+    final applyToFuture = scope == RecurringScope.thisAndFuture;
     final deleted = switch (section) {
-      _BatchSection.bills => await widget.presenter.deleteBills(ids),
-      _BatchSection.receivables =>
-        await widget.presenter.deleteReceivables(ids),
-      _BatchSection.budgeted =>
-        await widget.presenter.deleteBudgetedExpenses(ids),
+      _BatchSection.bills =>
+        await widget.presenter.deleteBills(ids, applyToFuture: applyToFuture),
+      _BatchSection.receivables => await widget.presenter
+          .deleteReceivables(ids, applyToFuture: applyToFuture),
+      _BatchSection.budgeted => await widget.presenter
+          .deleteBudgetedExpenses(ids, applyToFuture: applyToFuture),
       _BatchSection.installments =>
         await widget.installmentPresenter.deleteInstallments(ids),
     };
     _finishBatch('Deleted $deleted ${_plural(deleted, label)}.');
+  }
+
+  /// The name of the only selected row, so a one-row batch delete reads as
+  /// "Alphaus Salary repeats" rather than "1 of them repeats".
+  String? _batchSoleName(_BatchSection section, String id) {
+    final names = switch (section) {
+      _BatchSection.bills => [
+          for (final b in widget.presenter.allBills)
+            if (b.id == id) b.name
+        ],
+      _BatchSection.receivables => [
+          for (final r in widget.presenter.allReceivables)
+            if (r.id == id) r.name
+        ],
+      _BatchSection.budgeted => [
+          for (final e in widget.presenter.allBudgetedExpenses)
+            if (e.id == id) e.name
+        ],
+      _BatchSection.installments => const <String>[],
+    };
+    return names.isEmpty ? null : names.first;
   }
 
   /// "3 bills" / "1 bill" — the subject line of a batch confirmation.
