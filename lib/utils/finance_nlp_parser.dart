@@ -1128,6 +1128,7 @@ _AccountScan _scanAccounts(
   }
 
   spans.sort((a, b) => a.start.compareTo(b.start));
+  _collapseNameFragments(spans, tokens, accounts);
   final leftover = <String>[];
   for (var i = 0; i < tokens.length; i++) {
     if (!claimed[i]) leftover.add(tokens[i]);
@@ -1135,6 +1136,66 @@ _AccountScan _scanAccounts(
   // A token that resolved on a wider pass isn't ambiguous after all.
   ambiguous.removeWhere((t) => !leftover.contains(t));
   return _AccountScan(spans, leftover, ambiguous);
+}
+
+/// An account name's words, punctuation stripped: "Credit Card (Maya)" becomes
+/// {credit, card, maya}.
+Set<String> _accountNameWords(FinancialAccount a) => a.name
+    .toLowerCase()
+    .split(RegExp(r'[^a-z0-9ñ]+'))
+    .where((w) => w.isNotEmpty)
+    .toSet();
+
+/// Collapses a run of touching spans that is really one account's name written
+/// loosely, in place.
+///
+/// The span matcher tries the widest phrase first, so a name written exactly is
+/// matched whole. A name written out of order is not: with accounts "MAYA" and
+/// "Credit Card (Maya)", the run "maya credit card" matches no phrase entire, so
+/// it falls to the narrower passes and comes back as *two* spans — "credit card"
+/// (a prefix of the card) and "maya" (the e-wallet, exactly). The caller then
+/// takes the leftmost, which is the e-wallet: money on the card was logged
+/// against the wallet, and the user's own words named the card three times.
+///
+/// A run collapses only when exactly one account's name words account for every
+/// token in it. That is what keeps a two-account transfer intact: "bpi gcash"
+/// touches too, but no account is named by both words, so it stays two spans and
+/// the direction survives. Two accounts covering the same run is ambiguous, not
+/// a merge, so it is left alone for the AI to ask about.
+void _collapseNameFragments(
+  List<_AccountSpan> spans,
+  List<String> tokens,
+  List<FinancialAccount> accounts,
+) {
+  if (spans.length < 2) return;
+  var i = 0;
+  while (i < spans.length - 1) {
+    // Grow the widest run of spans that touch end-to-start from here.
+    var j = i;
+    while (j < spans.length - 1 && spans[j].end == spans[j + 1].start) {
+      j++;
+    }
+    if (j == i) {
+      i++;
+      continue;
+    }
+    final start = spans[i].start;
+    final end = spans[j].end;
+    final runTokens = {
+      for (final t in tokens.getRange(start, end))
+        for (final w in t.toLowerCase().split(RegExp(r'[^a-z0-9ñ]+')))
+          if (w.isNotEmpty) w,
+    };
+    final covering = accounts
+        .where((a) => _accountNameWords(a).containsAll(runTokens))
+        .toList();
+    if (covering.length == 1) {
+      spans.replaceRange(i, j + 1, [
+        _AccountSpan(covering.first.id, start, end),
+      ]);
+    }
+    i++;
+  }
 }
 
 /// Looks [token] up in the learned dictionary, matching how the dictionary

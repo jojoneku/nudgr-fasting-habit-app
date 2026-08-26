@@ -817,6 +817,54 @@ void main() {
       });
     });
 
+    // The form the chat hands off to used to show the raw message in its
+    // Description field — sitting right beside the Amount and Account fields
+    // holding those very values. Only the commit path cleaned the label.
+    group('the prefilled form', () {
+      test('gets a description without the amount or the account in it',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('207 lunch at alturas gcash',
+            autoResolve: true);
+
+        final prefill = presenter.pendingFormPrefill!;
+        expect(prefill.amount, 207);
+        expect(prefill.accountId, gcash.id);
+        expect(prefill.description, 'lunch at alturas');
+        expect(prefill.description, isNot(contains('207')));
+        expect(prefill.description.toLowerCase(), isNot(contains('gcash')));
+      });
+
+      test('every queued leftover is cleaned too, not just the first',
+          () async {
+        final ai = FakeAiCoachService([
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+          const StepGiveUp(
+              reason: 'no clue', partialDraft: ParsedTransaction()),
+        ]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput(
+          '207 lunch at alturas gcash and 89 merienda at bos bpi',
+          autoResolve: true,
+        );
+
+        expect(presenter.pendingFormPrefill!.description, 'lunch at alturas');
+        presenter.consumeFormPrefill();
+        final next = presenter.takeNextFormPrefill()!;
+        expect(next.description, isNot(contains('89')));
+        expect(next.description.toLowerCase(), isNot(contains('bpi')));
+      });
+    });
+
     test('cancel drops the queued leftovers too', () async {
       final ai = FakeAiCoachService([
         const StepGiveUp(reason: 'no clue', partialDraft: ParsedTransaction()),
