@@ -163,7 +163,11 @@ class BudgetPresenter extends ChangeNotifier {
   BudgetGroupDef? groupById(String id) =>
       _groups.where((g) => g.id == id).firstOrNull;
 
-  bool _isSavingsGroup(String groupId) =>
+  /// Whether [groupId] names a savings group — the built-in one or a
+  /// user-created group flagged `isSavings`. Public because the views decide
+  /// off it too: a savings row is keyed by an *account* id rather than a
+  /// category id, which changes how it is picked, labelled and totalled.
+  bool isSavingsGroup(String groupId) =>
       _groups.where((g) => g.id == groupId).firstOrNull?.isSavings ?? false;
 
   // ─── Summary getters ─────────────────────────────────────────────────────────
@@ -400,7 +404,7 @@ class BudgetPresenter extends ChangeNotifier {
       for (final g in expenseGroups) g.id: [],
     };
     for (final b in _budgetsForMonth) {
-      if (_isSavingsGroup(b.group)) continue;
+      if (isSavingsGroup(b.group)) continue;
       final matches = _categories.where((c) => c.id == b.categoryId);
       if (matches.isEmpty) continue;
       result.putIfAbsent(b.group, () => []).add(matches.first);
@@ -413,7 +417,7 @@ class BudgetPresenter extends ChangeNotifier {
   /// exists.
   List<({Budget budget, FinancialAccount account})> get savingsBudgets {
     final result = <({Budget budget, FinancialAccount account})>[];
-    for (final b in _budgetsForMonth.where((b) => _isSavingsGroup(b.group))) {
+    for (final b in _budgetsForMonth.where((b) => isSavingsGroup(b.group))) {
       final acct = _accounts.where((a) => a.id == b.categoryId).firstOrNull;
       if (acct != null) result.add((budget: b, account: acct));
     }
@@ -425,7 +429,7 @@ class BudgetPresenter extends ChangeNotifier {
       .fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
   double sectionSpent(String groupId) {
-    if (_isSavingsGroup(groupId)) {
+    if (isSavingsGroup(groupId)) {
       return savingsBudgets.fold(
         0.0,
         (sum, e) => sum + contributedTo(e.account.id),
@@ -502,7 +506,7 @@ class BudgetPresenter extends ChangeNotifier {
 
   double spentFor(String categoryId) {
     final budget = budgetFor(categoryId);
-    if (budget != null && _isSavingsGroup(budget.group)) {
+    if (budget != null && isSavingsGroup(budget.group)) {
       // For savings rows the "categoryId" is actually a target account id —
       // count contributions, not outflows.
       return contributedTo(categoryId);
@@ -647,6 +651,8 @@ class BudgetPresenter extends ChangeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
+    // After the accounts load — the repair has to recognise account ids.
+    await _repairOrphanedSavingsBudgets();
     _cachedNotifPrefs = await _storage.loadNotificationPreferences();
     // Restore which budgets have already warned (persisted across restarts) so
     // the over-threshold alert doesn't re-fire on every cold reopen.
@@ -681,6 +687,43 @@ class BudgetPresenter extends ChangeNotifier {
       _groups = _groups.where((g) => g.id != oldId).toList();
       await _storage.saveBudgetGroups(_groups);
     }
+  }
+
+  /// Re-homes savings budgets that were persisted under an *expense* group.
+  ///
+  /// The web add-row used to hold its Savings toggle and the group it writes in
+  /// two separate fields; after one add the group reset to Variable while the
+  /// toggle stayed on Savings, so the next entry was saved with an account id
+  /// under an expense group. Such a row is invisible from both directions —
+  /// [categoriesByGroup] finds no category for the id, [savingsBudgets] skips
+  /// it for not being in a savings group — while its allocation still counted
+  /// toward [totalAllocated]. The write path is fixed; this repairs the rows
+  /// already on disk.
+  ///
+  /// Idempotent, so it is cheap to run on every load: once no budget points at
+  /// an account from an expense group it is a no-op.
+  Future<void> _repairOrphanedSavingsBudgets() async {
+    final savingsAccountIds = {
+      for (final a in _accounts)
+        if (a.category == AccountCategory.savings ||
+            a.category == AccountCategory.goal)
+          a.id,
+    };
+    if (savingsAccountIds.isEmpty) return;
+
+    // Requiring that no category owns the id too, so a category that somehow
+    // shares an account's id is never dragged into the savings group.
+    bool isOrphan(Budget b) =>
+        !isSavingsGroup(b.group) &&
+        savingsAccountIds.contains(b.categoryId) &&
+        !_categories.any((c) => c.id == b.categoryId);
+
+    if (!_allBudgets.any(isOrphan)) return;
+    _allBudgets = [
+      for (final b in _allBudgets)
+        isOrphan(b) ? b.copyWith(group: BudgetGroupDef.idSavings) : b,
+    ];
+    await _storage.saveBudgets(_allBudgets);
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────
