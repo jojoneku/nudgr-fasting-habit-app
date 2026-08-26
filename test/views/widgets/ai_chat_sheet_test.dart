@@ -11,7 +11,7 @@ import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 
 import '../../mocks.mocks.dart';
 
-/// The Money Mentor chat surface: header layout, selectable replies, and the
+/// Nudgy's chat surface: header layout, selectable replies, and the
 /// scroll contract — follow the newest message while the user is parked at the
 /// tail, and never move the list under them otherwise.
 void main() {
@@ -95,7 +95,7 @@ void main() {
       // Plus Jakarta Sans advance. Any width-vs-content assertion measures the
       // test font, not the layout. The gap does measure the layout, and it is
       // what a Spacer stealing half the row actually looks like.
-      final title = find.text('Money Mentor');
+      final title = find.text('Nudgy');
       expect(title, findsOneWidget);
 
       final titleRight = tester.getRect(title).right;
@@ -110,13 +110,13 @@ void main() {
 
     testWidgets('drops the redundant AI badge beside the persona label',
         (tester) async {
-      // "Money Mentor" + a Think/Fast toggle already says this is the AI; the
+      // "Nudgy" + a Think/Fast toggle already says this is the AI; the
       // badge was ~40px of the squeeze on the title. It stays in the web dock,
       // which prints no label.
       final presenter = openAdvisor();
       await pumpChat(tester, presenter);
 
-      expect(find.text('Money Mentor'), findsOneWidget);
+      expect(find.text('Nudgy'), findsOneWidget);
       expect(find.text('AI'), findsNothing);
 
       presenter.dispose();

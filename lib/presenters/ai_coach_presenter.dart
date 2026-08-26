@@ -203,16 +203,25 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final trimmed = text.trim();
     if ((trimmed.isEmpty && image == null) || _isResponding) return;
 
-    // Advisor logging: a clear expense-log intent — or any reply while the
-    // ledger is mid-clarify — goes through the ledger's confirm-before-commit
-    // pipeline instead of the advice model. The sheet renders the confirm card.
-    // An attached image is always advice, never an expense log — skip routing.
+    // Logging intent — or any reply while the ledger is mid-clarify — goes
+    // through the ledger's confirm-before-commit pipeline instead of the advice
+    // model. The sheet renders the confirm card. An attached image is always
+    // advice, never an expense log, so routing is skipped for one.
+    //
+    // Two tests, because they catch different things. [looksLikeExpenseLog]
+    // reads the words alone (a spend verb, or a short "coffee 120"), which is
+    // all it can do as a pure function. `recognisesLoggableEntry` asks the
+    // preparser, which knows the user's actual accounts and categories — so a
+    // plainly-stated entry with no spend verb in it, like "207 lunch at alturas
+    // maya credit card", is recognised as the log it obviously is instead of
+    // being answered as a question.
     final ledger = _ledger;
     if (image == null &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         (ledger.chatState.phase == ChatPhase.clarifying ||
-            looksLikeExpenseLog(trimmed))) {
+            looksLikeExpenseLog(trimmed) ||
+            ledger.recognisesLoggableEntry(trimmed))) {
       _messages.add(AiChatMessage.user(trimmed));
       _errorMessage = null;
       _isResponding = true;
@@ -646,11 +655,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var setAsides = const <AdvisorSetAsideLine>[];
     var monthlyLedger = const <AdvisorMonthLedger>[];
     if (isAdvisor && t != null) {
-      topCategories = t.categorySpendThisMonth
+      // Every category with spend, not the dashboard's top 10: the advisor is
+      // asked about specific line items, and a category outside the top 10 was
+      // simply invisible to it — indistinguishable from one with no spend.
+      final trailing = t.categoryTrailingAverage(months: 3);
+      topCategories = t.allCategorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
                 name: e.$1.name,
                 target: b?.budgetFor(e.$1.id)?.allocatedAmount,
                 actual: e.$2,
+                trailingAverage: trailing.averages[e.$1.id],
+                trailingMonths: trailing.months,
               ))
           .toList();
       outstandingBills = t.upcomingBills
@@ -682,11 +697,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         );
       }).toList();
       netWorthTrend = t
-          .netWorthTrend(months: 6)
+          .netWorthTrend(months: 12)
           .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
           .toList();
       incomeExpenseTrend = t
-          .incomeExpenseTrend(months: 6)
+          // A year, so a seasonal month reads as seasonal.
+          .incomeExpenseTrend(months: 12)
           .map((m) => AdvisorMonthFlow(
                 label: m.label,
                 income: m.income,
@@ -739,7 +755,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       recentTransactions = t
-          .recentSpending(limit: 8)
+          // 8 was too few to explain anything: a single busy week filled the
+          // list, so the advisor could see a category was over budget but not
+          // which purchases put it there.
+          .recentSpending(limit: 30)
           .map((r) => AdvisorTxnLine(
                 dateLabel: DateFormat('MMM d').format(r.date),
                 description: r.description,
@@ -785,7 +804,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       monthlyLedger = t
-          .historicalLedger(months: 6)
+          .historicalLedger(months: 12)
           .map((m) => AdvisorMonthLedger(
                 label: m.label,
                 billed: m.billed,

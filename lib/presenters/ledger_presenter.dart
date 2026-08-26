@@ -169,6 +169,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// outlived its conversation would ambush the next entry.
   List<PreparseResult> _deferredSegments = const [];
 
+  /// Leftovers waiting for the *form*, on surfaces that have no clarify UI (the
+  /// web Quick Add). [_deferredSegments] can't serve these: it drives a clarify
+  /// conversation, which is exactly what those surfaces lack. Drained one at a
+  /// time by [takeNextFormPrefill] as each prefilled form closes, and cleared
+  /// alongside [_deferredSegments] so a queue never outlives its message.
+  List<ParsedTransaction> _queuedFormPrefills = const [];
+
   LedgerChatState get chatState => _chatState;
   FinanceParseError? get chatHardError => _chatHardError;
   String? get lastCommittedSummary => _lastCommittedSummary;
@@ -178,6 +185,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// were on, so the view can explain the jump instead of just doing it.
   String? get lastCommitSnappedFromMonth => _lastCommitSnappedFromMonth;
   ParsedTransaction? get pendingFormPrefill => _pendingFormPrefill;
+
+  /// How many leftovers are still queued behind [pendingFormPrefill]. Lets a
+  /// one-shot surface say "2 more need details" instead of springing a second
+  /// form on the user unannounced.
+  int get queuedFormPrefillCount => _queuedFormPrefills.length;
 
   // --- Public state ---
 
@@ -1141,6 +1153,35 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────
 
+  /// Whether the rule-based preparser can already see a transaction in [text] —
+  /// an amount together with an account or a category it recognises.
+  ///
+  /// Used to decide whether a message typed into the assistant is something to
+  /// log or something to answer. It is far stronger evidence than a keyword
+  /// list, because it is the very layer that would do the logging: it knows the
+  /// user's real account and category names. "207 lunch at alturas maya credit
+  /// card" reads as a log with no spend verb anywhere in it, while "i have 12k
+  /// saved" does not, because nothing in it names an account or a category.
+  ///
+  /// A question is never a log, however much of one the parser can see in it:
+  /// "can I afford a ₱4000 dinner?" is asking, not reporting.
+  bool recognisesLoggableEntry(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || trimmed.contains('?')) return false;
+    // `viewingPastDate` is deliberately false: whether the ledger is parked on
+    // an old day changes whether a log is ALLOWED, not whether the words are
+    // one. sendChatInput re-parses with the real value and reports that error.
+    final batch = preparseFinanceBatch(
+      input: trimmed,
+      categories: _categories,
+      accounts: _accounts,
+      learnedDict: _financeDict.snapshot(),
+    );
+    if (batch.hardError != null) return false;
+    return batch.segments.any((s) =>
+        s.amount != null && (s.accountId != null || s.categoryId != null));
+  }
+
   /// Handles every user message in the chat input row — whether starting a
   /// new conversation or replying to a clarifying question.
   ///
@@ -1263,8 +1304,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         viewingPastDate: viewingPast,
       );
       // A brand-new message supersedes any leftovers still queued from a
-      // previous one.
+      // previous one — whether they were waiting on a question or on a form.
+      // The pending prefill goes too: left standing, an entry the user walked
+      // away from would open its form on top of the next thing they typed.
       _deferredSegments = const [];
+      _queuedFormPrefills = const [];
+      _pendingFormPrefill = null;
       if (batch.hardError != null) {
         _chatHardError = batch.hardError;
         safeNotify();
@@ -1410,6 +1455,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       final first = batch.segments.first;
       _chatState = _chatState.copyWith(draft: first.toDraft());
       await _runClassifier(first, autoResolve: autoResolve);
+      // On a one-shot surface _runClassifier has just sent `first` to the form.
+      // The rest of the message would otherwise end here, unlogged and unsaid.
+      if (autoResolve) {
+        _queuedFormPrefills = [
+          for (final s in batch.segments.skip(1))
+            _withCleanDescription(s.toDraft()),
+        ];
+        safeNotify();
+      }
       return;
     }
 
@@ -1421,14 +1475,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     );
 
     // One-shot surfaces (web Quick Add) have no clarify UI, so an unresolved
-    // leftover would vanish. Commit what's confirmed, then hand the first
-    // leftover to the prefilled form rather than dropping it.
+    // leftover would vanish. Commit what's confirmed, then hand the leftovers
+    // to the prefilled form — all of them, in written order. Only the first
+    // used to be kept, so "coffee 150 gcash, taxi, lunch" logged the coffee and
+    // dropped the lunch without a word.
     if (autoResolve) {
       await _commitBatch(drafts);
-      final leftover = [...deferred, ...malformed];
-      if (leftover.isNotEmpty) {
-        _fallbackToForm(leftover.first.toDraft(), 'Needs more detail.');
-      }
+      _queueForForm([...deferred, ...malformed]);
       return;
     }
 
@@ -1659,6 +1712,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // Editing takes the user into the form, away from the conversation, so any
     // queued leftovers are abandoned rather than fired at an absent chat.
     _deferredSegments = const [];
+    _queuedFormPrefills = const [];
     safeNotify();
   }
 
@@ -1670,6 +1724,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _chatHardError = null;
     _pendingFormPrefill = null;
     _deferredSegments = const [];
+    _queuedFormPrefills = const [];
     safeNotify();
   }
 
@@ -1711,6 +1766,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (DateTime.now().difference(pausedAt) > _staleConversationThreshold) {
       _chatState = const LedgerChatState.idle();
       _deferredSegments = const [];
+      _queuedFormPrefills = const [];
       safeNotify();
     }
   }
@@ -1841,11 +1897,49 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         '${categoryName ?? '?'} (${accountName ?? '?'})';
   }
 
+  /// Hands [leftovers] to the form: the first becomes [pendingFormPrefill], the
+  /// rest wait their turn. No-op on an empty list, so the caller needn't guard.
+  void _queueForForm(List<PreparseResult> leftovers) {
+    if (leftovers.isEmpty) return;
+    _queuedFormPrefills = [
+      for (final s in leftovers.skip(1)) _withCleanDescription(s.toDraft()),
+    ];
+    _fallbackToForm(leftovers.first.toDraft(), 'Needs more detail.');
+  }
+
+  /// Pops the next queued leftover for a one-shot surface to open the form
+  /// with, or null when the queue is empty. The view calls this after each
+  /// prefilled form closes; abandoning the flow means simply not calling it,
+  /// and the next message clears whatever is left.
+  ParsedTransaction? takeNextFormPrefill() {
+    if (_queuedFormPrefills.isEmpty) return null;
+    final next = _queuedFormPrefills.first;
+    _queuedFormPrefills = _queuedFormPrefills.skip(1).toList();
+    safeNotify();
+    return next;
+  }
+
   /// Falls back to the form prefilled with the partial draft, clears chat.
+  ///
+  /// The draft's description is still the raw message at this point — that is
+  /// what `PreparseResult.toDraft` puts there — so it is cleaned on the way in.
+  /// Only the commit path used to clean it, which left the form showing
+  /// "207 lunch at alturas maya credit card" in a Description field sitting
+  /// right beside the Amount and Account fields holding those very values.
   void _fallbackToForm(ParsedTransaction draft, String reason) {
-    _pendingFormPrefill = draft;
+    _pendingFormPrefill = _withCleanDescription(draft);
     _chatState = const LedgerChatState.idle();
     safeNotify();
+  }
+
+  /// [draft] with its description reduced to what the user actually described.
+  /// A draft the AI wrote already carries a clean label, so it is left alone.
+  ParsedTransaction _withCleanDescription(ParsedTransaction draft) {
+    if (draft.descriptionIsClean || draft.description.isEmpty) return draft;
+    return draft.copyWith(
+      description: _truncateDescription(_cleanDescription(draft)),
+      descriptionIsClean: true,
+    );
   }
 
   /// Longest description chat will store. The manual form is uncapped, but a

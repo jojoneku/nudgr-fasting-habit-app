@@ -274,6 +274,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _searchController.text = _f.query;
     _searchController.addListener(_onSearchChanged);
     _f.addListener(_onFiltersChanged);
+    _p.addListener(_onLedgerNeedsForm);
   }
 
   @override
@@ -283,8 +284,57 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _gridHScroll.dispose();
     _gridVScroll.dispose();
     _f.removeListener(_onFiltersChanged);
+    _p.removeListener(_onLedgerNeedsForm);
     if (_ownsFilters) _f.dispose();
     super.dispose();
+  }
+
+  /// True while [_drainToForm] is walking the queue, so a notify raised by the
+  /// form's own commit doesn't start a second, overlapping walk.
+  bool _drainingToForm = false;
+
+  /// The web surface that owns the transaction form, so it is the one that
+  /// answers when the parser hands an entry back.
+  ///
+  /// Quick Add used to do this itself, from inside its own send(). Now that the
+  /// assistant is the only place you type an entry, and it lives in the shell
+  /// rather than on this page, the drain has to live with the form instead —
+  /// otherwise a message the assistant only partly resolved leaves its
+  /// leftovers queued in the presenter with nothing on web to open them.
+  void _onLedgerNeedsForm() {
+    if (!mounted || _drainingToForm) return;
+    if (_p.pendingFormPrefill == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _drainToForm();
+    });
+  }
+
+  /// Opens the prefilled form for the pending leftover, then for each one still
+  /// queued behind it. Awaiting each dialog is what lets every unresolved entry
+  /// from one message get filled in, rather than only the first.
+  Future<void> _drainToForm() async {
+    if (_drainingToForm) return;
+    _drainingToForm = true;
+    try {
+      var prefill = _p.pendingFormPrefill;
+      _p.consumeFormPrefill();
+      while (prefill != null && mounted) {
+        final remaining = _p.queuedFormPrefillCount;
+        if (remaining > 0) {
+          // Say a second form is coming. Two dialogs in a row with no warning
+          // reads as the first one failing to close.
+          AppToast.show(
+            context,
+            '$remaining more from that message after this one',
+          );
+        }
+        await _openAddDialog(prefill);
+        if (!mounted) return;
+        prefill = _p.takeNextFormPrefill();
+      }
+    } finally {
+      _drainingToForm = false;
+    }
   }
 
   void _onFiltersChanged() {
@@ -641,9 +691,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
         spansAll ? _p.ledgerSpreadsheetRowsAllMonths : _p.ledgerSpreadsheetRows;
     final rows = _sorted(all.where(_matches).toList());
 
-    // The page is now focused purely on the ledger grid — the inflow/outflow/
-    // net-cash summary tiles moved out, and natural-language Quick Add became
-    // the floating button in the bottom-right corner (see [_QuickAddFab]).
+    // The page is focused purely on the ledger grid: the inflow/outflow/
+    // net-cash summary tiles moved out, and typed entry moved to Nudgy in the
+    // shell, so only receipt scanning still floats over the grid.
     return Stack(
       children: [
         Column(
@@ -690,26 +740,17 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
             ),
           ],
         ),
-        // Natural-language Quick Add — a floating button anchored to the
-        // bottom-right that pops open a compact chat box on tap, with receipt
-        // scanning stacked above it. Both feed the same
-        // confirm-before-commit pipeline.
+        // Receipt scanning. Typed entry moved to Nudgy, the assistant in the
+        // shell — one input that logs what reads as a transaction and answers
+        // everything else, instead of a box here that could only do the first.
         Positioned(
           right: 0,
           bottom: 0,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              FloatingActionButton.small(
-                heroTag: 'ledgerReceiptScan',
-                tooltip: 'Scan a receipt',
-                onPressed: () => showWebReceiptDialog(context, ledger: _p),
-                child: const Icon(Icons.document_scanner_outlined),
-              ),
-              const SizedBox(height: WebInsets.md),
-              _QuickAddFab(presenter: _p, onNeedsForm: _openAddDialog),
-            ],
+          child: FloatingActionButton.small(
+            heroTag: 'ledgerReceiptScan',
+            tooltip: 'Scan a receipt',
+            onPressed: () => showWebReceiptDialog(context, ledger: _p),
+            child: const Icon(Icons.document_scanner_outlined),
           ),
         ),
       ],
@@ -1765,262 +1806,6 @@ class _ActiveChip extends StatelessWidget {
                 color: cs.onSurfaceVariant,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// QuickAdd — floating button + compact chat box (single-shot NL entry)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-/// Floating natural-language entry: a round button anchored bottom-right that
-/// expands into a compact chat box. Typing a transaction in plain words parses
-/// + posts it (or hands off to the full form when the rule-based parser can't
-/// fully resolve it). Replaces the old full-width Quick Add card.
-class _QuickAddFab extends StatefulWidget {
-  final LedgerPresenter presenter;
-  final void Function(ParsedTransaction? prefill) onNeedsForm;
-  const _QuickAddFab({required this.presenter, required this.onNeedsForm});
-
-  @override
-  State<_QuickAddFab> createState() => _QuickAddFabState();
-}
-
-class _QuickAddFabState extends State<_QuickAddFab> {
-  final _controller = TextEditingController();
-  final _focus = FocusNode();
-  bool _busy = false;
-  bool _open = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
-    setState(() => _open = !_open);
-    if (_open) {
-      // Focus the field once the box has been inserted into the tree.
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => _focus.requestFocus(),
-      );
-    }
-  }
-
-  Future<void> _send() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty || _busy) return;
-    setState(() => _busy = true);
-
-    final p = widget.presenter;
-    // One-shot: the web box has no multi-turn clarify UI, so a confident parse
-    // commits immediately and an ambiguous one opens the prefilled form.
-    await p.sendChatInput(text, autoResolve: true);
-    if (!mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    if (p.lastCommittedSummary != null) {
-      final summary = p.lastCommittedSummary!;
-      // Quick Add always dates "today", so logging while reading an older month
-      // moves the table to the current one. Say so — silently relocating the
-      // user reads as the grid glitching.
-      final snappedFrom = p.lastCommitSnappedFromMonth;
-      final message = snappedFrom == null
-          ? summary
-          : '$summary — dated today, so the table moved from '
-              '${monthLabel(snappedFrom)} to ${monthLabel(p.selectedMonth)}.';
-      p.clearLastCommittedSummary();
-      _controller.clear();
-      _toast(messenger, message, ok: true);
-      // Keep the box open + focused so the next transaction can be typed
-      // straight away — desktop users log several in a row.
-      _focus.requestFocus();
-    } else if (p.chatHardError != null) {
-      final msg = p.chatHardError!.userMessage;
-      p.clearChatHardError();
-      _toast(messenger, msg, ok: false);
-    } else {
-      // Rule-based parser couldn't fully resolve (no on-device AI on web) —
-      // close the box and hand off to the form prefilled with what we parsed.
-      final prefill = p.pendingFormPrefill;
-      p.consumeFormPrefill();
-      _controller.clear();
-      setState(() => _open = false);
-      widget.onNeedsForm(prefill);
-    }
-    if (mounted) setState(() => _busy = false);
-  }
-
-  void _toast(
-    ScaffoldMessengerState messenger,
-    String message, {
-    required bool ok,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          width: 420,
-          backgroundColor: ok ? cs.tertiaryContainer : cs.errorContainer,
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
-                size: 18,
-                color: ok ? cs.onTertiaryContainer : cs.onErrorContainer,
-              ),
-              const SizedBox(width: WebInsets.sm),
-              Flexible(
-                child: Text(
-                  message,
-                  style: TextStyle(
-                    color: ok ? cs.onTertiaryContainer : cs.onErrorContainer,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
-          transitionBuilder: (child, anim) => FadeTransition(
-            opacity: anim,
-            child: SizeTransition(sizeFactor: anim, child: child),
-          ),
-          child: _open ? _chatBox(context) : const SizedBox.shrink(),
-        ),
-        const SizedBox(height: WebInsets.md),
-        _fab(context),
-      ],
-    );
-  }
-
-  Widget _fab(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return FloatingActionButton(
-      heroTag: 'ledgerQuickAdd',
-      onPressed: _toggle,
-      backgroundColor: cs.primary,
-      foregroundColor: cs.onPrimary,
-      tooltip: _open ? 'Close Quick Add' : 'Quick Add a transaction',
-      child: Icon(_open ? Icons.close_rounded : Icons.auto_awesome),
-    );
-  }
-
-  Widget _chatBox(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Container(
-      width: 340,
-      padding: const EdgeInsets.all(WebInsets.lg),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.auto_awesome, size: 15, color: cs.secondary),
-              const SizedBox(width: WebInsets.sm),
-              Text(
-                'Quick Add',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  'type it in plain words',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: WebInsets.md),
-          SizedBox(
-            height: 44,
-            child: TextField(
-              controller: _controller,
-              focusNode: _focus,
-              enabled: !_busy,
-              onSubmitted: (_) => _send(),
-              textAlignVertical: TextAlignVertical.center,
-              decoration: InputDecoration(
-                hintText: 'e.g. “Grab 180 from gcash” or “Salary 46500”',
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 0,
-                  horizontal: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: WebInsets.md),
-          SizedBox(
-            height: 44,
-            child: FilledButton(
-              onPressed: _busy ? null : _send,
-              style: FilledButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.sm),
-                ),
-              ),
-              child: _busy
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Add'),
-            ),
-          ),
-          // Loading indicator while the entry is being parsed + saved.
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 150),
-            child: _busy
-                ? Padding(
-                    padding: const EdgeInsets.only(top: WebInsets.md),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: const LinearProgressIndicator(minHeight: 3),
-                    ),
-                  )
-                : const SizedBox(height: 0, width: double.infinity),
           ),
         ],
       ),
