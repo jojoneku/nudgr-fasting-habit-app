@@ -1782,7 +1782,11 @@ class _ActiveChip extends StatelessWidget {
 /// fully resolve it). Replaces the old full-width Quick Add card.
 class _QuickAddFab extends StatefulWidget {
   final LedgerPresenter presenter;
-  final void Function(ParsedTransaction? prefill) onNeedsForm;
+
+  /// Opens the manual form, and completes when it closes — awaited, so a
+  /// message describing several transactions can walk the user through its
+  /// leftovers one form at a time instead of surfacing only the first.
+  final Future<void> Function(ParsedTransaction? prefill) onNeedsForm;
   const _QuickAddFab({required this.presenter, required this.onNeedsForm});
 
   @override
@@ -1824,6 +1828,19 @@ class _QuickAddFabState extends State<_QuickAddFab> {
     if (!mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    if (p.chatHardError != null) {
+      final msg = p.chatHardError!.userMessage;
+      p.clearChatHardError();
+      _toast(messenger, msg, ok: false);
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+
+    // One message can be part committed and part unresolved, so "did anything
+    // commit?" and "is anything left?" are independent questions. Asking them
+    // as if/else meant a batch that logged anything at all took the success
+    // branch and never opened the form — the leftovers the presenter had kept
+    // precisely so they wouldn't vanish were dropped right here.
     if (p.lastCommittedSummary != null) {
       final summary = p.lastCommittedSummary!;
       // Quick Add always dates "today", so logging while reading an older month
@@ -1835,25 +1852,49 @@ class _QuickAddFabState extends State<_QuickAddFab> {
           : '$summary — dated today, so the table moved from '
               '${monthLabel(snappedFrom)} to ${monthLabel(p.selectedMonth)}.';
       p.clearLastCommittedSummary();
-      _controller.clear();
       _toast(messenger, message, ok: true);
-      // Keep the box open + focused so the next transaction can be typed
-      // straight away — desktop users log several in a row.
-      _focus.requestFocus();
-    } else if (p.chatHardError != null) {
-      final msg = p.chatHardError!.userMessage;
-      p.clearChatHardError();
-      _toast(messenger, msg, ok: false);
-    } else {
-      // Rule-based parser couldn't fully resolve (no on-device AI on web) —
-      // close the box and hand off to the form prefilled with what we parsed.
-      final prefill = p.pendingFormPrefill;
-      p.consumeFormPrefill();
-      _controller.clear();
-      setState(() => _open = false);
-      widget.onNeedsForm(prefill);
     }
-    if (mounted) setState(() => _busy = false);
+
+    _controller.clear();
+
+    if (p.pendingFormPrefill == null) {
+      // Everything landed. Keep the box open + focused so the next transaction
+      // can be typed straight away — desktop users log several in a row.
+      _focus.requestFocus();
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+
+    // Rule-based parser couldn't fully resolve at least one entry (no on-device
+    // AI on web) — close the box and take the form through each leftover.
+    setState(() {
+      _open = false;
+      _busy = false;
+    });
+    await _drainToForm(p);
+  }
+
+  /// Opens the prefilled form for the pending leftover, then for each one still
+  /// queued behind it. Awaiting each dialog is what lets every unresolved entry
+  /// from one message get filled in, rather than only the first.
+  Future<void> _drainToForm(LedgerPresenter p) async {
+    var prefill = p.pendingFormPrefill;
+    p.consumeFormPrefill();
+    while (prefill != null) {
+      final remaining = p.queuedFormPrefillCount;
+      if (remaining > 0 && mounted) {
+        // Say a second form is coming. Two dialogs in a row with no warning
+        // reads as the first one failing to close.
+        _toast(
+          ScaffoldMessenger.of(context),
+          '$remaining more from that message after this one',
+          ok: true,
+        );
+      }
+      await widget.onNeedsForm(prefill);
+      if (!mounted) return;
+      prefill = p.takeNextFormPrefill();
+    }
   }
 
   void _toast(
