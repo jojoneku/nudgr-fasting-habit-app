@@ -231,7 +231,7 @@ class BudgetPresenter extends ChangeNotifier {
             in savingsBudgets.where((e) => e.budget.group == group.id)) {
           final account = entry.account;
           final allocated = entry.budget.allocatedAmount;
-          final contributed = contributedTo(account.id);
+          final funded = fundedInto(account.id);
           rows.add(BudgetSectionRow(
             targetId: account.id,
             name: account.name,
@@ -243,13 +243,14 @@ class BudgetPresenter extends ChangeNotifier {
             isIncome: false,
             budgetType: entry.budget.budgetType,
             allocated: allocated,
-            actual: contributed,
+            actual: funded,
+            withdrawn: withdrawnFrom(account.id),
             progress:
-                allocated > 0 ? (contributed / allocated).clamp(0.0, 1.0) : 0.0,
+                allocated > 0 ? (funded / allocated).clamp(0.0, 1.0) : 0.0,
             // Savings rows can never be "over" — exceeding the goal is good.
             isOver: false,
             overBy: 0.0,
-            met: allocated > 0 && contributed >= allocated,
+            met: allocated > 0 && funded >= allocated,
             transactions: _transactionsForAccount(account.id),
           ));
         }
@@ -361,16 +362,16 @@ class BudgetPresenter extends ChangeNotifier {
     }
     for (final entry in savingsBudgets) {
       final allocated = entry.budget.allocatedAmount;
-      final contributed = contributedTo(entry.account.id);
+      final funded = fundedInto(entry.account.id);
       rows.add(WebBudgetRow(
         targetId: entry.account.id,
         name: entry.account.name,
-        groupId: BudgetGroupDef.idSavings,
+        groupId: entry.budget.group,
         allocated: allocated,
-        spent: contributed,
-        remaining: allocated - contributed,
-        progress:
-            allocated > 0 ? (contributed / allocated).clamp(0.0, 1.0) : 0.0,
+        spent: funded,
+        remaining: allocated - funded,
+        withdrawn: withdrawnFrom(entry.account.id),
+        progress: allocated > 0 ? (funded / allocated).clamp(0.0, 1.0) : 0.0,
         // Savings rows can never be "over" — exceeding the goal is good.
         isOver: false,
       ));
@@ -430,10 +431,11 @@ class BudgetPresenter extends ChangeNotifier {
 
   double sectionSpent(String groupId) {
     if (isSavingsGroup(groupId)) {
-      return savingsBudgets.fold(
-        0.0,
-        (sum, e) => sum + contributedTo(e.account.id),
-      );
+      // Scoped to this group: a user-created savings group and the built-in one
+      // must not each report the other's rows.
+      return savingsBudgets
+          .where((e) => e.budget.group == groupId)
+          .fold(0.0, (sum, e) => sum + fundedInto(e.account.id));
     }
     final catIds = _budgetsForMonth
         .where((b) => b.group == groupId)
@@ -448,23 +450,67 @@ class BudgetPresenter extends ChangeNotifier {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  /// NET contributions into [accountId] this month: inflow legs add, outflow
-  /// legs subtract (transfer legs included — a transfer leg's `accountId` is the
-  /// endpoint it touches). Used for savings/goal progress. Netting means a
-  /// transfer *between* two savings accounts contributes zero overall instead
-  /// of inflating one side, keeping the Budget page and Dashboard in agreement.
-  double contributedTo(String accountId) {
+  /// Money funded INTO [accountId] this month — what a savings budget measures
+  /// itself against.
+  ///
+  /// Inflow legs only. A savings budget asks "did I set aside what I planned
+  /// this month?", and spending a fund on the very thing it exists for is that
+  /// fund working, not a failure to fund it. Netting withdrawals off answered a
+  /// different question ("what is the balance doing?") in the progress slot,
+  /// which drove rows negative: a Braces fund you paid the dentist from read as
+  /// −₱1,800 saved, dragged the month's total spent down with it, and left the
+  /// forecast reserving money already moved. The balance question is answered
+  /// on the Accounts page, where it belongs.
+  ///
+  /// Legs of a transfer between two savings/goal accounts are skipped, which is
+  /// what the old netting was really protecting: shuffling ₱3,000 from one fund
+  /// into another funds neither, and counting the destination would inflate the
+  /// month. Pair this with [withdrawnFrom] to show both directions.
+  double fundedInto(String accountId) {
     var total = 0.0;
     for (final t in _allTransactions) {
       if (t.month != _selectedMonth) continue;
       if (t.accountId != accountId) continue;
-      if (t.type == TransactionType.inflow) {
-        total += t.amount;
-      } else if (t.type == TransactionType.outflow) {
-        total -= t.amount;
-      }
+      if (t.type != TransactionType.inflow) continue;
+      if (_isInternalSavingsTransferLeg(t)) continue;
+      total += t.amount;
     }
     return total;
+  }
+
+  /// Money that left [accountId] this month. Surfaced next to [fundedInto] so a
+  /// withdrawal stays visible instead of being quietly netted away — the two
+  /// answer different questions and neither substitutes for the other.
+  ///
+  /// Every outflow leg counts, including a move into another fund: that money
+  /// did leave this one. Only the *receiving* side of such a move is discounted,
+  /// by [fundedInto], and only to stop it inflating the month's funding.
+  double withdrawnFrom(String accountId) {
+    var total = 0.0;
+    for (final t in _allTransactions) {
+      if (t.month != _selectedMonth) continue;
+      if (t.accountId != accountId) continue;
+      if (t.type == TransactionType.outflow) total += t.amount;
+    }
+    return total;
+  }
+
+  /// True when [leg] is one side of a transfer whose *other* side is also a
+  /// savings or goal account — money moved between two funds rather than into
+  /// savings from outside.
+  bool _isInternalSavingsTransferLeg(TransactionRecord leg) {
+    final groupId = leg.transferGroupId;
+    if (groupId == null) return false;
+    for (final other in _allTransactions) {
+      if (other.transferGroupId != groupId) continue;
+      if (other.id == leg.id) continue;
+      final account =
+          _accounts.where((a) => a.id == other.accountId).firstOrNull;
+      if (account == null) continue;
+      return account.category == AccountCategory.savings ||
+          account.category == AccountCategory.goal;
+    }
+    return false;
   }
 
   bool isCategoryIncome(String categoryId) {
@@ -508,8 +554,8 @@ class BudgetPresenter extends ChangeNotifier {
     final budget = budgetFor(categoryId);
     if (budget != null && isSavingsGroup(budget.group)) {
       // For savings rows the "categoryId" is actually a target account id —
-      // count contributions, not outflows.
-      return contributedTo(categoryId);
+      // count what was funded in, not spending against a category.
+      return fundedInto(categoryId);
     }
     final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
@@ -780,6 +826,12 @@ class WebBudgetRow {
   final double spent;
   final double remaining;
 
+  /// Money that left a savings target this month. Zero for expense rows, whose
+  /// outflows are the [spent] figure itself. Kept beside [spent] rather than
+  /// netted into it: funding a goal and drawing it down are separate facts, and
+  /// collapsing them made a fund you spent from read as never funded.
+  final double withdrawn;
+
   /// Clamped 0.0–1.0 fill for the progress cell.
   final double progress;
   final bool isOver;
@@ -793,6 +845,7 @@ class WebBudgetRow {
     required this.remaining,
     required this.progress,
     required this.isOver,
+    this.withdrawn = 0.0,
   });
 }
 
@@ -821,8 +874,14 @@ class BudgetSectionRow {
   final BudgetType budgetType;
   final double allocated;
 
-  /// Spent (expense), received (income), or net contributed (savings).
+  /// Spent (expense), received (income), or funded in (savings).
   final double actual;
+
+  /// Savings only: money that left the target this month. Held apart from
+  /// [actual] rather than netted into it — funding a goal and drawing it down
+  /// are separate facts, and collapsing them made a fund you spent from read as
+  /// never funded at all. Zero for expense and income rows.
+  final double withdrawn;
 
   /// Clamped 0.0–1.0 fill for the progress bar.
   final double progress;
@@ -852,6 +911,7 @@ class BudgetSectionRow {
     required this.overBy,
     required this.met,
     required this.transactions,
+    this.withdrawn = 0.0,
   });
 }
 

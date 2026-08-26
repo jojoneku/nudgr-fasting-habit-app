@@ -158,10 +158,15 @@ void main() {
     });
   });
 
-  // ── A5: savings contributions net in−out (Budget ↔ Dashboard parity) ──────
+  // ── A5: a shuffle between funds funds neither (Budget ↔ Dashboard parity) ──
+  //
+  // Originally this held by netting inflow−outflow everywhere. Savings progress
+  // now counts what was funded IN (see BudgetPresenter.fundedInto), so the
+  // property is preserved by discounting the receiving leg instead: the
+  // destination reads 0 rather than +3,000, and the source reads 0 rather than
+  // −3,000. Both surfaces still agree, and neither can go negative.
   group('A5 — savings net contributions', () {
-    test('transfer between two savings accounts nets to zero across budgets',
-        () async {
+    test('transfer between two savings accounts funds neither', () async {
       final accounts = [
         _account(id: 'sav1', category: AccountCategory.savings, balance: 0),
         _account(id: 'sav2', category: AccountCategory.goal, balance: 0),
@@ -210,10 +215,15 @@ void main() {
 
       final budget = BudgetPresenter(mockStorage, mockStats);
       await budget.load();
-      // sav1 net = −3000, sav2 net = +3000 → section spent nets to 0.
-      expect(budget.contributedTo('sav1'), -3000);
-      expect(budget.contributedTo('sav2'), 3000);
+      // Neither side counts: sav1 lost money it never gained, and sav2's inflow
+      // is the far leg of a savings→savings move.
+      expect(budget.fundedInto('sav1'), 0);
+      expect(budget.fundedInto('sav2'), 0);
       expect(budget.sectionSpent(BudgetGroupDef.idSavings), 0);
+      // The money leaving sav1 is still reported — just not as negative
+      // progress. It is what the row's "used from this fund" line reads.
+      expect(budget.withdrawnFrom('sav1'), 3000);
+      expect(budget.withdrawnFrom('sav2'), 0);
     });
   });
 
