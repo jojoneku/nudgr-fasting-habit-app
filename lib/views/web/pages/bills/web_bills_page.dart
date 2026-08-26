@@ -627,27 +627,62 @@ class _BillsBodyState extends State<_BillsBody> {
           _BatchSection.budgeted => 'set-aside',
           _BatchSection.installments => 'installment',
         };
-        final ok = await AppConfirmDialog.confirm(
+        // Same series question the row's own delete asks — see the phone's
+        // _batchDelete. Installments have no per-month row, so no scope.
+        final reach = switch (section) {
+          _BatchSection.bills => presenter.billBatchSeriesReach(ids),
+          _BatchSection.receivables =>
+            presenter.receivableBatchSeriesReach(ids),
+          _BatchSection.budgeted => presenter.expenseBatchSeriesReach(ids),
+          _BatchSection.installments => (recurring: 0, extraMonths: 0),
+        };
+        final scope = await confirmRecurringBatchDelete(
           context: context,
           title: 'Delete ${ids.length} ${_plural(ids.length, label)}?',
-          body: section == _BatchSection.installments
+          selectedCount: ids.length,
+          recurringCount: reach.recurring,
+          extraMonthCount: reach.extraMonths,
+          plainBody: section == _BatchSection.installments
               ? 'Their linked payment transactions are removed too. This '
                   'cannot be undone.'
               : 'This cannot be undone.',
-          confirmLabel: 'Delete',
-          cancelLabel: 'Cancel',
-          isDestructive: true,
+          soleName: ids.length == 1 ? _batchSoleName(section, ids.first) : null,
         );
-        if (!ok) return;
+        if (scope == null) return;
+        final applyToFuture = scope == RecurringScope.thisAndFuture;
         final deleted = switch (section) {
-          _BatchSection.bills => await presenter.deleteBills(ids),
-          _BatchSection.receivables => await presenter.deleteReceivables(ids),
-          _BatchSection.budgeted => await presenter.deleteBudgetedExpenses(ids),
+          _BatchSection.bills =>
+            await presenter.deleteBills(ids, applyToFuture: applyToFuture),
+          _BatchSection.receivables => await presenter.deleteReceivables(ids,
+              applyToFuture: applyToFuture),
+          _BatchSection.budgeted => await presenter.deleteBudgetedExpenses(ids,
+              applyToFuture: applyToFuture),
           _BatchSection.installments =>
             await installmentPresenter.deleteInstallments(ids),
         };
         _finishBatch('Deleted $deleted ${_plural(deleted, label)}.');
       });
+
+  /// The name of the only selected row, so a one-row batch delete is asked
+  /// about by name rather than as "1 receivable".
+  String? _batchSoleName(_BatchSection section, String id) {
+    final names = switch (section) {
+      _BatchSection.bills => [
+          for (final b in presenter.allBills)
+            if (b.id == id) b.name
+        ],
+      _BatchSection.receivables => [
+          for (final r in presenter.allReceivables)
+            if (r.id == id) r.name
+        ],
+      _BatchSection.budgeted => [
+          for (final e in presenter.allBudgetedExpenses)
+            if (e.id == id) e.name
+        ],
+      _BatchSection.installments => const <String>[],
+    };
+    return names.isEmpty ? null : names.first;
+  }
 
   /// Routes a "Coming up" row to the dialog for its own kind, resolved off
   /// [ComingUpItem.source].
@@ -1970,6 +2005,7 @@ class _BillRow extends StatelessWidget {
       title: 'Delete bill?',
       name: bill.name,
       futureMonthCount: presenter.futureSeriesBills(bill).length,
+      isRecurring: bill.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteBill(
@@ -2304,6 +2340,7 @@ class _ReceivableRow extends StatelessWidget {
       title: 'Delete receivable?',
       name: receivable.name,
       futureMonthCount: presenter.futureSeriesReceivables(receivable).length,
+      isRecurring: receivable.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteReceivable(
@@ -2730,6 +2767,7 @@ class _BudgetedExpenseRow extends StatelessWidget {
       title: 'Delete set-aside?',
       name: expense.name,
       futureMonthCount: presenter.futureSeriesExpenses(expense).length,
+      isRecurring: expense.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteBudgetedExpense(
