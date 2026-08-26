@@ -655,8 +655,8 @@ class _BillsBodyState extends State<_BillsBody> {
             await presenter.deleteBills(ids, applyToFuture: applyToFuture),
           _BatchSection.receivables => await presenter.deleteReceivables(ids,
               applyToFuture: applyToFuture),
-          _BatchSection.budgeted => await presenter
-              .deleteBudgetedExpenses(ids, applyToFuture: applyToFuture),
+          _BatchSection.budgeted => await presenter.deleteBudgetedExpenses(ids,
+              applyToFuture: applyToFuture),
           _BatchSection.installments =>
             await installmentPresenter.deleteInstallments(ids),
         };

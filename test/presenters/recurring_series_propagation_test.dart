@@ -441,8 +441,7 @@ void main() {
       expect(p.allBills.map((b) => b.id), ['sep']);
     });
 
-    test('ends the series, so the months left behind stop recurring',
-        () async {
+    test('ends the series, so the months left behind stop recurring', () async {
       bills = [
         rent(id: 'aug', month: aug, seriesId: 's1'),
         rent(id: 'sep', month: sep, seriesId: 's1'),

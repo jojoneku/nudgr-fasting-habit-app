@@ -1705,8 +1705,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     bool applyToFuture = false,
   }) async {
     final ids = receivableIds.toSet();
-    final selected =
-        _allReceivables.where((r) => ids.contains(r.id)).toList();
+    final selected = _allReceivables.where((r) => ids.contains(r.id)).toList();
     if (selected.isEmpty) return 0;
     final reach = _seriesReach<Receivable>(
       selected,
@@ -1715,8 +1714,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       idOf: (r) => r.id,
       applyToFuture: applyToFuture,
     );
-    final count =
-        _allReceivables.where((r) => reach.ids.contains(r.id)).length;
+    final count = _allReceivables.where((r) => reach.ids.contains(r.id)).length;
     _allReceivables = _allReceivables
         .where((r) => !reach.ids.contains(r.id))
         .map((r) => reach.endedSeries.contains(r.seriesId)
@@ -2061,8 +2059,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   ({int recurring, int extraMonths}) receivableBatchSeriesReach(
       Iterable<String> receivableIds) {
     final ids = receivableIds.toSet();
-    final selected =
-        _allReceivables.where((r) => ids.contains(r.id)).toList();
+    final selected = _allReceivables.where((r) => ids.contains(r.id)).toList();
     final reach = _seriesReach<Receivable>(
       selected,
       seriesOf: (r) => r.seriesId,
