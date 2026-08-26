@@ -817,15 +817,26 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Deletes [id]. With [applyToFuture] set, the unsettled later months of the
-  /// same series go with it, so ending a subscription doesn't leave its already
-  /// generated future copies behind as phantom obligations.
+  /// same series go with it and the series stops recurring, so ending a
+  /// subscription doesn't leave its already generated future copies behind as
+  /// phantom obligations — or seed fresh ones.
   Future<void> deleteBill(String id, {bool applyToFuture = false}) async {
     final target = _allBills.where((b) => b.id == id).firstOrNull;
     final alsoRemove = applyToFuture && target != null
         ? futureSeriesBills(target).map((b) => b.id).toSet()
         : const <String>{};
+    // Removing the rows is only half of ending a series. The auto-copy pass
+    // seeds an empty month from the previous month's *recurring* rows, so the
+    // earlier months left standing would put the deleted bill straight back the
+    // next time the user paged into one of the months just cleared — the
+    // "I have to delete it again every month" loop. Clearing the flag on what
+    // survives is what actually stops it.
+    final endedSeries = applyToFuture ? target?.seriesId : null;
     _allBills = _allBills
         .where((b) => b.id != id && !alsoRemove.contains(b.id))
+        .map((b) => endedSeries != null && b.seriesId == endedSeries
+            ? b.copyWith(isRecurring: false)
+            : b)
         .toList();
     safeNotify();
     await _storage.saveBills(_allBills);
@@ -1298,14 +1309,18 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Deletes [id], optionally taking the unsettled later months of its series
-  /// with it — see [deleteBill].
+  /// with it and ending its recurrence — see [deleteBill].
   Future<void> deleteReceivable(String id, {bool applyToFuture = false}) async {
     final target = _allReceivables.where((r) => r.id == id).firstOrNull;
     final alsoRemove = applyToFuture && target != null
         ? futureSeriesReceivables(target).map((r) => r.id).toSet()
         : const <String>{};
+    final endedSeries = applyToFuture ? target?.seriesId : null;
     _allReceivables = _allReceivables
         .where((r) => r.id != id && !alsoRemove.contains(r.id))
+        .map((r) => endedSeries != null && r.seriesId == endedSeries
+            ? r.copyWith(isRecurring: false)
+            : r)
         .toList();
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
@@ -1405,7 +1420,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Deletes [id], optionally taking the unfunded later months of its series
-  /// with it — see [deleteBill].
+  /// with it and ending its recurrence — see [deleteBill].
   Future<void> deleteBudgetedExpense(
     String id, {
     bool applyToFuture = false,
@@ -1414,8 +1429,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final alsoRemove = applyToFuture && target != null
         ? futureSeriesExpenses(target).map((e) => e.id).toSet()
         : const <String>{};
+    final endedSeries = applyToFuture ? target?.seriesId : null;
     _allExpenses = _allExpenses
         .where((e) => e.id != id && !alsoRemove.contains(e.id))
+        .map((e) => endedSeries != null && e.seriesId == endedSeries
+            ? e.copyWith(isRecurring: false)
+            : e)
         .toList();
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);

@@ -1970,6 +1970,7 @@ class _BillRow extends StatelessWidget {
       title: 'Delete bill?',
       name: bill.name,
       futureMonthCount: presenter.futureSeriesBills(bill).length,
+      isRecurring: bill.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteBill(
@@ -2304,6 +2305,7 @@ class _ReceivableRow extends StatelessWidget {
       title: 'Delete receivable?',
       name: receivable.name,
       futureMonthCount: presenter.futureSeriesReceivables(receivable).length,
+      isRecurring: receivable.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteReceivable(
@@ -2730,6 +2732,7 @@ class _BudgetedExpenseRow extends StatelessWidget {
       title: 'Delete set-aside?',
       name: expense.name,
       futureMonthCount: presenter.futureSeriesExpenses(expense).length,
+      isRecurring: expense.isRecurring,
     );
     if (scope == null) return;
     await presenter.deleteBudgetedExpense(

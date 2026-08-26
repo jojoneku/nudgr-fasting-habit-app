@@ -418,6 +418,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       title: 'Delete Bill',
       name: b.name,
       futureMonthCount: widget.presenter.futureSeriesBills(b).length,
+      isRecurring: b.isRecurring,
     );
     if (scope == null) return;
     await widget.presenter.deleteBill(
@@ -432,6 +433,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       title: 'Delete Receivable',
       name: r.name,
       futureMonthCount: widget.presenter.futureSeriesReceivables(r).length,
+      isRecurring: r.isRecurring,
     );
     if (scope == null) return;
     await widget.presenter.deleteReceivable(
@@ -446,6 +448,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       title: 'Delete Budgeted Expense',
       name: e.name,
       futureMonthCount: widget.presenter.futureSeriesExpenses(e).length,
+      isRecurring: e.isRecurring,
     );
     if (scope == null) return;
     await widget.presenter.deleteBudgetedExpense(
