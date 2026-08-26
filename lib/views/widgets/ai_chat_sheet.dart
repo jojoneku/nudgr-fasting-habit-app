@@ -31,7 +31,7 @@ const _entryMeta = {
     icon: Icons.account_balance_wallet_outlined
   ),
   AiCoachEntryPoint.financeAdvisor: (
-    label: 'Money Mentor',
+    label: 'Nudgy',
     icon: Icons.savings_outlined
   ),
   AiCoachEntryPoint.general: (
@@ -200,11 +200,22 @@ class _AiChatBodyState extends State<AiChatBody> {
       _followTail = true;
       _scrollToBottom();
     }
-    if (ledger.pendingFormPrefill != null) {
-      ledger.consumeFormPrefill();
-      _presenter.appendAssistantNote(
-          "I couldn't pin that down — try rephrasing the amount and where it "
-          "came from, and I'll prepare it again.");
+    // A message can be part committed and part unresolved. Consuming the
+    // prefill here dropped whatever the parser couldn't pin down — including
+    // the rest of a multi-entry message, which the presenter had queued
+    // precisely so it wouldn't vanish. Leave the queue alone: the surface that
+    // owns the transaction form drains it. Say what is still outstanding so a
+    // partial result never reads as a whole one.
+    final pending = ledger.pendingFormPrefill;
+    if (pending != null) {
+      final outstanding = 1 + ledger.queuedFormPrefillCount;
+      _presenter.appendAssistantNote(outstanding == 1
+          ? "One entry needs details I couldn't infer — I've opened the form "
+              'for it.'
+          : "$outstanding entries need details I couldn't infer — I've opened "
+              'the form for them.');
+      _followTail = true;
+      _scrollToBottom();
     }
   }
 
@@ -592,7 +603,7 @@ class _SheetHeader extends StatelessWidget {
           ),
           // The "AI" badge only earns its ~40px when the persona label isn't
           // printed (the web dock prints the title above instead). Beside
-          // "Money Mentor" + a Think/Fast toggle it says nothing new, and it
+          // "Nudgy" + a Think/Fast toggle it says nothing new, and it
           // was part of what squeezed the title into an ellipsis.
           if (!showLabel) ...[
             const SizedBox(width: 8),
@@ -1631,7 +1642,7 @@ class _CloudUnavailable extends StatelessWidget {
                 size: 40, color: cs.onSurfaceVariant),
             const SizedBox(height: 12),
             Text(
-              'Money Mentor is unavailable',
+              'Nudgy is unavailable',
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,

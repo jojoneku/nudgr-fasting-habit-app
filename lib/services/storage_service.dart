@@ -212,7 +212,7 @@ abstract class StorageService {
   Future<AdvisorProfile?> loadAdvisorProfile();
   Future<void> clearAdvisorHistory();
 
-  /// Saved Money Mentor conversations (ChatGPT-style history browser). Stored
+  /// Saved Nudgy conversations (ChatGPT-style history browser). Stored
   /// alongside — and synced with — the advisor state. Default no-op/empty so
   /// alternative [StorageService] impls need not implement them.
   Future<void> saveAdvisorConversations(

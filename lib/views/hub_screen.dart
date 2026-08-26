@@ -671,12 +671,40 @@ class _QuickLogBarState extends State<_QuickLogBar> {
       _ledger.clearLastCommittedSummary();
     }
 
-    final prefill = _ledger.pendingFormPrefill;
-    if (prefill != null) {
-      _ledger.consumeFormPrefill();
+    if (_ledger.pendingFormPrefill != null && !_drainingToForm) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _openFormSheet(prefill);
+        if (mounted) _drainToForm();
       });
+    }
+  }
+
+  /// True while [_drainToForm] is walking the queue, so a notify raised by the
+  /// form's own commit doesn't start a second, overlapping walk.
+  bool _drainingToForm = false;
+
+  /// Opens the prefilled sheet for the pending leftover, then for each one
+  /// still queued behind it. One message can describe several transactions and
+  /// leave more than one unresolved; opening only the first dropped the rest.
+  Future<void> _drainToForm() async {
+    if (_drainingToForm) return;
+    _drainingToForm = true;
+    try {
+      var prefill = _ledger.pendingFormPrefill;
+      _ledger.consumeFormPrefill();
+      while (prefill != null && mounted) {
+        final remaining = _ledger.queuedFormPrefillCount;
+        if (remaining > 0) {
+          AppToast.show(
+            context,
+            '$remaining more from that message after this one',
+          );
+        }
+        await _openFormSheet(prefill);
+        if (!mounted) return;
+        prefill = _ledger.takeNextFormPrefill();
+      }
+    } finally {
+      _drainingToForm = false;
     }
   }
 
@@ -734,8 +762,10 @@ class _QuickLogBarState extends State<_QuickLogBar> {
     return 'Logged $names · $kcal kcal';
   }
 
-  void _openFormSheet(ParsedTransaction prefill) {
-    AppBottomSheet.show(
+  /// Awaited by [_drainToForm], so each leftover gets its own form in turn
+  /// rather than all of them racing into one.
+  Future<void> _openFormSheet(ParsedTransaction prefill) {
+    return AppBottomSheet.show(
       context: context,
       title: 'Log Transaction',
       body: AddTransactionSheet(

@@ -29,10 +29,16 @@ class WebShell extends StatelessWidget {
   final Widget? topBar;
 
   /// Optional right-hand dock, mounted alongside every destination rather than
-  /// replacing the body (the advisor panel). It owns its own width — collapsed
-  /// to a narrow rail or expanded to a column — so the shell simply gives it
-  /// whatever it asks for.
+  /// replacing the body (Nudgy's conversation). It owns its own width — zero
+  /// while closed, a column when open — so the shell simply gives it whatever
+  /// it asks for, and the page gets the space back when it closes.
   final Widget? dock;
+
+  /// Optional control floating over the bottom-right of the content area — the
+  /// button that opens [dock]. It floats rather than sitting in the row because
+  /// a collapsed dock has no width to hold it, and because bottom-right is
+  /// where the button it replaced lived.
+  final Widget? dockLauncher;
 
   const WebShell({
     super.key,
@@ -44,6 +50,7 @@ class WebShell extends StatelessWidget {
     this.footer,
     this.topBar,
     this.dock,
+    this.dockLauncher,
   });
 
   @override
@@ -119,7 +126,20 @@ class WebShell extends StatelessWidget {
                   // Full-height content region that fills the space after the
                   // sidebar (matches the Claude design). Pages own their own
                   // scrolling and padding.
-                  Expanded(child: body),
+                  Expanded(
+                    child: dockLauncher == null
+                        ? body
+                        : Stack(
+                            children: [
+                              Positioned.fill(child: body),
+                              Positioned(
+                                right: WebInsets.xl,
+                                bottom: WebInsets.xl,
+                                child: dockLauncher!,
+                              ),
+                            ],
+                          ),
+                  ),
                 ],
               ),
             ),
@@ -127,17 +147,10 @@ class WebShell extends StatelessWidget {
           // Optional right dock — the advisor. Outside the content Expanded so
           // the page keeps its own width budget: the dock takes space from the
           // shell, never from the page's internal column/table layout.
-          if (dock != null)
-            Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                border: Border(
-                  left: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.5)),
-                ),
-              ),
-              child: SafeArea(child: dock!),
-            ),
+          // The dock paints its own background and border: while closed it has
+          // zero width, and a Container here would still draw a 1px line down
+          // the right edge of every page.
+          if (dock != null) dock!,
         ],
       ),
     );

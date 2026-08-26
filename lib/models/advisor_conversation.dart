@@ -1,6 +1,6 @@
 import 'ai_chat_message.dart';
 
-/// A single named Money Mentor conversation — the unit the history browser
+/// A single named Nudgy conversation — the unit the history browser
 /// lists (ChatGPT/Claude style). Persisted locally and synced as part of the
 /// advisor-state document.
 class AdvisorConversation {

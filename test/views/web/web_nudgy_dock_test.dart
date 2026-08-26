@@ -6,14 +6,20 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
-import 'package:intermittent_fasting/views/web/widgets/web_advisor_panel.dart';
+import 'package:intermittent_fasting/views/web/widgets/web_nudgy_dock.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_shell.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 
 import '../../mocks.mocks.dart';
 
-/// The web Money Mentor dock, and the presenter arrangement that lets the
-/// advisor run on a platform with no fasting or nutrition presenter.
+/// Nudgy's web dock, and the presenter arrangement that lets the advisor run on
+/// a platform with no fasting or nutrition presenter.
+///
+/// Nudgy is a launcher plus a panel sharing a [NudgyController]: the launcher
+/// floats over the content bottom-right, the panel is a column in the shell's
+/// row. They used to be one widget that collapsed to a 56px rail holding one
+/// unlabelled icon — which is why it was reported as unreachable by someone who
+/// had it on screen the whole time.
 void main() {
   late MockStatsPresenter stats;
   late MockAiCoachService cloud;
@@ -38,6 +44,17 @@ void main() {
   Widget wrap(Widget child) => MaterialApp(
         theme: buildWebDarkTheme(),
         home: Scaffold(body: Row(children: [child])),
+      );
+
+  /// Both halves, as the shell mounts them.
+  Widget wrapDock(NudgyController c) => MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: Row(children: [
+            Expanded(child: NudgyLauncher(controller: c)),
+            NudgyPanel(controller: c),
+          ]),
+        ),
       );
 
   group('advisor without fasting or nutrition', () {
@@ -87,49 +104,79 @@ void main() {
     });
   });
 
-  group('WebAdvisorPanel', () {
-    testWidgets('starts collapsed to a rail', (tester) async {
+  group('Nudgy dock', () {
+    testWidgets(
+        'starts closed: the launcher is offered, the panel takes no '
+        'width', (tester) async {
       final p = buildWebAdvisor();
-      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
       await tester.pumpAndSettle();
 
-      expect(find.text('Money Mentor'), findsNothing);
-      expect(
-        tester.getSize(find.byType(WebAdvisorPanel)).width,
-        WebAdvisorPanel.railWidth,
-      );
+      // Labelled, so it reads as a thing you can use.
+      expect(find.text('Ask Nudgy'), findsOneWidget);
+      expect(find.text('Nudgy'), findsNothing);
+      expect(tester.getSize(find.byType(NudgyPanel)).width, 0);
+      c.dispose();
       p.dispose();
     });
 
-    testWidgets('expands on tap and opens the advisor session', (tester) async {
+    testWidgets('the launcher opens the panel and the advisor session',
+        (tester) async {
       final p = buildWebAdvisor();
-      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.savings_outlined));
+      await tester.tap(find.text('Ask Nudgy'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Money Mentor'), findsOneWidget);
+      expect(find.text('Nudgy'), findsOneWidget);
       expect(find.byType(AiChatBody), findsOneWidget);
       expect(p.entryPoint, AiCoachEntryPoint.financeAdvisor);
       expect(
-        tester.getSize(find.byType(WebAdvisorPanel)).width,
-        WebAdvisorPanel.expandedWidth,
-      );
+          tester.getSize(find.byType(NudgyPanel)).width, NudgyPanel.openWidth);
+      c.dispose();
       p.dispose();
     });
 
-    testWidgets('collapses again from the header', (tester) async {
+    testWidgets('the session is opened once, not on every open',
+        (tester) async {
       final p = buildWebAdvisor();
-      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.savings_outlined));
+
+      c.open();
+      await tester.pumpAndSettle();
+      final firstMessages = p.messages.length;
+      c.close();
+      await tester.pumpAndSettle();
+      c.open();
+      await tester.pumpAndSettle();
+
+      // Re-opening must not restart the conversation the user was having.
+      expect(p.messages.length, firstMessages);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('closes from the header, and the launcher comes back',
+        (tester) async {
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ask Nudgy'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.chevron_right));
       await tester.pumpAndSettle();
 
-      expect(find.text('Money Mentor'), findsNothing);
+      expect(find.text('Nudgy'), findsNothing);
+      expect(tester.getSize(find.byType(NudgyPanel)).width, 0);
+      expect(find.text('Ask Nudgy'), findsOneWidget);
+      c.dispose();
       p.dispose();
     });
 
@@ -143,13 +190,15 @@ void main() {
       when(down.downloadProgress).thenReturn(null);
 
       final p = buildWebAdvisor(service: down);
-      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.savings_outlined));
+      await tester.tap(find.text('Ask Nudgy'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Money Mentor is unavailable'), findsOneWidget);
+      expect(find.text('Nudgy is unavailable'), findsOneWidget);
       expect(find.textContaining('Download'), findsNothing);
+      c.dispose();
       p.dispose();
     });
   });
@@ -166,9 +215,10 @@ void main() {
           (_) => Stream.fromIterable(['You are ', 'running a deficit.']));
 
       final p = buildWebAdvisor();
-      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapDock(c));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.savings_outlined));
+      await tester.tap(find.text('Ask Nudgy'));
       await tester.pumpAndSettle();
 
       // Composer is live once a tier is available.
@@ -214,7 +264,7 @@ void main() {
       // The sheet is a container around the same body the web dock uses...
       expect(find.byType(AiChatBody), findsOneWidget);
       // ...and unlike the dock it keeps the sheet affordances and the label.
-      expect(find.text('Money Mentor'), findsOneWidget);
+      expect(find.text('Nudgy'), findsOneWidget);
       expect(find.byType(DraggableScrollableSheet), findsOneWidget);
       p.dispose();
     });
