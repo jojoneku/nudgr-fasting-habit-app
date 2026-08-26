@@ -17,6 +17,20 @@ import '../models/food_search_candidate.dart';
 import '../utils/finance_classifier_parser.dart';
 import 'ai_coach_service.dart';
 
+/// Message for a transport-level failure — the request never came back with a
+/// status, so there is nothing on the response to read.
+///
+/// On native, that really is connectivity. In a browser it usually is not: a
+/// blocked CORS preflight is indistinguishable from an outage at this layer,
+/// and the endpoint's API Gateway needs `Access-Control-Allow-Origin` +
+/// `Authorization` in `AllowHeaders` for the app's origin. Saying "check your
+/// connection" to someone whose connection is fine sends them hunting in the
+/// wrong place — this cost a full debugging session once already.
+String _unreachableMessage(String subject) => kIsWeb
+    ? '$subject unreachable. Your connection looks fine? Then the endpoint is '
+        'likely refusing the browser (CORS) — check the API config.'
+    : '$subject unreachable. Check your connection and try again.';
+
 /// Cloud AI Coach — calls the AWS Lambda → Bedrock Claude Haiku endpoint.
 ///
 /// Endpoint configured at build time via:
@@ -159,8 +173,7 @@ class CloudAiCoachService implements AiCoachService {
       // before any response. The only case where "check your connection" is
       // the honest diagnosis.
       debugPrint('CloudAiCoachService[respond] network error: $e');
-      throw const AiCoachException(
-          'Cloud coach unreachable. Check your connection and try again.');
+      throw AiCoachException(_unreachableMessage('Cloud coach'));
     }
 
     if (response.statusCode == 401 || response.statusCode == 403) {
@@ -239,8 +252,7 @@ class CloudAiCoachService implements AiCoachService {
           .timeout(const Duration(seconds: _timeoutSeconds));
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
-      throw const AiCoachException(
-          'Advisor unreachable. Check your connection and try again.');
+      throw AiCoachException(_unreachableMessage('Advisor'));
     }
 
     if (response.statusCode == 401 || response.statusCode == 403) {

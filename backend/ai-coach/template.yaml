@@ -2,6 +2,28 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: AI Coach Lambda — Python 3.12, proxies to Amazon Bedrock Claude Haiku
 
+# ⚠️  THIS TEMPLATE DOES NOT DESCRIBE PRODUCTION.
+#
+# Production runs the Lambda `food-coach-handler` behind the HTTP API
+# `food-coach-api` at POST /v1/coach. This template provisions `ai-coach` /
+# `ai-coach-api` at POST /coach — different resources entirely. CI
+# (deploy_lambda in .github/workflows/ci.yml) only pushes function CODE to
+# `food-coach-handler`; nothing here has ever been applied to production.
+#
+# So do not read anything below as a statement about the live system. In
+# particular the CorsConfiguration further down is NOT in effect on
+# food-coach-api, which is what made every browser call to the advisor fail its
+# CORS preflight — reported by Dart as "check your connection", on a connection
+# that was fine. scripts/check_api_cors.sh now asserts the real API instead.
+#
+# Two consequences worth keeping in mind before editing:
+#   * `sam deploy` from here creates a SECOND stack alongside production rather
+#     than updating it. Changing the names below to production's would make SAM
+#     try to create resources that already exist, which fails — adopting them
+#     needs `sam deploy` with an import, not a rename.
+#   * Anything that must reach production has to be applied to the live
+#     resources (console or CLI) and, ideally, asserted in CI.
+
 Parameters:
   SupabaseProjectRef:
     Type: String
@@ -97,6 +119,15 @@ Resources:
                 - authenticated
             IdentitySource: "$request.header.Authorization"
         DefaultAuthorizer: SupabaseJWT
+      # NOT in effect on production — see the warning at the top of this file.
+      # The live food-coach-api needs the equivalent applied directly, from the
+      # committed cors.json beside this file:
+      #   aws apigatewayv2 update-api --api-id API_ID --region ap-southeast-1       #     --cors-configuration file://backend/ai-coach/cors.json
+      # By file, not inline shorthand: AllowOrigins=a,AllowHeaders=b cannot
+      # express a list unambiguously (the comma separates keys and values), and
+      # inline JSON loses its quotes through PowerShell.
+      # Authorization has to be named explicitly: a wildcard does not cover it
+      # once the request is authenticated, and every call carries a bearer token.
       CorsConfiguration:
         AllowOrigins:
           - '*'

@@ -1,0 +1,5 @@
+{
+  "AllowOrigins": ["https://nudgr-app.web.app"],
+  "AllowHeaders": ["content-type", "authorization"],
+  "AllowMethods": ["POST", "OPTIONS"]
+}
