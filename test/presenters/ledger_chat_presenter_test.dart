@@ -1428,7 +1428,10 @@ void main() {
           ];
         final presenter = withCloud(cloud);
         await _waitForLoad(presenter);
-        await presenter.sendChatInput('175 gcash food');
+        // Deliberately not fully resolvable by the regex (no category token),
+        // so the message reaches the extractor and a review card exists to
+        // remove a row from.
+        await presenter.sendChatInput('175 gcash zzzqqq');
 
         presenter.removeEntry(0);
 
@@ -1596,6 +1599,116 @@ void main() {
         AiCoachPresenter.looksLikeExpenseLog('add 175 maribank'),
         isTrue,
       );
+    });
+  });
+
+  group('local fast path', () {
+    // A single unambiguous entry never reaches the model. The card exists to
+    // check a model's reading of the message; when the regex matched one amount
+    // against the user's own account and category names, nothing read it and
+    // there is nothing to check — so it commits instantly, as it did before
+    // Plan 058.
+
+    LedgerPresenter withCloud(FakeAiCoachService cloud) =>
+        LedgerPresenter(storage, stats,
+            ai: FakeAiCoachService([]), cloudAi: cloud);
+
+    test('a fully-resolved single entry commits with no model call', () async {
+      final cloud = FakeAiCoachService([]);
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash');
+
+      expect(presenter.allTransactions, hasLength(1));
+      expect(cloud.extractCallCount, 0, reason: 'no waiting on Bedrock');
+      expect(presenter.chatState.phase, ChatPhase.idle);
+      expect(presenter.lastCommittedSummary, isNotNull);
+    });
+
+    test('a multi-entry message always goes to the model', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [
+            ExtractedEntry(
+              txn: const ParsedTransaction(
+                amount: 500,
+                type: TransactionType.outflow,
+                accountId: 'gcash',
+                categoryId: 'food',
+                description: 'Lunch',
+                descriptionIsClean: true,
+              ),
+            ),
+          ]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 food gcash and -300 food bpi');
+
+      expect(cloud.extractCallCount, 1,
+          reason: 'segmentation is the thing the regex gets wrong');
+      expect(presenter.allTransactions, isEmpty, reason: 'awaiting the card');
+    });
+
+    test('an unresolved field goes to the model, not the fast path', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [const ExtractionResult(entries: [])];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      // No category anywhere in the text — an inferred one is a guess, and
+      // guesses belong on the card.
+      await presenter.sendChatInput('-500 gcash zzzqqq');
+
+      expect(cloud.extractCallCount, 1);
+    });
+
+    test('two amounts reach the model instead of erroring', () async {
+      // "-500 -300 food gcash" is a hard error to the regex but two perfectly
+      // readable entries to the extractor.
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [const ExtractionResult(entries: [])];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('-500 -300 food gcash');
+
+      expect(cloud.extractCallCount, 1);
+    });
+
+    test('the fast path still respects a past month', () async {
+      final cloud = FakeAiCoachService([]);
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+      presenter
+          .setSelectedDate(DateTime.now().subtract(const Duration(days: 3)));
+
+      await presenter.sendChatInput('-500 food gcash');
+
+      expect(presenter.chatHardError, FinanceParseError.viewingPastDate);
+      expect(presenter.allTransactions, isEmpty);
+      expect(cloud.extractCallCount, 0);
+    });
+
+    test('a reply inside a clarify conversation never takes it', () async {
+      final ai = FakeAiCoachService([
+        StepClarify(
+          question: 'Which account?',
+          partialDraft: const ParsedTransaction(amount: 500),
+        ),
+      ]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('500 zzzqqq');
+      expect(presenter.chatState.phase, ChatPhase.clarifying);
+
+      // A reply that happens to parse as a whole entry must continue the
+      // conversation, not start a second transaction behind it.
+      await presenter.sendChatInput('-500 food gcash');
+      expect(presenter.allTransactions, isEmpty);
     });
   });
 }
