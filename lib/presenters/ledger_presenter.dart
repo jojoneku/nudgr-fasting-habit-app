@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
@@ -1169,7 +1170,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// "can I afford a ₱4000 dinner?" is asking, not reporting.
   bool recognisesLoggableEntry(String text) {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || trimmed.contains('?')) return false;
+    if (trimmed.isEmpty) return false;
+    // Same carve-out as looksLikeExpenseLog: a question mark blocks a log
+    // unless the sentence is asking *you* to make one.
+    if (trimmed.contains('?') &&
+        !AiCoachPresenter.isPoliteLogRequest(trimmed)) {
+      return false;
+    }
     // `viewingPastDate` is deliberately false: whether the ledger is parked on
     // an old day changes whether a log is ALLOWED, not whether the words are
     // one. sendChatInput re-parses with the real value and reports that error.

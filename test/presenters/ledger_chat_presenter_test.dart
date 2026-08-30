@@ -20,6 +20,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/food_parse_result.dart';
 import 'package:intermittent_fasting/models/food_search_candidate.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
+import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -1532,6 +1533,69 @@ void main() {
       await presenter.confirmEntries();
 
       verify(storage.saveFinanceDictionary(any)).called(greaterThan(0));
+    });
+  });
+
+  group('a polite request is an instruction, not a question', () {
+    // The question-mark veto exists so "can I afford 4000 food gcash?" stays
+    // with the advice model. But it also swallowed "can you add 175 maribank?",
+    // which is how the assistant came to describe three entries it had never
+    // logged: the words never reached the ledger at all.
+
+    test('"can you add ..." routes to the logger', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('can you add 175 maribank?'),
+        isTrue,
+      );
+    });
+
+    test('"please log ..." routes to the logger', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('please log 500 for food?'),
+        isTrue,
+      );
+    });
+
+    test('"can I afford ...?" is still advice', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('can i afford 4000 food gcash?'),
+        isFalse,
+      );
+    });
+
+    test('"how much did I spend?" is still advice', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('how much did i spend on food?'),
+        isFalse,
+      );
+    });
+
+    test('"should I buy this 5000 thing?" is still advice', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('should i buy this 5000 chair?'),
+        isFalse,
+      );
+    });
+
+    test('the parser-backed check agrees', () async {
+      final presenter = LedgerPresenter(storage, stats);
+      await _waitForLoad(presenter);
+
+      expect(
+        presenter.recognisesLoggableEntry('can you add 500 food gcash?'),
+        isTrue,
+      );
+      expect(
+        presenter.recognisesLoggableEntry('can i afford 500 food gcash?'),
+        isFalse,
+      );
+    });
+
+    test('a statement with no question mark is unaffected', () {
+      expect(
+        AiCoachPresenter.looksLikeExpenseLog('add 175 maribank'),
+        isTrue,
+      );
     });
   });
 }
