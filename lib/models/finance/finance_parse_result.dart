@@ -1,3 +1,4 @@
+import 'extracted_entry.dart';
 import 'transaction_record.dart';
 
 /// What the regex+dict preprocessor produces from a raw chat input. The
@@ -377,7 +378,11 @@ class QuickReply {
 // Ephemeral chat state (lives in LedgerPresenter, never persisted)
 // ─────────────────────────────────────────────────────────────────────────────
 
-enum ChatPhase { idle, classifying, clarifying }
+/// [reviewing] is the Plan 058 path: the AI extracted one or more entries from
+/// the whole message and the confirm card is showing them for review, with a
+/// picker on any field it couldn't determine. [clarifying] remains the older
+/// per-fragment conversation, still used by the regex fallback.
+enum ChatPhase { idle, classifying, clarifying, reviewing }
 
 class LedgerChatTurn {
   final String text;
@@ -400,15 +405,31 @@ class LedgerChatState {
   final int turnCount;
   final ClassifierStep? lastStep;
 
+  /// Rows awaiting review, from the one-call extractor (Plan 058). Empty on the
+  /// regex fallback path, which drives the card through [lastStep] instead.
+  final List<ExtractedEntry> entries;
+
+  /// Set when the extractor found nothing to log and asked something back.
+  final String? unclear;
+
   const LedgerChatState({
     this.phase = ChatPhase.idle,
     this.turns = const [],
     this.draft = const ParsedTransaction(),
     this.turnCount = 0,
     this.lastStep,
+    this.entries = const [],
+    this.unclear,
   });
 
   const LedgerChatState.idle() : this();
+
+  /// Every row is filled in and agrees with what the commit path requires.
+  bool get isReadyToCommit =>
+      entries.isNotEmpty && entries.every((e) => e.isReady);
+
+  /// Rows still holding a gap, for the card's "2 need a detail" line.
+  int get unresolvedCount => entries.where((e) => !e.isReady).length;
 
   LedgerChatState copyWith({
     ChatPhase? phase,
@@ -417,6 +438,9 @@ class LedgerChatState {
     int? turnCount,
     ClassifierStep? lastStep,
     bool clearLastStep = false,
+    List<ExtractedEntry>? entries,
+    String? unclear,
+    bool clearUnclear = false,
   }) =>
       LedgerChatState(
         phase: phase ?? this.phase,
@@ -424,5 +448,7 @@ class LedgerChatState {
         draft: draft ?? this.draft,
         turnCount: turnCount ?? this.turnCount,
         lastStep: clearLastStep ? null : (lastStep ?? this.lastStep),
+        entries: entries ?? this.entries,
+        unclear: clearUnclear ? null : (unclear ?? this.unclear),
       );
 }

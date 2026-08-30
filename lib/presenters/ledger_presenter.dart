@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -14,6 +15,7 @@ import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
+import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
@@ -1289,7 +1291,243 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return ReceiptScanOutcome.seeded;
   }
 
+  /// Handles a message the user typed at the assistant.
+  ///
+  /// Plan 058: the cloud extractor reads the WHOLE message in one call and
+  /// returns every transaction in it. That is the primary path. The regex
+  /// pipeline below it is the fallback for when the extractor has no transport
+  /// (offline, over the daily cap) or its response can't be parsed — it is no
+  /// longer allowed to split the message before the model reads it, which is
+  /// what dropped context stated once across a list.
   Future<void> sendChatInput(String text, {bool autoResolve = false}) async {
+    final isReply = _chatState.phase == ChatPhase.clarifying;
+
+    if (!isReply) {
+      // Viewing a past month is a whole-message error that doesn't depend on
+      // how the text parses, so it is answered before either path runs.
+      if (!isSelectedDateToday) {
+        _chatHardError = FinanceParseError.viewingPastDate;
+        safeNotify();
+        return;
+      }
+      final extracted = await _extractEntries(text);
+      if (extracted != null) {
+        await _presentExtraction(extracted, text, autoResolve: autoResolve);
+        return;
+      }
+    }
+    await _legacyChatInput(text, autoResolve: autoResolve);
+  }
+
+  /// One extraction call. Returns null when the tier is unavailable or the
+  /// response was unreadable — the caller then falls back to the regex path.
+  Future<ExtractionResult?> _extractEntries(String text) async {
+    final cloud = _cloudAi;
+    if (cloud == null) return null;
+    _chatHardError = null;
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [LedgerChatTurn(text: text, isUser: true, at: DateTime.now())],
+      turnCount: 0,
+    );
+    safeNotify();
+    try {
+      return await cloud.extractFinanceEntries(
+        message: text,
+        categories: _categories,
+        accounts: _accounts,
+        learnedMappings: _financeDict.snapshot(),
+        categoryNameFor: _categoryNameFor,
+      );
+    } catch (_) {
+      // A transport blow-up is the fallback's cue, not an error to show.
+      return null;
+    }
+  }
+
+  String _categoryNameFor(String categoryId) {
+    for (final c in _categories) {
+      if (c.id == categoryId) return c.name;
+    }
+    return '';
+  }
+
+  /// Puts the extracted rows on the confirm card.
+  ///
+  /// Nothing commits here. Even a set of rows with no gaps waits for the user,
+  /// because the card is the honesty surface: it is where they see what the
+  /// model understood before it becomes money in the ledger.
+  Future<void> _presentExtraction(
+    ExtractionResult result,
+    String rawText, {
+    bool autoResolve = false,
+  }) async {
+    if (result.entries.isEmpty) {
+      // Nothing to log. If the model asked something, put that in the
+      // conversation; otherwise let the regex path have a try — it may still
+      // recognise a shape the model didn't.
+      final question = result.unclear;
+      if (question == null || question.isEmpty) {
+        await _legacyChatInput(rawText, autoResolve: autoResolve);
+        return;
+      }
+      _chatState = _chatState.copyWith(
+        phase: ChatPhase.idle,
+        unclear: question,
+        turns: [
+          ..._chatState.turns,
+          LedgerChatTurn(text: question, isUser: false, at: DateTime.now()),
+        ],
+      );
+      safeNotify();
+      return;
+    }
+
+    // One-shot surfaces with no review UI commit what is ready and send the
+    // first gap to the prefilled form, as they always have.
+    if (autoResolve) {
+      await _commitEntries(result.entries.where((e) => e.isReady).toList());
+      final leftover = result.entries.where((e) => !e.isReady).toList();
+      if (leftover.isNotEmpty) {
+        _fallbackToForm(leftover.first.txn, 'Needs more detail.');
+      }
+      return;
+    }
+
+    _chatState = _chatState.copyWith(
+      phase: ChatPhase.reviewing,
+      entries: result.entries,
+      draft: result.entries.first.txn,
+      clearLastStep: true,
+      clearUnclear: true,
+    );
+    safeNotify();
+  }
+
+  // ── Inline resolution (Plan 058) ──────────────────────────────────────────
+  //
+  // A missing account or category is answered with a picker, not a question.
+  // The old clarify loop spent a Bedrock call and a user turn asking "which
+  // account?" on a three-turn budget that dead-ended at the form; a dropdown
+  // answers it instantly and for free. These setters are what the card's chips
+  // call.
+
+  void _updateEntry(int index, ExtractedEntry Function(ExtractedEntry) f) {
+    final entries = _chatState.entries;
+    if (index < 0 || index >= entries.length) return;
+    final next = [...entries];
+    next[index] = f(entries[index]);
+    _chatState = _chatState.copyWith(entries: next, draft: next.first.txn);
+    safeNotify();
+  }
+
+  void setEntryAccount(int index, String accountId) => _updateEntry(
+        index,
+        (e) =>
+            e.resolve(EntryField.account, e.txn.copyWith(accountId: accountId)),
+      );
+
+  void setEntryTransferTo(int index, String accountId) => _updateEntry(
+        index,
+        (e) => e.resolve(EntryField.transferTo,
+            e.txn.copyWith(transferToAccountId: accountId)),
+      );
+
+  /// Setting a category also settles the direction, since an income category
+  /// can only be an inflow and an expense category an outflow.
+  void setEntryCategory(int index, String categoryId) =>
+      _updateEntry(index, (e) {
+        final cat = _categories.where((c) => c.id == categoryId).firstOrNull;
+        final type = cat == null
+            ? e.txn.type
+            : (cat.type == CategoryType.income
+                ? TransactionType.inflow
+                : TransactionType.outflow);
+        return e.copyWith(
+          txn: e.txn.copyWith(categoryId: categoryId, type: type),
+          missing: {...e.missing}
+            ..remove(EntryField.category)
+            ..remove(EntryField.type),
+        );
+      });
+
+  void setEntryAmount(int index, double amount) => _updateEntry(
+        index,
+        (e) => amount <= 0
+            ? e
+            : e.resolve(EntryField.amount, e.txn.copyWith(amount: amount)),
+      );
+
+  void setEntryDate(int index, DateTime date) =>
+      _updateEntry(index, (e) => e.copyWith(txn: e.txn.copyWith(date: date)));
+
+  /// Dropping one row of a multi-entry message. Clearing the last row ends the
+  /// review rather than leaving an empty card on screen.
+  void removeEntry(int index) {
+    final entries = _chatState.entries;
+    if (index < 0 || index >= entries.length) return;
+    final next = [...entries]..removeAt(index);
+    if (next.isEmpty) {
+      cancelChat();
+      return;
+    }
+    _chatState = _chatState.copyWith(entries: next, draft: next.first.txn);
+    safeNotify();
+  }
+
+  /// User tapped "Log all" on the review card.
+  ///
+  /// Commits every ready row. Rows still holding a gap stay on the card rather
+  /// than being dropped, so confirming the good ones never silently loses the
+  /// rest — the button is disabled while any gap remains, so in practice this
+  /// commits the lot.
+  Future<void> confirmEntries() async {
+    final entries = _chatState.entries;
+    if (entries.isEmpty) return;
+    final ready = entries.where((e) => e.isReady).toList();
+    if (ready.isEmpty) return;
+
+    final leftover = entries.where((e) => !e.isReady).toList();
+    await _commitEntries(ready);
+
+    if (leftover.isNotEmpty) {
+      _chatState = _chatState.copyWith(
+        phase: ChatPhase.reviewing,
+        entries: leftover,
+        draft: leftover.first.txn,
+      );
+      safeNotify();
+    }
+  }
+
+  /// Commits rows as one user action, then learns from them.
+  ///
+  /// Each token is learned against ITS OWN row's category — pairing one row's
+  /// description with another row's category would persist a mapping the user
+  /// never confirmed. Only single-word descriptions are learned: a phrase is a
+  /// label for one purchase, not a token worth matching later.
+  Future<void> _commitEntries(List<ExtractedEntry> entries) async {
+    if (entries.isEmpty) return;
+    for (final e in entries) {
+      await _commitParsed(e.txn, announce: false);
+    }
+    for (final e in entries) {
+      final categoryId = e.txn.categoryId;
+      if (categoryId == null || !e.txn.descriptionIsClean) continue;
+      final token = e.txn.description.trim().toLowerCase();
+      if (token.isEmpty || token.contains(' ')) continue;
+      await _financeDict.learn(token, categoryId);
+    }
+    _lastCommittedSummary = entries.length == 1
+        ? _summaryFor(entries.first.txn)
+        : 'Logged ${entries.length} transactions';
+    safeNotify();
+  }
+
+  /// The pre-058 pipeline: regex split, then one classifier call per fragment.
+  /// Reached only when the extractor is unavailable or unreadable, and for
+  /// replies inside a clarify conversation it started.
+  Future<void> _legacyChatInput(String text, {bool autoResolve = false}) async {
     final isReply = _chatState.phase == ChatPhase.clarifying;
     final viewingPast = !isSelectedDateToday;
 

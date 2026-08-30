@@ -23,6 +23,8 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
+import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
@@ -44,6 +46,26 @@ class FakeAiCoachService implements AiCoachService {
 
   @override
   Future<void> downloadModel({void Function(int progress)? onProgress}) async {}
+
+  /// Scripted extraction results (Plan 058). An empty script means "this tier
+  /// has nothing", which is exactly what drives the regex fallback path.
+  List<ExtractionResult?> extractionScript = const [];
+  int extractCallCount = 0;
+  String? lastExtractMessage;
+
+  @override
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
+  }) async {
+    lastExtractMessage = message;
+    if (extractCallCount >= extractionScript.length) return null;
+    return extractionScript[extractCallCount++];
+  }
 
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({
@@ -1201,6 +1223,315 @@ void main() {
         expect(leg.date.day, expected.day);
         expect(leg.month, toMonthKey(leg.date));
       }
+    });
+  });
+
+  // ── Plan 058: one-call extraction over the whole message ──────────────────
+
+  group('AI-first extraction', () {
+    ExtractedEntry made({
+      double? amount = 175,
+      String? accountId = 'gcash',
+      String? categoryId = 'food',
+      TransactionType? type = TransactionType.outflow,
+      DateTime? date,
+      String description = 'Personal Shopping',
+      Set<EntryField> missing = const {},
+      double confidence = 0.9,
+    }) =>
+        ExtractedEntry(
+          txn: ParsedTransaction(
+            amount: amount,
+            type: type,
+            accountId: accountId,
+            categoryId: categoryId,
+            date: date,
+            description: description,
+            descriptionIsClean: true,
+          ),
+          missing: missing,
+          confidence: confidence,
+        );
+
+    LedgerPresenter withCloud(FakeAiCoachService cloud,
+            {FakeAiCoachService? onDevice}) =>
+        LedgerPresenter(storage, stats,
+            ai: onDevice ?? FakeAiCoachService([]), cloudAi: cloud);
+
+    test('the whole message reaches the model, unsplit', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [made()]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      const message = 'add in gcash 175 and 90 for food all yesterday';
+      await presenter.sendChatInput(message);
+
+      expect(cloud.lastExtractMessage, message,
+          reason: 'the model must see the sentence, not a fragment of it');
+      expect(cloud.extractCallCount, 1,
+          reason: 'one call for the message, not one per fragment');
+    });
+
+    test('extracted rows go to review, and nothing commits yet', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [
+            made(amount: 175),
+            made(amount: 90),
+            made(amount: 115, description: 'Avocado Ice Cream'),
+          ]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('175 and 90 and 115 gcash food');
+
+      expect(presenter.chatState.phase, ChatPhase.reviewing);
+      expect(presenter.chatState.entries, hasLength(3));
+      expect(presenter.chatState.isReadyToCommit, isTrue);
+      expect(presenter.allTransactions, isEmpty,
+          reason: 'the card is the honesty surface — the user confirms');
+    });
+
+    test('confirmEntries commits every row as one action', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [
+            made(amount: 175),
+            made(amount: 90),
+            made(amount: 115),
+          ]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('175 and 90 and 115 gcash food');
+      await presenter.confirmEntries();
+
+      expect(presenter.allTransactions, hasLength(3));
+      expect(presenter.lastCommittedSummary, 'Logged 3 transactions');
+      expect(presenter.chatState.phase, ChatPhase.idle);
+    });
+
+    test('a shared date reaches every committed row', () async {
+      final yesterday = DateTime(2026, 8, 29);
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [
+            made(amount: 175, date: yesterday),
+            made(amount: 90, date: yesterday),
+          ]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('175 and 90 gcash food yesterday');
+      await presenter.confirmEntries();
+
+      expect(
+        presenter.allTransactions
+            .every((t) => t.date.year == 2026 && t.date.day == 29),
+        isTrue,
+      );
+    });
+
+    test('a row with a gap blocks the commit but keeps its siblings', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [
+            made(amount: 175),
+            made(amount: 90, accountId: null, missing: {EntryField.account}),
+          ]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('175 gcash food and 90 food');
+
+      expect(presenter.chatState.isReadyToCommit, isFalse);
+      expect(presenter.chatState.unresolvedCount, 1);
+      expect(presenter.chatState.entries, hasLength(2),
+          reason: 'the good row is never dropped for the sake of the bad one');
+    });
+
+    group('inline resolution', () {
+      test('picking an account clears the gap without an AI call', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            ExtractionResult(entries: [
+              made(accountId: null, missing: {EntryField.account}),
+            ]),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+        await presenter.sendChatInput('175 food');
+
+        presenter.setEntryAccount(0, 'bpi');
+
+        expect(presenter.chatState.entries.single.missing, isEmpty);
+        expect(presenter.chatState.entries.single.txn.accountId, 'bpi');
+        expect(presenter.chatState.isReadyToCommit, isTrue);
+        expect(cloud.extractCallCount, 1,
+            reason: 'a dropdown answers this, not another round trip');
+      });
+
+      test('picking a category settles the direction too', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            ExtractionResult(entries: [
+              made(
+                categoryId: null,
+                type: null,
+                missing: {EntryField.category, EntryField.type},
+              ),
+            ]),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+        await presenter.sendChatInput('25000 bpi');
+
+        presenter.setEntryCategory(0, 'salary');
+
+        final entry = presenter.chatState.entries.single;
+        expect(entry.txn.categoryId, 'salary');
+        expect(entry.txn.type, TransactionType.inflow,
+            reason: 'an income category can only be an inflow');
+        expect(entry.missing, isEmpty);
+      });
+
+      test('a resolved row commits with the picked values', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            ExtractionResult(entries: [
+              made(accountId: null, missing: {EntryField.account}),
+            ]),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+        await presenter.sendChatInput('175 food');
+
+        presenter.setEntryAccount(0, 'bpi');
+        await presenter.confirmEntries();
+
+        expect(presenter.allTransactions, hasLength(1));
+        expect(presenter.allTransactions.single.accountId, 'bpi');
+      });
+
+      test('removing the last row ends the review', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            ExtractionResult(entries: [made()]),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+        await presenter.sendChatInput('175 gcash food');
+
+        presenter.removeEntry(0);
+
+        expect(presenter.chatState.phase, ChatPhase.idle);
+        expect(presenter.chatState.entries, isEmpty);
+        expect(presenter.allTransactions, isEmpty);
+      });
+
+      test('removing one row of several keeps the rest', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            ExtractionResult(entries: [made(amount: 175), made(amount: 90)]),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+        await presenter.sendChatInput('175 and 90 gcash food');
+
+        presenter.removeEntry(0);
+
+        expect(presenter.chatState.entries, hasLength(1));
+        expect(presenter.chatState.entries.single.txn.amount, 90);
+      });
+    });
+
+    group('falling back', () {
+      test('no cloud tier at all uses the regex path', () async {
+        final onDevice = FakeAiCoachService([]);
+        final presenter = LedgerPresenter(storage, stats, ai: onDevice);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('-500 food gcash');
+
+        expect(presenter.allTransactions, hasLength(1),
+            reason: 'offline logging must keep working');
+      });
+
+      test('an unreadable extraction falls back rather than failing', () async {
+        // Empty script → the fake returns null, which is what a transport
+        // error or unparseable response looks like to the presenter.
+        final cloud = FakeAiCoachService([]);
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('-500 food gcash');
+
+        expect(presenter.allTransactions, hasLength(1));
+      });
+
+      test('an empty extraction with no question falls back too', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [const ExtractionResult(entries: [])];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('-500 food gcash');
+
+        expect(presenter.allTransactions, hasLength(1));
+      });
+
+      test('an extractor question is put to the user, not the regex', () async {
+        final cloud = FakeAiCoachService([])
+          ..extractionScript = [
+            const ExtractionResult(entries: [], unclear: 'How much was it?'),
+          ];
+        final presenter = withCloud(cloud);
+        await _waitForLoad(presenter);
+
+        await presenter.sendChatInput('bought some stuff at the mall');
+
+        expect(presenter.chatState.unclear, 'How much was it?');
+        expect(presenter.allTransactions, isEmpty);
+      });
+    });
+
+    test('viewing a past month blocks before any AI call', () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [made()]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+      presenter
+          .setSelectedDate(DateTime.now().subtract(const Duration(days: 3)));
+
+      await presenter.sendChatInput('175 gcash food');
+
+      expect(presenter.chatHardError, FinanceParseError.viewingPastDate);
+      expect(cloud.extractCallCount, 0, reason: 'no wasted Bedrock call');
+      expect(presenter.allTransactions, isEmpty);
+    });
+
+    test('a single-word description is learned against its own category',
+        () async {
+      final cloud = FakeAiCoachService([])
+        ..extractionScript = [
+          ExtractionResult(entries: [made(description: 'Jollibee')]),
+        ];
+      final presenter = withCloud(cloud);
+      await _waitForLoad(presenter);
+
+      await presenter.sendChatInput('175 gcash jollibee');
+      await presenter.confirmEntries();
+
+      verify(storage.saveFinanceDictionary(any)).called(greaterThan(0));
     });
   });
 }
