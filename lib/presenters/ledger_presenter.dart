@@ -1412,6 +1412,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   // answers it instantly and for free. These setters are what the card's chips
   // call.
 
+  /// Seeds the review card without a round trip through the extractor, so a
+  /// widget test can drive the real presenter rather than a stand-in.
+  @visibleForTesting
+  void debugSeedReview(List<ExtractedEntry> entries) {
+    _chatState = _chatState.copyWith(
+      phase: ChatPhase.reviewing,
+      entries: entries,
+      draft: entries.isEmpty ? const ParsedTransaction() : entries.first.txn,
+    );
+    safeNotify();
+  }
+
   void _updateEntry(int index, ExtractedEntry Function(ExtractedEntry) f) {
     final entries = _chatState.entries;
     if (index < 0 || index >= entries.length) return;

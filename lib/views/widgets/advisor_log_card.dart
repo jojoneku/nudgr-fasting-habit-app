@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/finance/finance_parse_result.dart';
 import '../../models/finance/transaction_record.dart';
 import '../../presenters/ledger_presenter.dart';
+import 'finance/entry_review_card.dart';
 
 /// Polished in-chat confirm/clarify card for logging an expense from the
 /// financial advisor conversation. Driven by [LedgerPresenter.chatState] — the
@@ -31,6 +32,10 @@ class AdvisorLogCard extends StatelessWidget {
           message: hardError.userMessage, onDismiss: ledger.clearChatHardError);
     } else if (state.phase == ChatPhase.classifying) {
       body = _Thinking(cs: cs);
+    } else if (state.entries.isNotEmpty) {
+      // Plan 058: rows from the one-call extractor, reviewed and completed in
+      // place. The StepResolved branch below still serves the regex fallback.
+      body = EntryReviewCard(ledger: ledger, state: state);
     } else if (step is StepResolved) {
       body = _Resolved(ledger: ledger, step: step, money: _money);
     } else if (step is StepClarify) {
