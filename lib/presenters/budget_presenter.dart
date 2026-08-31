@@ -410,6 +410,7 @@ class BudgetPresenter extends ChangeNotifier {
             isSavings: true,
             isGoal: account.category == AccountCategory.goal,
             isIncome: false,
+            targetFromSetAside: derived != null,
             budgetType: entry.budget.budgetType,
             allocated: allocated,
             actual: funded,
@@ -1106,6 +1107,11 @@ class BudgetSectionRow {
   final bool isGoal;
   final bool isIncome;
 
+  /// True when [allocated] came from a recurring Bills set-aside rather than
+  /// this row's own stored amount (Plan 060). The card says so, because a
+  /// number the user cannot edit here needs to name where it is edited.
+  final bool targetFromSetAside;
+
   /// The budget's cadence type — surfaced as a small badge (expense rows only),
   /// preserving the label the old category tile showed.
   final BudgetType budgetType;
@@ -1140,6 +1146,7 @@ class BudgetSectionRow {
     required this.isSavings,
     required this.isGoal,
     required this.isIncome,
+    this.targetFromSetAside = false,
     required this.budgetType,
     required this.allocated,
     required this.actual,

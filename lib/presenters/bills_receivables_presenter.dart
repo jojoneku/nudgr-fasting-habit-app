@@ -2984,6 +2984,33 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _storage.saveReceivables(_allReceivables);
   }
 
+  /// Whether [e] funds a goal that has already reached its target.
+  ///
+  /// A monthly set-aside is a contribution toward a long-term goal; once the
+  /// goal is met the contribution is finished, so next month should not be
+  /// generated. This is the right layer for it — the set-aside *is* the monthly
+  /// commitment, where a budget row is only a view of one.
+  ///
+  /// Deliberately only stops the NEXT month. The current month's set-aside
+  /// stands even if the goal completes today: it is a commitment already made,
+  /// and making an obligation vanish mid-month would move the forecast with no
+  /// action from the user — the same class of surprise as the double-count this
+  /// change set removes. The user can still delete it if they want it gone now.
+  ///
+  /// Only goal accounts have a target. An ordinary savings fund runs
+  /// indefinitely — a rainy-day fund is never "done".
+  bool _goalIsFunded(BudgetedExpense e) {
+    final destination = e.destinationAccountId;
+    if (destination == null) return false;
+    final account = accounts.where((a) => a.id == destination).firstOrNull;
+    if (account == null || account.category != AccountCategory.goal) {
+      return false;
+    }
+    final target = account.goalTarget;
+    if (target == null || target <= 0) return false;
+    return account.balance >= target;
+  }
+
   Future<void> _autoGenerateRecurringBudgetedExpenses(String month) async {
     // Only seed a month that has no set-asides yet, so we never duplicate the
     // user's own entries. Mirrors the recurring-bills flow.
@@ -2991,8 +3018,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (existing.isNotEmpty) return;
 
     final prev = previousMonth(month);
-    final recurringFromPrev =
-        _allExpenses.where((e) => e.month == prev && e.isRecurring).toList();
+    final recurringFromPrev = _allExpenses
+        .where((e) => e.month == prev && e.isRecurring && !_goalIsFunded(e))
+        .toList();
     if (recurringFromPrev.isEmpty) return;
 
     final copies = recurringFromPrev.map((e) => BudgetedExpense(
