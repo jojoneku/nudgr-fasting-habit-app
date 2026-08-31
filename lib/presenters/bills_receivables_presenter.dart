@@ -16,6 +16,7 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:intermittent_fasting/utils/recurring_series.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1628,7 +1629,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final ids = billIds.toSet();
     final selected = _allBills.where((b) => ids.contains(b.id)).toList();
     if (selected.isEmpty) return 0;
-    final reach = _seriesReach<Bill>(
+    final reach = seriesReach<Bill>(
       selected,
       seriesOf: (b) => b.seriesId,
       laterOpen: futureSeriesBills,
@@ -1707,7 +1708,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final ids = receivableIds.toSet();
     final selected = _allReceivables.where((r) => ids.contains(r.id)).toList();
     if (selected.isEmpty) return 0;
-    final reach = _seriesReach<Receivable>(
+    final reach = seriesReach<Receivable>(
       selected,
       seriesOf: (r) => r.seriesId,
       laterOpen: futureSeriesReceivables,
@@ -1793,7 +1794,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final ids = expenseIds.toSet();
     final selected = _allExpenses.where((e) => ids.contains(e.id)).toList();
     if (selected.isEmpty) return 0;
-    final reach = _seriesReach<BudgetedExpense>(
+    final reach = seriesReach<BudgetedExpense>(
       selected,
       seriesOf: (e) => e.seriesId,
       laterOpen: futureSeriesExpenses,
@@ -2008,29 +2009,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   ///
   /// With [applyToFuture] off this is just the selection — the helper still
   /// runs, so there is one path through the delete rather than two.
-  ({Set<String> ids, Set<String> endedSeries}) _seriesReach<T>(
-    List<T> selected, {
-    required String? Function(T) seriesOf,
-    required List<T> Function(T) laterOpen,
-    required String Function(T) idOf,
-    required bool applyToFuture,
-  }) {
-    final ids = selected.map(idOf).toSet();
-    if (!applyToFuture) {
-      return (ids: ids, endedSeries: const <String>{});
-    }
-    final endedSeries = <String>{};
-    for (final item in selected) {
-      final series = seriesOf(item);
-      // A row with no series has nothing ahead of it and nothing to end, so it
-      // must not be matched by a null — that would sweep up every other
-      // unstamped row in the list.
-      if (series == null) continue;
-      endedSeries.add(series);
-      ids.addAll(laterOpen(item).map(idOf));
-    }
-    return (ids: ids, endedSeries: endedSeries);
-  }
 
   /// How far an "all months" batch delete of [billIds] would reach: how many
   /// of the selected rows recur (so the batch bar knows whether to ask at
@@ -2042,7 +2020,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       Iterable<String> billIds) {
     final ids = billIds.toSet();
     final selected = _allBills.where((b) => ids.contains(b.id)).toList();
-    final reach = _seriesReach<Bill>(
+    final reach = seriesReach<Bill>(
       selected,
       seriesOf: (b) => b.seriesId,
       laterOpen: futureSeriesBills,
@@ -2060,7 +2038,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       Iterable<String> receivableIds) {
     final ids = receivableIds.toSet();
     final selected = _allReceivables.where((r) => ids.contains(r.id)).toList();
-    final reach = _seriesReach<Receivable>(
+    final reach = seriesReach<Receivable>(
       selected,
       seriesOf: (r) => r.seriesId,
       laterOpen: futureSeriesReceivables,
@@ -2078,7 +2056,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       Iterable<String> expenseIds) {
     final ids = expenseIds.toSet();
     final selected = _allExpenses.where((e) => ids.contains(e.id)).toList();
-    final reach = _seriesReach<BudgetedExpense>(
+    final reach = seriesReach<BudgetedExpense>(
       selected,
       seriesOf: (e) => e.seriesId,
       laterOpen: futureSeriesExpenses,

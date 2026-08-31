@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,7 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/recurring_series.dart';
 
 class BudgetPresenter extends ChangeNotifier {
   BudgetPresenter(
@@ -140,9 +142,94 @@ class BudgetPresenter extends ChangeNotifier {
   String get selectedMonth => _selectedMonth;
 
   void setMonth(String month) {
+    // The carried-over notice belongs to the month that was carried, not to the
+    // presenter. Leaving it set would announce "Carried over from August" over
+    // a month the user merely navigated to, which is worse than saying nothing.
+    // Only an actual change clears it: re-selecting the month already on screen
+    // must not wipe the notice describing it.
+    if (month != _selectedMonth) _carriedFrom = null;
     _selectedMonth = month;
     _monthScope?.setMonth(month); // keep Ledger/Bills/Installments in step
     notifyListeners();
+    // Fire-and-forget: the month renders immediately from whatever it has and
+    // repaints again if rows are carried in. Awaiting would stall the tab
+    // switch on a disk write.
+    unawaited(_carryForwardInto(month));
+  }
+
+  /// True once [load] has read the stored budgets. Carry-forward must not run
+  /// before it: an empty `_allBudgets` looks exactly like "this month has no
+  /// rows", and materialising against that would write a month out of nothing.
+  bool _budgetsLoaded = false;
+
+  /// Which month the selected one was carried over from, if it was populated on
+  /// this view. Drives the "Carried over from August" line — a month that
+  /// silently fills with numbers is worse than one that says where they came
+  /// from, and this is the only moment the user meets the feature.
+  String? _carriedFrom;
+  String? get carriedFrom => _carriedFrom;
+
+  void clearCarriedNotice() {
+    if (_carriedFrom == null) return;
+    _carriedFrom = null;
+    notifyListeners();
+  }
+
+  /// Materialises [month] from the most recent earlier month that has rows
+  /// (Plan 059). No-op unless the month is genuinely empty.
+  ///
+  /// Three rules, each load-bearing:
+  ///
+  ///  * **Only when empty.** A month with rows of its own is authoritative and
+  ///    is never re-derived. This is exactly what "recurs unless modified"
+  ///    means.
+  ///  * **Forward only.** Never populate a month earlier than the stored rows.
+  ///    A past month with no budget *had* no budget; filling it in would invent
+  ///    history the user never set.
+  ///  * **Only recurring rows.** Deleting a line clears `isRecurring` across
+  ///    its series, so an ended series is simply not offered here — which is
+  ///    why a month the user deliberately emptied needs no separate marker.
+  Future<void> _carryForwardInto(String month) async {
+    if (!_budgetsLoaded) return;
+    if (_allBudgets.any((b) => b.month == month)) return;
+
+    final earlier =
+        _allBudgets.map((b) => b.month).where((m) => m.compareTo(month) < 0);
+    if (earlier.isEmpty) return; // forward only — nothing behind to carry
+    final source = earlier.reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+
+    // A fresh id per row: these are new rows in a new month, not the same row
+    // moved. Sharing the source's id would make the two months one record and
+    // let an edit to either rewrite the other.
+    final carried = <Budget>[
+      for (final b in _allBudgets)
+        if (b.month == source && b.isRecurring)
+          Budget(
+            id: _generateId(),
+            categoryId: b.categoryId,
+            month: month,
+            allocatedAmount: b.allocatedAmount,
+            group: b.group,
+            budgetType: b.budgetType,
+            seriesId: b.seriesId ?? b.id,
+            isRecurring: true,
+          ),
+    ];
+    if (carried.isEmpty) return;
+
+    _allBudgets = [..._allBudgets, ...carried];
+    _carriedFrom = source;
+    notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
+  }
+
+  /// Rows of [seriesId] in months strictly after [month] — the reach of an
+  /// "and future" edit or delete.
+  List<Budget> _laterInSeries(String? seriesId, String month) {
+    if (seriesId == null) return const [];
+    return _allBudgets
+        .where((b) => b.seriesId == seriesId && b.month.compareTo(month) > 0)
+        .toList();
   }
 
   /// Every budget across all months — this presenter owns them.
@@ -588,11 +675,24 @@ class BudgetPresenter extends ChangeNotifier {
   }) async {
     final existing = budgetFor(categoryId);
     if (existing != null) {
-      // copyWith treats null as "keep", so omitting group/budgetType preserves
-      // them, while passing a value (e.g. the inline Group dropdown) applies it.
+      // An edit is the new going rate: it lands on this month and every later
+      // month of the same series (Plan 059). Earlier months are never touched —
+      // changing September must not rewrite August.
+      //
+      // Months not yet materialised need nothing here. They will be carried
+      // from the most recent earlier month, which now holds this amount, so the
+      // "already materialised" and "not yet" cases agree. Those two disagreeing
+      // about what October's Groceries is would be the bug to fear.
+      final forward = {
+        existing.id,
+        ..._laterInSeries(existing.seriesId, existing.month).map((b) => b.id),
+      };
       _allBudgets = [
         for (final b in _allBudgets)
-          b.id == existing.id
+          forward.contains(b.id)
+              // copyWith treats null as "keep", so omitting group/budgetType
+              // preserves them, while passing a value (e.g. the inline Group
+              // dropdown) applies it.
               ? b.copyWith(
                   allocatedAmount: amount,
                   group: group,
@@ -601,13 +701,17 @@ class BudgetPresenter extends ChangeNotifier {
               : b,
       ];
     } else {
+      final id = _generateId();
       final newBudget = Budget(
-        id: _generateId(),
+        id: id,
         categoryId: categoryId,
         month: _selectedMonth,
         allocatedAmount: amount,
         group: group ?? BudgetGroupDef.idVariableOptional,
         budgetType: budgetType ?? BudgetType.monthly,
+        // Recurring by default, and its own series head: a budget you set once
+        // should keep applying without being asked to opt in.
+        seriesId: id,
       );
       _allBudgets = [..._allBudgets, newBudget];
     }
@@ -666,11 +770,56 @@ class BudgetPresenter extends ChangeNotifier {
     await _storage.saveBudgetGroups(_groups);
   }
 
+  /// Removes this month's row for [categoryId] and ends its series.
+  ///
+  /// Deleting reads as "I don't budget this any more", so the line does not
+  /// come back next month: later materialised rows go with it, and the earlier
+  /// rows are marked non-recurring so carry-forward stops offering it. That
+  /// last step is what makes a deliberately emptied month stay empty without
+  /// needing a marker of its own.
+  ///
+  /// Earlier months keep their rows. They are history — the user did budget
+  /// this in August, and deleting it in September should not rewrite that.
   Future<void> removeBudget(String categoryId) async {
+    final target = budgetFor(categoryId);
+    if (target == null) return;
+
+    final reach = seriesReach<Budget>(
+      [target],
+      seriesOf: (b) => b.seriesId,
+      laterOpen: (b) => _laterInSeries(b.seriesId, b.month),
+      idOf: (b) => b.id,
+      applyToFuture: true,
+    );
+
     _allBudgets = _allBudgets
-        .where(
-            (b) => !(b.categoryId == categoryId && b.month == _selectedMonth))
+        .where((b) => !reach.ids.contains(b.id))
+        .map((b) => reach.endedSeries.contains(b.seriesId)
+            ? b.copyWith(isRecurring: false)
+            : b)
         .toList();
+    notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
+  }
+
+  /// Turns recurrence on or off for this month's [categoryId] line — the
+  /// "Just this month" switch.
+  ///
+  /// Off detaches the row from its series entirely rather than only clearing
+  /// the flag: a one-off left carrying a `seriesId` would still be swept up by
+  /// a later "and future" edit of its old siblings.
+  Future<void> setBudgetRecurring(String categoryId, bool recurring) async {
+    final target = budgetFor(categoryId);
+    if (target == null || target.isRecurring == recurring) return;
+    _allBudgets = [
+      for (final b in _allBudgets)
+        b.id == target.id
+            ? b.copyWith(
+                isRecurring: recurring,
+                seriesId: recurring ? (b.seriesId ?? b.id) : null,
+              )
+            : b,
+    ];
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
   }
@@ -709,8 +858,13 @@ class BudgetPresenter extends ChangeNotifier {
     // _checkBudgetWarnings lets it run, while any earlier ledger-driven
     // _syncFromLedger calls (which lost the startup race) were correctly skipped.
     _warnedKeysLoaded = true;
+    _budgetsLoaded = true;
     notifyListeners();
     await _checkBudgetWarnings(_cachedNotifPrefs);
+    // The month selected at boot deserves the same carry-forward a month the
+    // user navigates to gets — otherwise opening the app on the 1st shows an
+    // empty Budget page until you step away and back.
+    await _carryForwardInto(_selectedMonth);
   }
 
   /// One-time merge of the retired "Living" group into "Essentials": remap any
