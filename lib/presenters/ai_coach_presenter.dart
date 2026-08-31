@@ -923,6 +923,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// Ledger presenter available to the advisor for in-conversation logging.
   LedgerPresenter? get advisorLedger => _ledger;
 
+  /// A second-person request to log something ("can you add…", "please log…").
+  ///
+  /// This is the one shape allowed past the question-mark veto. It turns on the
+  /// subject: *you* doing something is an instruction, *I* wondering about
+  /// something is a question, and only the first should reach the ledger.
+  static bool isPoliteLogRequest(String text) => RegExp(
+        r"\b(can|could|would|will|pls|please)\s+(you\s+)?"
+        r"(pls\s+|please\s+|just\s+)?"
+        r"(add|log|record|enter|put|note|save)\b",
+      ).hasMatch(text.toLowerCase());
+
   /// Heuristic: does [text] read as an expense to log (an amount plus a spend
   /// verb/keyword) rather than an advisory question? Used by the advisor mode
   /// to route logging intents into the confirm-before-commit ledger pipeline.
@@ -930,8 +941,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   static bool looksLikeExpenseLog(String text) {
     final t = text.toLowerCase().trim();
     if (t.isEmpty) return false;
-    // A question is advice, never a log.
-    if (t.contains('?')) return false;
+    // A question is advice, never a log — unless it is a request wearing a
+    // question mark. "can I afford 4000 food gcash?" is deliberating and stays
+    // with the advice model; "can you add 175 maribank?" is an instruction, and
+    // answering it conversationally is how the assistant ended up describing
+    // entries it had not logged.
+    if (t.contains('?') && !isPoliteLogRequest(t)) return false;
     final hasAmount = RegExp(r'(₱|php|p)?\s?\d[\d,]*(\.\d+)?').hasMatch(t);
     if (!hasAmount) return false;
     final hasLogVerb = RegExp(

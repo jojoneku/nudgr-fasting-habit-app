@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
@@ -14,6 +17,7 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/recurring_series.dart';
 
 class BudgetPresenter extends ChangeNotifier {
   BudgetPresenter(
@@ -22,12 +26,15 @@ class BudgetPresenter extends ChangeNotifier {
     LedgerPresenter? ledger,
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
+    BillsReceivablesPresenter? bills,
   ])  : _storage = storage,
         _stats = stats,
         _ledger = ledger,
         _monthScope = monthScope,
+        _bills = bills,
         _notifications = notifications ?? NotificationService() {
     _ledger?.addListener(_syncFromLedger);
+    _bills?.addListener(_syncFromBills);
     if (monthScope != null) {
       _selectedMonth = monthScope.month;
       monthScope.addListener(_adoptScopeMonth);
@@ -38,6 +45,60 @@ class BudgetPresenter extends ChangeNotifier {
   final StatsPresenter _stats;
   final LedgerPresenter? _ledger;
   final NotificationService _notifications;
+
+  /// The owner of the set-asides a savings row's target is read from (Plan
+  /// 060). Optional so the presenter still builds standalone — without it,
+  /// savings rows fall back to their own stored allocation.
+  final BillsReceivablesPresenter? _bills;
+
+  /// Set-asides mirrored off the owner, never a private copy refreshed only by
+  /// this presenter's own [load] — a copy would go stale the moment a set-aside
+  /// was edited on the Bills page, and the Budget page would keep showing the
+  /// old target with nothing to indicate it was wrong.
+  List<BudgetedExpense> _setAsides = const [];
+
+  void _syncFromBills() {
+    final bills = _bills;
+    if (bills == null) return;
+    _setAsides = bills.allBudgetedExpenses;
+    notifyListeners();
+  }
+
+  /// Seeds the mirrored set-asides directly, so a test can exercise the
+  /// derivation without standing up a whole BillsReceivablesPresenter.
+  @visibleForTesting
+  void debugSetSetAsides(List<BudgetedExpense> setAsides) {
+    _setAsides = setAsides;
+    notifyListeners();
+  }
+
+  /// This month's recurring set-asides landing in [accountId], totalled — the
+  /// target a savings row shows instead of its own stored amount.
+  ///
+  /// Recurring only, and this is the crux. A one-off set-aside is extra money
+  /// the user found part-way through the month, not a change of plan: counting
+  /// it would make the target chase the actual, so a goal funded ₱3,000 as
+  /// planned plus ₱2,000 spare would read exactly 100% instead of 167%, and a
+  /// generous month would look identical to a bare-minimum one. Extra funding
+  /// belongs in progress, which already counts it through `fundedInto`.
+  ///
+  /// Summed rather than first-wins: two recurring set-asides can legitimately
+  /// fund one goal, and picking one would under-report the target.
+  ///
+  /// Returns null when nothing recurring targets the account, which means "no
+  /// opinion" — the row keeps its own stored allocation.
+  double? setAsideTargetFor(String accountId) {
+    var total = 0.0;
+    var found = false;
+    for (final e in _setAsides) {
+      if (e.month != _selectedMonth) continue;
+      if (e.destinationAccountId != accountId) continue;
+      if (!e.isRecurring) continue;
+      total += e.allocatedAmount;
+      found = true;
+    }
+    return found ? total : null;
+  }
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;
@@ -112,6 +173,7 @@ class BudgetPresenter extends ChangeNotifier {
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
+    _bills?.removeListener(_syncFromBills);
     _monthScope?.removeListener(_adoptScopeMonth);
     super.dispose();
   }
@@ -140,9 +202,112 @@ class BudgetPresenter extends ChangeNotifier {
   String get selectedMonth => _selectedMonth;
 
   void setMonth(String month) {
+    // The carried-over notice belongs to the month that was carried, not to the
+    // presenter. Leaving it set would announce "Carried over from August" over
+    // a month the user merely navigated to, which is worse than saying nothing.
+    // Only an actual change clears it: re-selecting the month already on screen
+    // must not wipe the notice describing it.
+    if (month != _selectedMonth) _carriedFrom = null;
     _selectedMonth = month;
     _monthScope?.setMonth(month); // keep Ledger/Bills/Installments in step
     notifyListeners();
+    // Fire-and-forget: the month renders immediately from whatever it has and
+    // repaints again if rows are carried in. Awaiting would stall the tab
+    // switch on a disk write.
+    unawaited(_carryForwardInto(month));
+  }
+
+  /// True once [load] has read the stored budgets. Carry-forward must not run
+  /// before it: an empty `_allBudgets` looks exactly like "this month has no
+  /// rows", and materialising against that would write a month out of nothing.
+  bool _budgetsLoaded = false;
+
+  /// Which month the selected one was carried over from, if it was populated on
+  /// this view. Drives the "Carried over from August" line — a month that
+  /// silently fills with numbers is worse than one that says where they came
+  /// from, and this is the only moment the user meets the feature.
+  String? _carriedFrom;
+  String? get carriedFrom => _carriedFrom;
+
+  void clearCarriedNotice() {
+    if (_carriedFrom == null) return;
+    _carriedFrom = null;
+    notifyListeners();
+  }
+
+  /// Materialises [month] from the most recent earlier month that has rows
+  /// (Plan 059). No-op unless the month is genuinely empty.
+  ///
+  /// Three rules, each load-bearing:
+  ///
+  ///  * **Only when empty.** A month with rows of its own is authoritative and
+  ///    is never re-derived. This is exactly what "recurs unless modified"
+  ///    means.
+  ///  * **Forward only.** Never populate a month earlier than the stored rows.
+  ///    A past month with no budget *had* no budget; filling it in would invent
+  ///    history the user never set.
+  ///  * **Only recurring rows.** Deleting a line clears `isRecurring` across
+  ///    its series, so an ended series is simply not offered here — which is
+  ///    why a month the user deliberately emptied needs no separate marker.
+  Future<void> _carryForwardInto(String month) async {
+    if (!_budgetsLoaded) return;
+    if (_allBudgets.any((b) => b.month == month)) return;
+
+    final earlier =
+        _allBudgets.map((b) => b.month).where((m) => m.compareTo(month) < 0);
+    if (earlier.isEmpty) return; // forward only — nothing behind to carry
+    final source = earlier.reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+
+    final sources = _allBudgets
+        .where((b) => b.month == source && b.isRecurring)
+        .toList(growable: false);
+    if (sources.isEmpty) return;
+
+    // A fresh id per row: these are new rows in a new month, not the same row
+    // moved. Sharing the source's id would make the two months one record and
+    // let an edit to either rewrite the other.
+    //
+    // A source with no series yet adopts its own id as one, and — critically —
+    // is stamped with it too. Stamping only the child would leave the two in
+    // different series: the parent's `seriesId` would stay null, so deleting it
+    // could not reach the copy it had just produced, and the carried row would
+    // outlive the line it came from.
+    final carried = <Budget>[
+      for (final b in sources)
+        Budget(
+          id: _generateId(),
+          categoryId: b.categoryId,
+          month: month,
+          allocatedAmount: b.allocatedAmount,
+          group: b.group,
+          budgetType: b.budgetType,
+          seriesId: b.seriesId ?? b.id,
+          isRecurring: true,
+        ),
+    ];
+
+    final adopting = {
+      for (final b in sources)
+        if (b.seriesId == null) b.id,
+    };
+
+    _allBudgets = [
+      for (final b in _allBudgets)
+        adopting.contains(b.id) ? b.copyWith(seriesId: b.id) : b,
+      ...carried,
+    ];
+    _carriedFrom = source;
+    notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
+  }
+
+  /// Rows of [seriesId] in months strictly after [month] — the reach of an
+  /// "and future" edit or delete.
+  List<Budget> _laterInSeries(String? seriesId, String month) {
+    if (seriesId == null) return const [];
+    return _allBudgets
+        .where((b) => b.seriesId == seriesId && b.month.compareTo(month) > 0)
+        .toList();
   }
 
   /// Every budget across all months — this presenter owns them.
@@ -230,7 +395,11 @@ class BudgetPresenter extends ChangeNotifier {
         for (final entry
             in savingsBudgets.where((e) => e.budget.group == group.id)) {
           final account = entry.account;
-          final allocated = entry.budget.allocatedAmount;
+          // Plan 060: when a recurring set-aside targets this account, IT is
+          // the month's target — read, never written back. Writing would make
+          // rendering mutate storage and race the sync pull.
+          final derived = setAsideTargetFor(account.id);
+          final allocated = derived ?? entry.budget.allocatedAmount;
           final funded = fundedInto(account.id);
           rows.add(BudgetSectionRow(
             targetId: account.id,
@@ -241,6 +410,7 @@ class BudgetPresenter extends ChangeNotifier {
             isSavings: true,
             isGoal: account.category == AccountCategory.goal,
             isIncome: false,
+            targetFromSetAside: derived != null,
             iconKey: account.icon,
             accountCategory: account.category,
             budgetType: entry.budget.budgetType,
@@ -363,7 +533,8 @@ class BudgetPresenter extends ChangeNotifier {
       }
     }
     for (final entry in savingsBudgets) {
-      final allocated = entry.budget.allocatedAmount;
+      final allocated =
+          setAsideTargetFor(entry.account.id) ?? entry.budget.allocatedAmount;
       final funded = fundedInto(entry.account.id);
       rows.add(WebBudgetRow(
         targetId: entry.account.id,
@@ -590,11 +761,24 @@ class BudgetPresenter extends ChangeNotifier {
   }) async {
     final existing = budgetFor(categoryId);
     if (existing != null) {
-      // copyWith treats null as "keep", so omitting group/budgetType preserves
-      // them, while passing a value (e.g. the inline Group dropdown) applies it.
+      // An edit is the new going rate: it lands on this month and every later
+      // month of the same series (Plan 059). Earlier months are never touched —
+      // changing September must not rewrite August.
+      //
+      // Months not yet materialised need nothing here. They will be carried
+      // from the most recent earlier month, which now holds this amount, so the
+      // "already materialised" and "not yet" cases agree. Those two disagreeing
+      // about what October's Groceries is would be the bug to fear.
+      final forward = {
+        existing.id,
+        ..._laterInSeries(existing.seriesId, existing.month).map((b) => b.id),
+      };
       _allBudgets = [
         for (final b in _allBudgets)
-          b.id == existing.id
+          forward.contains(b.id)
+              // copyWith treats null as "keep", so omitting group/budgetType
+              // preserves them, while passing a value (e.g. the inline Group
+              // dropdown) applies it.
               ? b.copyWith(
                   allocatedAmount: amount,
                   group: group,
@@ -603,13 +787,17 @@ class BudgetPresenter extends ChangeNotifier {
               : b,
       ];
     } else {
+      final id = _generateId();
       final newBudget = Budget(
-        id: _generateId(),
+        id: id,
         categoryId: categoryId,
         month: _selectedMonth,
         allocatedAmount: amount,
         group: group ?? BudgetGroupDef.idVariableOptional,
         budgetType: budgetType ?? BudgetType.monthly,
+        // Recurring by default, and its own series head: a budget you set once
+        // should keep applying without being asked to opt in.
+        seriesId: id,
       );
       _allBudgets = [..._allBudgets, newBudget];
     }
@@ -668,11 +856,56 @@ class BudgetPresenter extends ChangeNotifier {
     await _storage.saveBudgetGroups(_groups);
   }
 
+  /// Removes this month's row for [categoryId] and ends its series.
+  ///
+  /// Deleting reads as "I don't budget this any more", so the line does not
+  /// come back next month: later materialised rows go with it, and the earlier
+  /// rows are marked non-recurring so carry-forward stops offering it. That
+  /// last step is what makes a deliberately emptied month stay empty without
+  /// needing a marker of its own.
+  ///
+  /// Earlier months keep their rows. They are history — the user did budget
+  /// this in August, and deleting it in September should not rewrite that.
   Future<void> removeBudget(String categoryId) async {
+    final target = budgetFor(categoryId);
+    if (target == null) return;
+
+    final reach = seriesReach<Budget>(
+      [target],
+      seriesOf: (b) => b.seriesId,
+      laterOpen: (b) => _laterInSeries(b.seriesId, b.month),
+      idOf: (b) => b.id,
+      applyToFuture: true,
+    );
+
     _allBudgets = _allBudgets
-        .where(
-            (b) => !(b.categoryId == categoryId && b.month == _selectedMonth))
+        .where((b) => !reach.ids.contains(b.id))
+        .map((b) => reach.endedSeries.contains(b.seriesId)
+            ? b.copyWith(isRecurring: false)
+            : b)
         .toList();
+    notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
+  }
+
+  /// Turns recurrence on or off for this month's [categoryId] line — the
+  /// "Just this month" switch.
+  ///
+  /// Off detaches the row from its series entirely rather than only clearing
+  /// the flag: a one-off left carrying a `seriesId` would still be swept up by
+  /// a later "and future" edit of its old siblings.
+  Future<void> setBudgetRecurring(String categoryId, bool recurring) async {
+    final target = budgetFor(categoryId);
+    if (target == null || target.isRecurring == recurring) return;
+    _allBudgets = [
+      for (final b in _allBudgets)
+        b.id == target.id
+            ? b.copyWith(
+                isRecurring: recurring,
+                seriesId: recurring ? (b.seriesId ?? b.id) : null,
+              )
+            : b,
+    ];
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
   }
@@ -711,8 +944,13 @@ class BudgetPresenter extends ChangeNotifier {
     // _checkBudgetWarnings lets it run, while any earlier ledger-driven
     // _syncFromLedger calls (which lost the startup race) were correctly skipped.
     _warnedKeysLoaded = true;
+    _budgetsLoaded = true;
     notifyListeners();
     await _checkBudgetWarnings(_cachedNotifPrefs);
+    // The month selected at boot deserves the same carry-forward a month the
+    // user navigates to gets — otherwise opening the app on the 1st shows an
+    // empty Budget page until you step away and back.
+    await _carryForwardInto(_selectedMonth);
   }
 
   /// One-time merge of the retired "Living" group into "Essentials": remap any
@@ -871,6 +1109,11 @@ class BudgetSectionRow {
   final bool isGoal;
   final bool isIncome;
 
+  /// True when [allocated] came from a recurring Bills set-aside rather than
+  /// this row's own stored amount (Plan 060). The card says so, because a
+  /// number the user cannot edit here needs to name where it is edited.
+  final bool targetFromSetAside;
+
   /// Savings rows only: the target account's stored `FinancialAccount.icon`
   /// (a badge-catalog key, the monogram sentinel, or '' for the category
   /// default) and its [AccountCategory]. Carried so the card can draw the icon
@@ -914,6 +1157,7 @@ class BudgetSectionRow {
     required this.isSavings,
     required this.isGoal,
     required this.isIncome,
+    this.targetFromSetAside = false,
     required this.budgetType,
     this.iconKey = '',
     this.accountCategory,

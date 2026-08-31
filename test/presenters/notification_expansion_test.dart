@@ -44,6 +44,7 @@ import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
+import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
@@ -62,6 +63,17 @@ class _NoOpAiCoach implements AiCoachService {
 
   @override
   Future<void> downloadModel({void Function(int progress)? onProgress}) async {}
+
+  @override
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
+  }) async =>
+      null;
 
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({

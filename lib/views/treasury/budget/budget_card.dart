@@ -108,6 +108,20 @@ class BudgetCard extends StatelessWidget {
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: cs.onSurfaceVariant),
                       ),
+                      // A target the user cannot edit here has to name where it
+                      // IS edited, or the row reads as ignoring what they typed
+                      // on this page.
+                      if (row.targetFromSetAside) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.link_rounded,
+                            size: 12, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 3),
+                        Text(
+                          'set-aside',
+                          style: theme.textTheme.labelSmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 8),
