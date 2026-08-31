@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
@@ -107,6 +108,52 @@ class BudgetPresenter extends ChangeNotifier {
               e.isRecurring)
             e,
       ];
+
+  /// Creates the monthly set-aside that will actually fund [accountId], so a
+  /// savings target set on this page also exists as something to move money
+  /// with.
+  ///
+  /// A savings budget and a set-aside are two halves of one intention: the
+  /// budget is the target, the set-aside is the transfer that fills it. Setting
+  /// only the budget is the split that leaves a fund planned but never funded —
+  /// the Budget page shows a goal, Bills has nothing to mark paid, and the two
+  /// tabs describe the same month differently. The other half is offered at the
+  /// moment the budget is saved because that is the only moment the user
+  /// already has both in mind.
+  ///
+  /// No funding account is chosen here. [BudgetedExpense.accountId] is optional
+  /// precisely so the mark-paid sheet can ask for the source at funding time,
+  /// which is when the user knows which account holds the money; guessing one
+  /// now would be a worse answer than asking later.
+  ///
+  /// Recurring, because a savings budget carries forward (Plan 059) and a
+  /// one-off set-aside would leave next month's target derived from nothing.
+  /// Written through the owner's own mutator rather than into a local copy —
+  /// bills owns set-asides, and this presenter only mirrors them.
+  Future<void> createRecurringSetAsideFor(
+      String accountId, double amount) async {
+    final bills = _bills;
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    if (bills == null || account == null) return;
+    await bills.addBudgetedExpense(
+      BudgetedExpense(
+        id: _generateId(),
+        name: account.name,
+        budgetedType: account.category == AccountCategory.goal
+            ? SetAsideType.goal
+            : SetAsideType.savings,
+        month: _selectedMonth,
+        allocatedAmount: amount,
+        // A set-aside is a transfer between the user's own accounts, never
+        // spending, so it carries no expense category — the same empty value
+        // the Bills sheet saves when none is picked.
+        categoryId: '',
+        destinationAccountId: accountId,
+        isRecurring: true,
+        recurrenceType: RecurrenceType.monthly,
+      ),
+    );
+  }
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;

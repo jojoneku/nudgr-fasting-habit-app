@@ -81,10 +81,50 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       // recurrence is set.
       await widget.presenter
           .setBudgetRecurring(_selectedCategoryId!, _recurring);
+      // Offer the other half before leaving. A savings target with nothing in
+      // Bills to fund it is the split this sheet is otherwise happy to create.
+      if (mounted) await _offerSetAside(amount);
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// Offers to create the set-aside that will fund this savings budget, when
+  /// nothing does yet.
+  ///
+  /// The exact complement of [_SetAsideNote]: that note explains a target the
+  /// user cannot edit here, this offers the entry that would produce one. Both
+  /// turn on the same emptiness check, so a fund shows one or the other and
+  /// never both.
+  ///
+  /// Silent for expense budgets — a category budget is a cap on spending that
+  /// already happens, with nothing to schedule. Only savings need an instrument.
+  Future<void> _offerSetAside(double amount) async {
+    if (!_isSavings) return;
+    final accountId = _selectedCategoryId;
+    if (accountId == null) return;
+    if (widget.presenter.setAsideSourcesFor(accountId).isNotEmpty) return;
+    final account = widget.presenter.savingsTargets
+        .where((a) => a.id == accountId)
+        .firstOrNull;
+    if (account == null) return;
+
+    final add = await AppConfirmDialog.confirm(
+      context: context,
+      title: 'Set this aside each month?',
+      body: '${account.name} now has a ${formatPeso(amount)} target, but '
+          'nothing in Bills moves money into it. Adding a monthly set-aside '
+          'gives you something to mark paid — you choose which account it '
+          'comes from when you fund it.',
+      confirmLabel: 'Add set-aside',
+      cancelLabel: 'Not now',
+    );
+    if (!add || !mounted) return;
+
+    await widget.presenter.createRecurringSetAsideFor(accountId, amount);
+    if (!mounted) return;
+    AppToast.success(context, 'Monthly set-aside added to Bills.');
   }
 
   bool get _isEdit =>
