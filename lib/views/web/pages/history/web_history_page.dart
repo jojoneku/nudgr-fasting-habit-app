@@ -461,6 +461,10 @@ class _HistoryBody extends StatelessWidget {
 }
 
 /// Responsive stat strip: 4-up on wide, 2-up on medium, 1-up on narrow.
+///
+/// The strip carries five tiles, so the last row is always short on a wide
+/// viewport. It is centred rather than filled: one stat tile stretched across a
+/// whole desktop row stops reading as a tile.
 class _StatStrip extends StatelessWidget {
   final List<Widget> tiles;
   const _StatStrip({required this.tiles});
@@ -471,14 +475,10 @@ class _StatStrip extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
         final cols = w >= 880 ? 4 : (w >= 520 ? 2 : 1);
-        const gap = WebInsets.lg;
-        final tileWidth = (w - gap * (cols - 1)) / cols;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final t in tiles) SizedBox(width: tileWidth, child: t),
-          ],
+        return WebTileFlow(
+          columns: cols,
+          lastRowFit: WebLastRowFit.capAndCentre,
+          children: tiles,
         );
       },
     );

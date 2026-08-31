@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class GoalProgressCard extends StatelessWidget {
@@ -47,21 +48,12 @@ class GoalProgressCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    account.goalTarget != null
-                        ? Icons.flag_outlined
-                        : Icons.savings_outlined,
-                    size: 17,
-                    color: color,
-                  ),
-                ),
+                // The account's own badge — the icon the user picked in the
+                // setup sheet. This used to hardcode flag/savings, so every
+                // goal rendered the same generic bucket no matter what was
+                // chosen. `AccountBadge` still falls back to the category
+                // default (goal -> flag, savings -> piggy) when nothing is set.
+                AccountBadge.of(account, size: 32, accent: color),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

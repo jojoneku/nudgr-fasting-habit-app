@@ -17,6 +17,13 @@ class AccountBadge extends StatelessWidget {
   final String colorHex;
   final double size;
 
+  /// Pre-resolved accent, overriding [colorHex]. For surfaces that already
+  /// resolve identity color through their own rules — the Budget card runs
+  /// `resolveSliceColor`, which guards near-white hexes and re-tunes them for
+  /// light mode — so the badge matches the row it sits in instead of deriving
+  /// a different shade from the same hex.
+  final Color? accent;
+
   const AccountBadge({
     super.key,
     required this.category,
@@ -24,19 +31,24 @@ class AccountBadge extends StatelessWidget {
     required this.iconKey,
     required this.colorHex,
     this.size = 36,
+    this.accent,
   });
 
   /// Convenience: build from an existing account.
-  factory AccountBadge.of(FinancialAccount account, {double size = 36}) =>
+  factory AccountBadge.of(FinancialAccount account,
+          {double size = 36, Color? accent}) =>
       AccountBadge(
         category: account.category,
         name: account.name,
         iconKey: account.icon,
         colorHex: account.colorHex,
         size: size,
+        accent: accent,
       );
 
   Color _accent(BuildContext context) {
+    final override = accent;
+    if (override != null) return override;
     try {
       return Color(int.parse('FF${colorHex.replaceFirst('#', '')}', radix: 16));
     } catch (_) {
