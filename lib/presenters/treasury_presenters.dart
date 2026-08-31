@@ -96,20 +96,26 @@ class TreasuryPresenters {
 
     // Owners first, reporters last: the dashboard subscribes to all three, so
     // each has to exist before it does.
-    final budget = BudgetPresenter(
-      storage,
-      stats,
-      ledger,
-      notifications,
-      scope,
-    );
-
+    //
+    // Bills is built before budget because budget now reads set-asides from it
+    // (Plan 060) — a savings row's target is the recurring set-aside that funds
+    // it. Safe in this order: bills holds no reference to budget, so there is
+    // no cycle to invert.
     final bills = BillsReceivablesPresenter(
       storage,
       ledger,
       stats,
       notifications: notifications,
       monthScope: scope,
+    );
+
+    final budget = BudgetPresenter(
+      storage,
+      stats,
+      ledger,
+      notifications,
+      scope,
+      bills,
     );
 
     final dashboard =

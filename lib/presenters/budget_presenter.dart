@@ -4,10 +4,12 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
@@ -24,12 +26,15 @@ class BudgetPresenter extends ChangeNotifier {
     LedgerPresenter? ledger,
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
+    BillsReceivablesPresenter? bills,
   ])  : _storage = storage,
         _stats = stats,
         _ledger = ledger,
         _monthScope = monthScope,
+        _bills = bills,
         _notifications = notifications ?? NotificationService() {
     _ledger?.addListener(_syncFromLedger);
+    _bills?.addListener(_syncFromBills);
     if (monthScope != null) {
       _selectedMonth = monthScope.month;
       monthScope.addListener(_adoptScopeMonth);
@@ -40,6 +45,60 @@ class BudgetPresenter extends ChangeNotifier {
   final StatsPresenter _stats;
   final LedgerPresenter? _ledger;
   final NotificationService _notifications;
+
+  /// The owner of the set-asides a savings row's target is read from (Plan
+  /// 060). Optional so the presenter still builds standalone — without it,
+  /// savings rows fall back to their own stored allocation.
+  final BillsReceivablesPresenter? _bills;
+
+  /// Set-asides mirrored off the owner, never a private copy refreshed only by
+  /// this presenter's own [load] — a copy would go stale the moment a set-aside
+  /// was edited on the Bills page, and the Budget page would keep showing the
+  /// old target with nothing to indicate it was wrong.
+  List<BudgetedExpense> _setAsides = const [];
+
+  void _syncFromBills() {
+    final bills = _bills;
+    if (bills == null) return;
+    _setAsides = bills.allBudgetedExpenses;
+    notifyListeners();
+  }
+
+  /// Seeds the mirrored set-asides directly, so a test can exercise the
+  /// derivation without standing up a whole BillsReceivablesPresenter.
+  @visibleForTesting
+  void debugSetSetAsides(List<BudgetedExpense> setAsides) {
+    _setAsides = setAsides;
+    notifyListeners();
+  }
+
+  /// This month's recurring set-asides landing in [accountId], totalled — the
+  /// target a savings row shows instead of its own stored amount.
+  ///
+  /// Recurring only, and this is the crux. A one-off set-aside is extra money
+  /// the user found part-way through the month, not a change of plan: counting
+  /// it would make the target chase the actual, so a goal funded ₱3,000 as
+  /// planned plus ₱2,000 spare would read exactly 100% instead of 167%, and a
+  /// generous month would look identical to a bare-minimum one. Extra funding
+  /// belongs in progress, which already counts it through `fundedInto`.
+  ///
+  /// Summed rather than first-wins: two recurring set-asides can legitimately
+  /// fund one goal, and picking one would under-report the target.
+  ///
+  /// Returns null when nothing recurring targets the account, which means "no
+  /// opinion" — the row keeps its own stored allocation.
+  double? setAsideTargetFor(String accountId) {
+    var total = 0.0;
+    var found = false;
+    for (final e in _setAsides) {
+      if (e.month != _selectedMonth) continue;
+      if (e.destinationAccountId != accountId) continue;
+      if (!e.isRecurring) continue;
+      total += e.allocatedAmount;
+      found = true;
+    }
+    return found ? total : null;
+  }
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;
@@ -114,6 +173,7 @@ class BudgetPresenter extends ChangeNotifier {
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
+    _bills?.removeListener(_syncFromBills);
     _monthScope?.removeListener(_adoptScopeMonth);
     super.dispose();
   }
@@ -335,7 +395,11 @@ class BudgetPresenter extends ChangeNotifier {
         for (final entry
             in savingsBudgets.where((e) => e.budget.group == group.id)) {
           final account = entry.account;
-          final allocated = entry.budget.allocatedAmount;
+          // Plan 060: when a recurring set-aside targets this account, IT is
+          // the month's target — read, never written back. Writing would make
+          // rendering mutate storage and race the sync pull.
+          final derived = setAsideTargetFor(account.id);
+          final allocated = derived ?? entry.budget.allocatedAmount;
           final funded = fundedInto(account.id);
           rows.add(BudgetSectionRow(
             targetId: account.id,
@@ -346,6 +410,7 @@ class BudgetPresenter extends ChangeNotifier {
             isSavings: true,
             isGoal: account.category == AccountCategory.goal,
             isIncome: false,
+            targetFromSetAside: derived != null,
             iconKey: account.icon,
             accountCategory: account.category,
             budgetType: entry.budget.budgetType,
@@ -468,7 +533,8 @@ class BudgetPresenter extends ChangeNotifier {
       }
     }
     for (final entry in savingsBudgets) {
-      final allocated = entry.budget.allocatedAmount;
+      final allocated =
+          setAsideTargetFor(entry.account.id) ?? entry.budget.allocatedAmount;
       final funded = fundedInto(entry.account.id);
       rows.add(WebBudgetRow(
         targetId: entry.account.id,
@@ -1043,6 +1109,11 @@ class BudgetSectionRow {
   final bool isGoal;
   final bool isIncome;
 
+  /// True when [allocated] came from a recurring Bills set-aside rather than
+  /// this row's own stored amount (Plan 060). The card says so, because a
+  /// number the user cannot edit here needs to name where it is edited.
+  final bool targetFromSetAside;
+
   /// Savings rows only: the target account's stored `FinancialAccount.icon`
   /// (a badge-catalog key, the monogram sentinel, or '' for the category
   /// default) and its [AccountCategory]. Carried so the card can draw the icon
@@ -1086,6 +1157,7 @@ class BudgetSectionRow {
     required this.isSavings,
     required this.isGoal,
     required this.isIncome,
+    this.targetFromSetAside = false,
     required this.budgetType,
     this.iconKey = '',
     this.accountCategory,
