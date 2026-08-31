@@ -44,6 +44,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
         _amountController.text = existing.allocatedAmount.toStringAsFixed(2);
         _groupId = existing.group;
         _budgetType = existing.budgetType;
+        _recurring = existing.isRecurring;
       }
     }
   }
@@ -53,6 +54,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     _amountController.dispose();
     super.dispose();
   }
+
+  /// Whether this line keeps applying in later months (Plan 059). On by
+  /// default: a budget you set once should keep applying without opting in.
+  bool _recurring = true;
 
   bool get _isSavings => _groupId == BudgetGroupDef.idSavings;
 
@@ -71,6 +76,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
         group: _groupId,
         budgetType: _budgetType,
       );
+      // After setBudget, so the row exists on a first save before its
+      // recurrence is set.
+      await widget.presenter
+          .setBudgetRecurring(_selectedCategoryId!, _recurring);
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -345,6 +354,17 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             ),
             const SizedBox(height: 20),
 
+            // Recurrence, framed as the exception ("Just this month") rather
+            // than the rule ("Repeat monthly"): carrying forward is the default
+            // and the common case, so the switch names the thing you would have
+            // to ask for, and its default state reads as untouched.
+            _JustThisMonth(
+              value: !_recurring,
+              onChanged:
+                  _isSubmitting ? null : (v) => setState(() => _recurring = !v),
+            ),
+            const SizedBox(height: 20),
+
             // Save button
             AppPrimaryButton(
               label: _isEdit ? 'Save Budget' : 'Set Budget',
@@ -475,6 +495,58 @@ class _NoCategoriesHint extends StatelessWidget {
             onPressed: onAdd,
             child: const Text('Create'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Just this month" — opts a budget line out of carrying forward.
+///
+/// Stated as the opt-out because recurring is the default (Plan 059). A switch
+/// labelled "Repeat monthly" that ships already on reads as a setting the user
+/// must have chosen; this one reads as untouched until they choose it.
+class _JustThisMonth extends StatelessWidget {
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  const _JustThisMonth({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Just this month',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value
+                      ? "Won't carry into next month"
+                      : 'Carries forward until you change it',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
