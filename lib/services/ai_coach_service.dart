@@ -11,6 +11,7 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
+import '../utils/finance_entry_extraction.dart';
 
 /// Tier of the active AI Coach service.
 enum AiCoachTier { onDevice, cloud }
@@ -185,6 +186,31 @@ abstract class AiCoachService {
     required List<FinancialAccount> accounts,
     required Map<String, String> learnedMappings,
     required int turnCount,
+  });
+
+  /// Extracts every transaction described by [message] in ONE call (Plan 058).
+  ///
+  /// This is the primary logging path. Unlike [runFinanceClassifierStep], which
+  /// sees a single pre-split fragment, this receives the user's whole message —
+  /// so context stated once ("in maribank ... all yesterday") reaches every
+  /// entry it covers, which is the thing per-fragment classification could not
+  /// do however good the model was.
+  ///
+  /// [now] is injected so relative dates resolve against a testable clock.
+  ///
+  /// Returns null when the tier is unavailable or the response can't be parsed;
+  /// the caller falls back to the regex pipeline rather than showing a
+  /// half-read message. Implementations MUST bind every named entity against
+  /// the live [accounts] / [categories] lists — a name that doesn't match must
+  /// leave that field null and record it in [ExtractedEntry.missing], never
+  /// produce an invented id.
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
   });
 
   void dispose();

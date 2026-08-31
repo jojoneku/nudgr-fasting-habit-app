@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// One budget rendered as its own card (Nudgr budget-cards redesign,
@@ -15,13 +16,6 @@ class BudgetCard extends StatelessWidget {
   final VoidCallback? onEdit;
 
   const BudgetCard({super.key, required this.row, this.onEdit});
-
-  IconData get _icon {
-    if (row.isSavings) {
-      return row.isGoal ? Icons.flag_outlined : Icons.savings_outlined;
-    }
-    return categoryIcon(row.name, row.categoryType);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +59,25 @@ class BudgetCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _IconChip(icon: _icon, color: identity),
+            // Savings rows carry a real account, so they get that account's
+            // badge — the icon picked in the setup sheet, or its category
+            // default. Hardcoding flag/piggy here meant every fund rendered
+            // the same generic bucket. Expense/income rows have no account and
+            // keep resolving their glyph from the category name.
+            if (row.isSavings && row.accountCategory != null)
+              AccountBadge(
+                category: row.accountCategory!,
+                name: row.name,
+                iconKey: row.iconKey,
+                colorHex: row.colorHex,
+                size: 40,
+                accent: identity,
+              )
+            else
+              _IconChip(
+                icon: categoryIcon(row.name, row.categoryType),
+                color: identity,
+              ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

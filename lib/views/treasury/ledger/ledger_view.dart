@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/views/widgets/finance/entry_review_card.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -189,7 +190,9 @@ class _LedgerChatDrawer extends StatelessWidget {
                 children: [
                   _Transcript(turns: state.turns),
                   const SizedBox(height: 8),
-                  if (state.lastStep is StepClarify)
+                  if (state.entries.isNotEmpty)
+                    EntryReviewCard(ledger: presenter, state: state)
+                  else if (state.lastStep is StepClarify)
                     _ClarifyActions(
                       presenter: presenter,
                       step: state.lastStep as StepClarify,

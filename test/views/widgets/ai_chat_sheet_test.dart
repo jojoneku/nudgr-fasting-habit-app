@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
+import 'package:intermittent_fasting/models/ai_chat_message.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
@@ -226,6 +229,114 @@ void main() {
       expect(position.pixels, closeTo(position.maxScrollExtent, 1));
 
       presenter.dispose();
+    });
+  });
+
+  // ── Enter-to-send ─────────────────────────────────────────────────────────
+
+  group('Enter sends on a physical keyboard', () {
+    setUp(() {
+      when(cloud.respond(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        isThinking: anyNamed('isThinking'),
+      )).thenAnswer((_) => const Stream<String>.empty());
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer((_) => const Stream<String>.empty());
+    });
+
+    /// Runs [body] as though on [platform]. The override is cleared inside the
+    /// test body, not in a tearDown: the framework asserts every debug var is
+    /// back to default at the end of the body, before tearDown ever runs.
+    Future<void> onPlatform(
+      TargetPlatform platform,
+      Future<void> Function() body,
+    ) async {
+      debugDefaultTargetPlatformOverride = platform;
+      try {
+        await body();
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    }
+
+    String composerText(WidgetTester tester) =>
+        tester
+            .widget<TextField>(find.byType(TextField).last)
+            .controller
+            ?.text ??
+        '';
+
+    testWidgets('a bare Enter sends and clears the field', (tester) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final presenter = openAdvisor();
+        await pumpChat(tester, presenter, surface: const Size(1200, 900));
+
+        await tester.enterText(find.byType(TextField).last, 'how much on food');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(composerText(tester), isEmpty,
+            reason: 'sending clears the composer');
+        expect(
+          presenter.messages.any((m) => m.text == 'how much on food'),
+          isTrue,
+        );
+      });
+    });
+
+    testWidgets('Shift+Enter does not send', (tester) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final presenter = openAdvisor();
+        await pumpChat(tester, presenter, surface: const Size(1200, 900));
+
+        await tester.enterText(find.byType(TextField).last, 'first line');
+        await tester.pump();
+        await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+        await tester.pumpAndSettle();
+
+        expect(composerText(tester), contains('first line'),
+            reason: 'the text stays put so the line can be continued');
+        expect(presenter.messages.any((m) => m.text == 'first line'), isFalse);
+      });
+    });
+
+    testWidgets('Enter on an empty field does nothing', (tester) async {
+      await onPlatform(TargetPlatform.macOS, () async {
+        final presenter = openAdvisor();
+        await pumpChat(tester, presenter, surface: const Size(1200, 900));
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(
+          presenter.messages.where((m) => m.role == AiChatRole.user),
+          isEmpty,
+        );
+      });
+    });
+
+    testWidgets('on a phone Enter stays a newline', (tester) async {
+      await onPlatform(TargetPlatform.android, () async {
+        final presenter = openAdvisor();
+        await pumpChat(tester, presenter);
+
+        await tester.enterText(find.byType(TextField).last, 'a note');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(composerText(tester), 'a note',
+            reason: 'the return key is the only way to break a line there');
+        expect(presenter.messages.any((m) => m.text == 'a note'), isFalse);
+      });
     });
   });
 }

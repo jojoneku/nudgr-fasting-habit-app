@@ -12,6 +12,7 @@ import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
+import '../utils/finance_entry_extraction.dart';
 
 /// Stub implementation used before the on-device model is downloaded or
 /// when no network is available for the cloud tier.
@@ -96,6 +97,19 @@ class NullAiCoachService implements AiCoachService {
     String userQuery,
     List<FoodSearchCandidate> candidates,
   ) async =>
+      null;
+
+  // Extraction is cloud-only; with no service at all the caller falls back
+  // to the regex pipeline.
+  @override
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
+  }) async =>
       null;
 
   @override

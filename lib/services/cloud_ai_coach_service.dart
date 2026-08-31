@@ -16,6 +16,7 @@ import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../utils/finance_classifier_parser.dart';
 import 'ai_coach_service.dart';
+import '../utils/finance_entry_extraction.dart';
 
 /// Message for a transport-level failure — the request never came back with a
 /// status, so there is nothing on the response to read.
@@ -643,6 +644,54 @@ class CloudAiCoachService implements AiCoachService {
       accounts: activeAccounts,
       categories: categories,
       preparse: preparse,
+    );
+  }
+
+  // ── Finance extraction (Plan 058) ─────────────────────────────────────────
+
+  /// One call over the whole message. This is the primary logging path; the
+  /// per-fragment classifier above is kept for the clarify loop and for the
+  /// regex fallback that runs when this tier has no transport.
+  @override
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
+  }) async {
+    if (!_hasTransport) return null;
+
+    // Same pool the rest of chat logging uses: sub-accounts (savings pockets)
+    // and custodian holdings are not loggable by chat (Plan 026 §4).
+    final activeAccounts = accounts
+        .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
+        .toList();
+    if (activeAccounts.isEmpty) return null;
+
+    final clock = now ?? DateTime.now();
+    final prompt = buildFinanceExtractionPrompt(
+      message: message,
+      categories: categories,
+      accounts: activeAccounts,
+      learnedMappings: learnedMappings,
+      now: clock,
+      categoryNameFor: categoryNameFor,
+    );
+
+    // requireOptIn:false — logging is the default Quick Add path and does not
+    // wait on the Cloud AI toggle, matching runFinanceClassifierStep.
+    final result =
+        await _call('classifyFinance', {'prompt': prompt}, requireOptIn: false);
+    final text = result?['text'] as String?;
+    if (text == null || text.isEmpty) return null;
+
+    return parseFinanceExtractionResponse(
+      text: text,
+      accounts: activeAccounts,
+      categories: categories,
+      now: clock,
     );
   }
 

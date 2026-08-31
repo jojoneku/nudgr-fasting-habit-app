@@ -411,6 +411,8 @@ class BudgetPresenter extends ChangeNotifier {
             isGoal: account.category == AccountCategory.goal,
             isIncome: false,
             targetFromSetAside: derived != null,
+            iconKey: account.icon,
+            accountCategory: account.category,
             budgetType: entry.budget.budgetType,
             allocated: allocated,
             actual: funded,
@@ -1112,6 +1114,15 @@ class BudgetSectionRow {
   /// number the user cannot edit here needs to name where it is edited.
   final bool targetFromSetAside;
 
+  /// Savings rows only: the target account's stored `FinancialAccount.icon`
+  /// (a badge-catalog key, the monogram sentinel, or '' for the category
+  /// default) and its [AccountCategory]. Carried so the card can draw the icon
+  /// the user actually picked instead of one generic savings/goal glyph for
+  /// every fund. Empty/null on expense and income rows, which resolve their
+  /// glyph from [name]/[categoryType] instead.
+  final String iconKey;
+  final AccountCategory? accountCategory;
+
   /// The budget's cadence type — surfaced as a small badge (expense rows only),
   /// preserving the label the old category tile showed.
   final BudgetType budgetType;
@@ -1148,6 +1159,8 @@ class BudgetSectionRow {
     required this.isIncome,
     this.targetFromSetAside = false,
     required this.budgetType,
+    this.iconKey = '',
+    this.accountCategory,
     required this.allocated,
     required this.actual,
     required this.progress,
