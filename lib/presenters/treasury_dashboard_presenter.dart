@@ -1013,12 +1013,43 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Savings groups are skipped — a savings budget's `categoryId` is an
   /// *account* id (see [_budgetSpentFor]), so it shares no key space with the
   /// category ids bills and set-asides carry.
+  /// The slice of [budget] — a savings row — already reserved by an unfunded
+  /// set-aside pointing at the same account.
+  ///
+  /// The general path above matches obligations by `categoryId`, which cannot
+  /// see this: a savings budget's `categoryId` is an *account* id, while a
+  /// set-aside's `categoryId` is an expense category. The key that does join
+  /// them is `destinationAccountId` — where the set-aside's money lands.
+  ///
+  /// Without this, a ₱3,000 savings budget plus an unfunded ₱3,000 set-aside
+  /// into the same goal reserved ₱6,000 against month-end cash: once through
+  /// [budgetedExpensesRemaining] and again through [totalBudgetRemaining], with
+  /// nothing credited back. The forecast read low for as long as the set-aside
+  /// stayed unfunded — which is most of a month — and corrected itself only
+  /// once funded, so it looked like the projection drifting rather than a
+  /// double count.
+  double _savingsSetAsideOverlap(Budget budget) {
+    var owed = 0.0;
+    for (final e in _budgetedExpenses) {
+      if (e.month != _currentMonth || e.isPaid) continue;
+      if (e.destinationAccountId != budget.categoryId) continue;
+      owed += (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity);
+    }
+    if (owed <= 0) return 0.0;
+    final remaining = (budget.allocatedAmount - _budgetSpentFor(budget))
+        .clamp(0.0, double.infinity);
+    return owed < remaining ? owed : remaining;
+  }
+
   double get _obligationBudgetOverlap {
     final obligations = _outstandingObligationsByCategory;
     if (obligations.isEmpty) return 0.0;
     var overlap = 0.0;
     for (final budget in _budgets.where((b) => b.month == _currentMonth)) {
-      if (_isSavingsGroup(budget.group)) continue;
+      if (_isSavingsGroup(budget.group)) {
+        overlap += _savingsSetAsideOverlap(budget);
+        continue;
+      }
       final owed = obligations[budget.categoryId];
       if (owed == null) continue;
       final remaining = (budget.allocatedAmount - _budgetSpentFor(budget))
