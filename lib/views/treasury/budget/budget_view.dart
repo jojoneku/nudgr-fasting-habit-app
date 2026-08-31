@@ -4,6 +4,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/budget/add_budget_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/budget/budget_card.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.dart';
 import 'package:intermittent_fasting/views/treasury/budget/manage_groups_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -248,42 +249,12 @@ class _BudgetHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 2),
-            _MonthSwitcher(
+            MonthStepperPill(
               month: presenter.selectedMonth,
               onTap: onPickMonth,
+              onMonthChanged: presenter.setMonth,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MonthSwitcher extends StatelessWidget {
-  final String month;
-  final VoidCallback onTap;
-
-  const _MonthSwitcher({required this.month, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Material(
-      color: cs.surfaceContainerHighest,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          alignment: Alignment.center,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          child: Text(
-            monthChipLabel(month),
-            style: theme.textTheme.titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
         ),
       ),
     );
