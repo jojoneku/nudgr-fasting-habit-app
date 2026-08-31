@@ -132,7 +132,11 @@ class _PositionRow extends StatelessWidget {
             : constraints.maxWidth >= 560
                 ? 2
                 : 1;
-        return _GridFlow(columns: cols, spacing: WebInsets.lg, children: tiles);
+        return WebTileFlow(
+          columns: cols,
+          lastRowFit: WebLastRowFit.fill,
+          children: tiles,
+        );
       },
     );
   }
@@ -226,8 +230,7 @@ class _MonthEndOutlookRow extends StatelessWidget {
                 : constraints.maxWidth >= 560
                     ? 2
                     : 1;
-            return _GridFlow(
-                columns: cols, spacing: WebInsets.lg, children: tiles);
+            return WebTileFlow(columns: cols, children: tiles);
           },
         ),
       ],
@@ -849,8 +852,7 @@ class _AccountBalancesRow extends StatelessWidget {
                 : constraints.maxWidth >= 560
                     ? 2
                     : 1;
-            return _GridFlow(
-                columns: cols, spacing: WebInsets.lg, children: tiles);
+            return WebTileFlow(columns: cols, children: tiles);
           },
         ),
       ],
@@ -1179,45 +1181,6 @@ class _SavingsGoalsCard extends StatelessWidget {
 // ===========================================================================
 // Shared page-private helpers
 // ===========================================================================
-
-/// A simple responsive grid that flows [children] into [columns] equal-width
-/// cells with [spacing] between them. Each row stretches its cells to equal
-/// height via IntrinsicHeight.
-class _GridFlow extends StatelessWidget {
-  final int columns;
-  final double spacing;
-  final List<Widget> children;
-  const _GridFlow({
-    required this.columns,
-    required this.spacing,
-    required this.children,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (var i = 0; i < children.length; i += columns) {
-      final slice =
-          children.sublist(i, (i + columns).clamp(0, children.length).toInt());
-      final cells = <Widget>[];
-      for (var c = 0; c < columns; c++) {
-        if (c > 0) cells.add(SizedBox(width: spacing));
-        cells.add(Expanded(
-          child: c < slice.length ? slice[c] : const SizedBox.shrink(),
-        ));
-      }
-      if (rows.isNotEmpty) rows.add(SizedBox(height: spacing));
-      rows.add(IntrinsicHeight(
-        child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch, children: cells),
-      ));
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: rows,
-    );
-  }
-}
 
 /// 2-column grid of [_MiniStat]s used inside the Cash Flow card.
 class _StatGrid extends StatelessWidget {
