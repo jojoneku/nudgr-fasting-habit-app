@@ -13,6 +13,25 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.69] - 2026-08-31
+
+### Added
+- give the mobile month pill its chevrons
+- stop a goal's set-aside once it is funded, and say where a target comes from
+- say when a month was carried, and offer a one-off
+- carry a budget line forward until you change it
+- review extracted entries in place, and send on Enter
+- make the one-call extractor the primary logging path
+- extract every transaction in a message from one AI call
+
+### Fixed
+- stop reserving a goal's monthly contribution twice
+- put a carried row in the same series as the row it came from
+- let a polite request log, and stop the advisor claiming it did
+
+### Performance
+- commit a single unambiguous entry without calling the model
+
 ## [1.1.68] - 2026-08-31
 
 ### Fixed
@@ -683,7 +702,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.68...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.69...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -753,3 +772,4 @@ distributed via `manifest.json`.
 [1.1.66]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.66
 [1.1.67]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.67
 [1.1.68]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.68
+[1.1.69]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.69
