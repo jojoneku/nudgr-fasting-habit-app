@@ -100,6 +100,7 @@ class _BudgetViewState extends State<BudgetView> {
                           children: [
                             _BudgetRingHero(presenter: widget.presenter),
                             const SizedBox(height: 20),
+                            _CarriedOverNotice(presenter: widget.presenter),
                             for (final section in sections) ...[
                               _SectionBlock(
                                 section: section,
@@ -126,6 +127,83 @@ class _BudgetViewState extends State<BudgetView> {
           ),
         );
       },
+    );
+  }
+}
+
+/// "Carried over from August" — shown the first time a month is populated by
+/// carry-forward (Plan 059).
+///
+/// A month that silently fills with numbers is worse than one that says where
+/// they came from: without this the user opens September, sees figures they
+/// don't remember typing, and has no way to tell a carried budget from one they
+/// set. It is also the only moment the feature explains itself.
+///
+/// Collapses to nothing when the month wasn't carried.
+class _CarriedOverNotice extends StatelessWidget {
+  final BudgetPresenter presenter;
+
+  const _CarriedOverNotice({required this.presenter});
+
+  /// "2026-08" → "August". Falls back to the raw key rather than throwing on
+  /// anything unexpected — a malformed month must not take the page down.
+  String _monthName(String key) {
+    final parts = key.split('-');
+    if (parts.length != 2) return key;
+    final month = int.tryParse(parts[1]);
+    if (month == null || month < 1 || month > 12) return key;
+    return const [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ][month - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final from = presenter.carriedFrom;
+    if (from == null) return const SizedBox.shrink();
+
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cs.outlineVariant, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.history_rounded, size: 16, color: cs.onSurfaceVariant),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Carried over from ${_monthName(from)}. Edit any row and it '
+                'applies from here on.',
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, size: 16, color: cs.onSurfaceVariant),
+              onPressed: presenter.clearCarriedNotice,
+              tooltip: 'Dismiss',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              padding: EdgeInsets.zero,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
