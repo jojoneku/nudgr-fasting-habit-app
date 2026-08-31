@@ -107,6 +107,27 @@ void main() {
       expect(sept.seriesId, aug.seriesId);
     });
 
+    test('an unstamped source adopts a series, so delete can reach its copy',
+        () async {
+      // A row created without a seriesId (legacy, or built in code) still
+      // carries. Stamping only the child would leave the parent seriesId null,
+      // so deleting the parent could not reach the copy it had just produced
+      // and the carried row would outlive the line it came from.
+      stub(budgets: [
+        _budget('food', '2026-08', 8000, id: 'bud1', seriesId: null),
+      ]);
+      final p = await presenterOn('2026-09');
+
+      final aug = monthRows(p, '2026-08').single;
+      final sept = monthRows(p, '2026-09').single;
+      expect(aug.seriesId, isNotNull, reason: 'the source adopts a series too');
+      expect(sept.seriesId, aug.seriesId);
+
+      p.setMonth('2026-08');
+      await p.removeBudget('food');
+      expect(monthRows(p, '2026-09'), isEmpty);
+    });
+
     test('a month with rows of its own is never re-derived', () async {
       stub(budgets: [
         _budget('food', '2026-08', 8000),

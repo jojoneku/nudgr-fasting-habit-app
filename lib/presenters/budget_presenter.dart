@@ -198,26 +198,44 @@ class BudgetPresenter extends ChangeNotifier {
     if (earlier.isEmpty) return; // forward only — nothing behind to carry
     final source = earlier.reduce((a, b) => a.compareTo(b) > 0 ? a : b);
 
+    final sources = _allBudgets
+        .where((b) => b.month == source && b.isRecurring)
+        .toList(growable: false);
+    if (sources.isEmpty) return;
+
     // A fresh id per row: these are new rows in a new month, not the same row
     // moved. Sharing the source's id would make the two months one record and
     // let an edit to either rewrite the other.
+    //
+    // A source with no series yet adopts its own id as one, and — critically —
+    // is stamped with it too. Stamping only the child would leave the two in
+    // different series: the parent's `seriesId` would stay null, so deleting it
+    // could not reach the copy it had just produced, and the carried row would
+    // outlive the line it came from.
     final carried = <Budget>[
-      for (final b in _allBudgets)
-        if (b.month == source && b.isRecurring)
-          Budget(
-            id: _generateId(),
-            categoryId: b.categoryId,
-            month: month,
-            allocatedAmount: b.allocatedAmount,
-            group: b.group,
-            budgetType: b.budgetType,
-            seriesId: b.seriesId ?? b.id,
-            isRecurring: true,
-          ),
+      for (final b in sources)
+        Budget(
+          id: _generateId(),
+          categoryId: b.categoryId,
+          month: month,
+          allocatedAmount: b.allocatedAmount,
+          group: b.group,
+          budgetType: b.budgetType,
+          seriesId: b.seriesId ?? b.id,
+          isRecurring: true,
+        ),
     ];
-    if (carried.isEmpty) return;
 
-    _allBudgets = [..._allBudgets, ...carried];
+    final adopting = {
+      for (final b in sources)
+        if (b.seriesId == null) b.id,
+    };
+
+    _allBudgets = [
+      for (final b in _allBudgets)
+        adopting.contains(b.id) ? b.copyWith(seriesId: b.id) : b,
+      ...carried,
+    ];
     _carriedFrom = source;
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
