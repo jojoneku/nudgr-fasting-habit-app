@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/finance/finance_parse_result.dart';
 import '../../../presenters/ledger_presenter.dart';
+import 'entry_review_card.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/app_text_styles.dart';
 
@@ -31,6 +32,10 @@ class LedgerChatPanel extends StatelessWidget {
           onDismiss: () {
             ledger.clearChatHardError();
           });
+    } else if (state.entries.isNotEmpty) {
+      // Plan 058 rows. Same widget the assistant sheet and the Ledger drawer
+      // render, so the three surfaces cannot drift.
+      body = EntryReviewCard(ledger: ledger, state: state);
     } else if (state.phase == ChatPhase.classifying) {
       body = Row(
         children: [

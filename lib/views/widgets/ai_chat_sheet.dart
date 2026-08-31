@@ -1,6 +1,6 @@
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/ai_chat_message.dart';
@@ -961,6 +961,33 @@ class _InputBar extends StatelessWidget {
     this.onAttach,
   });
 
+  /// True where a physical keyboard is the norm. Desktop and web get
+  /// Enter-to-send; phones and tablets keep the return key as a newline.
+  static bool get _hasPhysicalKeyboard =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  /// Sends on a bare Enter, leaving Shift+Enter (and every other combination)
+  /// to the field so a multi-line message is still possible.
+  ///
+  /// Runs on key-down only: handling both down and up would send twice, and
+  /// swallowing the up event without the down one lets the newline through
+  /// first.
+  KeyEventResult _sendOnEnter(FocusNode node, KeyEvent event) {
+    if (!_hasPhysicalKeyboard || !enabled) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) return KeyEventResult.ignored;
+    if (controller.text.trim().isEmpty) return KeyEventResult.ignored;
+    onSend();
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -980,45 +1007,52 @@ class _InputBar extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              enabled: enabled,
-              maxLines: 4,
-              minLines: 1,
-              textInputAction: TextInputAction.newline,
-              style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 14,
-              ),
-              decoration: InputDecoration(
-                hintText: enabled ? 'Ask your coach…' : 'Coach not ready…',
-                hintStyle: TextStyle(
-                  color: cs.onSurfaceVariant,
+            child: Focus(
+              // Enter sends where there is a physical keyboard; Shift+Enter
+              // still breaks the line. On a touch keyboard the return key
+              // stays a newline — it is the only way to get one there, and
+              // reaching for a send button is the expected gesture anyway.
+              onKeyEvent: _sendOnEnter,
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                enabled: enabled,
+                maxLines: 4,
+                minLines: 1,
+                textInputAction: TextInputAction.newline,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 14,
                 ),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: cs.outlineVariant,
-                    width: 1,
+                decoration: InputDecoration(
+                  hintText: enabled ? 'Ask your coach…' : 'Coach not ready…',
+                  hintStyle: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 14,
                   ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(
-                    color: cs.primary,
-                    width: 1,
+                  filled: true,
+                  fillColor: cs.surfaceContainerHighest,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: cs.outlineVariant,
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                      color: cs.primary,
+                      width: 1,
+                    ),
                   ),
                 ),
               ),

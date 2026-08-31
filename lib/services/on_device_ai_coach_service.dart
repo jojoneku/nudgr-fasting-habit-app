@@ -20,6 +20,7 @@ import '../utils/finance_classifier_parser.dart';
 import '../utils/food_nlp_parser.dart';
 import '../utils/food_unit_converter.dart';
 import 'ai_coach_service.dart';
+import '../utils/finance_entry_extraction.dart';
 
 /// On-device AI Coach powered by Qwen3 0.6B via flutter_gemma.
 ///
@@ -987,6 +988,21 @@ class OnDeviceAiCoachService implements AiCoachService {
   }
 
   // ── Finance classifier step (Plan 026 §3.3) ───────────────────────────────
+
+  // Extraction is cloud-only. Gemma 0.6B is materially worse at emitting a
+  // clean multi-object JSON array than at the single object the classifier
+  // asks for, and a half-parsed array is worse than no array — the regex
+  // pipeline is the better offline fallback, so this tier declines.
+  @override
+  Future<ExtractionResult?> extractFinanceEntries({
+    required String message,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required String Function(String categoryId) categoryNameFor,
+    DateTime? now,
+  }) async =>
+      null;
 
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({

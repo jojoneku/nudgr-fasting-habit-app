@@ -6,9 +6,21 @@ against the manual ledger form (`lib/views/treasury/ledger/add_transaction_sheet
 Read this before sending a user to chat for something, or before assuming chat
 is a full replacement for the form.
 
-**Pipeline:** regex + dictionary preparse (`lib/utils/finance_nlp_parser.dart`)
-→ AI classifier, cloud then on-device (`lib/utils/finance_classifier_parser.dart`)
-→ prefilled form. Each layer only handles what the one before it couldn't.
+**Pipeline (Plan 058):** the whole message goes to the cloud extractor in ONE
+call (`lib/utils/finance_entry_extraction.dart`), which returns every
+transaction in it as an array; names are bound against the live account and
+category lists, and any field it couldn't determine is marked `missing` and
+resolved with a picker on the confirm card
+(`lib/views/widgets/finance/entry_review_card.dart`).
+
+The regex + dictionary preparse (`lib/utils/finance_nlp_parser.dart`) and the
+per-fragment AI classifier (`lib/utils/finance_classifier_parser.dart`) are the
+**fallback**, reached only when the extractor has no transport (offline, over
+the daily cap) or returns something unparseable. They are no longer allowed to
+split the message before the model reads it: that is what dropped context
+stated once across a list, and it is why "add in maribank 175 and 90 for
+personal shopping. then 115 for food and drinks avocado ice cream all
+yesterday" lost the ice cream's description and dated nothing.
 
 ---
 
@@ -26,7 +38,7 @@ reach it.
 | **category** | Picker sheet | Name, prefix, learned dictionary (typo-tolerant), AI inference |
 | **description** | Free text, uncapped | Derived from raw input, metadata stripped, capped at 120 with an ellipsis |
 | **note** | Free text | `note: …` or `// …` to end of segment |
-| **date** | Date picker, any date | Relative and named date phrases — see §4 |
+| **date** | Date picker, any date | Resolved to an absolute date by the model against today; a date chip on the card edits it. The fallback path still uses the phrase table in §4 |
 | **reimbursable** | Switch | Auto-detected from phrasing |
 | **expectedReimbursementDate** | Date picker | A date behind a payback cue ("pays me back friday") |
 | **owedBy** | Free text | Extracted from lend/payback phrasing, or supplied by the AI |
@@ -43,7 +55,9 @@ operations chat structurally cannot perform: **edit and delete**.
 
 | Capability | What it does | Where |
 |---|---|---|
-| **Several entries per message** | `-500 food gcash and -300 grab bpi` → two transactions, one confirm | `preparseFinanceBatch` |
+| **Several entries per message** | `-500 food gcash and -300 grab bpi` → two transactions, one confirm | the extractor's array; `preparseFinanceBatch` on the fallback path |
+| **Context stated once** | `in maribank … all yesterday` sets the account and date for every entry in the message | extractor prompt rule 2 — the fallback path cannot do this |
+| **Fill a gap without retyping** | A row missing an account gets a dropdown on the card, not a question and another round trip | `EntryReviewCard`, `LedgerPresenter.setEntry*` |
 | **Credit-card pay-down** | `paid bpi cc 5000 from gcash` → transfer that pays the card down, not an expense | `_tryPayCredit` |
 | **Spotted-for-someone wash** | `paid 800 on my cc for jana, she paid me back` → card→cash transfer, neither spending nor income | `_tryPaidForSomeone` |
 | **Reimbursable detection** | "work expense", "owes me", "pays me back" arms the toggle and pulls out the debtor | `_detectReimbursable`, `_extractExtras` |
