@@ -796,14 +796,15 @@ class _DueSoonRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cols = constraints.maxWidth >= _twoUpMin ? 2 : 1;
-        const gap = WebInsets.xl;
-        final width = (constraints.maxWidth - gap * (cols - 1)) / cols;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
+        // An odd number of imminent bills used to leave the last hero at half
+        // width with a hole beside it. Centre it instead, capped so a single
+        // bill doesn't inflate into a page-wide banner.
+        return WebTileFlow(
+          columns: cols,
+          spacing: WebInsets.xl,
+          lastRowFit: WebLastRowFit.capAndCentre,
           children: [
-            for (final bill in shown)
-              SizedBox(width: width, child: _hero(context, bill)),
+            for (final bill in shown) _hero(context, bill),
           ],
         );
       },

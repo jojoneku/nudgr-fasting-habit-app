@@ -1653,18 +1653,14 @@ class _GroupLegendGrid extends StatelessWidget {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const spacing = WebInsets.xxl;
-        final colWidth = (constraints.maxWidth - spacing) / 2;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: WebInsets.lg,
-          children: [
-            for (final item in items) SizedBox(width: colWidth, child: item),
-          ],
-        );
-      },
+    // An odd group count (three groups is the default set) left the last
+    // legend item at half width with a hole beside it; centre it instead.
+    return WebTileFlow(
+      columns: 2,
+      spacing: WebInsets.xxl,
+      runSpacing: WebInsets.lg,
+      lastRowFit: WebLastRowFit.capAndCentre,
+      children: items,
     );
   }
 }
