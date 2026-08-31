@@ -614,6 +614,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // recurring auto-copy used to proliferate before it excluded credit cards.
     await _cleanupFutureRecurringCreditStatements();
 
+    // Seed the month we're about to show. Generation used to hang off
+    // [setMonth] alone, so the month the app *opens* on was never seeded:
+    // reopen on the 1st and the new month is blank until you tap to another
+    // month and back. That is what made a recurring set-aside look like it
+    // never recurred — the row was one navigation away from existing, and
+    // users re-created it by hand instead.
+    await _autoGenerateRecurringIfNeeded(_selectedMonth);
+
     // Schedule or cancel monthly bills reminder based on user preferences.
     final prefs = await _storage.loadNotificationPreferences();
     _billsReminderEnabled = prefs.billsReminderEnabled;
@@ -2565,6 +2573,29 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _stats.addXp(50);
   }
 
+  /// The month [month]'s recurring rows should be seeded from: the nearest
+  /// *earlier* month that actually holds rows of this kind, not simply
+  /// [previousMonth].
+  ///
+  /// Seeding strictly from the month before broke the chain the moment a month
+  /// was skipped, and then broke it permanently: last used the app in August,
+  /// open it in November, and October is empty — so November seeds from
+  /// nothing, and December seeds from November, and the recurring salary or
+  /// sinking fund is gone for good. Walking back to the last month that has
+  /// rows lets a series survive the gap, and re-visiting the skipped month
+  /// still seeds it from its own nearest predecessor.
+  ///
+  /// Returns null when nothing precedes [month] — a genuinely new series has
+  /// nothing to repeat yet.
+  String? _seedMonthBefore(Iterable<String> months, String month) {
+    String? latest;
+    for (final m in months) {
+      if (m.compareTo(month) >= 0) continue;
+      if (latest == null || m.compareTo(latest) > 0) latest = m;
+    }
+    return latest;
+  }
+
   Future<void> _autoGenerateRecurringIfNeeded(String month) async {
     await _autoGenerateRecurringBills(month);
     await _autoGenerateRecurringReceivables(month);
@@ -2931,12 +2962,17 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .toList();
     if (existing.isNotEmpty) return;
 
-    final prev = previousMonth(month);
+    // Auto-statements are excluded from the search for a month to seed from
+    // for the same reason they are excluded from [existing] above: a generated
+    // statement is not the user having bills in that month.
+    final userBills = _allBills.where((b) => !_isAutoStatement(b));
+    final prev = _seedMonthBefore(userBills.map((b) => b.month), month);
+    if (prev == null) return;
     // Credit-card statements are handled by the live auto-statement snapshot
     // (real balance for the current month, nothing for the future). Copying a
     // recurring credit-card bill forward would stamp a frozen amount onto every
-    // future month the user opens — the proliferation bug — so exclude them.
-    final recurringFromPrev = _allBills
+    // future month the user opens — the proliferation bug — so never copy one.
+    final recurringFromPrev = userBills
         .where((b) =>
             b.month == prev &&
             b.isRecurring &&
@@ -2970,7 +3006,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final existing = _allReceivables.where((r) => r.month == month).toList();
     if (existing.isNotEmpty) return;
 
-    final prev = previousMonth(month);
+    final prev = _seedMonthBefore(_allReceivables.map((r) => r.month), month);
+    if (prev == null) return;
     final recurringFromPrev =
         _allReceivables.where((r) => r.month == prev && r.isRecurring).toList();
     if (recurringFromPrev.isEmpty) return;
@@ -3012,7 +3049,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final existing = _allExpenses.where((e) => e.month == month).toList();
     if (existing.isNotEmpty) return;
 
-    final prev = previousMonth(month);
+    final prev = _seedMonthBefore(_allExpenses.map((e) => e.month), month);
+    if (prev == null) return;
     final recurringFromPrev =
         _allExpenses.where((e) => e.month == prev && e.isRecurring).toList();
     if (recurringFromPrev.isEmpty) return;

@@ -9,8 +9,21 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 
 import '../mocks.mocks.dart';
+
+/// A 'YYYY-MM' key [delta] months from now (delta may be negative).
+String _monthKey(int delta) {
+  final now = DateTime.now();
+  return toMonthKey(DateTime(now.year, now.month + delta));
+}
+
+/// [day] of the month [monthKey] names.
+DateTime _dayIn(String monthKey, int day) {
+  final parts = monthKey.split('-');
+  return DateTime(int.parse(parts[0]), int.parse(parts[1]), day);
+}
 
 /// Recurring items are stored one row per month, seeded once and then frozen.
 /// So raising your rent in August used to leave the September row — already
@@ -21,10 +34,16 @@ import '../mocks.mocks.dart';
 /// at anything already settled, it never reaches backwards, and the rows it
 /// finds are found by series rather than by name.
 void main() {
-  const aug = '2026-08';
-  const sep = '2026-09';
-  const oct = '2026-10';
-  const jul = '2026-07';
+  // Relative to today, not pinned to a calendar month. `aug` is the month the
+  // app would open on, and [BillsReceivablesPresenter.load] seeds that month
+  // from the recurring rows before it — so a fixture pinned to a literal
+  // '2026-08' would start growing extra rows the moment the real calendar
+  // moved past it, and these tests would rot on a date. The July→October
+  // naming is kept for readability.
+  final jul = _monthKey(-1);
+  final aug = _monthKey(0);
+  final sep = _monthKey(1);
+  final oct = _monthKey(2);
 
   late MockStorageService storage;
   late MockStatsPresenter stats;
@@ -156,7 +175,9 @@ void main() {
     });
   });
 
-  Future<BillsReceivablesPresenter> load({String month = aug}) async {
+  // [month] defaults to `aug`, but not as a parameter default: the month keys
+  // are relative to today, so they are no longer compile-time constants.
+  Future<BillsReceivablesPresenter> load({String? month}) async {
     final ledger = LedgerPresenter(storage, stats);
     final presenter = BillsReceivablesPresenter(
       storage,
@@ -165,7 +186,7 @@ void main() {
       notifications: notifications,
     );
     await presenter.load();
-    await presenter.setMonth(month);
+    await presenter.setMonth(month ?? aug);
     var guard = 0;
     while (ledger.isLoading && guard++ < 50) {
       await Future<void>.delayed(Duration.zero);
@@ -541,12 +562,12 @@ void main() {
 
       final augR = p.allReceivables.firstWhere((r) => r.month == aug);
       await p.updateReceivable(
-        augR.copyWith(expectedDate: DateTime.parse('2026-08-25')),
+        augR.copyWith(expectedDate: _dayIn(aug, 25)),
         applyToFuture: true,
       );
 
       final sepR = p.allReceivables.firstWhere((r) => r.month == sep);
-      expect(sepR.expectedDate, DateTime(2026, 9, 25),
+      expect(sepR.expectedDate, _dayIn(sep, 25),
           reason: 'the day travels, the month does not');
     });
 

@@ -8,19 +8,29 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 
 import '../../../mocks.mocks.dart';
 
+/// A 'YYYY-MM' key [delta] months from now (delta may be negative).
+String _monthKey(int delta) {
+  final now = DateTime.now();
+  return toMonthKey(DateTime(now.year, now.month + delta));
+}
+
 /// The scope switch is the user-facing half of the recurring-edit fix: without
 /// it, carrying an amount forward would be an invisible behaviour change, and a
 /// genuinely one-off correction ("they overcharged me in March") would have no
 /// way to stay in its month.
 void main() {
-  const month = '2026-08';
-  const nextMonth = '2026-09';
+  // Relative to today: [BillsReceivablesPresenter.load] seeds whatever month
+  // the app opens on, so a calendar-pinned fixture would start generating rows
+  // of its own once the real month moved past it.
+  final month = _monthKey(0);
+  final nextMonth = _monthKey(1);
 
   late MockStorageService storage;
   late MockStatsPresenter stats;

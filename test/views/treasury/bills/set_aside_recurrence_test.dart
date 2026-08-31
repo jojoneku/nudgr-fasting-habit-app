@@ -9,9 +9,16 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_budgeted_expense_sheet.dart';
 import '../../../mocks.mocks.dart';
+
+/// A 'YYYY-MM' key [delta] months from now (delta may be negative).
+String _monthKey(int delta) {
+  final now = DateTime.now();
+  return toMonthKey(DateTime(now.year, now.month + delta));
+}
 
 /// Recurrence is what makes a sinking fund come back next month
 /// (`_autoGenerateRecurringBudgetedExpenses` keys off `isRecurring`). It used to
@@ -23,8 +30,11 @@ void main() {
   late MockNotificationService notifications;
   late LedgerPresenter ledger;
   late BillsReceivablesPresenter presenter;
-  const month = '2026-03';
-  const nextMonth = '2026-04';
+  // Relative to today: [BillsReceivablesPresenter.load] seeds whatever month
+  // the app opens on, so a calendar-pinned fixture would start generating rows
+  // of its own once the real month moved past it.
+  final month = _monthKey(0);
+  final nextMonth = _monthKey(1);
 
   BudgetedExpense setAside({
     bool isRecurring = false,
