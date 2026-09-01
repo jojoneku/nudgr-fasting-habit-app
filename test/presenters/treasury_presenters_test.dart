@@ -1605,6 +1605,262 @@ void main() {
       verifyNever(mockStorage.saveMonthlySummaries(any));
     });
   });
+  group('TreasuryHistoryPresenter — advisor history', () {
+    late MockStorageService mockStorage;
+    late MockStatsPresenter mockStats;
+
+    // Three months of real spending, one savings pocket funded then partly
+    // withdrawn, and a category that only appears once.
+    final categories = [
+      FinanceCategory(
+        id: 'food',
+        name: 'Food',
+        type: CategoryType.expense,
+        icon: 'food',
+        colorHex: '#FF0000',
+      ),
+      FinanceCategory(
+        id: 'medical',
+        name: 'Medical',
+        type: CategoryType.expense,
+        icon: 'heart',
+        colorHex: '#00FF00',
+      ),
+    ];
+
+    final accounts = [
+      _account(id: 'gcash', category: AccountCategory.ewallet, balance: 5000),
+      _account(
+          id: 'braces',
+          name: 'Braces',
+          category: AccountCategory.goal,
+          balance: 3000),
+    ];
+
+    TransactionRecord spend({
+      required String id,
+      required String month,
+      required int day,
+      required String categoryId,
+      required double amount,
+      String description = 'Test',
+    }) =>
+        TransactionRecord(
+          id: id,
+          date: DateTime.parse('$month-${day.toString().padLeft(2, '0')}'),
+          accountId: 'gcash',
+          categoryId: categoryId,
+          amount: amount,
+          type: TransactionType.outflow,
+          description: description,
+          month: month,
+        );
+
+    final transactions = <TransactionRecord>[
+      spend(
+          id: 'a1',
+          month: '2026-01',
+          day: 5,
+          categoryId: 'food',
+          amount: 4200,
+          description: 'Groceries'),
+      spend(
+          id: 'a2',
+          month: '2026-02',
+          day: 8,
+          categoryId: 'food',
+          amount: 5100,
+          description: 'Groceries'),
+      spend(
+          id: 'a3',
+          month: '2026-03',
+          day: 2,
+          categoryId: 'food',
+          amount: 1200,
+          description: 'Small run'),
+      spend(
+          id: 'a4',
+          month: '2026-03',
+          day: 20,
+          categoryId: 'food',
+          amount: 6300,
+          description: 'Big shop'),
+      spend(
+          id: 'a5',
+          month: '2026-02',
+          day: 14,
+          categoryId: 'medical',
+          amount: 2500,
+          description: 'Dentist'),
+      // Savings transfer legs: ₱2,500 into Braces in Feb, ₱1,200 back out in
+      // March. Only the pocket-side leg counts toward a contribution.
+      TransactionRecord(
+        id: 's1out',
+        date: DateTime(2026, 2, 1),
+        accountId: 'gcash',
+        categoryId: '',
+        amount: 2500,
+        type: TransactionType.outflow,
+        description: 'To Braces',
+        month: '2026-02',
+        transferGroupId: 'tg1',
+        transferToAccountId: 'braces',
+      ),
+      TransactionRecord(
+        id: 's1in',
+        date: DateTime(2026, 2, 1),
+        accountId: 'braces',
+        categoryId: '',
+        amount: 2500,
+        type: TransactionType.inflow,
+        description: 'From GCash',
+        month: '2026-02',
+        transferGroupId: 'tg1',
+      ),
+      TransactionRecord(
+        id: 's2out',
+        date: DateTime(2026, 3, 1),
+        accountId: 'braces',
+        categoryId: '',
+        amount: 1200,
+        type: TransactionType.outflow,
+        description: 'Raided',
+        month: '2026-03',
+        transferGroupId: 'tg2',
+        transferToAccountId: 'gcash',
+      ),
+      TransactionRecord(
+        id: 's2in',
+        date: DateTime(2026, 3, 1),
+        accountId: 'gcash',
+        categoryId: '',
+        amount: 1200,
+        type: TransactionType.inflow,
+        description: 'From Braces',
+        month: '2026-03',
+        transferGroupId: 'tg2',
+      ),
+    ];
+
+    setUp(() {
+      mockStorage = MockStorageService();
+      mockStats = MockStatsPresenter();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => accounts);
+      when(mockStorage.loadTransactions())
+          .thenAnswer((_) async => transactions);
+      when(mockStorage.loadFinanceCategories())
+          .thenAnswer((_) async => categories);
+      when(mockStorage.loadBills()).thenAnswer((_) async => []);
+      when(mockStorage.loadReceivables()).thenAnswer((_) async => []);
+      when(mockStorage.loadMonthlySummaries()).thenAnswer((_) async => []);
+      when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(mockStorage.saveMonthlySummaries(any)).thenAnswer((_) async {});
+      when(mockStorage.saveTransactions(any)).thenAnswer((_) async {});
+      when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
+      when(mockStorage.saveFinanceCategories(any)).thenAnswer((_) async {});
+      when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(mockStats.addXp(any)).thenAnswer((_) async {});
+      when(mockStats.stats).thenReturn(UserStats.initial());
+    });
+
+    Future<TreasuryHistoryPresenter> loaded() async {
+      final presenter = TreasuryHistoryPresenter(mockStorage);
+      await presenter.load();
+      return presenter;
+    }
+
+    test('categoryMatrix spans every active month, per category', () async {
+      final h = await loaded();
+      final food = h.categoryMatrix.firstWhere((r) => r.name == 'Food');
+      expect(food.byMonth['2026-01'], 4200);
+      expect(food.byMonth['2026-02'], 5100);
+      // Both March expenses roll into the one cell.
+      expect(food.byMonth['2026-03'], 7500);
+      expect(food.total, 16800);
+
+      final medical = h.categoryMatrix.firstWhere((r) => r.name == 'Medical');
+      // A month with no spend is absent, not zero — the advisor renders it '-'.
+      expect(medical.byMonth.containsKey('2026-01'), isFalse);
+      expect(medical.byMonth['2026-02'], 2500);
+    });
+
+    test('savingsPocketMatrix records funding and withdrawal per month',
+        () async {
+      final h = await loaded();
+      final braces =
+          h.savingsPocketMatrix.firstWhere((r) => r.name == 'Braces');
+      expect(braces.byMonth['2026-02'], 2500);
+      // A raid on the pocket must read as negative, not as absent.
+      expect(braces.byMonth['2026-03'], -1200);
+      expect(braces.total, 1300);
+    });
+
+    test('largestSpendingByMonth ranks by size, newest month first', () async {
+      final h = await loaded();
+      final digests = h.largestSpendingByMonth(months: 12, perMonth: 6);
+
+      expect(digests.first.month, '2026-03');
+      expect(digests.last.month, '2026-01');
+
+      final march = digests.first;
+      // The big shop leads even though the small run is not much older —
+      // recency ranking would have buried the expense that explains the month.
+      expect(march.items.first.description, 'Big shop');
+      expect(march.items.first.amount, 6300);
+      expect(march.monthTotal, 7500);
+      expect(march.itemCount, 2);
+      // Transfer legs are not spending and must never appear.
+      expect(
+        march.items.map((i) => i.description),
+        isNot(contains('Raided')),
+      );
+    });
+
+    test('perMonth caps the sample but not the stated total', () async {
+      final h = await loaded();
+      final march = h
+          .largestSpendingByMonth(months: 12, perMonth: 1)
+          .firstWhere((d) => d.month == '2026-03');
+
+      expect(march.items, hasLength(1));
+      // The month still reports its whole self, so a one-item sample cannot be
+      // mistaken for the month's entire spending.
+      expect(march.itemCount, 2);
+      expect(march.monthTotal, 7500);
+    });
+
+    test('months caps the window to the most recent months', () async {
+      final h = await loaded();
+      final digests = h.largestSpendingByMonth(months: 2, perMonth: 6);
+      expect(digests.map((d) => d.month), ['2026-03', '2026-02']);
+    });
+
+    test('mirrors ledger edits instead of waiting for its own load', () async {
+      final ledger = LedgerPresenter(mockStorage, mockStats);
+      await _waitForLoad(ledger);
+      final h = TreasuryHistoryPresenter(mockStorage, ledger);
+      await h.load();
+
+      final before = h.categoryMatrix.firstWhere((r) => r.name == 'Food');
+      expect(before.byMonth['2026-03'], 7500);
+
+      await ledger.addTransaction(spend(
+        id: 'new',
+        month: '2026-03',
+        day: 25,
+        categoryId: 'food',
+        amount: 500,
+        description: 'Late snack',
+      ));
+
+      // No reload: the advisor reads these grids mid-conversation, so a copy
+      // refreshed only by load() would quote a ledger the user already changed.
+      final after = h.categoryMatrix.firstWhere((r) => r.name == 'Food');
+      expect(after.byMonth['2026-03'], 8000);
+    });
+  });
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

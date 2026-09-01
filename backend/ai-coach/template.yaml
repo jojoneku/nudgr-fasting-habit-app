@@ -52,12 +52,17 @@ Parameters:
       request access in the Bedrock console if you want to upgrade later.
   AdvisorMaxTokens:
     Type: Number
-    Default: 3000
+    Default: 16000
     Description: >
-      Max output tokens for the adviseFinance op. 900 forced the model to choose
-      between covering a five-section financial position and showing its
-      arithmetic, and clipped answers mid-sentence. Billing follows tokens
-      actually emitted, so a higher ceiling costs nothing on short answers.
+      Max output tokens for the adviseFinance op. Every earlier value was a
+      ceiling the model kept hitting: 900 clipped answers mid-sentence, and
+      3000 was reached again once the advisor was given month-by-month history
+      to reason over — a per-category, per-month comparison legitimately runs
+      long, and a truncated table is worse than a short answer because it looks
+      complete. Sonnet 4.5 permits up to 64000, so 16000 is a real ceiling and
+      not a limit anyone should meet in a chat bubble. Billing follows tokens
+      ACTUALLY emitted, so raising it costs nothing on the short answers that
+      make up most turns.
       Production sets this env var directly (there is no stack) — see the
       warning at the top of this file.
 
