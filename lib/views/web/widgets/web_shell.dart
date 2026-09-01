@@ -14,6 +14,12 @@ class WebDestination {
 /// header and a footer slot (sync status / sign-out), plus a scrolling content
 /// area constrained to [WebBreakpoints.content]. Theme-aware, both modes.
 class WebShell extends StatelessWidget {
+  /// Width of the navigation rail. Named because the Nudgy dock has to subtract
+  /// it to work out how much width the page can actually spare: the window is
+  /// rail + page + dock, and a dock sizing itself against the raw window width
+  /// silently eats the rail's share out of the page's.
+  static const double sidebarWidth = 248;
+
   final List<WebDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
@@ -63,7 +69,7 @@ class WebShell extends StatelessWidget {
       body: Row(
         children: [
           Container(
-            width: 248,
+            width: sidebarWidth,
             decoration: BoxDecoration(
               color: cs.surfaceContainerLow,
               border: Border(

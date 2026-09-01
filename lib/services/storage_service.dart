@@ -119,6 +119,7 @@ abstract class StorageService {
   static const String keyGroceryCart = 'grocery_cart';
   static const String keyGroceryPriceMemory = 'grocery_price_memory';
   static const String keyGroceryBudget = 'grocery_budget';
+  static const String keyNudgyPanelWidth = 'nudgy_panel_width';
   static const String keyGroceryTripHistory = 'grocery_trip_history';
   // Insight Engine (Plan 057) — per-domain snapshot hash baseline, the ring
   // buffer of generated insights/nudges, per-trigger cooldown timestamps, and
@@ -279,6 +280,13 @@ abstract class StorageService {
   Future<double?> loadGroceryBudget();
   Future<void> saveGroceryTripHistory(List<SavedTrip> trips);
   Future<List<SavedTrip>> loadGroceryTripHistory();
+
+  //  Nudgy dock
+  /// Width the user dragged Nudgy's column to, in logical pixels. Null when
+  /// they have never resized it, which is different from having chosen the
+  /// default — a stored value is honoured even if the default later changes.
+  Future<void> saveNudgyPanelWidth(double? width);
+  Future<double?> loadNudgyPanelWidth();
 
   //  Insight Engine (Plan 057)
   Future<Map<String, String>?> loadInsightBaselineHashes();

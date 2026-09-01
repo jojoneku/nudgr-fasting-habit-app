@@ -1634,6 +1634,23 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<void> saveNudgyPanelWidth(double? width) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _k(StorageService.keyNudgyPanelWidth);
+    if (width == null) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setDouble(key, width);
+    }
+  }
+
+  @override
+  Future<double?> loadNudgyPanelWidth() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_k(StorageService.keyNudgyPanelWidth));
+  }
+
+  @override
   Future<void> saveGroceryTripHistory(List<SavedTrip> trips) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
