@@ -173,10 +173,11 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       treasury: _treasuryPresenter,
       budget: _budgetPresenter,
       installments: _installmentPresenter,
+      history: _historyPresenter,
       ledger: _ledgerPresenter,
       storage: _storage,
     );
-    _nudgy = NudgyController(_advisorPresenter);
+    _nudgy = NudgyController(_advisorPresenter, storage: _storage);
     _authPresenter = AuthPresenter(
       _authService,
       onFirstSignIn: (userId) => _initSync(userId),

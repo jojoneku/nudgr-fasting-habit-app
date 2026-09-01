@@ -50,6 +50,11 @@ class TreasuryPresenters {
   /// than keeping copies only its own `load()` refreshes.
   final TreasuryDashboardPresenter dashboard;
 
+  /// Reports on closed months and the month-by-month grids, owning none of it:
+  /// it mirrors accounts, transactions and categories from [ledger]. The AI
+  /// advisor reads these grids on every message, so a copy refreshed only by
+  /// its own `load()` would have Nudgy quoting a ledger the user had already
+  /// changed.
   final TreasuryHistoryPresenter history;
   final InstallmentPresenter installments;
   final GroceryCartPresenter groceryCart;
@@ -127,7 +132,7 @@ class TreasuryPresenters {
       budget: budget,
       dashboard: dashboard,
       bills: bills,
-      history: TreasuryHistoryPresenter(storage),
+      history: TreasuryHistoryPresenter(storage, ledger),
       installments: InstallmentPresenter(
         storage,
         ledger,

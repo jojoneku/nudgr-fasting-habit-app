@@ -131,10 +131,74 @@ class AdvisorMonthFlow {
   final String label;
   final double income;
   final double expense;
+
+  /// Net moved INTO savings/goal pockets that month, or null when unknown.
+  ///
+  /// Distinct from `income - expense`: that is the cash-flow surplus, this is
+  /// what actually landed in a pocket. A month can post a healthy surplus and
+  /// still have set nothing aside, and the advice for that month is different.
+  final double? savingsContribution;
+
+  /// Running sum of net cash flow through this month, or null when unknown.
+  final double? cumulativeNet;
+
   const AdvisorMonthFlow({
     required this.label,
     required this.income,
     required this.expense,
+    this.savingsContribution,
+    this.cumulativeNet,
+  });
+}
+
+/// One category's spend across the historical window — the row of a
+/// category x month grid.
+///
+/// [amounts] is positionally aligned to [AiCoachContext.historyMonthLabels];
+/// null means the category had no spend that month, which reads differently
+/// from zero only in that it needs no mention.
+class AdvisorCategoryHistoryRow {
+  final String name;
+  final List<double?> amounts;
+  final double total;
+  const AdvisorCategoryHistoryRow({
+    required this.name,
+    required this.amounts,
+    required this.total,
+  });
+}
+
+/// One savings pocket's contributions across the historical window, aligned to
+/// [AiCoachContext.historyMonthLabels] the same way as
+/// [AdvisorCategoryHistoryRow].
+class AdvisorSavingsHistoryRow {
+  final String name;
+  final List<double?> amounts;
+  final double total;
+  const AdvisorSavingsHistoryRow({
+    required this.name,
+    required this.amounts,
+    required this.total,
+  });
+}
+
+/// One past month's biggest expenses — the line items behind a month's total.
+class AdvisorMonthSpendingDigest {
+  final String monthLabel;
+
+  /// Total real spend that month, including items not in [items].
+  final double monthTotal;
+
+  /// How many expenses the month held, so a 6-item sample is not mistaken for
+  /// the whole month.
+  final int itemCount;
+  final List<AdvisorTxnLine> items;
+
+  const AdvisorMonthSpendingDigest({
+    required this.monthLabel,
+    required this.monthTotal,
+    required this.itemCount,
+    required this.items,
   });
 }
 
@@ -381,6 +445,25 @@ class AiCoachContext {
   /// Per-closed-month bills/receivables/savings totals (past picture).
   final List<AdvisorMonthLedger> monthlyLedger;
 
+  // ── Finance advisor (past: the month-by-month detail grid) ─────────────────
+  /// Month labels for the historical grids, oldest → newest. Every row in
+  /// [categoryHistory] and [savingsHistory] is positionally aligned to this.
+  final List<String> historyMonthLabels;
+
+  /// Per-category spend for each month in [historyMonthLabels].
+  ///
+  /// This is what turns "you are over on Food" into "Food has run above target
+  /// four of the last five months" — the difference between a reading and a
+  /// diagnosis. A single blended trailing average cannot make that distinction:
+  /// it collapses a worsening trend and a stable habit into the same number.
+  final List<AdvisorCategoryHistoryRow> categoryHistory;
+
+  /// Per-pocket savings contributions for each month in [historyMonthLabels].
+  final List<AdvisorSavingsHistoryRow> savingsHistory;
+
+  /// The biggest expenses of each recent month, newest month first.
+  final List<AdvisorMonthSpendingDigest> spendingByMonth;
+
   // ── Finance advisor (breakdowns: goals, accounts, budget, installments) ─────
   /// Per-goal progress (name, saved, target).
   final List<AdvisorGoalLine> goals;
@@ -467,6 +550,10 @@ class AiCoachContext {
     this.netWorthTrend = const [],
     this.incomeExpenseTrend = const [],
     this.monthlyLedger = const [],
+    this.historyMonthLabels = const [],
+    this.categoryHistory = const [],
+    this.savingsHistory = const [],
+    this.spendingByMonth = const [],
     this.goals = const [],
     this.liquidAccounts = const [],
     this.heldForOthers,
@@ -791,8 +878,16 @@ class AiCoachContext {
     if (incomeExpenseTrend.isNotEmpty) {
       buf.writeln('Income vs expenses by month:');
       for (final m in incomeExpenseTrend) {
-        buf.writeln('  - ${m.label}: ${_peso(m.income)} in / '
+        final line = StringBuffer('  - ${m.label}: ${_peso(m.income)} in / '
             '${_peso(m.expense)} out (net ${_peso(m.income - m.expense)})');
+        final sc = m.savingsContribution;
+        if (sc != null && sc != 0) {
+          line.write(', ${_peso(sc)} set aside into pockets');
+        }
+        if (m.cumulativeNet != null) {
+          line.write(', cumulative net ${_peso(m.cumulativeNet!)}');
+        }
+        buf.writeln(line.toString());
       }
     }
     if (monthlyLedger.isNotEmpty) {
@@ -803,6 +898,46 @@ class AiCoachContext {
             '(paid ${_peso(m.billsPaid)}), receivables '
             '${_peso(m.receivablesExpected)} (received ${_peso(m.received)}), '
             'saved ${_peso(m.netSavings)}');
+      }
+    }
+    if (historyMonthLabels.isNotEmpty && categoryHistory.isNotEmpty) {
+      final months = historyMonthLabels.join(' | ');
+      buf.writeln('Category spend month by month. Each row lists that '
+          'the spend for one category in this exact month order — $months — with "-" '
+          'for a month it had no spend. Read across a row to see whether a '
+          'category is trending up, trending down, or steady; that is the '
+          'difference between a one-off and a habit:');
+      for (final r in categoryHistory) {
+        final cells =
+            r.amounts.map((a) => a == null ? '-' : _peso(a)).join(' | ');
+        buf.writeln('  - ${r.name}: $cells (total ${_peso(r.total)})');
+      }
+    }
+    if (historyMonthLabels.isNotEmpty && savingsHistory.isNotEmpty) {
+      final months = historyMonthLabels.join(' | ');
+      buf.writeln('Savings set aside month by month, per pocket, in this exact '
+          'month order — $months — with "-" for no movement. A NEGATIVE figure '
+          'is a net withdrawal from that pocket that month:');
+      for (final r in savingsHistory) {
+        final cells =
+            r.amounts.map((a) => a == null ? '-' : _peso(a)).join(' | ');
+        buf.writeln('  - ${r.name}: $cells (net ${_peso(r.total)})');
+      }
+    }
+    if (spendingByMonth.isNotEmpty) {
+      buf.writeln('Biggest individual expenses per month (newest month first). '
+          'These are the largest few of each month, NOT the whole month — the '
+          'month total and item count are given so you can see what is not '
+          'listed:');
+      for (final d in spendingByMonth) {
+        buf.writeln('  ${d.monthLabel} — ${_peso(d.monthTotal)} across '
+            '${d.itemCount} expense${d.itemCount == 1 ? '' : 's'}; largest:');
+        for (final tx in d.items) {
+          final desc =
+              tx.description.trim().isEmpty ? tx.category : tx.description;
+          buf.writeln('    - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
+              '(${tx.category})');
+        }
       }
     }
     return buf.toString().trim();

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../models/ai_coach_context.dart';
 import '../../../presenters/ai_coach_presenter.dart';
+import '../../../services/storage_service.dart';
 import '../../widgets/ai_chat_sheet.dart';
 import '../design/web_breakpoints.dart';
+import 'web_shell.dart';
 
 /// Nudgy — the one place on web where you type at the app.
 ///
@@ -31,10 +33,91 @@ import '../design/web_breakpoints.dart';
 class NudgyController extends ChangeNotifier {
   final AiCoachPresenter presenter;
 
-  NudgyController(this.presenter);
+  /// Persists the width the user dragged the column to. Optional so the panel
+  /// still works unstored (tests, previews) — it simply forgets between runs.
+  final StorageService? storage;
+
+  NudgyController(this.presenter, {this.storage}) {
+    _restoreWidth();
+  }
+
+  /// Default open width. Wide enough for the header row and the chat body's
+  /// four trailing controls; the reason the body hides its own entry label.
+  static const double defaultWidth = 380;
+
+  /// Narrowest the user can drag it. Below this the chat's own controls start
+  /// ellipsising into each other, so the panel would be draggable into a state
+  /// it cannot render — a resize handle should not be able to break the thing
+  /// it resizes.
+  static const double minWidth = 320;
+
+  /// Widest, absent a window constraint. The view clamps further so the page
+  /// always keeps a readable column; this is the ceiling for a huge display.
+  static const double maxWidth = 900;
 
   bool _open = false;
   bool get isOpen => _open;
+
+  double _width = defaultWidth;
+
+  /// Current open width. Always within [minWidth]..[maxWidth]; the view
+  /// additionally clamps it against the space the page can spare.
+  double get width => _width;
+
+  bool _isResizing = false;
+
+  /// True while a drag is in flight, so the view can drop its width animation.
+  /// An eased width during a drag lags the pointer, which reads as the handle
+  /// slipping out of the user's grip rather than as smoothness.
+  bool get isResizing => _isResizing;
+
+  Future<void> _restoreWidth() async {
+    final stored = await storage?.loadNudgyPanelWidth();
+    if (stored == null) return;
+    final clamped = stored.clamp(minWidth, maxWidth);
+    if (clamped == _width) return;
+    _width = clamped;
+    notifyListeners();
+  }
+
+  void beginResize() {
+    _isResizing = true;
+    notifyListeners();
+  }
+
+  /// Applies a drag. [delta] is the pointer's horizontal movement; the panel is
+  /// on the right, so dragging LEFT (negative dx) widens it.
+  ///
+  /// [available] is the most the shell can give up right now, already accounting
+  /// for the page's own minimum. Passed in per-drag rather than stored because
+  /// it changes with the window, and a width that was legal when the window was
+  /// wide must not survive the window getting narrow.
+  void applyResizeDelta(double delta, {required double available}) {
+    // The view guarantees `available >= defaultWidth`, so the clamp range is
+    // always valid and a narrow window can never pin the panel to its minimum.
+    final next = (_width - delta).clamp(minWidth, available);
+    if (next == _width) return;
+    _width = next;
+    notifyListeners();
+  }
+
+  void endResize() {
+    _isResizing = false;
+    notifyListeners();
+    // Persist only on release. Writing on every drag frame would put a few
+    // hundred writes through SharedPreferences for one gesture.
+    storage?.saveNudgyPanelWidth(_width);
+  }
+
+  /// Returns the column to its default width. The handle is easy to nudge by a
+  /// pixel or two without meaning to, and without this the only way back to a
+  /// deliberate width is to drag until it looks right again.
+  void resetWidth() {
+    if (_width == defaultWidth) return;
+    _width = defaultWidth;
+    notifyListeners();
+    storage?.saveNudgyPanelWidth(null);
+  }
 
   /// The advisor session is started on first open, not at construction: a user
   /// who never opens Nudgy should not pay for building its context.
@@ -96,11 +179,29 @@ class NudgyLauncher extends StatelessWidget {
 
 /// Nudgy's conversation column. Zero-width while closed, so the shell can keep
 /// it mounted in the row unconditionally and the page gets the space back.
+///
+/// Resizable from its left edge. 380px is a good width for a question and a
+/// bad one for the answer: the advisor replies with pipe tables — budget vs
+/// actual per category, month vs month — and a table that has to scroll
+/// sideways inside a narrow bubble is most of the way to unreadable. Rather
+/// than pick one width for both jobs, the user drags.
 class NudgyPanel extends StatelessWidget {
   final NudgyController controller;
 
-  /// Width of the open column.
-  static const double openWidth = 380;
+  /// Default width of the open column. Retained as the historical name for
+  /// [NudgyController.defaultWidth]; the live width now lives on the
+  /// controller, since it is state the user owns.
+  static const double openWidth = NudgyController.defaultWidth;
+
+  /// Smallest the page may be squeezed to while the panel grows. The panel is
+  /// a companion to the page, and a drag that reduces the page to a gutter has
+  /// stopped serving the reason the panel is docked rather than floating.
+  static const double _minPageWidth = 480;
+
+  /// Hit width of the drag strip. Wider than the 1px border it sits on: an
+  /// edge target has to be findable without precision aiming, and a 1px
+  /// handle on a 380px panel is a hunt.
+  static const double _handleWidth = 10;
 
   const NudgyPanel({super.key, required this.controller});
 
@@ -110,9 +211,35 @@ class NudgyPanel extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final cs = Theme.of(context).colorScheme;
-        final width = controller.isOpen ? openWidth : 0.0;
+        // How wide the panel is allowed to get right now. Recomputed on every
+        // build so shrinking the window cannot leave a stored width that
+        // crushes the page.
+        // Note the floor is the DEFAULT width, not the minimum: the page's
+        // reserve caps how far the panel may be GROWN, it does not squeeze the
+        // panel below the width it opens at. A narrow window is a reason for
+        // the page to be cramped, not for the conversation to be.
+        // The window is rail + page + panel. Subtract the rail as well as the
+        // page's reserve: measuring against the raw window width lets the
+        // panel spend the rail's share, and the page ends up ~250px narrower
+        // than the floor promises — cards truncate mid-figure.
+        final spare = MediaQuery.sizeOf(context).width -
+            WebShell.sidebarWidth -
+            _minPageWidth;
+        final maxNow = spare.clamp(
+          NudgyController.defaultWidth,
+          NudgyController.maxWidth,
+        );
+        final openWidthNow = controller.width.clamp(
+          NudgyController.minWidth,
+          maxNow,
+        );
+        final width = controller.isOpen ? openWidthNow : 0.0;
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          // No easing while the pointer is down: an animated width lags the
+          // drag and reads as the handle slipping out of the user's grip.
+          duration: controller.isResizing
+              ? Duration.zero
+              : const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           width: width,
           decoration: BoxDecoration(
@@ -132,10 +259,26 @@ class NudgyPanel extends StatelessWidget {
           child: ClipRect(
             child: OverflowBox(
               alignment: Alignment.centerLeft,
-              minWidth: openWidth,
-              maxWidth: openWidth,
+              minWidth: openWidthNow,
+              maxWidth: openWidthNow,
               child: controller.isOpen
-                  ? SafeArea(child: _body(context))
+                  ? Stack(
+                      children: [
+                        Positioned.fill(child: SafeArea(child: _body(context))),
+                        // Left edge, above the content so the chat's own
+                        // scrollables cannot swallow the horizontal drag.
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: _handleWidth,
+                          child: _ResizeHandle(
+                            controller: controller,
+                            available: maxNow,
+                          ),
+                        ),
+                      ],
+                    )
                   : const SizedBox.shrink(),
             ),
           ),
@@ -190,6 +333,113 @@ class NudgyPanel extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The strip along Nudgy's left edge that resizes it.
+///
+/// Deliberately almost invisible until pointed at. A permanent grip line on a
+/// panel the user mostly is not resizing is one more piece of furniture between
+/// them and the conversation; the resize cursor already announces the affordance
+/// to anyone who brushes the edge.
+class _ResizeHandle extends StatefulWidget {
+  final NudgyController controller;
+
+  /// The widest the panel may become right now, passed down so the drag clamps
+  /// against the live window rather than a remembered one.
+  final double available;
+
+  const _ResizeHandle({required this.controller, required this.available});
+
+  @override
+  State<_ResizeHandle> createState() => _ResizeHandleState();
+}
+
+class _ResizeHandleState extends State<_ResizeHandle> {
+  bool _hovered = false;
+
+  /// Where the current click started, and when the last one that stayed still
+  /// finished — the two facts needed to spot a double-click ourselves.
+  Offset? _downAt;
+  DateTime? _lastClickAt;
+
+  /// How far a pointer may travel and still count as a click, not a drag.
+  static const double _clickSlop = 4;
+
+  /// Window for the second click of a double. Matches Flutter's own
+  /// [kDoubleTapTimeout].
+  static const Duration _doubleClickWindow = Duration(milliseconds: 300);
+
+  // Double-click is detected from raw pointer events rather than with
+  // GestureDetector's onDoubleTap, which does not survive contact with a real
+  // mouse here. A mouse reports a pixel or two of jitter between press and
+  // release, that is enough for the horizontal-drag recognizer sharing this
+  // detector to claim the arena, and the double-tap recognizer is then
+  // defeated before it can see the second click. It worked under test, where
+  // synthetic pointers move exactly zero, and never once in a browser.
+  //
+  // A Listener sits outside the arena entirely, so it sees every press and
+  // release regardless of which recognizer wins the gesture — and the drag
+  // itself is excluded by distance, not by arena politics.
+  void _onPointerDown(PointerDownEvent event) => _downAt = event.position;
+
+  void _onPointerUp(PointerUpEvent event) {
+    final down = _downAt;
+    _downAt = null;
+    if (down == null) return;
+    if ((event.position - down).distance > _clickSlop) return; // a drag
+
+    final now = DateTime.now();
+    final previous = _lastClickAt;
+    _lastClickAt = now;
+    if (previous == null || now.difference(previous) > _doubleClickWindow) {
+      return;
+    }
+    // Consume it, so a third click does not read as another double.
+    _lastClickAt = null;
+    widget.controller.resetWidth();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final active = _hovered || widget.controller.isResizing;
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeLeftRight,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Listener(
+        onPointerDown: _onPointerDown,
+        onPointerUp: _onPointerUp,
+        child: GestureDetector(
+          // opaque, so the strip takes the gesture even where it paints
+          // nothing.
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragStart: (_) => widget.controller.beginResize(),
+          onHorizontalDragUpdate: (details) =>
+              widget.controller.applyResizeDelta(
+            details.delta.dx,
+            available: widget.available,
+          ),
+          onHorizontalDragEnd: (_) => widget.controller.endResize(),
+          onHorizontalDragCancel: widget.controller.endResize,
+          child: Semantics(
+            label: 'Resize Nudgy',
+            child: Center(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: active ? 3 : 0,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -17,6 +17,7 @@ import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
+import '../presenters/treasury_history_presenter.dart';
 import '../services/ai_coach_service.dart';
 import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
@@ -25,6 +26,24 @@ import '../services/storage_service.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
+
+/// How many months of month-by-month detail the advisor snapshot carries.
+///
+/// 18 rather than 12 so a year-over-year comparison has both endpoints: at 12
+/// the oldest column is the same month being asked about, which is exactly the
+/// comparison that cannot then be made.
+const int _historyWindowMonths = 18;
+
+/// Row caps on the historical grids. The snapshot is budgeted, and a grid is
+/// the one section that grows in two dimensions at once — rows are pre-sorted
+/// by total, so a cap drops the least material lines first.
+const int _historyMaxCategoryRows = 18;
+const int _historyMaxSavingsRows = 12;
+
+/// Biggest expenses listed per past month. Enough to explain a month without
+/// re-sending it in full; each month also reports its total and item count so
+/// the sample is never mistaken for the whole.
+const int _historyItemsPerMonth = 6;
 
 /// How many named advisor conversations stay browsable. Older ones fold into a
 /// single archive thread ("Earlier messages") once this is exceeded.
@@ -48,6 +67,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// Active installment / BNPL plans — a fixed monthly commitment the advisor
   /// must account for when judging affordability. Null when finance isn't wired.
   final InstallmentPresenter? _installments;
+
+  /// Month-by-month history: the category x month spend grid, per-pocket
+  /// savings contributions, and each month's biggest expenses.
+  ///
+  /// Null when finance isn't wired, in which case the advisor keeps the
+  /// aggregate trends it always had and simply has no detail grid — the
+  /// snapshot omits those sections rather than sending empty ones.
+  final TreasuryHistoryPresenter? _history;
 
   /// Ledger used by the financial-advisor mode to log expenses in-conversation
   /// through the existing confirm-before-commit pipeline. Null when finance
@@ -95,6 +122,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     TreasuryDashboardPresenter? treasury,
     BudgetPresenter? budget,
     InstallmentPresenter? installments,
+    TreasuryHistoryPresenter? history,
     LedgerPresenter? ledger,
     StorageService? storage,
     AiCoachService? cloudFallback,
@@ -105,6 +133,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _treasury = treasury,
         _budget = budget,
         _installments = installments,
+        _history = history,
         _ledger = ledger,
         _storage = storage,
         _cloudFallback = cloudFallback,
@@ -654,6 +683,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var receivedThisMonth = const <AdvisorReceivableLine>[];
     var setAsides = const <AdvisorSetAsideLine>[];
     var monthlyLedger = const <AdvisorMonthLedger>[];
+    var historyMonthLabels = const <String>[];
+    var categoryHistory = const <AdvisorCategoryHistoryRow>[];
+    var savingsHistory = const <AdvisorSavingsHistoryRow>[];
+    var spendingByMonth = const <AdvisorMonthSpendingDigest>[];
     if (isAdvisor && t != null) {
       // Every category with spend, not the dashboard's top 10: the advisor is
       // asked about specific line items, and a category outside the top 10 was
@@ -757,8 +790,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       recentTransactions = t
           // 8 was too few to explain anything: a single busy week filled the
           // list, so the advisor could see a category was over budget but not
-          // which purchases put it there.
-          .recentSpending(limit: 30)
+          // which purchases put it there. This is the recency view — the
+          // month-by-month digests below cover the past by size instead, so
+          // this one no longer has to stretch to reach last month.
+          .recentSpending(limit: 60)
           .map((r) => AdvisorTxnLine(
                 dateLabel: DateFormat('MMM d').format(r.date),
                 description: r.description,
@@ -812,6 +847,60 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 receivablesExpected: m.receivablesExpected,
                 received: m.received,
                 netSavings: m.netSavings,
+              ))
+          .toList();
+    }
+    final h = _history;
+    if (isAdvisor && h != null) {
+      // The grids are keyed by month, so they need one shared, ordered spine.
+      // Take it from the tail of the ledger's own active months rather than
+      // generating a calendar range: a month with no transactions contributes
+      // nothing but an empty column to every row below it.
+      final months = h.activeMonths;
+      final window = months.length <= _historyWindowMonths
+          ? months
+          : months.sublist(months.length - _historyWindowMonths);
+      if (window.isNotEmpty) {
+        historyMonthLabels =
+            window.map((m) => _monthYearLabel(m)).toList(growable: false);
+        // Rows are already sorted by total spend descending, so the cap keeps
+        // the categories that actually move the needle. Capped at all because
+        // a long tail of one-off categories would crowd out the months.
+        categoryHistory = h.categoryMatrix
+            .take(_historyMaxCategoryRows)
+            .map((r) => AdvisorCategoryHistoryRow(
+                  name: r.name,
+                  amounts: [for (final m in window) r.byMonth[m]],
+                  total: r.total,
+                ))
+            .toList();
+        savingsHistory = h.savingsPocketMatrix
+            .take(_historyMaxSavingsRows)
+            .map((r) => AdvisorSavingsHistoryRow(
+                  name: r.name,
+                  amounts: [for (final m in window) r.byMonth[m]],
+                  total: r.total,
+                ))
+            .toList();
+      }
+      spendingByMonth = h
+          .largestSpendingByMonth(
+            months: _historyWindowMonths,
+            perMonth: _historyItemsPerMonth,
+          )
+          .map((d) => AdvisorMonthSpendingDigest(
+                monthLabel: _monthYearLabel(d.month),
+                monthTotal: d.monthTotal,
+                itemCount: d.itemCount,
+                items: [
+                  for (final tx in d.items)
+                    AdvisorTxnLine(
+                      dateLabel: DateFormat('MMM d').format(tx.date),
+                      description: tx.description,
+                      amount: tx.amount,
+                      category: tx.category,
+                    ),
+                ],
               ))
           .toList();
     }
@@ -892,7 +981,19 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       netWorthMonthDeltaPct: isAdvisor ? t?.netWorthMonthDeltaPct : null,
       maturities: maturities,
       recentTransactions: recentTransactions,
+      historyMonthLabels: historyMonthLabels,
+      categoryHistory: categoryHistory,
+      savingsHistory: savingsHistory,
+      spendingByMonth: spendingByMonth,
     );
+  }
+
+  /// 'YYYY-MM' → 'Sep 2026'. The year is load-bearing: the History grids run
+  /// long enough that a bare 'Sep' would collide with the same month a year
+  /// earlier, and a collision here is a wrong answer, not a cosmetic one.
+  static String _monthYearLabel(String monthKey) {
+    final parsed = DateTime.tryParse('$monthKey-01');
+    return parsed == null ? monthKey : DateFormat('MMM yyyy').format(parsed);
   }
 
   /// Due label for a current-month bill given its [dueDay], relative to today

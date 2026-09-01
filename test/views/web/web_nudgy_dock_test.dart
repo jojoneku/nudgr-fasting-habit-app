@@ -309,4 +309,279 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('Nudgy dock resize', () {
+    /// A window wide enough that the 480px page minimum is never the binding
+    /// constraint, so these tests exercise the controller's own limits.
+    Future<void> wide(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(2400, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    testWidgets('dragging the left edge left widens the panel', (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      expect(tester.getSize(find.byType(NudgyPanel)).width,
+          NudgyController.defaultWidth);
+
+      // Grab the strip on the panel's own left edge.
+      final panel = tester.getRect(find.byType(NudgyPanel));
+      final grip = Offset(panel.left + 4, panel.center.dy);
+      await tester.dragFrom(grip, const Offset(-200, 0));
+      await tester.pumpAndSettle();
+
+      // Within a touch slop of the drag distance: the recognizer eats the
+      // first ~20px breaking slop, which is deliberate — a resize that jumps
+      // to catch up on acceptance is worse than a small dead zone.
+      expect(c.width, closeTo(NudgyController.defaultWidth + 200, 24));
+      expect(tester.getSize(find.byType(NudgyPanel)).width, c.width);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('dragging right narrows it, but never past the minimum',
+        (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final panel = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(panel.left + 4, panel.center.dy), const Offset(600, 0));
+      await tester.pumpAndSettle();
+
+      // A handle must not be able to drag the panel into a width its own
+      // controls cannot render.
+      expect(c.width, NudgyController.minWidth);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('a narrow window caps the drag so the page keeps its column',
+        (tester) async {
+      // 1200 wide: rail (248) + page floor (480) leaves the panel at most 472.
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final panel = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(panel.left + 4, panel.center.dy), const Offset(-800, 0));
+      await tester.pumpAndSettle();
+
+      expect(c.width, lessThanOrEqualTo(472));
+      expect(c.width, greaterThan(NudgyController.defaultWidth));
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('double-tapping the handle restores the default width',
+        (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final before = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(before.left + 4, before.center.dy), const Offset(-160, 0));
+      await tester.pumpAndSettle();
+      expect(c.width, isNot(NudgyController.defaultWidth));
+
+      // Re-find the edge: widening moved it left, so the old grip point now
+      // sits inside the conversation rather than on the handle.
+      final widened = tester.getRect(find.byType(NudgyPanel));
+      final grip = Offset(widened.left + 4, widened.center.dy);
+
+      final first = await tester.startGesture(grip);
+      await first.up();
+      await tester.pump(const Duration(milliseconds: 80));
+      final second = await tester.startGesture(grip);
+      await second.up();
+      await tester.pumpAndSettle();
+
+      expect(c.width, NudgyController.defaultWidth);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('a double-click with mouse jitter still resets',
+        (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final before = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(before.left + 4, before.center.dy), const Offset(-160, 0));
+      await tester.pumpAndSettle();
+      expect(c.width, isNot(NudgyController.defaultWidth));
+
+      final widened = tester.getRect(find.byType(NudgyPanel));
+      final grip = Offset(widened.left + 4, widened.center.dy);
+
+      // The real failure this guards: a mouse reports a pixel or two between
+      // press and release, which was enough for the drag recognizer to claim
+      // the arena and defeat GestureDetector's onDoubleTap. Zero-movement
+      // synthetic taps passed while a browser never reset once.
+      for (var i = 0; i < 2; i++) {
+        final g = await tester.startGesture(grip);
+        await g.moveBy(const Offset(2, -1));
+        await g.up();
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.pumpAndSettle();
+
+      expect(c.width, NudgyController.defaultWidth);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('two real drags in quick succession do not read as a reset',
+        (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      for (var i = 0; i < 2; i++) {
+        final edge = tester.getRect(find.byType(NudgyPanel));
+        await tester.dragFrom(
+            Offset(edge.left + 4, edge.center.dy), const Offset(-60, 0));
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.pumpAndSettle();
+
+      // Deliberate resizes must not be undone by having been quick: the
+      // click detector excludes them by distance travelled.
+      expect(c.width, greaterThan(NudgyController.defaultWidth));
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('the width survives a reopen', (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final panel = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(panel.left + 4, panel.center.dy), const Offset(-120, 0));
+      await tester.pumpAndSettle();
+      final widened = c.width;
+
+      c.close();
+      await tester.pumpAndSettle();
+      expect(tester.getSize(find.byType(NudgyPanel)).width, 0);
+
+      c.open();
+      await tester.pumpAndSettle();
+      // Collapsing is not a reset: the user chose this width.
+      expect(tester.getSize(find.byType(NudgyPanel)).width, widened);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('a stored width is restored on construction', (tester) async {
+      await wide(tester);
+      final storage = MockStorageService();
+      when(storage.loadNudgyPanelWidth()).thenAnswer((_) async => 620);
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p, storage: storage);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      expect(c.width, 620);
+      expect(tester.getSize(find.byType(NudgyPanel)).width, 620);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('a stored width beyond the maximum is clamped, not trusted',
+        (tester) async {
+      await wide(tester);
+      final storage = MockStorageService();
+      when(storage.loadNudgyPanelWidth()).thenAnswer((_) async => 99999);
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p, storage: storage);
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      expect(c.width, NudgyController.maxWidth);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('releasing the drag persists the width exactly once',
+        (tester) async {
+      await wide(tester);
+      final storage = MockStorageService();
+      when(storage.loadNudgyPanelWidth()).thenAnswer((_) async => null);
+      when(storage.saveNudgyPanelWidth(any)).thenAnswer((_) async {});
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p, storage: storage);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      final panel = tester.getRect(find.byType(NudgyPanel));
+      await tester.dragFrom(
+          Offset(panel.left + 4, panel.center.dy), const Offset(-150, 0));
+      await tester.pumpAndSettle();
+
+      // Once on release, not once per drag frame — a single gesture would
+      // otherwise put hundreds of writes through SharedPreferences.
+      verify(storage.saveNudgyPanelWidth(c.width)).called(1);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('the handle does not steal taps from the chat body',
+        (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(wrapDock(c));
+      await tester.pumpAndSettle();
+
+      // The collapse control sits at the panel's far right, well clear of the
+      // 10px grip — a resize strip that covered it would trap the user open.
+      await tester.tap(find.byTooltip('Collapse Nudgy'));
+      await tester.pumpAndSettle();
+
+      expect(c.isOpen, isFalse);
+      c.dispose();
+      p.dispose();
+    });
+  });
 }
