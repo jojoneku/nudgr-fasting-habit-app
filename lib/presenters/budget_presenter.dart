@@ -88,17 +88,25 @@ class BudgetPresenter extends ChangeNotifier {
   /// Returns null when nothing recurring targets the account, which means "no
   /// opinion" — the row keeps its own stored allocation.
   double? setAsideTargetFor(String accountId) {
-    var total = 0.0;
-    var found = false;
-    for (final e in _setAsides) {
-      if (e.month != _selectedMonth) continue;
-      if (e.destinationAccountId != accountId) continue;
-      if (!e.isRecurring) continue;
-      total += e.allocatedAmount;
-      found = true;
-    }
-    return found ? total : null;
+    final sources = setAsideSourcesFor(accountId);
+    if (sources.isEmpty) return null;
+    return sources.fold<double>(0.0, (sum, e) => sum + e.allocatedAmount);
   }
+
+  /// The set-asides [setAsideTargetFor] sums for [accountId], in full.
+  ///
+  /// The derived target is the one figure on the Budget page the user cannot
+  /// change where they see it, so a surface that mentions it has to be able to
+  /// name the rows behind it — "edit it in Bills" is only actionable when it
+  /// also says *which* entry. Filtered here rather than at each call site so a
+  /// note can never disagree with the figure it explains.
+  List<BudgetedExpense> setAsideSourcesFor(String accountId) => [
+        for (final e in _setAsides)
+          if (e.month == _selectedMonth &&
+              e.destinationAccountId == accountId &&
+              e.isRecurring)
+            e,
+      ];
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;

@@ -108,22 +108,22 @@ class BudgetCard extends StatelessWidget {
                         style: theme.textTheme.bodySmall
                             ?.copyWith(color: cs.onSurfaceVariant),
                       ),
-                      // A target the user cannot edit here has to name where it
-                      // IS edited, or the row reads as ignoring what they typed
-                      // on this page.
-                      if (row.targetFromSetAside) ...[
-                        const SizedBox(width: 6),
-                        Icon(Icons.link_rounded,
-                            size: 12, color: cs.onSurfaceVariant),
-                        const SizedBox(width: 3),
-                        Text(
-                          'set-aside',
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                      ],
                     ],
                   ),
+                  // A target the user cannot edit here has to name where it IS
+                  // edited, or the row reads as ignoring what they typed on
+                  // this page. It sits on its own line rather than beside the
+                  // amount: inline it split the "spent / allocated" pair apart
+                  // mid-row and stole width from the name's ellipsis, and it
+                  // read as part of the figure instead of a note about it.
+                  if (row.targetFromSetAside) ...[
+                    const SizedBox(height: 3),
+                    _HintLine(
+                      icon: Icons.link_rounded,
+                      color: cs.onSurfaceVariant,
+                      text: "Target from this month's set-aside",
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   // Progress bar + % — directly below the name, aligned with it.
                   Row(

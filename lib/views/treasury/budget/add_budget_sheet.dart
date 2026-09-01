@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
@@ -256,6 +257,12 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final isPreselected = widget.preselectedCategoryId != null;
     final targetName = _selectedTargetName;
     final accent = Theme.of(context).colorScheme.primary;
+    // Empty unless a recurring set-aside already drives this fund's target, in
+    // which case the amount field below is not what the Budget page will show.
+    // See [_SetAsideNote].
+    final setAsideSources = _isSavings && _selectedCategoryId != null
+        ? widget.presenter.setAsideSourcesFor(_selectedCategoryId!)
+        : const <BudgetedExpense>[];
 
     return Form(
       key: _formKey,
@@ -330,6 +337,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                 return null;
               },
             ),
+            if (setAsideSources.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _SetAsideNote(sources: setAsideSources),
+            ],
             const SizedBox(height: 16),
 
             // Budget group
@@ -462,6 +473,67 @@ class _NoSavingsHint extends StatelessWidget {
             child: Text(
               'No savings or goal accounts yet — add one in the Dashboard first.',
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Says that this fund's target is derived from a set-aside, and from which.
+///
+/// The Budget page shows the set-aside total in place of the amount saved here
+/// whenever a recurring set-aside targets the account, so without this the
+/// field reads as broken: you type ₱5,000, save, and the card still says
+/// ₱2,500. The badge on the card says the target is borrowed; this says what
+/// to go and edit, which is the part you need while standing in the sheet that
+/// cannot change it.
+class _SetAsideNote extends StatelessWidget {
+  final List<BudgetedExpense> sources;
+
+  const _SetAsideNote({required this.sources});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final total = sources.fold<double>(0, (sum, e) => sum + e.allocatedAmount);
+    final names = sources.map((e) => e.name).join(', ');
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.link_rounded, color: cs.onSurfaceVariant, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  sources.length == 1
+                      ? 'Target comes from a set-aside'
+                      : 'Target comes from your set-asides',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'The Budget page shows ${formatPeso(total)} for this fund '
+                  '— $names, repeating monthly. Change it in Bills; the amount '
+                  'above is saved but only takes over once that set-aside ends.',
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
