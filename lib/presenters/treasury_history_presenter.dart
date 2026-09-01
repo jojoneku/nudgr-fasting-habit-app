@@ -5,14 +5,24 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class TreasuryHistoryPresenter extends ChangeNotifier {
-  TreasuryHistoryPresenter(StorageService storage) : _storage = storage;
+  TreasuryHistoryPresenter(StorageService storage, [LedgerPresenter? ledger])
+      : _storage = storage,
+        _ledger = ledger {
+    _ledger?.addListener(_syncFromLedger);
+  }
 
   final StorageService _storage;
+
+  /// Owner of the accounts, transactions and categories this presenter reports
+  /// on. Optional so History still builds standalone (tests, single-screen
+  /// mounts), where it falls back to whatever [load] read from storage.
+  final LedgerPresenter? _ledger;
 
   bool _isLoading = false;
   List<MonthlySummary> _summaries = [];
@@ -252,8 +262,113 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     return rows;
   }
 
+  /// One row per savings pocket (descending by total set aside), each carrying
+  /// its net contribution in every active month — the savings counterpart to
+  /// [categoryMatrix].
+  ///
+  /// A pocket's current balance says where it landed; this says how it got
+  /// there. Without it a goal that was funded steadily for six months and one
+  /// that took a single lump sum look identical, and a pocket quietly raided
+  /// for three months straight reads as healthy right up until it is empty.
+  List<SavingsPocketHistoryRow> get savingsPocketMatrix {
+    final byPocket = <String, Map<String, double>>{};
+    for (final m in activeMonths) {
+      final monthTxns = _allTransactions.where((t) => t.month == m).toList();
+      _buildSavingsContributionByPocket(monthTxns).forEach((id, amount) {
+        (byPocket[id] ??= {})[m] = amount;
+      });
+    }
+    final rows = <SavingsPocketHistoryRow>[];
+    byPocket.forEach((accountId, byMonth) {
+      final acct = _accounts.where((a) => a.id == accountId).firstOrNull;
+      rows.add(SavingsPocketHistoryRow(
+        accountId: accountId,
+        name: acct?.name ?? 'Account',
+        byMonth: byMonth,
+        total: byMonth.values.fold(0.0, (a, b) => a + b),
+      ));
+    });
+    rows.sort((a, b) => b.total.compareTo(a.total));
+    return rows;
+  }
+
+  /// The [perMonth] biggest single expenses in each of the most recent [months]
+  /// active months, newest month first, largest expense first within a month.
+  ///
+  /// Deliberately largest-first rather than most-recent-first: a recency-ranked
+  /// list spends its whole budget on the current month — one busy week buries
+  /// everything before it — and the transactions that explain a month are the
+  /// large ones, not the last ones. A ₱12,000 purchase in March answers
+  /// "why was March like that"; the 30th most recent ₱80 fare answers nothing.
+  ///
+  /// [monthTotal] and [itemCount] cover the tail that didn't make the cut, so
+  /// the listed items are readable as a sample of a known whole rather than
+  /// mistaken for the entire month.
+  List<MonthSpendingDigest> largestSpendingByMonth({
+    int months = 12,
+    int perMonth = 6,
+  }) {
+    final excluded = _excludedCategoryIds;
+    final nameById = {for (final c in _categories) c.id: c.name};
+    final recent = activeMonths.reversed.take(months).toList();
+    final digests = <MonthSpendingDigest>[];
+    for (final m in recent) {
+      final spends = _allTransactions
+          .where((t) => t.month == m && isSpendingOutflow(t, excluded))
+          .toList()
+        ..sort((a, b) => b.amount.compareTo(a.amount));
+      if (spends.isEmpty) continue;
+      digests.add(MonthSpendingDigest(
+        month: m,
+        monthTotal: spends.fold(0.0, (a, t) => a + t.amount),
+        itemCount: spends.length,
+        items: [
+          for (final t in spends.take(perMonth))
+            (
+              date: t.date,
+              description: t.description,
+              amount: t.amount,
+              category: nameById[t.categoryId] ?? 'Uncategorized',
+            ),
+        ],
+      ));
+    }
+    return digests;
+  }
+
   /// True when there are no transactions at all to build the matrix from.
   bool get hasNoMatrixData => _allTransactions.isEmpty;
+
+  // ─── Ledger sync ──────────────────────────────────────────────────────────────
+
+  /// Mirror accounts, transactions and categories from their owner,
+  /// [LedgerPresenter], so every history figure reflects ledger mutations
+  /// without waiting for a tab switch or an app restart.
+  ///
+  /// This matters more now than when History was only a page you navigated to:
+  /// the AI advisor reads [monthMatrix], [categoryMatrix] and
+  /// [largestSpendingByMonth] on every message it answers. A private copy
+  /// refreshed only by [load] would have it discussing a ledger the user had
+  /// already moved on from — quoting a category total that was three expenses
+  /// out of date, with nothing on screen to reveal the staleness.
+  ///
+  /// Only the mirrored lists are refreshed. Month close and the summary repair
+  /// stay in [load]: both write to storage, and a listener that fires on every
+  /// ledger keystroke is no place for that.
+  void _syncFromLedger() {
+    final ledger = _ledger;
+    if (ledger == null) return;
+    _accounts = ledger.accounts;
+    _allTransactions = ledger.allTransactions;
+    _categories = ledger.categories;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ledger?.removeListener(_syncFromLedger);
+    super.dispose();
+  }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
@@ -555,5 +670,46 @@ class CategoryHistoryRow {
     required this.colorHex,
     required this.byMonth,
     required this.total,
+  });
+}
+
+/// One savings-pocket row of the pocket×month contribution grid.
+class SavingsPocketHistoryRow {
+  final String accountId;
+  final String name;
+
+  /// monthKey → net set aside that month (negative = net withdrawal).
+  final Map<String, double> byMonth;
+  final double total;
+
+  const SavingsPocketHistoryRow({
+    required this.accountId,
+    required this.name,
+    required this.byMonth,
+    required this.total,
+  });
+}
+
+/// One month's biggest expenses, with the totals needed to read them as a
+/// sample rather than the whole month.
+class MonthSpendingDigest {
+  final String month; // 'YYYY-MM'
+
+  /// Every real expense that month, including the ones not in [items].
+  final double monthTotal;
+
+  /// How many expenses the month held in total.
+  final int itemCount;
+
+  /// The largest few, descending by amount.
+  final List<
+          ({DateTime date, String description, double amount, String category})>
+      items;
+
+  const MonthSpendingDigest({
+    required this.month,
+    required this.monthTotal,
+    required this.itemCount,
+    required this.items,
   });
 }

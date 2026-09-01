@@ -173,6 +173,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       treasury: _treasuryPresenter,
       budget: _budgetPresenter,
       installments: _installmentPresenter,
+      history: _historyPresenter,
       ledger: _ledgerPresenter,
       storage: _storage,
     );

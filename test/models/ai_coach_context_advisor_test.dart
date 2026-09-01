@@ -389,6 +389,193 @@ void main() {
       // The trends must NOT bleed into the live liquidity snapshot.
       expect(ctx.financeSnapshotSummary(), '(no financial data available)');
     });
+
+    test('income-vs-expense months carry set-aside and cumulative figures', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        incomeExpenseTrend: [
+          AdvisorMonthFlow(
+            label: 'Jun 2026',
+            income: 32000,
+            expense: 21000,
+            savingsContribution: 6000,
+            cumulativeNet: 44000,
+          ),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('₱6,000 set aside into pockets'));
+      expect(h, contains('cumulative net ₱44,000'));
+    });
+
+    test('a month that set nothing aside says nothing about set-asides', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        incomeExpenseTrend: [
+          AdvisorMonthFlow(
+            label: 'Jun 2026',
+            income: 32000,
+            expense: 21000,
+            savingsContribution: 0,
+          ),
+        ],
+      );
+
+      // Zero is not the same claim as "₱0 set aside" — an unstated figure
+      // invites no conclusion, whereas a stated zero reads as a finding.
+      expect(ctx.financeHistoricalSummary(), isNot(contains('set aside')));
+    });
+
+    test('category x month grid renders aligned to the month spine', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        historyMonthLabels: ['Apr 2026', 'May 2026', 'Jun 2026'],
+        categoryHistory: [
+          AdvisorCategoryHistoryRow(
+            name: 'Groceries',
+            amounts: [4200, 5100, 6300],
+            total: 15600,
+          ),
+          // A category bought once: the empty months must read as absent, not
+          // as zero spend the advisor might treat as a deliberate cut.
+          AdvisorCategoryHistoryRow(
+            name: 'Medical',
+            amounts: [null, 2500, null],
+            total: 2500,
+          ),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('Apr 2026 | May 2026 | Jun 2026'));
+      expect(
+          h, contains('Groceries: ₱4,200 | ₱5,100 | ₱6,300 (total ₱15,600)'));
+      expect(h, contains('Medical: - | ₱2,500 | - (total ₱2,500)'));
+    });
+
+    test('the grid is omitted when there is no month spine to align it to', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        categoryHistory: [
+          AdvisorCategoryHistoryRow(
+            name: 'Groceries',
+            amounts: [4200],
+            total: 4200,
+          ),
+        ],
+      );
+
+      // Cells with no months naming them are worse than no cells: the advisor
+      // would have to guess which month each figure belonged to.
+      expect(ctx.financeHistoricalSummary(), isNot(contains('Groceries')));
+    });
+
+    test('savings-pocket grid marks a net withdrawal as negative', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        historyMonthLabels: ['May 2026', 'Jun 2026'],
+        savingsHistory: [
+          AdvisorSavingsHistoryRow(
+            name: 'Braces',
+            amounts: [2500, -1200],
+            total: 1300,
+          ),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('NEGATIVE figure'));
+      expect(h, contains('Braces: ₱2,500 | -₱1,200 (net ₱1,300)'));
+    });
+
+    test('per-month digests state the whole month, not just the sample', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        spendingByMonth: [
+          AdvisorMonthSpendingDigest(
+            monthLabel: 'Jun 2026',
+            monthTotal: 21400,
+            itemCount: 47,
+            items: [
+              AdvisorTxnLine(
+                dateLabel: 'Jun 14',
+                description: 'Laptop stand',
+                amount: 3200,
+                category: 'Gear',
+              ),
+              // Blank description falls back to the category, as elsewhere.
+              AdvisorTxnLine(
+                dateLabel: 'Jun 2',
+                description: '   ',
+                amount: 1800,
+                category: 'Groceries',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('Jun 2026 — ₱21,400 across 47 expenses; largest:'));
+      expect(h, contains('Jun 14: Laptop stand — ₱3,200 (Gear)'));
+      expect(h, contains('Jun 2: Groceries — ₱1,800 (Groceries)'));
+    });
+
+    test('a single-expense month is pluralised correctly', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        spendingByMonth: [
+          AdvisorMonthSpendingDigest(
+            monthLabel: 'Jan 2026',
+            monthTotal: 900,
+            itemCount: 1,
+            items: [
+              AdvisorTxnLine(
+                dateLabel: 'Jan 3',
+                description: 'Domain renewal',
+                amount: 900,
+                category: 'Software',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      expect(ctx.financeHistoricalSummary(),
+          contains('across 1 expense; largest:'));
+    });
+
+    test('history never leaks into the current-liquidity snapshot', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        historyMonthLabels: ['Jun 2026'],
+        categoryHistory: [
+          AdvisorCategoryHistoryRow(
+            name: 'Groceries',
+            amounts: [6300],
+            total: 6300,
+          ),
+        ],
+        savingsHistory: [
+          AdvisorSavingsHistoryRow(
+              name: 'Braces', amounts: [2500], total: 2500),
+        ],
+        spendingByMonth: [
+          AdvisorMonthSpendingDigest(
+            monthLabel: 'Jun 2026',
+            monthTotal: 6300,
+            itemCount: 2,
+            items: [],
+          ),
+        ],
+      );
+
+      // Rule: the snapshot is what is true NOW. Past figures reaching it would
+      // let the advisor answer "what can I spend" with last month's numbers.
+      expect(ctx.financeSnapshotSummary(), '(no financial data available)');
+      expect(ctx.financeHistoricalSummary(), isNotEmpty);
+    });
   });
 
   group('AiCoachPresenter.looksLikeExpenseLog', () {
