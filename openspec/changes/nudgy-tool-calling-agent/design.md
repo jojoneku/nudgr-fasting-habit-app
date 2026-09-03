@@ -53,11 +53,13 @@ Every bill and receivable mutator takes `applyToFuture`. On a delete it is the d
 
 The tool schema therefore **omits** `applyToFuture`. It is not a field the model can set, correctly or otherwise. The confirm card renders it as an explicit choice with the consequence spelled out, defaulting to the narrower scope. A model that wants the wider scope has to ask the user in prose, which is the correct interaction anyway.
 
-### D5 — Metering moves to per user turn
+### D5 — Metering moves to per user turn, keyed on tool results
 
 `increment_ai_usage` is called per Bedrock invocation and `_DAILY_CAP` is 100. Under a tool loop a single question can cost four invocations, so the effective cap would drop to roughly 25 conversations a day without anyone changing a setting.
 
-The client sends a turn id; the Lambda counts the first hop of a turn and passes subsequent hops through. Cheating the cap by fabricating turn ids is possible and not worth defending against — the loop has its own hard hop ceiling (D6), which is the real bound.
+**Revised during implementation.** The original plan had the client send a turn id and the Lambda count only a turn's first hop. That cannot work: the Lambda is stateless, so it has no way to remember which turn ids it has already counted, and a warm container's memory is not a place to keep that.
+
+The signal is already in the request. A turn's first hop never carries tool results; every continuation always does. So `_carries_tool_results(body)` identifies a continuation exactly, with no server state and no new field. Faking it requires sending a fabricated tool result, and the hop ceiling (D6) is the real bound on abuse either way.
 
 ### D6 — The loop has a hard hop ceiling
 
@@ -78,6 +80,30 @@ Implemented as: the budget confirm card offers the matching set-aside inline, th
 ### D9 — Delete ships last
 
 Create is recoverable by deleting. Edit is recoverable by editing back. Delete is recoverable by nothing, and combined with recurrence scope it has the widest blast radius in the surface. It ships in phase 3, behind a card that names the row and the scope explicitly.
+
+### D10 — The tool catalogue is declared by the client, not the Lambda
+
+The Lambda takes `tools` from the request payload and forwards it to Bedrock. It defines no catalogue of its own.
+
+The client is what executes every tool, because the data lives on the device (D1). It is therefore also the only party that knows which tools its build can actually run. A catalogue hardcoded server-side would, on the next deploy, hand an old app a `tool_use` for a tool that app has never heard of — and app versions in the wild lag indefinitely. Client-declared tools make that skew impossible by construction, and adding a tool stops requiring a Lambda deploy.
+
+This is not a trust boundary being crossed. The model's reply is only ever a proposal, and the same client that declared the tool is the one that must confirm and execute it. A client that lies about its tools is lying to itself.
+
+### D11 — MCP-adaptable by construction, not by intention
+
+MCP is a protocol for reaching tools *across* processes. Every tool here is an in-process Dart call on data that never leaves the phone, so there is nothing for it to bridge today and adopting it now would mean speaking JSON-RPC from the app to itself.
+
+It is still worth being adaptable, because the cost is close to zero and the shapes already agree. MCP describes a tool with the same trio this catalogue uses — name, description, JSON Schema — so the differences are narrow and mechanical:
+
+| | Bedrock | MCP |
+|---|---|---|
+| schema key | `input_schema` | `inputSchema` |
+| behaviour | implied by the description | explicit `annotations` |
+| result | `tool_result` block, `is_error` | content list, `isError` |
+
+So the catalogue encodes both. `AiTool.toRequestJson()` and `AiTool.toMcpJson()` sit side by side, as do `AiToolResult.toContentBlock()` and `toMcpJson()`. The behaviour flag is `AiToolKind` (`read` / `create` / `update` / `destroy`) rather than a `mutates` bool, because MCP annotates along three independent axes and a single bool loses the one this change cares most about: the difference between changing a row and destroying one.
+
+Making the mapping executable rather than aspirational is the whole point. A claim that something "could be exposed over MCP later" rots silently; a `toMcpJson()` with a test does not.
 
 ## Risks / Trade-offs
 
