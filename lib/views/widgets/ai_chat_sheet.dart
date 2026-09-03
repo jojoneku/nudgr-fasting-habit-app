@@ -393,8 +393,17 @@ class _AiChatBodyState extends State<AiChatBody> {
         ),
         if (_advisorMode)
           ListenableBuilder(
-            listenable: _ledger!,
-            builder: (_, __) => AdvisorLogCard(ledger: _ledger!),
+            // Both drive this one card: the ledger for logging, the proposal
+            // host for a change Nudgy asked to make.
+            listenable: Listenable.merge([
+              _ledger!,
+              if (_presenter.financeProposals != null)
+                _presenter.financeProposals!,
+            ]),
+            builder: (_, __) => AdvisorLogCard(
+              ledger: _ledger!,
+              proposals: _presenter.financeProposals,
+            ),
           ),
         Padding(
           padding: EdgeInsets.only(bottom: bottomInset),

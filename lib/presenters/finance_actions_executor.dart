@@ -11,33 +11,6 @@ import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
 import 'finance_tool_executor.dart';
 
-/// A change Nudgy proposed, waiting for the user to say yes or no.
-///
-/// Deliberately a plain description rather than a half-built entity: the card
-/// renders these fields, and the entity is only constructed once the user has
-/// confirmed. Nothing that could accidentally be persisted exists until then.
-class PendingFinanceAction {
-  const PendingFinanceAction({
-    required this.call,
-    required this.title,
-    required this.details,
-    required this.isRecurring,
-  });
-
-  final AiToolCall call;
-
-  /// One line naming what will happen, e.g. "Set aside ₱3,000 for Braces".
-  final String title;
-
-  /// Label/value rows for the card body.
-  final List<({String label, String value})> details;
-
-  /// Whether the proposal repeats. Only a recurring action offers the
-  /// future-months scope choice, because only a recurring one has a series to
-  /// spread across.
-  final bool isRecurring;
-}
-
 /// Runs Nudgy's finance tools against the presenters that own the data.
 ///
 /// Assembled in `TreasuryPresenters` (CLAUDE.md #9), never in a shell, and it
@@ -48,7 +21,7 @@ class PendingFinanceAction {
 /// [PendingFinanceAction] and returns a future that only completes when the
 /// user answers, so there is no code path from a model reply to a write.
 class FinanceActionsExecutor extends ChangeNotifier
-    implements FinanceToolExecutor {
+    implements FinanceToolExecutor, FinanceProposalHost {
   FinanceActionsExecutor({
     required BillsReceivablesPresenter bills,
     BudgetPresenter? budget,
@@ -61,7 +34,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   PendingFinanceAction? _pending;
   Completer<AiToolResult>? _decision;
 
-  /// The change awaiting confirmation, or null when nothing is pending.
+  @override
   PendingFinanceAction? get pending => _pending;
 
   // ── Reads ─────────────────────────────────────────────────────────────────
@@ -160,6 +133,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// The user said yes. [applyToFuture] comes from the card, never the model:
   /// it spreads the change across later months of the series, and no chat
   /// sentence reliably asks for that.
+  @override
   Future<void> confirm({bool applyToFuture = false}) async {
     final action = _pending;
     final decision = _decision;
@@ -180,6 +154,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   }
 
   /// The user said no. Reported as a decline, never as a quiet success.
+  @override
   void decline() {
     final action = _pending;
     final decision = _decision;

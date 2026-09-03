@@ -18,16 +18,16 @@
 
 - [x] 3.1 Implement the client tool loop in `AiCoachPresenter`: send, receive tool calls, execute, send results, repeat. Enforce the hop ceiling and the no-progress termination (design D6). *Verify: unit test with a scripted service driving 1-hop, 3-hop, and ceiling-exceeded conversations.*
 - [x] 3.2 Implement the find tools against `BillsReceivablesPresenter` and `BudgetPresenter` read surfaces, executing with no confirmation. *Verify: unit tests for exact match, multiple matches, and no match.*
-- [ ] 3.3 Route mutating tool calls into `ChatPhase.reviewing` as a pending proposal rather than executing them. *Verify: unit test asserting no mutator is called when a mutating tool call arrives.*
+- [x] 3.3 Route mutating tool calls into `ChatPhase.reviewing` as a pending proposal rather than executing them. *Verify: unit test asserting no mutator is called when a mutating tool call arrives.*
 - [x] 3.4 On confirmation, call the owning presenter's mutator and return the real outcome as the tool result; on decline, return a decline result (design D3, CLAUDE.md #8). *Verify: unit tests for both paths, asserting the tool result reflects the actual outcome and that no local copy is written.*
 - [x] 3.5 Wire the new dependencies in `lib/presenters/treasury_presenters.dart`, not in `home_screen.dart` or `treasury_web_app.dart` (CLAUDE.md #9). *Verify: both shells compile with no new wiring of their own.*
 
 ## 4. UI — confirm cards
 
-- [ ] 4.1 Extract the shared confirm-card shell from `entry_review_card.dart` so the transaction card and the new entity cards share one structure. *Verify: existing entry-review widget tests still pass.*
-- [ ] 4.2 Bill and receivable proposal cards, including the recurrence-scope control with its consequence stated and the narrow default (design D4). *Verify: widget test asserting the scope control exists, defaults narrow, and that confirming passes the user's choice through.*
-- [ ] 4.3 Set-aside proposal card, including type (`savings`/`goal`/`sinkingFund`/`gift`/`other`) and destination account. *Verify: widget test.*
-- [ ] 4.4 Theme-aware colours read from `Theme.of(context)` in every new card, both modes (CLAUDE.md #7). *Verify: widget test rendering each card in dark and light.*
+- [x] 4.1 **Revised:** no new shell was extracted. `AdvisorLogCard` already IS the shared shell (container chrome plus a body switch), so the proposal card slots into it as one more body. Extracting a parallel abstraction would have added a layer without removing one. *Verified: existing entry-review widget tests still pass.*
+- [x] 4.2 Bill and receivable proposal cards, including the recurrence-scope control with its consequence stated and the narrow default (design D4). *Verify: widget test asserting the scope control exists, defaults narrow, and that confirming passes the user's choice through.*
+- [x] 4.3 Set-aside proposal card, including type (`savings`/`goal`/`sinkingFund`/`gift`/`other`) and destination account. *Verify: widget test.*
+- [x] 4.4 Theme-aware colours read from `Theme.of(context)` in every new card, both modes (CLAUDE.md #7). *Verify: widget test rendering each card in dark and light.*
 
 ## 5. End-to-end and guardrails
 

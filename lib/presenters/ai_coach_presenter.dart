@@ -98,6 +98,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// never propose a change nothing is able to carry out.
   final FinanceToolExecutor? _toolExecutor;
 
+  /// The proposal surface a confirm card binds to, when the injected executor
+  /// has one. Resolved here rather than type-tested inside a `build()`.
+  /// The cast is explicit because [FinanceProposalHost] is deliberately not a
+  /// subtype of [FinanceToolExecutor] — the two describe different audiences —
+  /// so Dart cannot promote across them.
+  FinanceProposalHost? get financeProposals {
+    final executor = _toolExecutor;
+    return executor is FinanceProposalHost
+        ? executor as FinanceProposalHost
+        : null;
+  }
+
   /// The user-curated advisor memory, injected into every advisor turn.
   AdvisorProfile _advisorProfile = AdvisorProfile.empty();
 
