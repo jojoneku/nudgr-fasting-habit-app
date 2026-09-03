@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 import urllib.request
 
 import boto3
@@ -25,7 +26,7 @@ _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
 # on food-coach-handler in ap-southeast-1 — and that call REPLACES the whole
 # environment map, so read the current one first and put every existing key
 # back, or the function loses the rest of its config.
-_ADVISOR_MAX_TOKENS = int(os.environ.get("ADVISOR_MAX_TOKENS", "16000"))
+_ADVISOR_MAX_TOKENS = int(os.environ.get("ADVISOR_MAX_TOKENS", "3000"))
 _DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
 # Verbose request logging, OFF by default. Even when enabled it never logs the
 # Authorization header (a live Supabase JWT) or the request body (chat text,
@@ -953,6 +954,16 @@ def _classify_finance(payload):
 
 # ── Financial advisor (adviseFinance) ────────────────────────────────────────────
 
+# Appended server-side when Bedrock reports stop_reason == "max_tokens". The client
+# renders the advisor reply as markdown, so this lands as its own italic line with no
+# client change. Without it a cut-off answer is presented as the whole reply, which is
+# worse than a short one because the user has no way to tell it is incomplete.
+_TRUNCATION_NOTICE = (
+    "\n\n---\n"
+    "*That answer ran into its length limit and stopped early. Ask me to carry on with "
+    "the part you want and I'll pick it up from there.*"
+)
+
 # Stable, cache-friendly system prefix: persona + knowledge-base principles +
 # anti-hallucination contract + the "financial position" diagnostic structure.
 # Only distilled principles — never copyrighted book text.
@@ -1053,10 +1064,20 @@ _ADVISOR_SYSTEM_PREFIX = (
     "- Prefer a **bold label** on its own line over a heading for a single short section; "
     "reach for '##' only when the answer genuinely has several parts.\n"
     "- Still be tight and skimmable: short sentences, a blank line between sections, at most "
-    "one emoji for the whole reply. Length is genuinely not rationed — spend it on substance: "
-    "more figures cited, more arithmetic shown, more months compared. Never on padding, "
-    "restatement, or a preamble about what you are about to do. A long answer is earned by "
-    "carrying more evidence, not by saying less at greater length.\n\n"
+    "one emoji for the whole reply. Spend length on substance: more figures cited, more "
+    "arithmetic shown, more months compared. Never on padding, restatement, or a preamble "
+    "about what you are about to do. A long answer is earned by carrying more evidence, not "
+    "by saying less at greater length.\n"
+    "- LENGTH BUDGET — you have room for about 900 words. A full financial analysis may use "
+    "all of it; a one-line question should take a few sentences. Treat this as a real "
+    "ceiling, not a suggestion: anything past it is cut off mid-word before the user ever "
+    "sees it, so an answer that lands complete at 900 words always beats one still going at "
+    "1,200. If the material genuinely will not fit, finish the part you started, then say "
+    "what you left out and offer to go deeper on it — never open a section you cannot close.\n"
+    "- PUT THE LOAD-BEARING CONTENT FIRST: the direct answer, the figures, and the tables "
+    "come before context, caveats, and encouragement. Finish a table before moving on to "
+    "prose. If anything is going to be lost at the end, it must be the closing paragraph "
+    "and never a half-written table, which reads as complete when it is not.\n\n"
     "All money is in Philippine pesos (₱). Be warm, direct, and concrete. You are not a licensed "
     "investment, tax, legal, or medical professional — caveat and redirect if asked for those."
 )
@@ -1157,6 +1178,7 @@ def _advise_finance(payload):
                 ]
                 break
 
+    started = time.monotonic()
     try:
         raw = _bedrock.invoke_model(
             modelId=_ADVISOR_MODEL_ID,
@@ -1170,11 +1192,32 @@ def _advise_finance(payload):
             }),
         )
         result = json.loads(raw["body"].read())
+        elapsed_ms = int((time.monotonic() - started) * 1000)
         response_text = result["content"][0]["text"].strip()
-        print(f"cost_line op=adviseFinance msgs={len(bedrock_messages)} snapshot={'y' if summary else 'n'} image={'y' if has_image else 'n'}")
-        return _resp(200, {"response": response_text})
+
+        # The advisor is a single blocking call behind an HTTP API, which caps the
+        # whole round trip at 30s. That makes latency_ms and out_tokens the two
+        # numbers that decide what _ADVISOR_MAX_TOKENS can safely be — without them
+        # the ceiling can only be guessed at. cache_read_input_tokens is 0 until
+        # prompt caching is turned on; it is logged now so the before/after is
+        # visible when it is.
+        usage = result.get("usage") or {}
+        stop_reason = result.get("stop_reason")
+        truncated = stop_reason == "max_tokens"
+        if truncated:
+            response_text += _TRUNCATION_NOTICE
+        print(
+            f"cost_line op=adviseFinance msgs={len(bedrock_messages)} "
+            f"snapshot={'y' if summary else 'n'} image={'y' if has_image else 'n'} "
+            f"in_tokens={usage.get('input_tokens', -1)} "
+            f"out_tokens={usage.get('output_tokens', -1)} "
+            f"cache_read={usage.get('cache_read_input_tokens', 0)} "
+            f"latency_ms={elapsed_ms} stop={stop_reason}"
+        )
+        return _resp(200, {"response": response_text, "truncated": truncated})
     except Exception as e:
-        print(f"Bedrock error (adviseFinance): {e}")
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        print(f"Bedrock error (adviseFinance) after {elapsed_ms}ms: {e}")
         return _resp(502, {"error": "bedrock_error", "message": str(e)})
 
 
