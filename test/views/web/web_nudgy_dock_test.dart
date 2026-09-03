@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
@@ -81,7 +82,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
-      )).thenAnswer((_) => Stream.fromIterable(['Looks fine.']));
+      )).thenAnswer((_) async => const AdvisorReply(text: 'Looks fine.'));
 
       final p = buildWebAdvisor();
       p.openSession(AiCoachEntryPoint.financeAdvisor);
@@ -212,7 +213,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
       )).thenAnswer(
-          (_) => Stream.fromIterable(['You are ', 'running a deficit.']));
+          (_) async => const AdvisorReply(text: 'You are running a deficit.'));
 
       final p = buildWebAdvisor();
       final c = NudgyController(p);

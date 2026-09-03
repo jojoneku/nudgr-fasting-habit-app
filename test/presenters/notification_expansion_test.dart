@@ -18,6 +18,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intermittent_fasting/models/advisor_reply.dart';
+import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/ai_chat_message.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/ai_meal_estimate.dart';
@@ -94,12 +96,14 @@ class _NoOpAiCoach implements AiCoachService {
   }) async* {}
 
   @override
-  Stream<String> adviseFinance({
+  Future<AdvisorReply> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
-  }) async* {}
+    List<AiTool> tools = const [],
+  }) async =>
+      const AdvisorReply();
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;

@@ -3,7 +3,7 @@
 - [x] 1.1 Define the tool catalogue in one place shared by client and backend intent: name, description, JSON schema, and whether it mutates. Phase 1 set: `findBills`, `findReceivables`, `findSetAsides`, `findBudgets`, `addBill`, `addReceivable`, `addSetAside`. `applyToFuture` MUST NOT appear in any schema (design D4). Behaviour is `AiToolKind` (read/create/update/destroy), not a bool, so it maps onto MCP annotations (design D11). *Verify: a unit test asserts no schema contains `applyToFuture`, that every mutating tool takes an `id` or is a create, and that `toMcpJson()`/`toRequestJson()` agree on name, description and schema for every tool in the catalogue.*
 - [x] 1.2 Add `AiToolCall` (id, name, input map) and `AiToolResult` (id, ok, summary, error) models in `lib/models/`, immutable with `fromJson`/`toJson`. *Verify: round-trip unit test.*
 - [ ] 1.3 Add a `FinanceActionProposal` sealed type with one variant per entity, carrying the parsed tool input plus the resolved row for edits. *Verify: unit test constructing each variant from a representative tool input.*
-- [ ] 1.4 Change the `adviseFinance` service contract from `Stream<String>` to a result carrying either text or tool calls, plus the assistant turn to replay. Update `NullAiCoachService` and the on-device path to the new type. *Verify: existing advisor tests compile and pass unchanged in behaviour.*
+- [x] 1.4 Change the `adviseFinance` service contract from `Stream<String>` to a result carrying either text or tool calls, plus the assistant turn to replay. Update `NullAiCoachService` and the on-device path to the new type. *Verify: existing advisor tests compile and pass unchanged in behaviour.*
 
 ## 2. Backend — tool use on `adviseFinance`
 
@@ -16,7 +16,7 @@
 
 ## 3. Presenter — the loop and the executors
 
-- [ ] 3.1 Implement the client tool loop in `AiCoachPresenter`: send, receive tool calls, execute, send results, repeat. Enforce the hop ceiling and the no-progress termination (design D6). *Verify: unit test with a scripted service driving 1-hop, 3-hop, and ceiling-exceeded conversations.*
+- [x] 3.1 Implement the client tool loop in `AiCoachPresenter`: send, receive tool calls, execute, send results, repeat. Enforce the hop ceiling and the no-progress termination (design D6). *Verify: unit test with a scripted service driving 1-hop, 3-hop, and ceiling-exceeded conversations.*
 - [ ] 3.2 Implement the find tools against `BillsReceivablesPresenter` and `BudgetPresenter` read surfaces, executing with no confirmation. *Verify: unit tests for exact match, multiple matches, and no match.*
 - [ ] 3.3 Route mutating tool calls into `ChatPhase.reviewing` as a pending proposal rather than executing them. *Verify: unit test asserting no mutator is called when a mutating tool call arrives.*
 - [ ] 3.4 On confirmation, call the owning presenter's mutator and return the real outcome as the tool result; on decline, return a decline result (design D3, CLAUDE.md #8). *Verify: unit tests for both paths, asserting the tool result reflects the actual outcome and that no local copy is written.*

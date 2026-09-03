@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
@@ -97,7 +98,8 @@ void main() {
       historical: anyNamed('historical'),
     )).thenAnswer((inv) {
       captured = inv.namedArguments[#context] as AiCoachContext;
-      return Stream.fromIterable(['Looks like an internet bill.']);
+      return Future.value(
+          const AdvisorReply(text: 'Looks like an internet bill.'));
     });
 
     final p = AiCoachPresenter(
@@ -125,7 +127,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) => Stream.fromIterable(['reply']));
+    )).thenAnswer((_) async => const AdvisorReply(text: 'reply'));
 
     final p =
         AiCoachPresenter(stats: stats, fasting: fasting, service: service);
@@ -153,7 +155,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) => Stream.fromIterable(['ok']));
+    )).thenAnswer((_) async => const AdvisorReply(text: 'ok'));
 
     final p =
         AiCoachPresenter(stats: stats, fasting: fasting, service: service);
@@ -175,7 +177,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) => Stream.fromIterable(['A receipt.']));
+    )).thenAnswer((_) async => const AdvisorReply(text: 'A receipt.'));
 
     final p = AiCoachPresenter(
       stats: stats,
