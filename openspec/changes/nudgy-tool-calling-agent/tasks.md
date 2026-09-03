@@ -17,10 +17,10 @@
 ## 3. Presenter — the loop and the executors
 
 - [x] 3.1 Implement the client tool loop in `AiCoachPresenter`: send, receive tool calls, execute, send results, repeat. Enforce the hop ceiling and the no-progress termination (design D6). *Verify: unit test with a scripted service driving 1-hop, 3-hop, and ceiling-exceeded conversations.*
-- [ ] 3.2 Implement the find tools against `BillsReceivablesPresenter` and `BudgetPresenter` read surfaces, executing with no confirmation. *Verify: unit tests for exact match, multiple matches, and no match.*
+- [x] 3.2 Implement the find tools against `BillsReceivablesPresenter` and `BudgetPresenter` read surfaces, executing with no confirmation. *Verify: unit tests for exact match, multiple matches, and no match.*
 - [ ] 3.3 Route mutating tool calls into `ChatPhase.reviewing` as a pending proposal rather than executing them. *Verify: unit test asserting no mutator is called when a mutating tool call arrives.*
-- [ ] 3.4 On confirmation, call the owning presenter's mutator and return the real outcome as the tool result; on decline, return a decline result (design D3, CLAUDE.md #8). *Verify: unit tests for both paths, asserting the tool result reflects the actual outcome and that no local copy is written.*
-- [ ] 3.5 Wire the new dependencies in `lib/presenters/treasury_presenters.dart`, not in `home_screen.dart` or `treasury_web_app.dart` (CLAUDE.md #9). *Verify: both shells compile with no new wiring of their own.*
+- [x] 3.4 On confirmation, call the owning presenter's mutator and return the real outcome as the tool result; on decline, return a decline result (design D3, CLAUDE.md #8). *Verify: unit tests for both paths, asserting the tool result reflects the actual outcome and that no local copy is written.*
+- [x] 3.5 Wire the new dependencies in `lib/presenters/treasury_presenters.dart`, not in `home_screen.dart` or `treasury_web_app.dart` (CLAUDE.md #9). *Verify: both shells compile with no new wiring of their own.*
 
 ## 4. UI — confirm cards
 
