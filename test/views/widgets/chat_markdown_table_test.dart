@@ -84,6 +84,62 @@ void main() {
       );
     });
 
+    testWidgets('a long label wraps so the figure stays in frame',
+        (tester) async {
+      // The shape that actually shipped broken: a budget breakdown whose labels
+      // are sentences. IntrinsicColumnWidth sized the label column to the
+      // longest of them and pushed every amount off the right edge, so the rows
+      // that mattered most ("Total out") showed no number at all. It was
+      // scrollable, but nothing on screen said so, and a table with no visible
+      // figures reads as broken rather than as scrolled.
+      await pump(
+        tester,
+        '| Item | Amount |\n|---|---:|\n'
+        '| Food (₱200/day × 30 days) | ₱6,000 |\n'
+        '| Household contribution (reduced) | ₱4,500 |\n'
+        '| Total out | ₱31,973 |\n',
+      );
+
+      final bubble = tester.getRect(find.byType(ChatMarkdown));
+      for (final amount in ['₱6,000', '₱4,500', '₱31,973']) {
+        final cell = tester.getRect(find.text(amount));
+        expect(
+          cell.right,
+          lessThanOrEqualTo(bubble.right + 0.5),
+          reason: '$amount is off the right edge of the bubble',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the label column is capped, and the figure column is not',
+        (tester) async {
+      await pump(
+        tester,
+        '| Item | Amount |\n|---|---:|\n'
+        '| Household contribution (reduced) | ₱4,500 |\n',
+      );
+
+      // Under half the bubble for the prose column, so the amount beside it
+      // always has somewhere to sit.
+      final label =
+          tester.getRect(find.text('Household contribution (reduced)'));
+      expect(label.width, lessThanOrEqualTo(380 * 0.46 + 0.5));
+      // Wrapping is the point: the capped label is taller than one line.
+      expect(label.height, greaterThan(20));
+    });
+
+    testWidgets('a short label is not stretched to the cap', (tester) async {
+      await pump(
+        tester,
+        '| A | B |\n|---|---:|\n| Food | ₱10 |\n',
+      );
+
+      // The cap is an upper bound, never a target — a compact two-column table
+      // must not be blown out into a sparse one with a gulf in the middle.
+      expect(tester.getRect(find.text('Food')).width, lessThan(80));
+    });
+
     testWidgets('surrounding prose still renders around it', (tester) async {
       await pump(tester, 'Here is the split:\n\n$table\nOverall you are fine.');
 
