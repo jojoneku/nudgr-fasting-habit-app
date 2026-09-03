@@ -361,8 +361,15 @@ class _ResizeHandleState extends State<_ResizeHandle> {
 
   /// Where the current click started, and when the last one that stayed still
   /// finished — the two facts needed to spot a double-click ourselves.
+  ///
+  /// The time comes from [PointerEvent.timeStamp], not the wall clock. Both are
+  /// correct for a real user, but only the event's own stamp is the time base
+  /// the framework advances, so a test that pumps 60ms of fake time between two
+  /// clicks sees 60ms. Against `DateTime.now()` it saw however long the machine
+  /// actually took, which under a loaded full-suite run drifted past the
+  /// 300ms window and made the test flake.
   Offset? _downAt;
-  DateTime? _lastClickAt;
+  Duration? _lastClickAt;
 
   /// How far a pointer may travel and still count as a click, not a drag.
   static const double _clickSlop = 4;
@@ -390,10 +397,10 @@ class _ResizeHandleState extends State<_ResizeHandle> {
     if (down == null) return;
     if ((event.position - down).distance > _clickSlop) return; // a drag
 
-    final now = DateTime.now();
+    final now = event.timeStamp;
     final previous = _lastClickAt;
     _lastClickAt = now;
-    if (previous == null || now.difference(previous) > _doubleClickWindow) {
+    if (previous == null || now - previous > _doubleClickWindow) {
       return;
     }
     // Consume it, so a third click does not read as another double.
