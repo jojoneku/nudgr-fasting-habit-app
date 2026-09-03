@@ -221,54 +221,107 @@ class ChatMarkdown extends StatelessWidget {
     ].reduce((a, b) => a > b ? a : b);
     final align = _alignments(rows[1], columns);
 
-    List<Widget> cellsFor(List<String> cells, {required bool isHeader}) => [
+    List<Widget> cellsFor(
+      List<String> cells, {
+      required bool isHeader,
+      required double? labelBudget,
+    }) =>
+        [
           for (var i = 0; i < columns; i++)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: Text.rich(
-                _inline(
-                  i < cells.length ? cells[i] : '',
-                  isHeader
-                      ? base.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: cs.onSurfaceVariant,
-                          fontSize: base.fontSize! - 1,
-                        )
-                      : base,
+              child: _capped(
+                // Only the first column is capped, and only when there is a
+                // budget to cap it to. It is the one that holds prose; the rest
+                // hold figures, which must never be the thing that wraps.
+                width: i == 0 ? labelBudget : null,
+                child: Text.rich(
+                  _inline(
+                    i < cells.length ? cells[i] : '',
+                    isHeader
+                        ? base.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: cs.onSurfaceVariant,
+                            fontSize: base.fontSize! - 1,
+                          )
+                        : base,
+                  ),
+                  textAlign: align[i],
                 ),
-                textAlign: align[i],
               ),
             ),
         ];
 
-    final table = Table(
-      // Sized to content, not stretched: a two-column money table stretched to
-      // the bubble width leaves a gulf between label and figure.
-      defaultColumnWidth: const IntrinsicColumnWidth(),
-      border: TableBorder(
-        horizontalInside: BorderSide(color: cs.outlineVariant, width: 0.5),
-        top: BorderSide(color: cs.outlineVariant, width: 0.5),
-        bottom: BorderSide(color: cs.outlineVariant, width: 0.5),
-      ),
-      children: [
-        TableRow(
-          decoration: BoxDecoration(color: cs.surfaceContainerHighest),
-          children: cellsFor(header, isHeader: true),
-        ),
-        for (final r in body) TableRow(children: cellsFor(r, isHeader: false)),
-      ],
-    );
+    Widget build(double? labelBudget) => Table(
+          // Sized to content, not stretched: a two-column money table stretched
+          // to the bubble width leaves a gulf between label and figure.
+          defaultColumnWidth: const IntrinsicColumnWidth(),
+          border: TableBorder(
+            horizontalInside: BorderSide(color: cs.outlineVariant, width: 0.5),
+            top: BorderSide(color: cs.outlineVariant, width: 0.5),
+            bottom: BorderSide(color: cs.outlineVariant, width: 0.5),
+          ),
+          children: [
+            TableRow(
+              decoration: BoxDecoration(color: cs.surfaceContainerHighest),
+              children:
+                  cellsFor(header, isHeader: true, labelBudget: labelBudget),
+            ),
+            for (final r in body)
+              TableRow(
+                children:
+                    cellsFor(r, isHeader: false, labelBudget: labelBudget),
+              ),
+          ],
+        );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      // A chat bubble is narrow and a table has a minimum width it cannot go
-      // below, so let it scroll sideways rather than overflow the bubble.
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: table,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // A chat bubble is narrow and a table has a minimum width it cannot
+          // go below, so the whole thing still scrolls sideways as a fallback.
+          //
+          // But scrolling alone was not enough, and the way it failed was the
+          // worst available: IntrinsicColumnWidth sizes the label column to its
+          // longest string, so one verbose row ("Household contribution
+          // (reduced)") pushed the FIGURES off the right edge. The column that
+          // matters was the one that disappeared, and a table whose numbers are
+          // all out of frame reads as broken rather than as scrollable —
+          // nothing on screen says there is more to the right.
+          //
+          // So the label column gets a budget and wraps within it, which keeps
+          // the numbers in frame at the cost of a taller row. Two lines of
+          // label beats an invisible amount.
+          final available = constraints.maxWidth;
+          final budget = available.isFinite && columns > 1
+              ? available * _labelColumnShare
+              : null;
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: build(budget),
+          );
+        },
       ),
     );
   }
+
+  /// Share of the bubble the first column may claim before it has to wrap.
+  ///
+  /// Half, less a little: enough for a real label, and it still leaves the
+  /// widest figure column in frame beside it.
+  static const double _labelColumnShare = 0.46;
+
+  /// [child] under a maximum width, or untouched when there is no budget.
+  /// A cap is only ever an upper bound — a short label still sizes to itself,
+  /// so a compact table is not stretched into a sparse one.
+  static Widget _capped({required double? width, required Widget child}) =>
+      width == null
+          ? child
+          : ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: width),
+              child: child,
+            );
 
   /// A list row: fixed marker + hanging-indented inline content.
   Widget _marker(
