@@ -27,13 +27,29 @@ enum AiCoachTier { onDevice, cloud }
 /// like the Insight Engine collect yielded tokens as AI content and would
 /// otherwise persist the error prose as a coaching insight.
 class AiCoachException implements Exception {
-  const AiCoachException(this.userMessage);
+  const AiCoachException(this.userMessage, {this.retryable = false});
 
   /// Short, plain-language explanation safe to show directly in the UI.
   final String userMessage;
 
+  /// Whether trying the identical request again could plausibly succeed.
+  ///
+  /// Defaults to false, so a new failure is only ever retried when someone has
+  /// thought about it. The inverse default would be worse than useless: it
+  /// would hammer an expired session three times before telling the user to
+  /// sign in, and spend three turns of a daily cap discovering the cap is
+  /// full.
+  ///
+  /// Retryable means transient and blameless — the connection dropped, the
+  /// server returned a 5xx, the stream died mid-answer. Not retryable means
+  /// the same request will fail the same way: bad credentials, an exhausted
+  /// allowance, a protocol the build does not understand, a feature switched
+  /// off in Settings.
+  final bool retryable;
+
   @override
-  String toString() => 'AiCoachException: $userMessage';
+  String toString() =>
+      'AiCoachException: $userMessage${retryable ? ' (retryable)' : ''}';
 }
 
 /// Abstract interface for all AI Coach implementations.
