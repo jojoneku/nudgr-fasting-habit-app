@@ -1,0 +1,8 @@
+# Shell scripts must keep LF endings regardless of platform.
+#
+# A .sh file checked out with CRLF on Windows and then packaged fails at exec
+# with "bad interpreter: /bin/bash^M" — which is a confusing way to learn about
+# line endings, especially inside a Lambda whose only symptom is that every
+# invocation dies at boot. backend/ai-coach/run.sh is the entrypoint the Lambda
+# Web Adapter runs, and scripts/*.sh run in CI.
+*.sh text eol=lf

@@ -1,26 +1,76 @@
 ## Status
 
-Code is implemented and verified; infrastructure is not created yet, so nothing
-is live. `flutter analyze` and `dart format` clean, full suite 1785 passing.
+Code done and tested. Infrastructure **built and verified**, with one blocker
+outside the code: the account refuses anonymous Function URL access.
 
-Two gaps worth knowing before this ships, both called out on their tasks below:
+`flutter analyze` + `dart format` clean, 1806 Dart tests, 32 Python tests.
 
-- **The auth helper has no test yet.** It is the entire security boundary for an
-  `AuthType: NONE` endpoint, and PyJWT is not installed in this environment
-  (`pip install` unavailable), so §2.2/§2.4 could not be executed here. Do not
-  create the Function URL until they are.
-- **The arm64 wheel check (§2.1) did not run** for the same reason.
+### What is live
 
-Verified against real Bedrock through `advise_finance_stream` itself:
+| | |
+|---|---|
+| Function | `food-advisor-stream` (ap-southeast-1, python3.12, arm64, 1024 MB, 45s) |
+| Handler | `run.sh` via `AWS_LAMBDA_EXEC_WRAPPER=/opt/bootstrap` |
+| Layer | `arn:aws:lambda:ap-southeast-1:753240598075:layer:LambdaAdapterLayerArm64:28` (LWA 1.0.1, arm64) |
+| Role | reused `food-coach-handler-role-b767mr42` — same permissions, same code |
+| URL | `https://hwshru3edc3n7clcvv6p57x42u0wivou.lambda-url.ap-southeast-1.on.aws/` |
+| Mode | `RESPONSE_STREAM` + `AWS_LWA_INVOKE_MODE=response_stream` |
+| CORS | both Firebase origins, `authorization` + `content-type` named |
+
+Verified against the deployed function:
+
+- The stack boots. A direct invoke returns `server: uvicorn` and this app's own
+  401 body, so LWA started the server, the vendored arm64 `cryptography`
+  imported, and auth ran.
+- `POST /v1/advisor` unauthenticated → `401 {"error":"unauthorized"}`.
+- `POST /v1/coach` → `404 {"error":"not_found"}`. This function serves one op.
+- Real status codes, no envelope, once `AWS_LWA_INVOKE_MODE` was set — without
+  it LWA buffers and hands back an API-Gateway-shaped body with `200` on the
+  outside, which would have made every error look like a success.
+
+### THE BLOCKER: anonymous Function URL access is refused
+
+With `AuthType: NONE` every request gets `403 Forbidden` from AWS before
+reaching the function. Isolated, not guessed:
+
+- The resource policy is correct (`lambda:InvokeFunctionUrl`, `Principal: "*"`,
+  condition `lambda:FunctionUrlAuthType: NONE`).
+- The account is **not** in an Organization, so it is not an SCP.
+- Flipping the same URL to `AWS_IAM` and sending a SigV4-signed request returns
+  **200** and the app's real response. Same function, same URL, same code — only
+  the anonymous path is refused.
+
+That points at Lambda's account-level public-access block. The installed CLI
+(2.34.30) predates the API for it, so it could not be read or changed from here.
+
+**Someone needs to allow public Function URLs for this account** (Lambda console
+→ the function's Configuration → Function URL, or a newer CLI). Until then the
+endpoint cannot be reached by the app, and `AI_ADVISOR_ENDPOINT` must stay unset.
+
+If that setting is deliberate and should stay, the fallback is a REST API in
+front of it: REST supports response streaming (Nov 2025) with integration
+timeouts up to 15 minutes, at the cost of a Lambda authorizer, since the
+built-in JWT authorizer is HTTP-API-only.
+
+### Still unverified
+
+**That LWA actually chunks the reply.** Proving it needs a valid Supabase access
+token, which is not available here, and stubbing auth to test it would mean
+deploying weakened auth to a public endpoint. `advise_finance_stream` is verified
+streaming against real Bedrock locally (ttfb 1.55s warm / 2.30s cold, delta
+accumulation asserted equal to the final text), and `AWS_LWA_INVOKE_MODE` is set
+— but the end-to-end chunking claim is untested and should be the first thing
+checked once the endpoint is reachable.
+
+Local Bedrock measurements through `advise_finance_stream`:
 
 | case | ttfb | total | cache_read | cache_write |
 |---|---|---|---|---|
 | cold | 2.30s | 7.40s | 0 | 6,670 |
 | warm | **1.55s** | 9.39s | **6,670** | 21 |
 
-Prompt caching survives the streaming call, and a `tool_use` turn reassembled
-its `input_json_delta` fragments into valid JSON
-(`{'amount': 1500, 'pocket': 'Emergency Fund'}`).
+Caching survives streaming, and a `tool_use` turn reassembled its
+`input_json_delta` fragments into `{'amount': 1500, 'pocket': 'Emergency Fund'}`.
 
 ---
 
@@ -30,10 +80,10 @@ its `input_json_delta` fragments into valid JSON
 
 ## 2. In-function authentication (security boundary — lands before anything is reachable)
 
-- [ ] 2.1 Add `PyJWT[crypto]` to `backend/ai-coach/requirements.txt`; confirm the built zip still installs clean on `python3.12`/arm64. **(dependency added; the arm64 wheel check did not run — pip unavailable here)**
-- [ ] 2.2 Add a `_verify_supabase_token(token)` helper: fetch the project JWKS once, cache it at module scope, verify RS256 signature + `exp` + `iss`, return claims or raise. Unit-test against a valid token, an expired one, one signed by a foreign key, a malformed one, and an absent one. **(written as `verify_supabase_token`; TESTS STILL OWED — no local PyJWT, and this is the whole security boundary)**
-- [ ] 2.3 Teach `_get_user_id` a Function-URL path: prefer gateway authorizer claims when present, fall back to verified-token claims. Existing gateway behavior must be unchanged — assert with a test using a synthetic API Gateway event. **(implemented; the synthetic-event test is still owed)**
-- [ ] 2.4 Reject unauthenticated requests with 401 **before** any Bedrock call or rate-limit spend. Test that a 401 path performs no model invocation. **(implemented in `app.py`; test still owed)**
+- [x] 2.1 Add `PyJWT[crypto]` to `backend/ai-coach/requirements.txt`; confirm the built zip still installs clean on `python3.12`/arm64. **(done; `cryptography` ships `cp311-abi3-manylinux2014_aarch64`, which covers 3.12, and `pyjwt` is pure Python)**
+- [x] 2.2 Add a `_verify_supabase_token(token)` helper: fetch the project JWKS once, cache it at module scope, verify RS256 signature + `exp` + `iss`, return claims or raise. Unit-test against a valid token, an expired one, one signed by a foreign key, a malformed one, and an absent one. **(done — `backend/ai-coach/test_auth.py`, 17 tests written as attacks: `alg:none`, HS256-against-the-public-key, foreign signer, foreign issuer, no `sub`, no `exp`, unconfigured-must-refuse, and one-refetch-on-rotation)**
+- [x] 2.3 Teach `_get_user_id` a Function-URL path: prefer gateway authorizer claims when present, fall back to verified-token claims. Existing gateway behavior must be unchanged — assert with a test using a synthetic API Gateway event. **(done — synthetic API Gateway event asserts the gateway path is unchanged)**
+- [x] 2.4 Reject unauthenticated requests with 401 **before** any Bedrock call or rate-limit spend. Test that a 401 path performs no model invocation. **(done — `backend/ai-coach/test_app.py`, 15 tests; every rejection asserts Bedrock was never called AND the Supabase RPC was never reached, so an unauthenticated flood cannot cost anything)**
 
 ## 3. Streaming handler
 
@@ -45,10 +95,10 @@ its `input_json_delta` fragments into valid JSON
 
 ## 4. Infrastructure (hand-managed — no CloudFormation stack exists)
 
-- [ ] 4.1 Create `food-advisor-stream` in ap-southeast-1: python3.12, arm64, 1024 MB, 45s timeout, same env map as `food-coach-handler`, and the additive Bedrock IAM policy. Record every value in the memory note — nothing here is in a template.
-- [ ] 4.2 Attach the arm64 Lambda Web Adapter layer for ap-southeast-1 and confirm the function still responds to a plain buffered invoke.
-- [ ] 4.3 Create the Function URL with `InvokeMode: RESPONSE_STREAM`, `AuthType: NONE`, and CORS mirroring `backend/ai-coach/cors.json` — both Firebase origins, `authorization` + `content-type` named explicitly, never a wildcard.
-- [ ] 4.4 Verify by `curl` that deltas arrive incrementally (timestamp first vs last byte), that a 40s+ answer completes, and that an unauthenticated call gets 401.
+- [x] 4.1 Create `food-advisor-stream` in ap-southeast-1: python3.12, arm64, 1024 MB, 45s timeout, same env map as `food-coach-handler`, and the additive Bedrock IAM policy. Record every value in the memory note — nothing here is in a template.
+- [x] 4.2 Attach the arm64 Lambda Web Adapter layer for ap-southeast-1 and confirm the function still responds to a plain buffered invoke.
+- [x] 4.3 Create the Function URL with `InvokeMode: RESPONSE_STREAM`, `AuthType: NONE`, and CORS mirroring `backend/ai-coach/cors.json` — both Firebase origins, `authorization` + `content-type` named explicitly, never a wildcard.
+- [ ] 4.4 Verify by `curl` that deltas arrive incrementally (timestamp first vs last byte), that a 40s+ answer completes, and that an unauthenticated call gets 401. **(401, 404 and no-envelope confirmed; incremental delivery and the 40s case need a real Supabase token and a reachable endpoint — see the blocker above)**
 - [ ] 4.5 Extend CI `deploy_lambda` to deploy both functions from the same zip in the same job, and add a live post-deploy assertion of the Function URL's CORS + env keys, in the spirit of `scripts/check_api_cors.sh`.
 
 ## 5. Client transport
