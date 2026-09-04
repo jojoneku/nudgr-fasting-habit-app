@@ -14,6 +14,14 @@ import '../../../presenters/ledger_presenter.dart';
 /// on a three-turn budget that ended at a blank form. A dropdown answers it
 /// instantly, and it is what makes this card a workable substitute for the
 /// manual form rather than a preview of one.
+///
+/// Layout note: each entry is its own inset card rather than a
+/// divider-separated block. Three surfaces render this widget on three
+/// different parent fills
+/// (the chat panel's `surfaceContainerHigh`, the Ledger drawer's
+/// `surfaceContainerLow`, the advisor card's `surfaceContainerHighest`), so the
+/// rows use `surfaceContainerLowest` plus a hairline border — a well reads as a
+/// row on all three, where a raised fill would vanish on one of them.
 class EntryReviewCard extends StatelessWidget {
   const EntryReviewCard({
     super.key,
@@ -36,24 +44,8 @@ class EntryReviewCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (entries.length > 1) ...[
-          Text(
-            '${entries.length} entries',
-            style: TextStyle(
-              color: cs.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
         for (var i = 0; i < entries.length; i++) ...[
-          if (i > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: cs.outlineVariant),
-            ),
+          if (i > 0) const SizedBox(height: 6),
           _ReviewRow(
             ledger: ledger,
             entry: entries[i],
@@ -62,30 +54,26 @@ class EntryReviewCard extends StatelessWidget {
             showRemove: entries.length > 1,
           ),
         ],
-        if (outstanding > 0) ...[
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(Icons.edit_outlined, size: 14, color: cs.onSurfaceVariant),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  outstanding == 1
-                      ? 'Tap the highlighted chip to finish 1 entry.'
-                      : 'Tap the highlighted chips to finish $outstanding '
-                          'entries.',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        // Count and the "still needs a chip" nudge share the action row's left
+        // slot: on a drawer that sits above the keyboard, a status line of its
+        // own costs a row of entry for nothing.
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            Expanded(
+              child: _StatusLine(
+                count: entries.length,
+                outstanding: outstanding,
+              ),
+            ),
             TextButton(
               onPressed: ledger.cancelChat,
+              style: TextButton.styleFrom(
+                foregroundColor: cs.onSurfaceVariant,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: const Size(0, 44),
+                visualDensity: VisualDensity.compact,
+              ),
               child: const Text('Cancel'),
             ),
             const SizedBox(width: 4),
@@ -94,12 +82,63 @@ class EntryReviewCard extends StatelessWidget {
               // behind the user's back is the silent partial logging this
               // whole change exists to end.
               onPressed: ready ? ledger.confirmEntries : null,
-              icon: const Icon(Icons.check, size: 18),
+              icon: const Icon(Icons.check, size: 17),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                minimumSize: const Size(0, 44),
+                visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               label: Text(
                 entries.length > 1 ? 'Log all ${entries.length}' : 'Log it',
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+/// One line of state for the whole card: what is left to fill, or how many rows
+/// are about to be written.
+class _StatusLine extends StatelessWidget {
+  const _StatusLine({required this.count, required this.outstanding});
+
+  final int count;
+  final int outstanding;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final pending = outstanding > 0;
+    final text = pending
+        ? (outstanding == 1
+            ? 'Tap the lit chip to finish 1 entry'
+            : 'Tap the lit chips to finish $outstanding entries')
+        : (count > 1 ? '$count entries ready' : 'Ready to log');
+
+    return Row(
+      children: [
+        Icon(
+          pending ? Icons.edit_outlined : Icons.check_circle_outline,
+          size: 13,
+          color: pending ? cs.primary : cs.onSurfaceVariant,
+        ),
+        const SizedBox(width: 5),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: pending ? cs.primary : cs.onSurfaceVariant,
+              fontSize: 11.5,
+              fontWeight: pending ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
         ),
       ],
     );
@@ -137,95 +176,127 @@ class _ReviewRow extends StatelessWidget {
       TransactionType.outflow => cs.error,
       TransactionType.transfer => cs.primary,
     };
+    final typeIcon = switch (type) {
+      TransactionType.inflow => Icons.south_west,
+      TransactionType.outflow => Icons.north_east,
+      TransactionType.transfer => Icons.swap_horiz,
+    };
     final sign = type == TransactionType.inflow ? '+' : '';
     final amountText =
         txn.amount == null ? 'Amount' : '$sign₱${money.format(txn.amount)}';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                txn.description.isEmpty ? 'New entry' : txn.description,
-                style: TextStyle(
-                  color: cs.onSurface,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+    return Container(
+      // Vertical padding stays thin because both rows inside already carry the
+      // 44px tap-target minimum — doubling that up is where the old card lost
+      // most of its height.
+      padding: const EdgeInsets.fromLTRB(10, 2, 6, 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: amountColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(typeIcon, size: 13, color: amountColor),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  txn.description.isEmpty ? 'New entry' : txn.description,
+                  // Two lines, not one: a truncated description can hide the
+                  // very detail the user is reviewing this row to catch.
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            _TapTarget(
-              onTap: () => _editAmount(context),
-              child: Text(
-                amountText,
-                style: TextStyle(
-                  color: _needs(EntryField.amount) ? cs.primary : amountColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  decoration: _needs(EntryField.amount)
-                      ? TextDecoration.underline
-                      : null,
+              const SizedBox(width: 8),
+              _TapTarget(
+                onTap: () => _editAmount(context),
+                child: Text(
+                  amountText,
+                  style: TextStyle(
+                    color: _needs(EntryField.amount) ? cs.primary : amountColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    decoration: _needs(EntryField.amount)
+                        ? TextDecoration.underline
+                        : null,
+                  ),
                 ),
               ),
-            ),
-            if (showRemove) ...[
-              const SizedBox(width: 4),
-              IconButton(
-                icon: Icon(Icons.close, size: 16, color: cs.onSurfaceVariant),
-                onPressed: () => ledger.removeEntry(index),
-                tooltip: 'Remove this entry',
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                padding: EdgeInsets.zero,
-              ),
+              if (showRemove)
+                IconButton(
+                  icon: Icon(Icons.close, size: 15, color: cs.onSurfaceVariant),
+                  onPressed: () => ledger.removeEntry(index),
+                  tooltip: 'Remove this entry',
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                )
+              else
+                const SizedBox(width: 4),
             ],
-          ],
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _FieldChip(
-              icon: Icons.account_balance_wallet_outlined,
-              label: _accountName(txn.accountId) ?? 'Add account',
-              needed: _needs(EntryField.account),
-              onTap: () => _pickAccount(context, EntryField.account),
-            ),
-            if (type == TransactionType.transfer)
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 2,
+            children: [
               _FieldChip(
-                icon: Icons.arrow_forward,
-                label:
-                    _accountName(txn.transferToAccountId) ?? 'Add destination',
-                needed: _needs(EntryField.transferTo),
-                onTap: () => _pickAccount(context, EntryField.transferTo),
-              )
-            else
+                icon: Icons.account_balance_wallet_outlined,
+                label: _accountName(txn.accountId) ?? 'Add account',
+                needed: _needs(EntryField.account),
+                onTap: () => _pickAccount(context, EntryField.account),
+              ),
+              if (type == TransactionType.transfer)
+                _FieldChip(
+                  icon: Icons.arrow_forward,
+                  label: _accountName(txn.transferToAccountId) ??
+                      'Add destination',
+                  needed: _needs(EntryField.transferTo),
+                  onTap: () => _pickAccount(context, EntryField.transferTo),
+                )
+              else
+                _FieldChip(
+                  icon: Icons.label_outline,
+                  label: _categoryName(txn.categoryId) ?? 'Add category',
+                  needed: _needs(EntryField.category),
+                  onTap: () => _pickCategory(context),
+                ),
               _FieldChip(
-                icon: Icons.label_outline,
-                label: _categoryName(txn.categoryId) ?? 'Add category',
-                needed: _needs(EntryField.category),
-                onTap: () => _pickCategory(context),
+                icon: Icons.event_outlined,
+                label: _dateLabel(txn.date),
+                needed: false,
+                onTap: () => _pickDate(context),
               ),
-            _FieldChip(
-              icon: Icons.event_outlined,
-              label: _dateLabel(txn.date),
-              needed: false,
-              onTap: () => _pickDate(context),
-            ),
-            if (entry.isLowConfidence)
-              const _FieldChip(
-                icon: Icons.help_outline,
-                label: 'Check this',
-                needed: true,
-                onTap: null,
-              ),
-          ],
-        ),
-      ],
+              if (entry.isLowConfidence)
+                const _FieldChip(
+                  icon: Icons.help_outline,
+                  label: 'Check this',
+                  needed: true,
+                  onTap: null,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -319,6 +390,8 @@ class _ReviewRow extends StatelessWidget {
 }
 
 /// A chip that either reports a resolved field or invites the user to fill it.
+/// Painted tight (a 30px pill) inside a 44px tap target, so the row reads as a
+/// dense strip of metadata while still clearing the touch minimum.
 class _FieldChip extends StatelessWidget {
   const _FieldChip({
     required this.icon,
@@ -335,27 +408,31 @@ class _FieldChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = needed ? cs.onPrimaryContainer : cs.onSurface;
+    final fg = needed ? cs.onPrimaryContainer : cs.onSurfaceVariant;
     return _TapTarget(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: needed ? cs.primaryContainer : cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(20),
-          border: needed ? Border.all(color: cs.primary, width: 1) : null,
+          color: needed ? cs.primaryContainer : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: needed ? cs.primary : cs.outlineVariant,
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: needed ? fg : cs.onSurfaceVariant),
-            const SizedBox(width: 6),
+            Icon(icon, size: 13, color: needed ? fg : cs.onSurfaceVariant),
+            const SizedBox(width: 5),
             Text(
               label,
               style: TextStyle(
                 color: fg,
-                fontSize: 12.5,
-                fontWeight: needed ? FontWeight.w700 : FontWeight.w400,
+                fontSize: 12,
+                height: 1.1,
+                fontWeight: needed ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],
@@ -375,7 +452,7 @@ class _TapTarget extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Center(widthFactor: 1, child: child),

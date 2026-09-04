@@ -127,7 +127,7 @@ void main() {
       _entry(amount: 115, description: 'Avocado Ice Cream'),
     ]);
 
-    expect(find.text('2 entries'), findsOneWidget);
+    expect(find.textContaining('2 entries'), findsOneWidget);
     expect(find.text('Personal Shopping'), findsOneWidget);
     expect(find.text('Avocado Ice Cream'), findsOneWidget);
     expect(find.text('₱175'), findsOneWidget);
@@ -151,7 +151,7 @@ void main() {
     ]);
 
     expect(find.text('Add account'), findsOneWidget);
-    expect(find.textContaining('Tap the highlighted chip'), findsOneWidget);
+    expect(find.textContaining('Tap the lit chip'), findsOneWidget);
   });
 
   testWidgets('Log all is disabled while any row has a gap', (tester) async {

@@ -183,13 +183,21 @@ class _LedgerChatDrawer extends StatelessWidget {
           ? const SizedBox(width: double.infinity)
           : Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              color: cs.surfaceContainerLow,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                border: Border(
+                  top: BorderSide(color: cs.outlineVariant, width: 1),
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _Transcript(turns: state.turns),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   if (state.entries.isNotEmpty)
                     EntryReviewCard(ledger: presenter, state: state)
                   else if (state.lastStep is StepClarify)
@@ -228,15 +236,18 @@ class _Transcript extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Show last 3 turns only — anything older isn't load-bearing for the
-    // user's decision and the drawer should stay compact.
-    final visible = turns.length > 3 ? turns.sublist(turns.length - 3) : turns;
+    // Show last 2 turns only — anything older isn't load-bearing for the
+    // user's decision, and above a keyboard the drawer is competing with the
+    // entry rows for what height there is. Each turn is capped at two lines
+    // for the same reason: a long paste shouldn't push the Log button off
+    // screen.
+    final visible = turns.length > 2 ? turns.sublist(turns.length - 2) : turns;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (final t in visible)
           Padding(
-            padding: const EdgeInsets.only(bottom: 4),
+            padding: const EdgeInsets.only(bottom: 3),
             child: Text.rich(
               TextSpan(
                 children: [
@@ -244,16 +255,22 @@ class _Transcript extends StatelessWidget {
                     text: t.isUser ? 'You: ' : 'AI: ',
                     style: TextStyle(
                       color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
                     ),
                   ),
                   TextSpan(
                     text: t.text,
-                    style: TextStyle(color: cs.onSurface, fontSize: 14),
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
                   ),
                 ],
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
       ],
