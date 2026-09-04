@@ -120,7 +120,7 @@ Metering runs *before* the first delta, so a user over the cap gets the limit me
 
 ## Open Questions
 
-- Does the Flutter **web** build surface incremental chunks from `http.Client().send()`, or does the browser XHR/fetch shim buffer the whole body? If it buffers, web needs a `fetch`-based reader and the mobile path stays as designed. This decides whether step 3's "web first" ordering is right, and should be answered by experiment before the client work starts.
+- ~~Does the Flutter **web** build surface incremental chunks from `http.Client().send()`?~~ **Answered: yes.** `http` 1.6.0's `BrowserClient` uses `fetch` and reads the response through a `ReadableStreamDefaultReader`, pumping chunks out via `Stream.multi` (`browser_client.dart`, `_readStreamBody`) — not the XHR buffer-everything path assumed when this was written. So `Client.send` streams natively on both platforms, no `fetch_client` dependency is needed, one code path serves both, and the "web first" rollout ordering stands.
 - Do the four short ops want the same `hop`-aware metering later, or does per-turn metering stay advisor-only?
 - Should `test/services/advisor_timeout_test.dart` keep asserting the client timeout exceeds a gateway timeout once the advisor has no gateway, or be rewritten to assert it exceeds the *function* budget?
 - Is a second function the long-term shape, or a waypoint until the short ops move to LWA too and the two collapse back into one?

@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 
 import '../../mocks.mocks.dart';
+import '../../support/advisor_events.dart';
 
 /// Nudgy's chat surface: header layout, selectable replies, and the
 /// scroll contract — follow the newest message while the user is parked at the
@@ -247,7 +248,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
-      )).thenAnswer((_) async => const AdvisorReply());
+      )).thenAnswer((_) => advisorStreamOf(const AdvisorReply()));
     });
 
     /// Runs [body] as though on [platform]. The override is cleared inside the

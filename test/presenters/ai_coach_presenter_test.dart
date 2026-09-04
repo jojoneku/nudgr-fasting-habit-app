@@ -10,6 +10,7 @@ import 'package:intermittent_fasting/services/image_compressor.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+import '../support/advisor_events.dart';
 
 /// Skips the platform-channel compress so the send path is unit-testable.
 class _PassthroughCompressor implements ImageCompressor {
@@ -98,7 +99,7 @@ void main() {
       historical: anyNamed('historical'),
     )).thenAnswer((inv) {
       captured = inv.namedArguments[#context] as AiCoachContext;
-      return Future.value(
+      return advisorStreamOf(
           const AdvisorReply(text: 'Looks like an internet bill.'));
     });
 
@@ -127,7 +128,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) async => const AdvisorReply(text: 'reply'));
+    )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'reply')));
 
     final p =
         AiCoachPresenter(stats: stats, fasting: fasting, service: service);
@@ -155,7 +156,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) async => const AdvisorReply(text: 'ok'));
+    )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'ok')));
 
     final p =
         AiCoachPresenter(stats: stats, fasting: fasting, service: service);
@@ -177,7 +178,8 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
-    )).thenAnswer((_) async => const AdvisorReply(text: 'A receipt.'));
+    )).thenAnswer(
+        (_) => advisorStreamOf(const AdvisorReply(text: 'A receipt.')));
 
     final p = AiCoachPresenter(
       stats: stats,

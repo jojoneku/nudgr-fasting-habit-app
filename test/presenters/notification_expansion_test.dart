@@ -18,6 +18,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intermittent_fasting/models/advisor_event.dart';
 import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/ai_chat_message.dart';
@@ -50,6 +51,7 @@ import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+import '../support/advisor_events.dart';
 
 // ── Minimal no-op AiCoachService for NutritionPresenter tests ────────────────
 
@@ -96,14 +98,14 @@ class _NoOpAiCoach implements AiCoachService {
   }) async* {}
 
   @override
-  Future<AdvisorReply> adviseFinance({
+  Stream<AdvisorEvent> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
-  }) async =>
-      const AdvisorReply();
+  }) =>
+      advisorStreamOf(const AdvisorReply());
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;
