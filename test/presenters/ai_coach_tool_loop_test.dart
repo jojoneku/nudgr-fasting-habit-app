@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/services/image_compressor.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+import '../support/advisor_events.dart';
 
 class _PassthroughCompressor implements ImageCompressor {
   @override
@@ -80,10 +81,10 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
-    )).thenAnswer((_) async {
+    )).thenAnswer((_) {
       final reply = script[i < script.length ? i : script.length - 1];
       i++;
-      return reply;
+      return advisorStreamOf(reply);
     });
   }
 

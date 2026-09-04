@@ -6,6 +6,8 @@ import 'package:http/http.dart' as http;
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
+import '../models/advisor_event.dart';
+import '../utils/advisor_frame_parser.dart';
 import '../models/advisor_reply.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
@@ -44,6 +46,22 @@ String _unreachableMessage(String subject) => kIsWeb
 /// with 401, so all ops become no-ops when the token is absent.
 class CloudAiCoachService implements AiCoachService {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
+
+  /// The streaming advisor's own endpoint — a Lambda Function URL, not a route
+  /// on [_endpoint].
+  ///
+  /// The advisor needs a transport that can deliver a reply while it is still
+  /// being written, and the HTTP API behind [_endpoint] cannot: its maximum
+  /// integration timeout is 30 seconds and AWS does not allow that to be
+  /// raised. An advisor turn that took 43 seconds therefore finished in Lambda,
+  /// was billed in full by Bedrock, and was then thrown away as a 504 — which
+  /// this class reported as "the advisor had a hiccup on our end", for a
+  /// working answer.
+  ///
+  /// Empty when a build does not set it, in which case the advisor falls back
+  /// to [_adviseFinanceBuffered] and behaves exactly as it did before. That is
+  /// what makes this safe to ship dark and what makes rollback a rebuild.
+  static const _advisorEndpoint = String.fromEnvironment('AI_ADVISOR_ENDPOINT');
 
   /// Transport timeout for the short ops (classify, food parse, receipt scan).
   /// These are small single-shot calls; a hang here should surface fast rather
@@ -233,13 +251,13 @@ class CloudAiCoachService implements AiCoachService {
   // ── Advise finance (financial advisor) ────────────────────────────────────
 
   @override
-  Future<AdvisorReply> adviseFinance({
+  Stream<AdvisorEvent> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
-  }) async {
+  }) async* {
     // Advisor gates on the Cloud AI opt-in (unlike the classifier) — it's an
     // explicit conversational feature the user opted into.
     if (!isAvailable) {
@@ -281,6 +299,67 @@ class CloudAiCoachService implements AiCoachService {
       },
     });
 
+    if (_advisorEndpoint.isEmpty) {
+      yield* _adviseFinanceBuffered(body);
+      return;
+    }
+    yield* _adviseFinanceStreamed(body);
+  }
+
+  /// Reads an NDJSON stream of [AdvisorEvent]s from the Function URL.
+  ///
+  /// Uses `Client.send` rather than `post` because `post` waits for the whole
+  /// body. On both platforms that matters: `IOClient` gives a chunked
+  /// `ByteStream`, and on web `BrowserClient` reads `fetch`'s response through
+  /// a `ReadableStream` reader, so a single code path streams natively on each.
+  Stream<AdvisorEvent> _adviseFinanceStreamed(String body) async* {
+    final client = http.Client();
+    try {
+      final request = http.Request('POST', Uri.parse(_advisorEndpoint))
+        ..headers.addAll(_headers)
+        ..body = body;
+
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: advisorTimeoutSeconds));
+
+      if (response.statusCode != 200) {
+        // A non-200 still has its whole body available, because the server only
+        // commits to streaming once it has decided the turn is valid.
+        final text = await response.stream.bytesToString();
+        throw _advisorHttpFailure(response.statusCode, text);
+      }
+
+      // Framing lives in parseAdvisorFrames, which is where the
+      // chunk-boundary rules are stated and tested.
+      yield* parseAdvisorFrames(response.stream
+          .timeout(const Duration(seconds: advisorTimeoutSeconds)));
+    } on AdvisorFrameException catch (e) {
+      switch (e.reason) {
+        case AdvisorFrameFailure.unreadableFrame:
+          throw const AiCoachException(
+              'The advisor sent back something unreadable. Try again.');
+        case AdvisorFrameFailure.noTerminator:
+          throw const AiCoachException(
+              'The advisor was cut off mid-answer. Try again.',
+              retryable: true);
+      }
+    } on AiCoachException {
+      rethrow;
+    } catch (e) {
+      debugPrint('CloudAiCoachService[adviseFinance] stream error: $e');
+      throw AiCoachException(_unreachableMessage('Advisor'), retryable: true);
+    } finally {
+      client.close();
+    }
+  }
+
+  /// The pre-streaming path, kept for builds without [_advisorEndpoint].
+  ///
+  /// Emits the same event sequence as the streamed path so callers need only
+  /// one code path: the whole reply arrives as a single delta followed by
+  /// `end`. It is still bounded by the gateway's 30s ceiling.
+  Stream<AdvisorEvent> _adviseFinanceBuffered(String body) async* {
     http.Response response;
     try {
       response = await http
@@ -288,32 +367,52 @@ class CloudAiCoachService implements AiCoachService {
           .timeout(const Duration(seconds: advisorTimeoutSeconds));
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
-      throw AiCoachException(_unreachableMessage('Advisor'));
+      throw AiCoachException(_unreachableMessage('Advisor'), retryable: true);
     }
 
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      throw const AiCoachException(
-          'Your session has expired. Sign in again to use the advisor.');
-    }
-    if (response.statusCode == 429) {
-      throw const AiCoachException(
-          'The advisor hit its daily limit. Try again tomorrow.');
-    }
     if (response.statusCode != 200) {
       debugPrint('CloudAiCoachService[adviseFinance] '
           'server error HTTP ${response.statusCode}: ${response.body}');
-      throw const AiCoachException(
-          'The advisor had a hiccup on our end. Try again in a moment.');
+      throw _advisorHttpFailure(response.statusCode, response.body);
     }
 
+    final AdvisorReply reply;
     try {
-      final result = jsonDecode(response.body) as Map<String, dynamic>;
-      return AdvisorReply.fromJson(result);
+      reply = AdvisorReply.fromJson(
+          jsonDecode(response.body) as Map<String, Object?>);
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] parse error: $e');
       throw const AiCoachException(
           'The advisor sent back something unreadable. Try again.');
     }
+
+    yield const AdvisorEvent.start();
+    if (reply.text.isNotEmpty) yield AdvisorEvent.delta(reply.text);
+    yield AdvisorEvent.end(reply);
+  }
+
+  /// Maps an advisor HTTP status onto the message the user should read.
+  ///
+  /// Shared by both transports so a 429 does not read as an outage on one and a
+  /// limit on the other.
+  AiCoachException _advisorHttpFailure(int status, String body) {
+    if (status == 401 || status == 403) {
+      return const AiCoachException(
+          'Your session has expired. Sign in again to use the advisor.');
+    }
+    if (status == 429) {
+      return const AiCoachException(
+          'The advisor hit its daily limit. Try again tomorrow.');
+    }
+    if (status == 503) {
+      return const AiCoachException(
+          'The advisor is temporarily unavailable. Try again in a moment.',
+          retryable: true);
+    }
+    debugPrint('CloudAiCoachService[adviseFinance] HTTP $status: $body');
+    return const AiCoachException(
+        'The advisor had a hiccup on our end. Try again in a moment.',
+        retryable: true);
   }
 
   // ── Parse food ────────────────────────────────────────────────────────────

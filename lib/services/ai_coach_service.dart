@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
-import '../models/advisor_reply.dart';
+import '../models/advisor_event.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
@@ -27,13 +27,29 @@ enum AiCoachTier { onDevice, cloud }
 /// like the Insight Engine collect yielded tokens as AI content and would
 /// otherwise persist the error prose as a coaching insight.
 class AiCoachException implements Exception {
-  const AiCoachException(this.userMessage);
+  const AiCoachException(this.userMessage, {this.retryable = false});
 
   /// Short, plain-language explanation safe to show directly in the UI.
   final String userMessage;
 
+  /// Whether trying the identical request again could plausibly succeed.
+  ///
+  /// Defaults to false, so a new failure is only ever retried when someone has
+  /// thought about it. The inverse default would be worse than useless: it
+  /// would hammer an expired session three times before telling the user to
+  /// sign in, and spend three turns of a daily cap discovering the cap is
+  /// full.
+  ///
+  /// Retryable means transient and blameless — the connection dropped, the
+  /// server returned a 5xx, the stream died mid-answer. Not retryable means
+  /// the same request will fail the same way: bad credentials, an exhausted
+  /// allowance, a protocol the build does not understand, a feature switched
+  /// off in Settings.
+  final bool retryable;
+
   @override
-  String toString() => 'AiCoachException: $userMessage';
+  String toString() =>
+      'AiCoachException: $userMessage${retryable ? ' (retryable)' : ''}';
 }
 
 /// Abstract interface for all AI Coach implementations.
@@ -76,13 +92,20 @@ abstract class AiCoachService {
   /// every tool acts on data that lives on this device. Pass an empty list for
   /// a plain advisory turn.
   ///
-  /// Returns a whole turn rather than a stream: the advisor is one blocking
-  /// call, and a caller cannot tell whether a turn is finished until it knows
+  /// Streams the turn as it is written. A turn is [AdvisorEventKind.start],
+  /// zero or more [AdvisorEventKind.delta], then exactly one of
+  /// [AdvisorEventKind.end] or [AdvisorEventKind.error] — and a stream that
+  /// stops without one of those two has failed, however much text arrived.
+  ///
+  /// It streams because it must, not for polish: the reply takes tens of
+  /// seconds to generate, and the gateway the buffered path sits behind will
+  /// not wait more than 30 of them. The finished turn arrives on the terminal
+  /// event, so a caller still cannot tell a turn is over until it knows
   /// whether the model asked for a tool.
   ///
   /// Only the cloud tier produces a real answer; the on-device and null tiers
   /// throw [AiCoachException] (the small on-device model can't do this reasoning).
-  Future<AdvisorReply> adviseFinance({
+  Stream<AdvisorEvent> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,

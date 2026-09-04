@@ -86,11 +86,116 @@ def _get_user_id(event):
     after a successful JWT authorizer check. Returns None if the authorizer
     didn't run (i.e. the request reached Lambda unauthenticated — shouldn't
     happen in production but guards against mis-configured deployments).
+
+    The streaming advisor has no authorizer to populate this — a Lambda
+    Function URL cannot have one — so that path verifies the token itself with
+    [verify_supabase_token] and does not come through here.
     """
     try:
         return event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]
     except (KeyError, TypeError):
         return None
+
+
+# The advisor's Function URL runs with AuthType NONE, because a Function URL
+# has no JWT authorizer to attach. That makes the verification below the entire
+# security boundary for that endpoint: everything past it is reachable by
+# anyone on the internet who can form a POST.
+#
+# Verification is local, against the project's published key set, rather than a
+# call to Supabase's /auth/v1/user. An external round trip on the auth decision
+# forces a choice between failing open (an open endpoint) and failing closed (an
+# outage) whenever that dependency is slow, and neither is acceptable for the
+# only gate on a paid endpoint. Local checking has no such failure mode.
+#
+# The key set is fetched once per container and reused across warm invocations;
+# it rotates rarely, and a miss costs one refetch rather than a rejected user.
+_JWKS_CACHE = {"keys": None, "fetched_at": 0.0}
+_JWKS_TTL_SECONDS = 3600
+
+
+class AuthError(Exception):
+    """The caller's token could not be verified. Always answered with a 401."""
+
+
+def _fetch_jwks(force=False):
+    now = time.monotonic()
+    fresh = now - _JWKS_CACHE["fetched_at"] < _JWKS_TTL_SECONDS
+    if _JWKS_CACHE["keys"] is not None and fresh and not force:
+        return _JWKS_CACHE["keys"]
+
+    url = f"{_SUPABASE_URL}/auth/v1/.well-known/jwks.json"
+    req = urllib.request.Request(url, headers={"apikey": _SUPABASE_ANON_KEY})
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        keys = (json.loads(resp.read()) or {}).get("keys") or []
+    _JWKS_CACHE["keys"] = keys
+    _JWKS_CACHE["fetched_at"] = now
+    return keys
+
+
+def verify_supabase_token(token):
+    """Return the verified claims for `token`, or raise [AuthError].
+
+    Checks the signature against the project key set, plus expiry and issuer.
+    Rejects anything it cannot positively verify — an unreadable header, an
+    unknown key id, a symmetric algorithm (which would let a caller sign their
+    own token with the public key), or a missing subject.
+    """
+    if not token:
+        raise AuthError("missing token")
+    if not _SUPABASE_URL or not _SUPABASE_ANON_KEY:
+        # Refuse rather than fail open: an unconfigured deployment behind
+        # AuthType NONE would otherwise be a wide-open Bedrock endpoint.
+        raise AuthError("auth not configured")
+
+    import jwt  # imported lazily so the other ops pay nothing for it
+
+    try:
+        header = jwt.get_unverified_header(token)
+    except Exception as e:
+        raise AuthError(f"unreadable header: {e}") from e
+
+    alg = header.get("alg")
+    # Only asymmetric signatures. An HS* token would be verifiable with the
+    # public key, which any caller can read.
+    if alg not in ("RS256", "RS384", "RS512", "ES256", "ES384", "ES512"):
+        raise AuthError(f"unacceptable alg {alg}")
+
+    kid = header.get("kid")
+    keys = _fetch_jwks()
+    match = next((k for k in keys if k.get("kid") == kid), None)
+    if match is None:
+        # A rotated key looks exactly like an unknown one; refetch once before
+        # rejecting, so a rotation does not log everyone out.
+        keys = _fetch_jwks(force=True)
+        match = next((k for k in keys if k.get("kid") == kid), None)
+    if match is None:
+        raise AuthError(f"unknown kid {kid}")
+
+    try:
+        key = jwt.PyJWK.from_dict(match).key
+        claims = jwt.decode(
+            token,
+            key=key,
+            algorithms=[alg],
+            issuer=f"{_SUPABASE_URL}/auth/v1",
+            options={"require": ["exp", "sub"], "verify_aud": False},
+        )
+    except Exception as e:
+        raise AuthError(f"rejected: {e}") from e
+
+    if not claims.get("sub"):
+        raise AuthError("no subject")
+    return claims
+
+
+def bearer_token_from_headers(headers):
+    """Return the raw Bearer token from a plain header mapping, or ''."""
+    headers = headers or {}
+    auth = headers.get("authorization") or headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
 
 
 def _get_bearer_token(event):
@@ -99,11 +204,7 @@ def _get_bearer_token(event):
     API Gateway HTTP API lowercases header names; fall back to the capitalised
     form defensively.
     """
-    headers = event.get("headers") or {}
-    auth = headers.get("authorization") or headers.get("Authorization") or ""
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
-    return ""
+    return bearer_token_from_headers(event.get("headers"))
 
 
 # ── Rate limiting ──────────────────────────────────────────────────────────────
@@ -1149,7 +1250,86 @@ def _clip(value, cap, label):
     return text
 
 
-def _advise_finance(payload):
+# ── Prompt caching ───────────────────────────────────────────────────────────────────
+#
+# The advisor re-sends its whole prompt every turn: the system prefix, the
+# snapshot, the historical record, the tool catalogue, and the full conversation
+# so far. That reached 28k input tokens by turn 37 of a real chat, reprocessed
+# from scratch each time, and pushed latency past 30s — which the API Gateway
+# integration timeout turns into a 504 the user reads as "the advisor had a
+# hiccup". Caching the stable prefix is what makes a long conversation stop
+# getting slower the longer it runs.
+#
+# Two breakpoints, because two different things are stable for different
+# reasons:
+#
+#   1. tools + system. Bedrock's cache prefix runs tools -> system -> messages,
+#      so a breakpoint at the end of the system block also covers the tool
+#      catalogue ahead of it. This is the big one: the snapshot and historical
+#      record are most of the prompt and change only when the ledger does.
+#   2. The conversation up to the second-to-last user turn. The newest turn is
+#      deliberately left outside so the prefix that gets cached is the part that
+#      will still be a prefix next turn — cache turn N-2 now, read it back and
+#      cache N-1 on the following call. Marking the newest turn instead would
+#      write a cache entry that the next message immediately invalidates.
+#
+# Entries live ~5 minutes and are billed at 1.25x on write, 0.1x on read, so a
+# back-and-forth conversation — every turn inside the previous turn's TTL — is
+# both faster and cheaper. A one-off question pays the write and reads nothing;
+# that is the intended trade.
+_CACHE_CONTROL = {"type": "ephemeral"}
+
+
+def _cached_system(system_prompt):
+    """The system prompt as a single cacheable block."""
+    return [{"type": "text", "text": system_prompt, "cache_control": _CACHE_CONTROL}]
+
+
+def _mark_conversation_cache(bedrock_messages):
+    """Put a cache breakpoint at the end of the second-to-last user turn.
+
+    Mutates and returns `bedrock_messages`. A turn's content may be a bare
+    string (the common case) or a list of blocks (the tool loop, and any turn
+    carrying an image); `cache_control` only goes on a block, so a string turn
+    is promoted to one text block first.
+
+    No-ops when there is only one user turn — there is no prefix worth caching
+    yet, and the system block already carries its own breakpoint.
+    """
+    user_positions = [
+        i for i, m in enumerate(bedrock_messages) if m.get("role") == "user"
+    ]
+    if len(user_positions) < 2:
+        return bedrock_messages
+
+    target = bedrock_messages[user_positions[-2]]
+    content = target.get("content")
+    if isinstance(content, str):
+        content = [{"type": "text", "text": content}]
+        target["content"] = content
+    if not isinstance(content, list) or not content:
+        return bedrock_messages
+
+    # The LAST block of the turn — a breakpoint marks the end of a prefix, so on
+    # an image turn it has to sit after the image, not before it.
+    last = content[-1]
+    if isinstance(last, dict):
+        last["cache_control"] = _CACHE_CONTROL
+    return bedrock_messages
+
+
+def _build_advisor_request(payload):
+    """Assemble one advisor turn's Bedrock request, or an error response.
+
+    Returns `(request, None)` on success and `(None, response)` when the
+    payload cannot be turned into a valid turn.
+
+    Extracted so the buffered and streaming advisor paths cannot drift. Every
+    rule that makes the advisor trustworthy lives in here — the snapshot as
+    sole source of numeric truth, the clipping caps, alternation enforcement,
+    the image attaching to the last user turn, and both cache breakpoints — so
+    a second copy of it would be a second place for those to rot.
+    """
     """Financial advisor chat (Plan: ai-financial-advisor).
 
     The client sends the conversation plus a PRE-FORMATTED financial snapshot
@@ -1162,7 +1342,7 @@ def _advise_finance(payload):
     ctx = payload.get("context", {}) or {}
 
     if not messages:
-        return _resp(400, {"error": "missing_messages"})
+        return None, _resp(400, {"error": "missing_messages"})
 
     system_lines = [_ADVISOR_SYSTEM_PREFIX]
     summary = _clip(ctx.get("summary"), _MAX_SNAPSHOT_LEN, "snapshot")
@@ -1211,7 +1391,7 @@ def _advise_finance(payload):
     bedrock_messages = _enforce_alternation(raw_messages)
 
     if not bedrock_messages:
-        return _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
+        return None, _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
 
     # Optional attached photo (a bill, receipt, credit offer …). Attach it to the
     # LAST user turn as a vision block so the advisor reads it in context — the
@@ -1221,7 +1401,7 @@ def _advise_finance(payload):
     has_image = bool(image_b64)
     if has_image:
         if len(image_b64) > _MAX_IMAGE_B64_LEN:
-            return _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+            return None, _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
         mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
         if mime not in _ALLOWED_IMAGE_MIME:
             mime = "image/jpeg"
@@ -1244,6 +1424,77 @@ def _advise_finance(payload):
     tools = payload.get("tools")
     tools = tools if isinstance(tools, list) and tools else None
 
+
+    return {
+        "system": _cached_system(system_prompt),
+        "messages": _mark_conversation_cache(bedrock_messages),
+        "tools": tools,
+        # Only for the cost_line; not part of the Bedrock request.
+        "_has_summary": bool(summary),
+        "_has_image": has_image,
+    }, None
+
+
+def _cost_line(*, msgs, has_summary, has_image, usage, stop_reason,
+               tools, calls, payload, latency_ms, ttft_ms=None):
+    """The one place an advisor turn's economics get logged.
+
+    latency_ms and out_tokens are what decide what _ADVISOR_MAX_TOKENS can
+    safely be. cache_read + cache_write are how you tell whether prompt caching
+    is working: cache_read climbing while in_tokens stays small is the win, and
+    both sitting at 0 on a long conversation means the prefix is being
+    invalidated every turn -- check whether the snapshot text is stable before
+    blaming the model.
+
+    ttft_ms is streaming-only, and is the number that matters most there. Total
+    latency no longer decides whether the user sees an answer at all, so time to
+    first token is what "fast" now means.
+    """
+    print(
+        f"cost_line op=adviseFinance msgs={msgs} "
+        f"snapshot={'y' if has_summary else 'n'} image={'y' if has_image else 'n'} "
+        f"in_tokens={usage.get('input_tokens', -1)} "
+        f"out_tokens={usage.get('output_tokens', -1)} "
+        f"cache_read={usage.get('cache_read_input_tokens', 0)} "
+        f"cache_write={usage.get('cache_creation_input_tokens', 0)} "
+        f"latency_ms={latency_ms} "
+        + (f"ttft_ms={ttft_ms} " if ttft_ms is not None else "")
+        + f"stop={stop_reason} tools={tools} calls={calls} "
+        f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'}"
+    )
+
+
+def _split_reply(content):
+    """Split an assistant turn into (text, tool_calls).
+
+    A tool-calling turn returns text blocks, tool_use blocks, or both, so
+    reading content[0] alone silently drops whichever came second.
+    """
+    text = "\n\n".join(
+        (b.get("text") or "").strip()
+        for b in content
+        if isinstance(b, dict) and b.get("type") == "text"
+    ).strip()
+    tool_calls = [
+        {"id": b.get("id"), "name": b.get("name"), "input": b.get("input") or {}}
+        for b in content
+        if isinstance(b, dict) and b.get("type") == "tool_use"
+    ]
+    return text, tool_calls
+
+
+def _advise_finance(payload):
+    """Financial advisor chat -- buffered. Reached via the HTTP API.
+
+    Kept as it was so a build without the streaming endpoint behaves exactly as
+    it does today. Its ceiling is the gateway's 30s integration timeout, which
+    is the whole reason the streaming path below exists.
+    """
+    request, err = _build_advisor_request(payload)
+    if err:
+        return err
+
+    tools = request["tools"]
     started = time.monotonic()
     try:
         raw = _bedrock.invoke_model(
@@ -1253,51 +1504,30 @@ def _advise_finance(payload):
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": system_prompt,
-                "messages": bedrock_messages,
+                "system": request["system"],
+                "messages": request["messages"],
                 **({"tools": tools} if tools else {}),
             }),
         )
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
-        # Split the reply. A tool-calling turn returns text blocks, tool_use
-        # blocks, or both, so reading content[0] alone silently drops whichever
-        # came second. `assistant_content` goes back verbatim so the client can
-        # replay this exact turn on the next hop — a reconstructed one would not
-        # carry the tool_use ids the results have to pair with.
+        # `assistant_content` goes back verbatim so the client can replay this
+        # exact turn on the next hop -- a reconstructed one would not carry the
+        # tool_use ids the results have to pair with.
         content = result.get("content") or []
-        response_text = "\n\n".join(
-            (b.get("text") or "").strip()
-            for b in content
-            if isinstance(b, dict) and b.get("type") == "text"
-        ).strip()
-        tool_calls = [
-            {"id": b.get("id"), "name": b.get("name"), "input": b.get("input") or {}}
-            for b in content
-            if isinstance(b, dict) and b.get("type") == "tool_use"
-        ]
+        response_text, tool_calls = _split_reply(content)
 
-        # The advisor is a single blocking call behind an HTTP API, which caps the
-        # whole round trip at 30s. That makes latency_ms and out_tokens the two
-        # numbers that decide what _ADVISOR_MAX_TOKENS can safely be — without them
-        # the ceiling can only be guessed at. cache_read_input_tokens is 0 until
-        # prompt caching is turned on; it is logged now so the before/after is
-        # visible when it is.
-        usage = result.get("usage") or {}
         stop_reason = result.get("stop_reason")
         truncated = stop_reason == "max_tokens"
         if truncated:
             response_text += _TRUNCATION_NOTICE
-        print(
-            f"cost_line op=adviseFinance msgs={len(bedrock_messages)} "
-            f"snapshot={'y' if summary else 'n'} image={'y' if has_image else 'n'} "
-            f"in_tokens={usage.get('input_tokens', -1)} "
-            f"out_tokens={usage.get('output_tokens', -1)} "
-            f"cache_read={usage.get('cache_read_input_tokens', 0)} "
-            f"latency_ms={elapsed_ms} stop={stop_reason} "
-            f"tools={len(tools) if tools else 0} calls={len(tool_calls)} "
-            f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'}"
+        _cost_line(
+            msgs=len(request["messages"]),
+            has_summary=request["_has_summary"], has_image=request["_has_image"],
+            usage=result.get("usage") or {}, stop_reason=stop_reason,
+            tools=len(tools) if tools else 0, calls=len(tool_calls),
+            payload=payload, latency_ms=elapsed_ms,
         )
         return _resp(200, {
             "response": response_text,
@@ -1309,6 +1539,143 @@ def _advise_finance(payload):
         elapsed_ms = int((time.monotonic() - started) * 1000)
         print(f"Bedrock error (adviseFinance) after {elapsed_ms}ms: {e}")
         return _resp(502, {"error": "bedrock_error", "message": str(e)})
+
+
+# -- Streaming advisor ---------------------------------------------------------
+
+def _frame(obj):
+    """One NDJSON frame. Newline-terminated, and never containing a raw one."""
+    return json.dumps(obj, ensure_ascii=False) + "\n"
+
+
+def advise_finance_stream(payload, request):
+    """Yield an advisor turn as NDJSON frames: start, deltas, then a terminator.
+
+    The sequence is `start`, zero or more `delta`, then exactly one of `end` or
+    `error`. A stream that stops without a terminator is a failure the server
+    did not survive, and the client is required to treat it as one -- the
+    alternative is presenting half an answer as a whole one.
+
+    `error` exists because once a 200 and its headers are on the wire, the
+    status code can no longer express failure. A Bedrock error at token 400
+    cannot become a 502, so it has to be said in-band.
+
+    The `end` frame deliberately carries the same keys as the buffered path's
+    200 body, so one AdvisorReply.fromJson parses both.
+    """
+    tools = request["tools"]
+    started = time.monotonic()
+    ttft_ms = None
+
+    # Rebuilt from the stream rather than read off a response: blocks arrive as
+    # a start/delta/stop sequence, and tool_use inputs arrive as JSON fragments
+    # that only parse once concatenated.
+    content = []
+    partial_json = {}
+    usage = {}
+    stop_reason = None
+
+    yield _frame({"type": "start"})
+    try:
+        raw = _bedrock.invoke_model_with_response_stream(
+            modelId=_ADVISOR_MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": _ADVISOR_MAX_TOKENS,
+                "system": request["system"],
+                "messages": request["messages"],
+                **({"tools": tools} if tools else {}),
+            }),
+        )
+
+        for event in raw["body"]:
+            chunk = event.get("chunk")
+            if not chunk:
+                continue
+            ev = json.loads(chunk["bytes"])
+            kind = ev.get("type")
+
+            if kind == "message_start":
+                # Input-side usage, the cache counters included, is only ever
+                # reported here.
+                usage.update((ev.get("message") or {}).get("usage") or {})
+
+            elif kind == "content_block_start":
+                block = dict(ev.get("content_block") or {})
+                idx = ev.get("index", len(content))
+                if block.get("type") == "text":
+                    block.setdefault("text", "")
+                elif block.get("type") == "tool_use":
+                    block["input"] = {}
+                    partial_json[idx] = ""
+                while len(content) <= idx:
+                    content.append(None)
+                content[idx] = block
+
+            elif kind == "content_block_delta":
+                idx = ev.get("index", 0)
+                delta = ev.get("delta") or {}
+                if delta.get("type") == "text_delta":
+                    text = delta.get("text") or ""
+                    if not text:
+                        continue
+                    if 0 <= idx < len(content) and content[idx]:
+                        content[idx]["text"] = (content[idx].get("text") or "") + text
+                    if ttft_ms is None:
+                        ttft_ms = int((time.monotonic() - started) * 1000)
+                    yield _frame({"type": "delta", "text": text})
+                elif delta.get("type") == "input_json_delta":
+                    partial_json[idx] = partial_json.get(idx, "") + (
+                        delta.get("partial_json") or "")
+
+            elif kind == "content_block_stop":
+                # A tool_use input arrives as JSON fragments; it is only valid
+                # JSON once every fragment has landed.
+                idx = ev.get("index", 0)
+                if idx in partial_json and 0 <= idx < len(content) and content[idx]:
+                    fragment = partial_json.pop(idx)
+                    try:
+                        content[idx]["input"] = json.loads(fragment) if fragment else {}
+                    except json.JSONDecodeError:
+                        print("adviseFinance: unparseable tool input at "
+                              f"{idx}: {fragment!r}")
+                        content[idx]["input"] = {}
+
+            elif kind == "message_delta":
+                stop_reason = (ev.get("delta") or {}).get("stop_reason", stop_reason)
+                usage.update(ev.get("usage") or {})
+
+        content = [b for b in content if b]
+        response_text, tool_calls = _split_reply(content)
+        truncated = stop_reason == "max_tokens"
+        if truncated:
+            response_text += _TRUNCATION_NOTICE
+
+        _cost_line(
+            msgs=len(request["messages"]),
+            has_summary=request["_has_summary"], has_image=request["_has_image"],
+            usage=usage, stop_reason=stop_reason,
+            tools=len(tools) if tools else 0, calls=len(tool_calls),
+            payload=payload,
+            latency_ms=int((time.monotonic() - started) * 1000),
+            ttft_ms=ttft_ms if ttft_ms is not None else -1,
+        )
+        yield _frame({
+            "type": "end",
+            "response": response_text,
+            "truncated": truncated,
+            "tool_calls": tool_calls,
+            "assistant_content": content,
+        })
+    except Exception as e:
+        elapsed_ms = int((time.monotonic() - started) * 1000)
+        print(f"Bedrock stream error (adviseFinance) after {elapsed_ms}ms: {e}")
+        yield _frame({
+            "type": "error",
+            "message": "The advisor stopped partway through. Try again.",
+        })
 
 
 # ── Shared Bedrock helper ──────────────────────────────────────────────────────

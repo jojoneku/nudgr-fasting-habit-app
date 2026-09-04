@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
-import '../models/advisor_reply.dart';
+import '../models/advisor_event.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
@@ -41,13 +41,13 @@ class NullAiCoachService implements AiCoachService {
   }
 
   @override
-  Future<AdvisorReply> adviseFinance({
+  Stream<AdvisorEvent> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
-  }) async {
+  }) async* {
     // The advisor requires the cloud tier; there's no canned equivalent.
     throw const AiCoachException(
         'The financial advisor is unavailable. Enable Cloud AI in Settings.');

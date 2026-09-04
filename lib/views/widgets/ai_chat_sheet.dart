@@ -247,6 +247,34 @@ class _AiChatBodyState extends State<AiChatBody> {
     });
   }
 
+  /// Edits a question already asked and asks the new one.
+  ///
+  /// Everything below the edited message goes with it — those answers were to a
+  /// question that no longer exists. The dialog says how much will go, because
+  /// it is not otherwise visible until it happens and it cannot be undone.
+  Future<void> _editMessage(AiChatMessage message) async {
+    final index = _presenter.messages.indexWhere((m) => m.id == message.id);
+    if (index < 0) return;
+    final droppedBelow = _presenter.messages.length - index - 1;
+
+    final edited = await showDialog<String>(
+      context: context,
+      builder: (_) => _EditQuestionDialog(
+        initialText: message.text,
+        droppedBelow: droppedBelow,
+      ),
+    );
+
+    if (!mounted) return;
+    if (edited == null || edited.isEmpty) return;
+
+    // Re-asking is an explicit request to follow the conversation again.
+    _followTail = true;
+    await _presenter.editAndResend(message.id, edited);
+    if (!mounted) return;
+    _scrollToBottom();
+  }
+
   /// Pick a bill / receipt / statement photo (camera or gallery) to attach.
   Future<void> _attachPhoto() async {
     final source = await showModalBottomSheet<ImageSource>(
@@ -388,6 +416,10 @@ class _AiChatBodyState extends State<AiChatBody> {
             return _ErrorChip(
               message: error,
               onDismiss: _presenter.clearError,
+              // Only when trying again could actually work. A button that can
+              // only fail again is worse than no button.
+              onRetry:
+                  _presenter.canRetryLastTurn ? _presenter.retryLastTurn : null,
             );
           },
         ),
@@ -475,6 +507,8 @@ class _AiChatBodyState extends State<AiChatBody> {
           messages: _presenter.messages,
           scrollController: _scrollController,
           isResponding: _presenter.isResponding,
+          canEdit: _presenter.canEdit,
+          onEdit: _editMessage,
         );
       },
     );
@@ -648,10 +682,21 @@ class _MessageList extends StatefulWidget {
   final ScrollController scrollController;
   final bool isResponding;
 
+  /// Asks to edit a question already sent. Null for messages that are not
+  /// editable prompts, and while a turn is in flight.
+  final void Function(AiChatMessage)? onEdit;
+
+  /// Whether this message may be edited. Kept as a predicate rather than baked
+  /// into [onEdit] so the bubble can decide whether to show its affordance
+  /// without the list having to build one callback per row.
+  final bool Function(AiChatMessage)? canEdit;
+
   const _MessageList({
     required this.messages,
     required this.scrollController,
     required this.isResponding,
+    this.onEdit,
+    this.canEdit,
   });
 
   @override
@@ -695,7 +740,16 @@ class _MessageListState extends State<_MessageList> {
         controller: widget.scrollController,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: widget.messages.length,
-        itemBuilder: (_, i) => _MessageBubble(message: widget.messages[i]),
+        itemBuilder: (_, i) {
+          final message = widget.messages[i];
+          final editable = widget.canEdit?.call(message) ?? false;
+          return _MessageBubble(
+            message: message,
+            onEdit: editable && widget.onEdit != null
+                ? () => widget.onEdit!(message)
+                : null,
+          );
+        },
       ),
     );
   }
@@ -760,12 +814,47 @@ class _JumpToBottomButton extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   final AiChatMessage message;
-  const _MessageBubble({required this.message});
+
+  /// Opens the editor for this question. Null when it is not an editable
+  /// prompt, or while a turn is in flight.
+  final VoidCallback? onEdit;
+
+  const _MessageBubble({required this.message, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
     final isUser = message.role == AiChatRole.user;
+    final bubble = _bubble(context, isUser);
+    if (onEdit == null) return bubble;
 
+    // An explicit button rather than a long-press: the whole list sits inside a
+    // SelectionArea, where long-press already means "start selecting text", and
+    // overloading it would make copying a figure feel like a misfire.
+    //
+    // It sits to the LEFT of the bubble because user messages are right-aligned
+    // against the edge, and there is nowhere else for it to go.
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: onEdit,
+          iconSize: 16,
+          // 44x44 minimum, per the touch-target rule, even though the glyph is
+          // small and quiet.
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          padding: EdgeInsets.zero,
+          visualDensity: VisualDensity.compact,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          tooltip: 'Edit and ask again',
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        Flexible(child: bubble),
+      ],
+    );
+  }
+
+  Widget _bubble(BuildContext context, bool isUser) {
     return AnimatedOpacity(
       opacity: 1,
       duration: const Duration(milliseconds: 200),
@@ -1622,11 +1711,113 @@ class _DownloadProgress extends StatelessWidget {
   }
 }
 
+/// Editor for a question already sent.
+///
+/// Stateful purely to own its [TextEditingController]. Building the field
+/// inline and disposing the controller once `showDialog` returned tripped
+/// `_dependents.isEmpty` — the route's field is still mounted at that moment,
+/// so the controller was pulled out from under a live widget. Owning it here
+/// ties its lifetime to the field's instead of to the await.
+class _EditQuestionDialog extends StatefulWidget {
+  const _EditQuestionDialog({
+    required this.initialText,
+    required this.droppedBelow,
+  });
+
+  final String initialText;
+
+  /// How many messages below this one will be replaced. Zero when the edited
+  /// question is the last thing in the conversation.
+  final int droppedBelow;
+
+  @override
+  State<_EditQuestionDialog> createState() => _EditQuestionDialogState();
+}
+
+class _EditQuestionDialogState extends State<_EditQuestionDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.of(context).pop(_controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: const Text('Edit question'),
+      // Width-pinned and scrollable: an AlertDialog gives its content loose
+      // constraints, so a multi-line field overflows on a short screen (or with
+      // the keyboard up) rather than shrinking.
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                minLines: 1,
+                maxLines: 5,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Ask something else…',
+                ),
+                onSubmitted: (_) => _submit(),
+              ),
+              if (widget.droppedBelow > 0) ...[
+                const SizedBox(height: 12),
+                Text(
+                  widget.droppedBelow == 1
+                      ? 'The reply below this will be replaced.'
+                      : 'The ${widget.droppedBelow} messages below this will '
+                          'be replaced.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Ask again'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ErrorChip extends StatelessWidget {
   final String message;
   final VoidCallback onDismiss;
 
-  const _ErrorChip({required this.message, required this.onDismiss});
+  /// Replays the failed turn. Null when the failure was not the kind retrying
+  /// fixes — an expired session, a spent daily cap — in which case no retry
+  /// action is offered at all.
+  final Future<void> Function()? onRetry;
+
+  const _ErrorChip({
+    required this.message,
+    required this.onDismiss,
+    this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1655,6 +1846,23 @@ class _ErrorChip extends StatelessWidget {
               ),
             ),
           ),
+          if (onRetry != null) ...[
+            const SizedBox(width: 8),
+            // A real button, not an icon: after three silent attempts have
+            // already failed, "Retry" should say what it does.
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                foregroundColor: errorColor,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 44),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
           GestureDetector(
             onTap: onDismiss,
             child: Icon(Icons.close, color: errorColor, size: 16),

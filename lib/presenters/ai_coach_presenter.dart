@@ -3,6 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/advisor_event.dart';
+import '../models/advisor_hop_outcome.dart';
+import '../models/advisor_reply.dart';
 import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
@@ -251,6 +254,80 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Send ──────────────────────────────────────────────────────────────────
 
+  /// Re-runs the last turn after a failure, without making the user retype it.
+  ///
+  /// The question is still in the transcript — it always was, which is what
+  /// made the old behaviour so annoying: the app was holding the text and still
+  /// asked for it again. This drops the failed assistant turn and everything
+  /// the tool loop accumulated behind it, then replays from the last real user
+  /// message.
+  ///
+  /// Refuses when the failure was not retryable, so it cannot be used to
+  /// re-attempt an expired session or a spent daily cap.
+  Future<void> retryLastTurn() async {
+    if (_isResponding || !canRetryLastTurn) return;
+
+    final lastUser = _lastUserPromptIndex();
+    if (lastUser == null) return;
+
+    final prompt = _messages[lastUser];
+    // Drop the user turn too — send() re-adds it, so keeping it would show the
+    // question twice.
+    _messages.removeRange(lastUser, _messages.length);
+    _errorMessage = null;
+    _lastTurnRetryable = false;
+    safeNotify();
+
+    await send(prompt.text, image: prompt.imageBytes);
+  }
+
+  /// Replaces a question already asked and answers the new one.
+  ///
+  /// Everything after the edited message goes: its answer was to a question
+  /// that no longer exists, and leaving it would put a reply above a prompt it
+  /// does not match. Anything the user wants to keep is above the edit.
+  ///
+  /// Returns false when the id is not an editable user prompt — a tool-result
+  /// turn wears [AiChatRole.user] too, and is not something anyone typed.
+  Future<bool> editAndResend(String messageId, String newText) async {
+    if (_isResponding) return false;
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) return false;
+
+    final index = _messages.indexWhere((m) => m.id == messageId);
+    if (index < 0) return false;
+    final target = _messages[index];
+    if (!_isEditablePrompt(target)) return false;
+    if (trimmed == target.text.trim()) return false; // nothing changed
+
+    final image = target.imageBytes;
+    _messages.removeRange(index, _messages.length);
+    _errorMessage = null;
+    _lastTurnRetryable = false;
+    safeNotify();
+
+    await send(trimmed, image: image);
+    return true;
+  }
+
+  /// True when this message is a prompt the user typed and may edit.
+  bool canEdit(AiChatMessage message) =>
+      !_isResponding && _isEditablePrompt(message);
+
+  /// A user turn carrying tool results is machinery, not something typed.
+  bool _isEditablePrompt(AiChatMessage m) =>
+      m.role == AiChatRole.user &&
+      m.contentBlocks.isEmpty &&
+      m.text.trim().isNotEmpty;
+
+  /// Index of the most recent prompt the user actually typed.
+  int? _lastUserPromptIndex() {
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_isEditablePrompt(_messages[i])) return i;
+    }
+    return null;
+  }
+
   Future<void> send(String text, {Uint8List? image}) async {
     final trimmed = text.trim();
     if ((trimmed.isEmpty && image == null) || _isResponding) return;
@@ -396,14 +473,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
 
     for (var hop = 1; hop <= maxToolHops; hop++) {
-      final reply = await cloud.adviseFinance(
-        messages: transcript,
+      final reply = await _streamAdvisorHopWithRetries(
+        cloud,
         context: context,
-        profile: _advisorProfile.promptSummary(),
-        historical: historical.isEmpty ? null : historical,
+        transcript: transcript,
+        historical: historical,
         tools: tools,
       );
-      if (isDisposed) return;
+      if (isDisposed || reply == null) return;
 
       if (!reply.wantsTools) {
         _updateLastMessage(reply.text, isStreaming: false);
@@ -444,6 +521,184 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       transcript.add(AiChatMessage.toolResults(results));
     }
   }
+
+  /// How many times a single advisor hop is attempted before giving up.
+  ///
+  /// Three, not one, because the failures this retries are the ones that had
+  /// nothing to do with the request: a dropped connection, a 5xx, a stream that
+  /// died mid-answer. Every one of those used to end the turn and leave the
+  /// user to retype a question the app was still holding — the worst possible
+  /// response to a fault that would have cleared on its own.
+  ///
+  /// Three is also where it stops. A retry is not free: a streamed turn is
+  /// billed for the whole function duration whether or not anyone reads it, so
+  /// an unbounded loop would quietly spend real money on an outage. Only
+  /// [AiCoachException.retryable] failures are attempted again; an expired
+  /// session or a spent daily cap fails once, immediately.
+  static const maxAdvisorAttempts = 3;
+
+  /// Backoff before each retry. Deliberately short — someone is watching this
+  /// happen, and a 5-second pause reads as the app having hung rather than as
+  /// patience.
+  static const _retryBackoff = [
+    Duration(milliseconds: 400),
+    Duration(milliseconds: 1200),
+  ];
+
+  /// The attempt currently in flight, 1-based. Anything above 1 means a retry
+  /// is underway, which the UI says out loud rather than leaving the user
+  /// staring at a spinner that restarted for no visible reason.
+  int _advisorAttempt = 1;
+  int get advisorAttempt => _advisorAttempt;
+  bool get isRetryingAdvisor => _advisorAttempt > 1;
+
+  /// Runs one hop, retrying transient failures up to [maxAdvisorAttempts].
+  Future<AdvisorReply?> _streamAdvisorHopWithRetries(
+    AiCoachService cloud, {
+    required AiCoachContext context,
+    required List<AiChatMessage> transcript,
+    required String historical,
+    required List<AiTool> tools,
+  }) async {
+    for (var attempt = 1; attempt <= maxAdvisorAttempts; attempt++) {
+      _advisorAttempt = attempt;
+      if (attempt > 1) {
+        // Clear the abandoned prose before the next attempt writes over it.
+        // Without this the retry's deltas append to half an answer and the user
+        // reads two beginnings stitched together.
+        _updateLastMessage('', isStreaming: true);
+        _errorMessage = null;
+        safeNotify();
+        await Future<void>.delayed(
+            _retryBackoff[(attempt - 2).clamp(0, _retryBackoff.length - 1)]);
+        if (isDisposed) return null;
+      }
+
+      final outcome = await _streamAdvisorHop(
+        cloud,
+        context: context,
+        transcript: transcript,
+        historical: historical,
+        tools: tools,
+      );
+      if (isDisposed) return null;
+      if (outcome.reply != null) {
+        _advisorAttempt = 1;
+        return outcome.reply;
+      }
+
+      final failure = outcome.failure;
+      final isLast = attempt == maxAdvisorAttempts;
+      if (failure == null || !failure.retryable || isLast) {
+        _advisorAttempt = 1;
+        // Only now does the failure reach the user, so two silent recoveries
+        // look like one slightly slow answer rather than three errors.
+        _failAdvisorHop(
+            outcome.partial, failure?.userMessage ?? _genericFailure,
+            retryable: failure?.retryable ?? false);
+        return null;
+      }
+      debugPrint('AiCoachPresenter advisor attempt $attempt failed, retrying: '
+          '${failure.userMessage}');
+    }
+    return null;
+  }
+
+  static const _genericFailure = 'Something went wrong. Try again.';
+
+  /// Runs one hop of the advisor, rendering its prose as it arrives.
+  ///
+  /// Reports the outcome rather than settling the UI, because the caller may
+  /// be about to try again — and a failed attempt that has already written an
+  /// error to the screen cannot be retried invisibly.
+  ///
+  /// A failure carries its partial prose back with it. A half-written answer is
+  /// real work the user may still want, and the alternative (wiping it for a
+  /// red bar) throws away the only part of a slow turn that arrived.
+  ///
+  /// Mirrors what `respond()` already does for the general coach: accumulate,
+  /// update, notify, and stop the moment the sheet goes away.
+  Future<AdvisorHopOutcome> _streamAdvisorHop(
+    AiCoachService cloud, {
+    required AiCoachContext context,
+    required List<AiChatMessage> transcript,
+    required String historical,
+    required List<AiTool> tools,
+  }) async {
+    final buffer = StringBuffer();
+    AdvisorReply? finished;
+
+    try {
+      final stream = cloud.adviseFinance(
+        messages: transcript,
+        context: context,
+        profile: _advisorProfile.promptSummary(),
+        historical: historical.isEmpty ? null : historical,
+        tools: tools,
+      );
+
+      await for (final event in stream) {
+        if (isDisposed) return const AdvisorHopOutcome.abandoned();
+        switch (event.kind) {
+          case AdvisorEventKind.start:
+            break;
+          case AdvisorEventKind.delta:
+            buffer.write(event.text);
+            _updateLastMessage(buffer.toString(), isStreaming: true);
+            safeNotify();
+          case AdvisorEventKind.end:
+            finished = event.reply;
+          case AdvisorEventKind.error:
+            // The server reported its own failure in-band, which it only does
+            // for a turn that died in flight — worth another attempt.
+            throw AiCoachException(
+                event.message ??
+                    'The advisor stopped partway through. Try again.',
+                retryable: true);
+        }
+      }
+    } on AiCoachException catch (e) {
+      return AdvisorHopOutcome.failed(buffer.toString(), e);
+    } catch (e) {
+      debugPrint('AiCoachPresenter advisor stream error: $e');
+      return AdvisorHopOutcome.failed(
+          buffer.toString(),
+          const AiCoachException(
+              'The advisor stopped partway through. Try again.',
+              retryable: true));
+    }
+
+    if (finished == null) {
+      // The stream completed without a terminal event. Never treat this as a
+      // short answer: that is precisely how half a reply gets presented as all
+      // of it.
+      return AdvisorHopOutcome.failed(
+          buffer.toString(),
+          const AiCoachException(
+              'The advisor was cut off mid-answer. Try again.',
+              retryable: true));
+    }
+    return AdvisorHopOutcome.done(finished);
+  }
+
+  /// Settles a failed advisor hop: keep whatever prose arrived, mark it
+  /// unfinished, and surface why.
+  ///
+  /// [retryable] is what the retry affordance keys off. A failure the user can
+  /// do nothing about (an expired session, a spent cap) should not offer a
+  /// button whose only effect is to fail again.
+  void _failAdvisorHop(String partial, String message,
+      {required bool retryable}) {
+    _errorMessage = message;
+    _lastTurnRetryable = retryable;
+    _updateLastMessage(partial, isStreaming: false);
+    safeNotify();
+  }
+
+  /// True when the last turn failed in a way that retrying could fix.
+  bool _lastTurnRetryable = false;
+  bool get canRetryLastTurn =>
+      _errorMessage != null && _lastTurnRetryable && !_isResponding;
 
   /// Dispatch one tool call. Reads run; mutations become proposals.
   Future<AiToolResult> _runTool(AiToolCall call) async {
