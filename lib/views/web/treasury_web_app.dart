@@ -176,6 +176,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       history: _historyPresenter,
       ledger: _ledgerPresenter,
       storage: _storage,
+      toolExecutor: _treasury.financeActions,
     );
     _nudgy = NudgyController(_advisorPresenter, storage: _storage);
     _authPresenter = AuthPresenter(

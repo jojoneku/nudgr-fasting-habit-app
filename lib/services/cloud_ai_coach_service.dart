@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_tool.dart';
+import '../models/advisor_reply.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
@@ -42,7 +44,28 @@ String _unreachableMessage(String subject) => kIsWeb
 /// with 401, so all ops become no-ops when the token is absent.
 class CloudAiCoachService implements AiCoachService {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
+
+  /// Transport timeout for the short ops (classify, food parse, receipt scan).
+  /// These are small single-shot calls; a hang here should surface fast rather
+  /// than leave the user watching a spinner.
   static const _timeoutSeconds = 30;
+
+  /// Transport timeout for the advisor, which generates far more tokens than
+  /// any other op and so legitimately takes longer.
+  ///
+  /// **This must stay ABOVE the API Gateway integration timeout.** The gateway
+  /// is what actually bounds the request; if the client gives up first, the
+  /// user sees a connection error while the backend is still working happily,
+  /// and the gateway's own 504 never arrives to say what really went wrong.
+  ///
+  /// It is deliberately not the same constant as [_timeoutSeconds]: raising
+  /// that one globally would make a failed food parse hang for two minutes.
+  ///
+  /// Being in code rather than config, this ships with an app release. Server
+  /// limits can therefore be raised at any time, but installs on an older
+  /// build stay capped here until they update — so raise this FIRST, ship it,
+  /// and only then raise the gateway.
+  static const advisorTimeoutSeconds = 120;
 
   /// Returns the current Supabase access token, or null when signed out.
   final String? Function() tokenProvider;
@@ -210,12 +233,13 @@ class CloudAiCoachService implements AiCoachService {
   // ── Advise finance (financial advisor) ────────────────────────────────────
 
   @override
-  Stream<String> adviseFinance({
+  Future<AdvisorReply> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
-  }) async* {
+    List<AiTool> tools = const [],
+  }) async {
     // Advisor gates on the Cloud AI opt-in (unlike the classifier) — it's an
     // explicit conversational feature the user opted into.
     if (!isAvailable) {
@@ -236,11 +260,22 @@ class CloudAiCoachService implements AiCoachService {
         },
         if (img != null) 'image_base64': base64Encode(img),
         if (img != null) 'mime_type': context.imageMimeType ?? 'image/jpeg',
+        if (tools.isNotEmpty)
+          'tools': [for (final t in tools) t.toRequestJson()],
+        // A turn is sent when it has text OR content blocks. The blocks path is
+        // the tool loop: an assistant turn holding a tool_use usually carries
+        // no text, and dropping it would orphan the tool_result answering it,
+        // which Bedrock rejects.
         'messages': messages
-            .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
+            .where((m) =>
+                m.role != AiChatRole.assistant ||
+                m.text.isNotEmpty ||
+                m.contentBlocks.isNotEmpty)
             .map((m) => {
                   'role': m.role == AiChatRole.user ? 'user' : 'assistant',
                   'text': m.text,
+                  if (m.contentBlocks.isNotEmpty)
+                    'content_blocks': m.contentBlocks,
                 })
             .toList(),
       },
@@ -250,7 +285,7 @@ class CloudAiCoachService implements AiCoachService {
     try {
       response = await http
           .post(Uri.parse(_endpoint), headers: _headers, body: body)
-          .timeout(const Duration(seconds: _timeoutSeconds));
+          .timeout(const Duration(seconds: advisorTimeoutSeconds));
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
       throw AiCoachException(_unreachableMessage('Advisor'));
@@ -271,16 +306,14 @@ class CloudAiCoachService implements AiCoachService {
           'The advisor had a hiccup on our end. Try again in a moment.');
     }
 
-    final String text;
     try {
       final result = jsonDecode(response.body) as Map<String, dynamic>;
-      text = (result['response'] as String?) ?? '';
+      return AdvisorReply.fromJson(result);
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] parse error: $e');
       throw const AiCoachException(
           'The advisor sent back something unreadable. Try again.');
     }
-    yield text;
   }
 
   // ── Parse food ────────────────────────────────────────────────────────────

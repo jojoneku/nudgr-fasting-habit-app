@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
+import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_chat_message.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
@@ -246,7 +247,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
-      )).thenAnswer((_) => const Stream<String>.empty());
+      )).thenAnswer((_) async => const AdvisorReply());
     });
 
     /// Runs [body] as though on [platform]. The override is cleared inside the

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_tool.dart';
+import '../models/advisor_reply.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
@@ -69,13 +71,23 @@ abstract class AiCoachService {
   /// learned facts (goals, risk tolerance, freeform notes), and [historical] an
   /// optional prior-period benchmark string.
   ///
+  /// [tools] is the catalogue this build can execute. It is declared by the
+  /// client rather than the backend because the client is what runs them —
+  /// every tool acts on data that lives on this device. Pass an empty list for
+  /// a plain advisory turn.
+  ///
+  /// Returns a whole turn rather than a stream: the advisor is one blocking
+  /// call, and a caller cannot tell whether a turn is finished until it knows
+  /// whether the model asked for a tool.
+  ///
   /// Only the cloud tier produces a real answer; the on-device and null tiers
   /// throw [AiCoachException] (the small on-device model can't do this reasoning).
-  Stream<String> adviseFinance({
+  Future<AdvisorReply> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
+    List<AiTool> tools = const [],
   });
 
   /// Attempt to parse [description] as a food log entry.
