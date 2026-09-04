@@ -44,7 +44,28 @@ String _unreachableMessage(String subject) => kIsWeb
 /// with 401, so all ops become no-ops when the token is absent.
 class CloudAiCoachService implements AiCoachService {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
+
+  /// Transport timeout for the short ops (classify, food parse, receipt scan).
+  /// These are small single-shot calls; a hang here should surface fast rather
+  /// than leave the user watching a spinner.
   static const _timeoutSeconds = 30;
+
+  /// Transport timeout for the advisor, which generates far more tokens than
+  /// any other op and so legitimately takes longer.
+  ///
+  /// **This must stay ABOVE the API Gateway integration timeout.** The gateway
+  /// is what actually bounds the request; if the client gives up first, the
+  /// user sees a connection error while the backend is still working happily,
+  /// and the gateway's own 504 never arrives to say what really went wrong.
+  ///
+  /// It is deliberately not the same constant as [_timeoutSeconds]: raising
+  /// that one globally would make a failed food parse hang for two minutes.
+  ///
+  /// Being in code rather than config, this ships with an app release. Server
+  /// limits can therefore be raised at any time, but installs on an older
+  /// build stay capped here until they update — so raise this FIRST, ship it,
+  /// and only then raise the gateway.
+  static const advisorTimeoutSeconds = 120;
 
   /// Returns the current Supabase access token, or null when signed out.
   final String? Function() tokenProvider;
@@ -264,7 +285,7 @@ class CloudAiCoachService implements AiCoachService {
     try {
       response = await http
           .post(Uri.parse(_endpoint), headers: _headers, body: body)
-          .timeout(const Duration(seconds: _timeoutSeconds));
+          .timeout(const Duration(seconds: advisorTimeoutSeconds));
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
       throw AiCoachException(_unreachableMessage('Advisor'));
