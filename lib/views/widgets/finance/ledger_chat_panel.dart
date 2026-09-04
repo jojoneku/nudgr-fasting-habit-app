@@ -68,7 +68,8 @@ class LedgerChatPanel extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cs.outlineVariant, width: 1),
               ),
               child: body,
             ),
