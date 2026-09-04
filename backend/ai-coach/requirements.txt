@@ -1,3 +1,15 @@
 # Runtime dependencies for the AI Coach Lambda (Python 3.12).
 # boto3 is provided by the Lambda runtime — listed here for local dev/testing.
 boto3>=1.34
+
+# The streaming advisor (app.py) verifies the caller's Supabase token itself,
+# because its Function URL runs with AuthType NONE and so has no JWT authorizer
+# in front of it. RS256 verification against the project key set needs a real
+# crypto backend; this is the first dependency beyond boto3 and takes the
+# artifact from ~23 KB to a few MB. The buffered ops never import it.
+PyJWT[crypto]>=2.8
+
+# The streaming advisor is an ASGI app fronted by the Lambda Web Adapter layer,
+# so it needs a server of its own to run under (see run.sh). The buffered ops
+# never import it.
+uvicorn>=0.30

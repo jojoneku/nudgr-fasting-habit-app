@@ -497,6 +497,79 @@ jobs:
           aws lambda wait function-updated \
             --function-name food-coach-handler
 
+      # The streaming advisor is a SECOND function from the SAME source tree.
+      #
+      # Separate because it runs under the Lambda Web Adapter, which replaces
+      # the handler with a bootstrap that proxies every invocation through a web
+      # server — one function would have made that the entry layer for all five
+      # ops, including the photo-logging and classifier paths.
+      #
+      # Its package is bigger: adviseFinance verifies the caller's Supabase token
+      # itself (a Function URL has no JWT authorizer), so PyJWT + cryptography
+      # are vendored, and uvicorn runs the ASGI app. Wheels are fetched for
+      # aarch64 because the function is arm64 — installing the runner's own x86
+      # wheels produces a package that imports cleanly here and dies on Lambda.
+      - name: Package and deploy the streaming advisor
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf build/advisor advisor.zip
+          mkdir -p build/advisor
+          cp backend/ai-coach/lambda_function.py \
+             backend/ai-coach/app.py \
+             backend/ai-coach/run.sh \
+             build/advisor/
+          # run.sh is what the adapter execs; without the bit it dies at boot.
+          chmod +x build/advisor/run.sh
+          pip install \
+            --platform manylinux2014_aarch64 \
+            --implementation cp \
+            --python-version 3.12 \
+            --only-binary=:all: \
+            --target build/advisor \
+            -r backend/ai-coach/requirements.txt
+          # boto3 ships with the runtime; dropping it keeps the package small.
+          rm -rf build/advisor/boto3* build/advisor/botocore* \
+                 build/advisor/bin build/advisor/__pycache__
+          (cd build/advisor && zip -qr ../../advisor.zip .)
+          aws lambda update-function-code \
+            --function-name food-advisor-stream \
+            --zip-file fileb://advisor.zip \
+            --no-cli-pager
+          aws lambda wait function-updated \
+            --function-name food-advisor-stream
+
+      # The advisor's own smoke test. It asserts the things that break silently:
+      # that the adapter actually started the server (a non-200 here usually
+      # means run.sh never ran), that an unauthenticated call is refused before
+      # anything bills, and that this function has not quietly become a second
+      # general coach API.
+      - name: Verify the streaming advisor rejects and routes correctly
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          event='{"version":"2.0","rawPath":"/v1/advisor","requestContext":{"http":{"method":"POST","path":"/v1/advisor"}},"headers":{"content-type":"application/json"},"body":"{}","isBase64Encoded":false}'
+          echo "$event" > /tmp/advisor-event.json
+          aws lambda invoke \
+            --function-name food-advisor-stream \
+            --payload fileb:///tmp/advisor-event.json \
+            --no-cli-pager /tmp/advisor-out.json >/dev/null
+          cat /tmp/advisor-out.json
+          grep -q '"statusCode":401' /tmp/advisor-out.json \
+            || { echo "advisor did not reject an unauthenticated call"; exit 1; }
+          grep -q 'unauthorized' /tmp/advisor-out.json \
+            || { echo "401 did not come from our own auth check"; exit 1; }
+
+          event404='{"version":"2.0","rawPath":"/v1/coach","requestContext":{"http":{"method":"POST","path":"/v1/coach"}},"headers":{"content-type":"application/json"},"body":"{}","isBase64Encoded":false}'
+          echo "$event404" > /tmp/advisor-404.json
+          aws lambda invoke \
+            --function-name food-advisor-stream \
+            --payload fileb:///tmp/advisor-404.json \
+            --no-cli-pager /tmp/advisor-404-out.json >/dev/null
+          grep -q '"statusCode":404' /tmp/advisor-404-out.json \
+            || { echo "advisor answered a path it does not own"; exit 1; }
+          echo "advisor smoke test passed"
+
       # Pushing function code says nothing about whether a browser can reach
       # it. See scripts/check_api_cors.sh for why this is asserted against the
       # live API rather than read off template.yaml.

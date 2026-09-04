@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/advisor_event.dart';
+import '../models/advisor_reply.dart';
 import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
@@ -396,14 +398,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
 
     for (var hop = 1; hop <= maxToolHops; hop++) {
-      final reply = await cloud.adviseFinance(
-        messages: transcript,
+      final reply = await _streamAdvisorHop(
+        cloud,
         context: context,
-        profile: _advisorProfile.promptSummary(),
-        historical: historical.isEmpty ? null : historical,
+        transcript: transcript,
+        historical: historical,
         tools: tools,
       );
-      if (isDisposed) return;
+      if (isDisposed || reply == null) return;
 
       if (!reply.wantsTools) {
         _updateLastMessage(reply.text, isStreaming: false);
@@ -443,6 +445,83 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }
       transcript.add(AiChatMessage.toolResults(results));
     }
+  }
+
+  /// Runs one hop of the advisor, rendering its prose as it arrives.
+  ///
+  /// Returns the finished turn, or null when the hop failed — in which case the
+  /// prose that DID arrive is deliberately left on screen. A half-written
+  /// answer is real work the user may still want, and the alternative (wiping
+  /// it for a red bar) throws away the only part of a slow turn that made it.
+  /// It is marked not-streaming and never becomes a completed assistant turn,
+  /// so it cannot be mistaken for a finished reply or replayed as one.
+  ///
+  /// Mirrors what `respond()` already does for the general coach: accumulate,
+  /// update, notify, and stop the moment the sheet goes away.
+  Future<AdvisorReply?> _streamAdvisorHop(
+    AiCoachService cloud, {
+    required AiCoachContext context,
+    required List<AiChatMessage> transcript,
+    required String historical,
+    required List<AiTool> tools,
+  }) async {
+    final buffer = StringBuffer();
+    AdvisorReply? finished;
+
+    try {
+      final stream = cloud.adviseFinance(
+        messages: transcript,
+        context: context,
+        profile: _advisorProfile.promptSummary(),
+        historical: historical.isEmpty ? null : historical,
+        tools: tools,
+      );
+
+      await for (final event in stream) {
+        if (isDisposed) return null;
+        switch (event.kind) {
+          case AdvisorEventKind.start:
+            break;
+          case AdvisorEventKind.delta:
+            buffer.write(event.text);
+            _updateLastMessage(buffer.toString(), isStreaming: true);
+            safeNotify();
+          case AdvisorEventKind.end:
+            finished = event.reply;
+          case AdvisorEventKind.error:
+            throw AiCoachException(event.message ??
+                'The advisor stopped partway through. Try again.');
+        }
+      }
+    } on AiCoachException catch (e) {
+      if (isDisposed) return null;
+      _failAdvisorHop(buffer.toString(), e.userMessage);
+      return null;
+    } catch (e) {
+      if (isDisposed) return null;
+      debugPrint('AiCoachPresenter advisor stream error: $e');
+      _failAdvisorHop(
+          buffer.toString(), 'The advisor stopped partway through. Try again.');
+      return null;
+    }
+
+    if (finished == null) {
+      // The stream completed without a terminal event. Never treat this as a
+      // short answer: that is precisely how half a reply gets presented as all
+      // of it.
+      _failAdvisorHop(
+          buffer.toString(), 'The advisor was cut off mid-answer. Try again.');
+      return null;
+    }
+    return finished;
+  }
+
+  /// Settles a failed advisor hop: keep whatever prose arrived, mark it
+  /// unfinished, and surface why.
+  void _failAdvisorHop(String partial, String message) {
+    _errorMessage = message;
+    _updateLastMessage(partial, isStreaming: false);
+    safeNotify();
   }
 
   /// Dispatch one tool call. Reads run; mutations become proposals.

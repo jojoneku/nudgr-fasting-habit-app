@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/views/web/widgets/web_shell.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 
 import '../../mocks.mocks.dart';
+import '../../support/advisor_events.dart';
 
 /// Nudgy's web dock, and the presenter arrangement that lets the advisor run on
 /// a platform with no fasting or nutrition presenter.
@@ -82,7 +83,8 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
-      )).thenAnswer((_) async => const AdvisorReply(text: 'Looks fine.'));
+      )).thenAnswer(
+          (_) => advisorStreamOf(const AdvisorReply(text: 'Looks fine.')));
 
       final p = buildWebAdvisor();
       p.openSession(AiCoachEntryPoint.financeAdvisor);
@@ -212,8 +214,8 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
-      )).thenAnswer(
-          (_) async => const AdvisorReply(text: 'You are running a deficit.'));
+      )).thenAnswer((_) => advisorStreamOf(
+          const AdvisorReply(text: 'You are running a deficit.')));
 
       final p = buildWebAdvisor();
       final c = NudgyController(p);

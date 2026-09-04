@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:intermittent_fasting/models/advisor_event.dart';
 import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
@@ -31,6 +32,7 @@ import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+import '../support/advisor_events.dart';
 
 class FakeAiCoachService implements AiCoachService {
   final List<ClassifierStep?> _script;
@@ -91,14 +93,14 @@ class FakeAiCoachService implements AiCoachService {
   }) async* {}
 
   @override
-  Future<AdvisorReply> adviseFinance({
+  Stream<AdvisorEvent> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
-  }) async =>
-      const AdvisorReply();
+  }) =>
+      advisorStreamOf(const AdvisorReply());
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;
