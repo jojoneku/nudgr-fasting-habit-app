@@ -341,13 +341,14 @@ class CloudAiCoachService implements AiCoachService {
               'The advisor sent back something unreadable. Try again.');
         case AdvisorFrameFailure.noTerminator:
           throw const AiCoachException(
-              'The advisor was cut off mid-answer. Try again.');
+              'The advisor was cut off mid-answer. Try again.',
+              retryable: true);
       }
     } on AiCoachException {
       rethrow;
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] stream error: $e');
-      throw AiCoachException(_unreachableMessage('Advisor'));
+      throw AiCoachException(_unreachableMessage('Advisor'), retryable: true);
     } finally {
       client.close();
     }
@@ -366,7 +367,7 @@ class CloudAiCoachService implements AiCoachService {
           .timeout(const Duration(seconds: advisorTimeoutSeconds));
     } catch (e) {
       debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
-      throw AiCoachException(_unreachableMessage('Advisor'));
+      throw AiCoachException(_unreachableMessage('Advisor'), retryable: true);
     }
 
     if (response.statusCode != 200) {
@@ -405,11 +406,13 @@ class CloudAiCoachService implements AiCoachService {
     }
     if (status == 503) {
       return const AiCoachException(
-          'The advisor is temporarily unavailable. Try again in a moment.');
+          'The advisor is temporarily unavailable. Try again in a moment.',
+          retryable: true);
     }
     debugPrint('CloudAiCoachService[adviseFinance] HTTP $status: $body');
     return const AiCoachException(
-        'The advisor had a hiccup on our end. Try again in a moment.');
+        'The advisor had a hiccup on our end. Try again in a moment.',
+        retryable: true);
   }
 
   // ── Parse food ────────────────────────────────────────────────────────────
