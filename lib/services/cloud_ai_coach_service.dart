@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/ai_chat_message.dart';
@@ -306,6 +307,15 @@ class CloudAiCoachService implements AiCoachService {
     yield* _adviseFinanceStreamed(body);
   }
 
+  /// Lowercase hex SHA-256 of the exact request body, for
+  /// `x-amz-content-sha256`.
+  ///
+  /// Must hash the bytes actually sent. Hashing a re-encoded or re-serialised
+  /// copy produces a valid-looking hash that fails signature validation at the
+  /// edge, and the resulting 403 says nothing about hashing.
+  static String payloadHash(String body) =>
+      sha256.convert(utf8.encode(body)).toString();
+
   /// Reads an NDJSON stream of [AdvisorEvent]s from the Function URL.
   ///
   /// Uses `Client.send` rather than `post` because `post` waits for the whole
@@ -317,6 +327,20 @@ class CloudAiCoachService implements AiCoachService {
     try {
       final request = http.Request('POST', Uri.parse(_advisorEndpoint))
         ..headers.addAll(_headers)
+        // The advisor is reached through CloudFront, which SigV4-signs to the
+        // Lambda behind it on our behalf (the account refuses public Function
+        // URLs, so the Lambda only accepts signed calls). CloudFront can sign
+        // the headers but not the body, so the caller has to supply the body's
+        // hash: "If you use PUT or POST methods with your Lambda function URL,
+        // your users must compute the SHA256 of the body and include the
+        // payload hash value in the x-amz-content-sha256 header. Lambda doesn't
+        // support unsigned payloads."
+        //
+        // Without it every request dies at the edge with a signature mismatch,
+        // which arrives as a 403 and looks nothing like a hashing problem.
+        // Harmless if the endpoint is ever pointed straight at a Function URL —
+        // it is then just an unread header.
+        ..headers['x-amz-content-sha256'] = payloadHash(body)
         ..body = body;
 
       final response = await client

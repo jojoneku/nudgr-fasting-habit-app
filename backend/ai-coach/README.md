@@ -111,7 +111,9 @@ end". The other four ops stay on the HTTP API — they finish well inside 30s.
 The app reads the URL from `AI_ADVISOR_ENDPOINT`. **Unset, the advisor uses the
 old buffered path** — so enabling and rolling back are both one value:
 
-1. Set the `AI_ADVISOR_ENDPOINT` repo secret to the URL above, with `/v1/advisor`.
+1. Set the `AI_ADVISOR_ENDPOINT` repo secret to
+   `https://d117xbrhlnuvq9.cloudfront.net/v1/advisor` (the CloudFront domain,
+   not the Function URL — see below).
 2. Push to `main`. Clearing the secret rolls back with no code change.
 
 ### Three things that fail silently
@@ -125,15 +127,50 @@ old buffered path** — so enabling and rolling back are both one value:
   interpreter: /bin/bash^M` and nothing in the log explains it. `.gitattributes`
   pins `*.sh`; the packaging step sets the bit.
 
-### Known blocker: anonymous access is refused
+### Reached through CloudFront, not directly
 
-`AuthType: NONE` currently returns **403 before reaching the function**. The
-resource policy is correct, the account is not in an Organization, and flipping
-the same URL to `AWS_IAM` with a SigV4-signed request returns 200 and the app's
-real response — so only the anonymous path is refused. The account also sits at
-**10 Lambda concurrent executions** (default 1000), which is the same
-new-account restricted state.
+The account refuses **anonymous** Function URL access: `AuthType: NONE` returns
+403 before the request reaches the function, even with a correct resource
+policy, and the account is not in an Organization. (It also sits at 10 Lambda
+concurrent executions against a default of 1000, which is the same new-account
+restricted state.) Flipping the same URL to `AWS_IAM` and sending a signed
+request returns 200, so only the anonymous path is refused.
 
-Needs AWS Support to allow public Function URLs on account `806880856566`. Until
-then, leave `AI_ADVISOR_ENDPOINT` unset: pointing the app at a 403 makes every
-advisor turn fail, which is worse than the timeout it replaces.
+So the Function URL is `AWS_IAM` and a CloudFront distribution fronts it with
+Origin Access Control. The app calls CloudFront anonymously; CloudFront
+SigV4-signs to the Lambda. Nothing is publicly invokable.
+
+| | |
+|---|---|
+| Distribution | `E3BTW8ND61SRIT` |
+| Domain | `d117xbrhlnuvq9.cloudfront.net` |
+| OAC | `E3NOOYYUKZCLJJ` — `lambda` type, sigv4, always sign |
+| Endpoint | `https://d117xbrhlnuvq9.cloudfront.net/v1/advisor` |
+
+Configured deliberately: caching **disabled**, compression **off** (it can force
+buffering and defeat streaming), origin read timeout **60s** to clear the
+Lambda's 45s, and origin request policy `AllViewerExceptHostHeader` — OAC has to
+set the Host header it signs against, so forwarding the viewer's would break
+every signature.
+
+Two resource-policy statements are required, not one: `lambda:InvokeFunctionUrl`
+**and** `lambda:InvokeFunction`, both for `cloudfront.amazonaws.com`, both
+scoped by `AWS:SourceArn` to this distribution. With only the first, requests
+fail with Lambda's generic "Forbidden" and look identical to the account block.
+
+**The client must send `x-amz-content-sha256`.** CloudFront signs headers but
+not the body, and per AWS: *"If you use PUT or POST methods with your Lambda
+function URL, your users must compute the SHA256 of the body and include the
+payload hash value in the x-amz-content-sha256 header. Lambda doesn't support
+unsigned payloads."* Without it the request dies at the edge with a signature
+mismatch, surfaced as a 403 that looks nothing like a hashing problem.
+`CloudAiCoachService.payloadHash` does this, and its digests are pinned in
+`test/services/advisor_payload_hash_test.dart`.
+
+Verified end to end: a response emitted in 10 frames 300ms apart arrived through
+CloudFront 300ms apart. **CloudFront passes the stream through without
+buffering** — which was the one assumption this whole approach rested on.
+
+If AWS later allows public Function URLs, CloudFront can be dropped: set the URL
+back to `AuthType: NONE`, point `AI_ADVISOR_ENDPOINT` at it, and the payload-hash
+header becomes an unread extra header.
