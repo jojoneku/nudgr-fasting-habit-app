@@ -150,6 +150,78 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'addTransaction',
+    kind: AiToolKind.create,
+    description:
+        'Propose logging one transaction in the ledger: an expense, income, '
+        'or a transfer between two of the user\'s own accounts. The user '
+        'confirms before anything is saved.\n'
+        'This is NOT the ordinary way an expense gets logged. A plain '
+        'reporting sentence ("spent 250 on lunch gcash", "coffee 120") never '
+        'reaches you at all — the quick-logger takes it first, and it is '
+        'better at that job than this tool: several entries from one message, '
+        'context stated once across them, learned categories, receipt photos. '
+        'Reach for this only when the entry became clear through the '
+        'conversation rather than from a sentence the user typed to be '
+        'logged: settling a bill you just looked up, an amount you worked out '
+        'together, or a log the user asked for without stating the fields. If '
+        'the user simply wants to record something they already know, tell '
+        'them to type it and let the logger have it.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['amount', 'description'],
+      'properties': {
+        'amount': {
+          'type': 'number',
+          'description': 'In pesos, always positive. The direction comes from '
+              '"type", never from a minus sign.',
+        },
+        'description': {
+          'type': 'string',
+          'description': 'What it was, e.g. "Lunch at Alturas".',
+        },
+        'type': {
+          'type': 'string',
+          'enum': ['expense', 'income', 'transfer'],
+          'description': 'Defaults to expense. A transfer moves money between '
+              'the user\'s own accounts and is neither spending nor income.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME the money leaves (expense, transfer) '
+              'or arrives in (income). Omit only when the user has exactly '
+              'one account; otherwise ask rather than picking for them.',
+        },
+        'toAccount': {
+          'type': 'string',
+          'description': 'Transfer only: destination account NAME.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Category NAME, matching the transaction direction. '
+              'Not used on a transfer, which carries the reserved transfer '
+              'category instead.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD. Defaults to today. Resolve "yesterday" '
+              'and similar against the TODAY line in the snapshot.',
+        },
+        'note': {'type': 'string', 'description': 'Optional longer note.'},
+        'reimbursable': {
+          'type': 'boolean',
+          'description': 'Expense only: money the user expects back (a work '
+              'expense, or something they spotted for someone). Spawns a '
+              'linked receivable so the payback is tracked.',
+        },
+        'owedBy': {
+          'type': 'string',
+          'description': 'Who owes the money back. Only with reimbursable.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'addSetAside',
     kind: AiToolKind.create,
     description:

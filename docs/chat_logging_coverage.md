@@ -49,6 +49,16 @@ are written by the Bills and Installments pages.
 Field parity is now complete except **custodian accounts** (§3) and the
 operations chat structurally cannot perform: **edit and delete**.
 
+**A second create path exists (Nudgy's `addTransaction` tool).** It is not a
+replacement for this one and is deliberately weaker: one entry per call, no
+context-stated-once, no learned dictionary, no receipt photos, and it refuses
+rather than guessing when the account or category does not resolve. It exists
+for entries that only became clear through the conversation — settling a bill
+the advisor just looked up, an amount worked out together — which never reach
+the pipeline above because the intercept in `AiCoachPresenter.send` only fires
+on text that already reads as a log. Anything a user simply types to be logged
+should go through this pipeline, not that tool.
+
 ---
 
 ## 2. Chat can do things the form cannot
@@ -71,7 +81,13 @@ is a shortcut rather than an exclusive.
 ## 3. The form can do things chat cannot
 
 - **Edit or delete.** Chat only ever creates. Every correction is a form trip.
-  This is structural, not a gap to close: a chat line names no existing row.
+  This was called structural on the grounds that a chat line names no existing
+  row. That reasoning no longer holds: Nudgy's tool loop reads rows with their
+  ids before it writes, which is exactly how it edits bills and set-asides. It
+  is a gap that has not been closed yet, not one that cannot be. Closing it
+  needs a correction-intent carve-out in the intercept first, or a phrase like
+  "change the coffee to 150" gets swallowed here and logged as a second entry
+  before any edit tool sees it.
 - **Custodian accounts.** The form offers them; chat's account pool excludes
   them, and deliberately so. Custodian accounts are usually named after people
   ("Jana's money"), and chat text mentions people constantly — putting them in

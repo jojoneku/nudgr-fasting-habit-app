@@ -29,6 +29,22 @@ const int _maxAccountSpanWords = 4;
 /// than a genuine list, so it's parsed as a single entry instead.
 const int _maxBatchSegments = 10;
 
+/// The accounts a chat surface may bind a spoken name to.
+///
+/// Only top-level, active accounts. Sub-accounts (savings pockets) and
+/// custodian holdings are excluded from chat logging — see Plan 026 §4 and
+/// `docs/chat_logging_coverage.md` §3. Custodian accounts are usually named
+/// after people ("Jana's money") and chat text mentions people constantly, so
+/// including them would resolve `spotted jana 800` to an account instead of a
+/// debtor.
+///
+/// Shared rather than inlined because Nudgy's `addTransaction` tool binds
+/// account names too, and two copies of this predicate would drift.
+List<FinancialAccount> chatEligibleAccounts(List<FinancialAccount> accounts) =>
+    accounts
+        .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
+        .toList();
+
 /// Resolves [input] using the account/category lists and the personal
 /// dictionary, returning a [PreparseResult] that may be:
 ///
@@ -61,11 +77,7 @@ PreparseResult preparseFinanceInput({
     return PreparseResult(rawInput: raw, hardError: FinanceParseError.tooLong);
   }
 
-  // Only consider top-level, active accounts. Sub-accounts (savings pockets)
-  // and custodian holdings are excluded from chat logging — see Plan 026 §4.
-  final activeAccounts = accounts
-      .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
-      .toList();
+  final activeAccounts = chatEligibleAccounts(accounts);
 
   // Pre-pass: lift the note, the dates and the beneficiary out before any
   // transaction pattern runs, so a date phrase can never be mistaken for an

@@ -47,3 +47,17 @@
 - [ ] 7.1 Add delete tools for all four entities, each requiring an id from a find.
 - [ ] 7.2 Delete confirmation card naming the row's identifying fields and the recurrence scope explicitly, with the narrow default (design D9). *Verify: widget test asserting the row is identified by more than its name, and that scope is never pre-widened.*
 - [ ] 7.3 Guardrail test: a delete proposal whose find returned multiple candidates cannot be confirmed without a disambiguation step.
+
+## 8. Phase 1b — transactions (shipped after phase 1)
+
+Added on request, out of the original phase order: the catalogue could create
+bills, receivables and set-asides but not the thing the ledger is actually made
+of. Creates only. Edit and delete stay with phases 6 and 7.
+
+- [x] 8.1 Add an `addTransaction` tool covering expense, income and transfer. Names, not ids, for accounts and categories, matching every other tool. No `applyToFuture`: a transaction is a single dated event with no series to spread across, so the card shows no scope choice. *Verified: the catalogue's existing invariant tests iterate every tool, so both invariants now cover this one too.*
+- [x] 8.2 Give the executor a `LedgerPresenter` and write through its mutators — `addTransaction`, `addTransfer`, `addReimbursableExpense` — never through a local copy (CLAUDE.md #8). Wired once in `TreasuryPresenters` (CLAUDE.md #9). *Verified: unit tests assert the resolved account and category ids land on the record, that a transfer books both legs under one group id, and that a reimbursable expense carries its payback link.*
+- [x] 8.3 Validate before the card rather than on it. A call missing its account or category has nothing to confirm, so it fails with the real names instead of rendering a blank field the user would be confirming on the model's behalf. *Verified: unit tests for an unnamed account with several to choose from, an unmatched name, an expense filed under an income category, a same-account transfer, a non-positive amount, and an unknown type.*
+- [x] 8.4 Put `TODAY: YYYY-MM-DD (Weekday)` in the advisor snapshot. Every other figure in it is relative, so the model had no anchor for the `date` argument and could not resolve "yesterday". The expense extractor has always been given the same line. *Verified: `AiCoachContext.asOfDate` is emitted as the snapshot's first line.*
+- [x] 8.5 Share the chat-eligible account pool (`chatEligibleAccounts`) between the preparser and the executor so the two cannot drift on which accounts a spoken name may bind to — sub-accounts and custodian accounts stay excluded from both.
+- [x] 8.6 Rewrite advisor rule 8 so it stops enumerating what the model cannot do. The catalogue is client-declared (design D10), so a prompt that names the missing operations goes stale the moment the catalogue grows — as it just did. The rule now points at the declared tool list as the whole of what is reachable. *Verified: the old "you still CANNOT create or edit transactions" sentence is gone.*
+- [ ] 8.7 The quick-log intercept in `AiCoachPresenter.send` still runs first and still only creates, so a correction ("change the coffee to 150") can be swallowed and logged as a second entry rather than reaching a future edit tool. Needs a correction-intent carve-out before phase 6 lands, or the edit tools will never be reached.

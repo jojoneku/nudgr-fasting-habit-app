@@ -1045,6 +1045,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       todayFat: n?.todayFat,
       monthBudget: _budget?.totalAllocated,
       monthSpent: _treasury?.monthTotalOutflow,
+      // The clock is read here rather than in the model: a model method that
+      // called DateTime.now() would be impure and untestable (CLAUDE.md #1).
+      asOfDate: isAdvisor
+          ? DateFormat('yyyy-MM-dd (EEEE)').format(DateTime.now())
+          : null,
       // Advisor-only rich snapshot (source of numeric truth for adviseFinance).
       forecastedNetBalance: isAdvisor ? t?.forecastedNetBalance : null,
       netWorth: isAdvisor ? t?.netWorth : null,

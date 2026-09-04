@@ -495,6 +495,16 @@ class AiCoachContext {
   /// Money spent so far today.
   final double? todaySpend;
 
+  /// Today's date as `YYYY-MM-DD (Weekday)`, or null outside the advisor.
+  ///
+  /// The snapshot is otherwise entirely relative ("due in 3 days", "this
+  /// month"), which left the advisor with no anchor for an absolute date. It
+  /// needs one to fill the `date` argument on a transaction it proposes: a
+  /// model that does not know today cannot resolve "yesterday", and guessing
+  /// files the entry on the wrong day. The expense extractor has always been
+  /// given the same line for the same reason.
+  final String? asOfDate;
+
   /// Net-worth change vs last month-end (absolute and as a fraction, 0.027 →
   /// +2.7%). Null when there's no prior month to compare.
   final double? netWorthMonthDelta;
@@ -565,6 +575,7 @@ class AiCoachContext {
     this.peakDaySpend,
     this.peakDayLabel,
     this.todaySpend,
+    this.asOfDate,
     this.netWorthMonthDelta,
     this.netWorthMonthDeltaPct,
     this.maturities = const [],
@@ -611,6 +622,9 @@ class AiCoachContext {
   String financeSnapshotSummary() {
     final buf = StringBuffer();
 
+    // First line, deliberately: every other figure below is stated relative to
+    // it, and a tool argument that names a date has to resolve against it.
+    if (asOfDate != null) buf.writeln('TODAY: $asOfDate');
     if (totalLiquidCash != null) {
       buf.writeln('Total liquid cash: ${_peso(totalLiquidCash!)}');
     }
