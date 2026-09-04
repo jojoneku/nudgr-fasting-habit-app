@@ -313,12 +313,18 @@ jobs:
       - name: Build APK
         if: steps.changes.outputs.changed == 'true'
         run: |
+          # AI_ADVISOR_ENDPOINT is the streaming advisor's Function URL, and
+          # it is a deliberate on/off switch. Unset, it compiles to an empty
+          # string and the advisor takes the buffered path it has always
+          # taken — so this is inert until the secret exists, and clearing
+          # the secret is a full rollback with no code change.
           flutter build apk --release \
             --build-number=${{ steps.meta.outputs.build_number }} \
             --build-name=${{ steps.meta.outputs.new_version }} \
             --dart-define=UPDATE_MANIFEST_URL=${{ steps.meta.outputs.manifest_url }} \
             --dart-define=APP_VERSION=${{ steps.meta.outputs.new_version }} \
-            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
+            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }} \
+            --dart-define=AI_ADVISOR_ENDPOINT=${{ secrets.AI_ADVISOR_ENDPOINT }}
 
       - name: Generate manifest.json
         if: steps.changes.outputs.changed == 'true'
@@ -640,7 +646,8 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           scripts/build_web.sh \
-            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
+            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }} \
+            --dart-define=AI_ADVISOR_ENDPOINT=${{ secrets.AI_ADVISOR_ENDPOINT }}
 
       - uses: google-github-actions/auth@v2
         if: steps.changes.outputs.changed == 'true'

@@ -396,9 +396,22 @@ class CloudAiCoachService implements AiCoachService {
   /// Shared by both transports so a 429 does not read as an outage on one and a
   /// limit on the other.
   AiCoachException _advisorHttpFailure(int status, String body) {
-    if (status == 401 || status == 403) {
+    // 401 is the advisor's own answer: it read the token and refused it.
+    if (status == 401) {
       return const AiCoachException(
           'Your session has expired. Sign in again to use the advisor.');
+    }
+    // 403 is NOT. Nothing in the advisor returns 403 — it answers a bad token
+    // with 401 — so a 403 came from the platform in front of it refusing the
+    // request before it arrived. Telling the user to sign in would send them to
+    // re-authenticate a session that is perfectly good, which is exactly the
+    // wrong place to look: the endpoint is misconfigured, not their account.
+    if (status == 403) {
+      debugPrint('CloudAiCoachService[adviseFinance] '
+          'endpoint refused the request (403): $body');
+      return const AiCoachException(
+          'The advisor endpoint is refusing requests. This is a '
+          'configuration problem on our side, not your account.');
     }
     if (status == 429) {
       return const AiCoachException(

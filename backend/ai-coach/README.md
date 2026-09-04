@@ -88,3 +88,52 @@ Supported `op` values: `respond`, `parseFoodWithCandidates`, `disambiguateFood`,
 ```json
 { "response": "After 8 hours fasted, break with protein + healthy fat first..." }
 ```
+
+## The streaming advisor (`food-advisor-stream`)
+
+`adviseFinance` runs on a **second function** with its own front door, because
+the HTTP API in front of `food-coach-handler` cannot stream: its maximum
+integration timeout is 30 seconds and AWS does not allow that to be raised. A
+turn that took 43s finished in Lambda, was billed in full by Bedrock, and was
+then discarded as a 504 the app reported as "the advisor had a hiccup on our
+end". The other four ops stay on the HTTP API — they finish well inside 30s.
+
+| | |
+|---|---|
+| Function | `food-advisor-stream` — ap-southeast-1, python3.12, **arm64**, 1024 MB, 45s |
+| Handler | `run.sh`, via `AWS_LAMBDA_EXEC_WRAPPER=/opt/bootstrap` |
+| Layer | `arn:aws:lambda:ap-southeast-1:753240598075:layer:LambdaAdapterLayerArm64:28` |
+| URL | `https://hwshru3edc3n7clcvv6p57x42u0wivou.lambda-url.ap-southeast-1.on.aws/` |
+| Route | `POST /v1/advisor` (everything else 404s — this is not a second coach API) |
+
+### Turning it on
+
+The app reads the URL from `AI_ADVISOR_ENDPOINT`. **Unset, the advisor uses the
+old buffered path** — so enabling and rolling back are both one value:
+
+1. Set the `AI_ADVISOR_ENDPOINT` repo secret to the URL above, with `/v1/advisor`.
+2. Push to `main`. Clearing the secret rolls back with no code change.
+
+### Three things that fail silently
+
+- **`AWS_LWA_INVOKE_MODE=response_stream` is required.** Without it the adapter
+  buffers and returns an API-Gateway-shaped body with `200` on the outside, so
+  every error reads as a success.
+- **Wheels must be built for `aarch64`** (`--platform manylinux2014_aarch64`).
+  The runner's x86 wheels import fine in CI and die on Lambda.
+- **`run.sh` must be LF and mode 0755.** With CRLF it fails at boot with `bad
+  interpreter: /bin/bash^M` and nothing in the log explains it. `.gitattributes`
+  pins `*.sh`; the packaging step sets the bit.
+
+### Known blocker: anonymous access is refused
+
+`AuthType: NONE` currently returns **403 before reaching the function**. The
+resource policy is correct, the account is not in an Organization, and flipping
+the same URL to `AWS_IAM` with a SigV4-signed request returns 200 and the app's
+real response — so only the anonymous path is refused. The account also sits at
+**10 Lambda concurrent executions** (default 1000), which is the same
+new-account restricted state.
+
+Needs AWS Support to allow public Function URLs on account `806880856566`. Until
+then, leave `AI_ADVISOR_ENDPOINT` unset: pointing the app at a 403 makes every
+advisor turn fail, which is worse than the timeout it replaces.
