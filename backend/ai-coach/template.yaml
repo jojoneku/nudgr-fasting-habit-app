@@ -52,17 +52,28 @@ Parameters:
       request access in the Bedrock console if you want to upgrade later.
   AdvisorMaxTokens:
     Type: Number
-    Default: 16000
+    Default: 3000
     Description: >
-      Max output tokens for the adviseFinance op. Every earlier value was a
-      ceiling the model kept hitting: 900 clipped answers mid-sentence, and
-      3000 was reached again once the advisor was given month-by-month history
-      to reason over — a per-category, per-month comparison legitimately runs
-      long, and a truncated table is worse than a short answer because it looks
-      complete. Sonnet 4.5 permits up to 64000, so 16000 is a real ceiling and
-      not a limit anyone should meet in a chat bubble. Billing follows tokens
-      ACTUALLY emitted, so raising it costs nothing on the short answers that
-      make up most turns.
+      Max output tokens for the adviseFinance op. This is a BACKSTOP, not the
+      answer-length budget: the real budget is stated to the model in the
+      FORMATTING section of _ADVISOR_SYSTEM_PREFIX (~900 words), because
+      max_tokens is a ceiling the model cannot see — it writes as though it has
+      unlimited room and is then cut mid-word. Telling it the limit is what
+      makes answers END; this number only decides what happens when it
+      overshoots anyway.
+      Why 3000 and not higher: adviseFinance is a blocking invoke_model behind
+      an AWS::Serverless::HttpApi, whose integration timeout is capped at 30s
+      and cannot be raised. The binding constraint is therefore wall-clock, not
+      tokens. 3000 is the largest value observed to complete inside that window
+      (answers were seen truncated AT 3000, so 3000 tokens were emitted and the
+      request still returned). Above it the failure mode flips from a clipped
+      answer to a 504 carrying nothing, which is strictly worse. Sonnet 4.5
+      permits 64000 and the general guidance for non-streaming calls is ~16000,
+      but that is sized for a 10-minute SDK timeout, not a 30-second gateway.
+      Raising this only becomes meaningful alongside
+      invoke_model_with_response_stream on a Lambda Function URL. Until then,
+      size it from the latency_ms and out_tokens now on every adviseFinance
+      cost_line.
       Production sets this env var directly (there is no stack) — see the
       warning at the top of this file.
 
