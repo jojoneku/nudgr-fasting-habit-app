@@ -13,6 +13,12 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.76] - 2026-09-04
+
+### Added
+- reach the streaming advisor through CloudFront
+- wire AI_ADVISOR_ENDPOINT, and stop 403 reading as a dead session
+
 ## [1.1.75] - 2026-09-04
 
 ### Added
@@ -750,7 +756,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.75...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.76...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -827,3 +833,4 @@ distributed via `manifest.json`.
 [1.1.73]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.73
 [1.1.74]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.74
 [1.1.75]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.75
+[1.1.76]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.76
