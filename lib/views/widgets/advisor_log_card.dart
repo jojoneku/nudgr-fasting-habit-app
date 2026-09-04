@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import '../../models/finance/finance_parse_result.dart';
 import '../../models/finance/transaction_record.dart';
 import '../../presenters/ledger_presenter.dart';
+import '../../presenters/finance_tool_executor.dart';
 import 'finance/entry_review_card.dart';
+import 'finance/finance_proposal_card.dart';
 
 /// Polished in-chat confirm/clarify card for logging an expense from the
 /// financial advisor conversation. Driven by [LedgerPresenter.chatState] — the
@@ -13,9 +15,13 @@ import 'finance/entry_review_card.dart';
 ///
 /// Collapses to nothing when the ledger chat is idle.
 class AdvisorLogCard extends StatelessWidget {
-  const AdvisorLogCard({super.key, required this.ledger});
+  const AdvisorLogCard({super.key, required this.ledger, this.proposals});
 
   final LedgerPresenter ledger;
+
+  /// Where a change Nudgy proposed waits for an answer. Null when this build
+  /// has no tool executor, in which case the card behaves exactly as before.
+  final FinanceProposalHost? proposals;
 
   static final _money = NumberFormat('#,##0.##', 'en_US');
 
@@ -26,10 +32,17 @@ class AdvisorLogCard extends StatelessWidget {
     final hardError = ledger.chatHardError;
     final step = state.lastStep;
 
+    final pending = proposals?.pending;
+
     Widget? body;
     if (hardError != null) {
       body = _Error(
           message: hardError.userMessage, onDismiss: ledger.clearChatHardError);
+    } else if (pending != null) {
+      // A pending proposal outranks the logging states: the tool loop is
+      // blocked on this answer, and nothing else in the chat can progress
+      // until the user gives one.
+      body = FinanceProposalCard(host: proposals!, action: pending);
     } else if (state.phase == ChatPhase.classifying) {
       body = _Thinking(cs: cs);
     } else if (state.entries.isNotEmpty) {

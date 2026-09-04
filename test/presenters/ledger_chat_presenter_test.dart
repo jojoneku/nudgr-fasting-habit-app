@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:intermittent_fasting/models/advisor_reply.dart';
+import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 // Presenter-level state machine tests for the chat-logging flow (Plan 026 §7).
 // Uses a FakeAiCoachService that replays a scripted sequence of
@@ -89,12 +91,14 @@ class FakeAiCoachService implements AiCoachService {
   }) async* {}
 
   @override
-  Stream<String> adviseFinance({
+  Future<AdvisorReply> adviseFinance({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
     String? profile,
     String? historical,
-  }) async* {}
+    List<AiTool> tools = const [],
+  }) async =>
+      const AdvisorReply();
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;

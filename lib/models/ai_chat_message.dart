@@ -18,6 +18,17 @@ class AiChatMessage {
   /// it's attached.
   final Uint8List? imageBytes;
 
+  /// Raw provider content blocks for this turn, used only by the tool loop:
+  /// an assistant turn holding a `tool_use`, or a user turn carrying the
+  /// matching `tool_result`.
+  ///
+  /// Kept verbatim rather than rebuilt from [text], because the `tool_use` ids
+  /// inside are what pair a result with the call it answers — a reconstructed
+  /// turn loses them. In-memory only and deliberately NOT persisted: a resumed
+  /// conversation should not replay a half-finished tool loop, and the ids
+  /// would be meaningless to a later turn anyway.
+  final List<Map<String, Object?>> contentBlocks;
+
   const AiChatMessage({
     required this.id,
     required this.role,
@@ -25,7 +36,32 @@ class AiChatMessage {
     required this.timestamp,
     this.isStreaming = false,
     this.imageBytes,
+    this.contentBlocks = const [],
   });
+
+  /// An assistant turn that asked to run tools. Carries the provider's blocks
+  /// so the next hop can replay it exactly.
+  factory AiChatMessage.assistantToolUse({
+    required String text,
+    required List<Map<String, Object?>> contentBlocks,
+  }) =>
+      AiChatMessage(
+        id: _generateId(),
+        role: AiChatRole.assistant,
+        text: text,
+        timestamp: DateTime.now(),
+        contentBlocks: contentBlocks,
+      );
+
+  /// A user turn carrying tool results back to the model.
+  factory AiChatMessage.toolResults(List<Map<String, Object?>> blocks) =>
+      AiChatMessage(
+        id: _generateId(),
+        role: AiChatRole.user,
+        text: '',
+        timestamp: DateTime.now(),
+        contentBlocks: blocks,
+      );
 
   static String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
@@ -68,6 +104,7 @@ class AiChatMessage {
         timestamp: timestamp,
         isStreaming: isStreaming ?? this.isStreaming,
         imageBytes: imageBytes,
+        contentBlocks: contentBlocks,
       );
 
   @override

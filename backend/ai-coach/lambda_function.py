@@ -146,6 +146,22 @@ def _check_rate_limit(token):
         return False, -1
 
 
+def _carries_tool_results(body):
+    """True when this request replays tool results, i.e. it continues a turn.
+
+    Used to meter the daily cap per user turn rather than per model call. See
+    the call site for why presence-of-tool-results is the identifying signal.
+    """
+    messages = ((body or {}).get("payload") or {}).get("messages") or []
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        for block in (m.get("content_blocks") or []):
+            if isinstance(block, dict) and block.get("type") == "tool_result":
+                return True
+    return False
+
+
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
@@ -163,8 +179,23 @@ def lambda_handler(event, context):
     if not user_id:
         return _resp(401, {"error": "unauthorized", "message": "Valid Bearer token required"})
 
+    try:
+        body = json.loads(event.get("body") or "{}")
+    except json.JSONDecodeError:
+        return _resp(400, {"error": "invalid_json", "message": "Body is not valid JSON"})
+
     # Per-user daily cap — prevents unbounded Bedrock billing.
-    allowed, count = _check_rate_limit(_get_bearer_token(event))
+    #
+    # Metered per USER TURN, not per model call. A tool-calling turn is several
+    # invocations (ask → tool_use → tool_result → answer), and counting each
+    # one would quietly cut a cap of 100 down to ~25 conversations a day.
+    #
+    # A continuation hop is identified by the request carrying tool results:
+    # the first hop of a turn never does, and every later hop always does. That
+    # is exact and needs no server state, which matters because there isn't any
+    # — the Lambda cannot remember which turns it has already counted.
+    allowed, count = (True, 0) if _carries_tool_results(body) \
+        else _check_rate_limit(_get_bearer_token(event))
     if not allowed:
         if count < 0:
             # Rate-limit check failed (transport/Supabase error). Retryable.
@@ -177,11 +208,6 @@ def lambda_handler(event, context):
             "error": "rate_limit_exceeded",
             "message": f"Daily limit of {_DAILY_CAP} AI requests reached. Try again tomorrow.",
         })
-
-    try:
-        body = json.loads(event.get("body") or "{}")
-    except json.JSONDecodeError:
-        return _resp(400, {"error": "invalid_json", "message": "Body is not valid JSON"})
 
     op = body.get("op")
     payload = body.get("payload", {})
@@ -837,14 +863,31 @@ def _enforce_alternation(messages):
         messages.pop(0)
     if not messages:
         return []
-    # Coalesce consecutive same-role turns by joining their content.
+    # Coalesce consecutive same-role turns by joining their content. Content is
+    # a plain string on ordinary turns and a list of content blocks on the
+    # tool-calling path (tool_use / tool_result), so joining has two cases —
+    # `+=` on a list of dicts would raise, and on a mixed pair would corrupt
+    # the turn. Tool loops alternate correctly on their own, so this is a
+    # guard rather than a hot path.
     result = [dict(messages[0])]
     for msg in messages[1:]:
-        if msg["role"] == result[-1]["role"]:
-            result[-1]["content"] += "\n" + msg["content"]
-        else:
+        if msg["role"] != result[-1]["role"]:
             result.append(dict(msg))
+            continue
+        prev, cur = result[-1]["content"], msg["content"]
+        if isinstance(prev, str) and isinstance(cur, str):
+            result[-1]["content"] = prev + "\n" + cur
+        else:
+            result[-1]["content"] = _as_blocks(prev) + _as_blocks(cur)
     return result
+
+
+def _as_blocks(content):
+    """Normalise a message's content to a list of Bedrock content blocks."""
+    if isinstance(content, list):
+        return content
+    text = (content or "").strip()
+    return [{"type": "text", "text": text}] if text else []
 
 
 def _respond(payload):
@@ -999,12 +1042,18 @@ _ADVISOR_SYSTEM_PREFIX = (
     "full is unused capacity, not toxic debt.\n"
     "7. If you realise you broke a rule mid-answer, output a line starting "
     "'> Correction:' with the corrected statement.\n"
-    "8. You CANNOT create, edit or delete transactions, bills, budgets or "
-    "accounts. Never state or imply that you have logged, added, recorded or "
-    "saved anything — you have not, and a user who believes you did will not "
-    "log it themselves. If asked to log an expense, say plainly that you will "
-    "hand it to the logger, and never present a table or summary of entries as "
-    "though they are now in the ledger.\n\n"
+    "8. When tools are available you may PROPOSE creating, editing or deleting "
+    "bills, receivables, set-asides and budgets by calling one. A proposal is "
+    "not a change: the user sees a confirmation card and decides. Never state "
+    "or imply that anything has been saved, added, recorded or logged until a "
+    "tool result comes back saying it was — a user who believes you saved "
+    "something will not save it themselves, and that is worse than not "
+    "offering. If a result says the user declined, accept it and ask what they "
+    "would prefer instead; do not re-propose the same thing. Recurrence scope "
+    "(this month vs. every future month) is never yours to set — the card asks "
+    "the user. You still CANNOT create or edit transactions or accounts: say "
+    "plainly that you will hand an expense to the logger, and never present a "
+    "table of entries as though they are already in the ledger.\n\n"
     "USING THE SNAPSHOT: it already carries past, present, and future figures — read the whole "
     "thing before saying you lack data. Present: liquid cash (with a per-account breakdown and any "
     "amount held for someone else), income received, savings & goals (with per-goal progress "
@@ -1147,11 +1196,18 @@ def _advise_finance(payload):
         )
     system_prompt = "\n\n".join(system_lines)
 
-    raw_messages = [
-        {"role": m["role"], "content": m.get("text", "")}
-        for m in messages
-        if m.get("text", "").strip()
-    ]
+    # A turn is kept if it carries text OR content blocks. The blocks path is
+    # the tool loop: an assistant turn holding a tool_use block usually has no
+    # text at all, and filtering on text alone would delete the very call that
+    # the next turn's tool_result answers — which Bedrock then rejects as an
+    # unmatched result.
+    raw_messages = []
+    for m in messages:
+        blocks = m.get("content_blocks")
+        if isinstance(blocks, list) and blocks:
+            raw_messages.append({"role": m["role"], "content": blocks})
+        elif (m.get("text") or "").strip():
+            raw_messages.append({"role": m["role"], "content": m["text"]})
     bedrock_messages = _enforce_alternation(raw_messages)
 
     if not bedrock_messages:
@@ -1178,6 +1234,16 @@ def _advise_finance(payload):
                 ]
                 break
 
+    # Tool definitions come from the CLIENT, not from this file. The client is
+    # what executes them — every tool acts on data that lives on the device and
+    # never arrives here in full — so the client is also what knows which tools
+    # its build supports. A catalogue hardcoded server-side would hand an old
+    # app a tool_use for a tool it cannot run on the next deploy. Nothing here
+    # is trusted from that list: the reply is only ever a proposal that the same
+    # client must confirm and carry out.
+    tools = payload.get("tools")
+    tools = tools if isinstance(tools, list) and tools else None
+
     started = time.monotonic()
     try:
         raw = _bedrock.invoke_model(
@@ -1189,11 +1255,28 @@ def _advise_finance(payload):
                 "max_tokens": _ADVISOR_MAX_TOKENS,
                 "system": system_prompt,
                 "messages": bedrock_messages,
+                **({"tools": tools} if tools else {}),
             }),
         )
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
-        response_text = result["content"][0]["text"].strip()
+
+        # Split the reply. A tool-calling turn returns text blocks, tool_use
+        # blocks, or both, so reading content[0] alone silently drops whichever
+        # came second. `assistant_content` goes back verbatim so the client can
+        # replay this exact turn on the next hop — a reconstructed one would not
+        # carry the tool_use ids the results have to pair with.
+        content = result.get("content") or []
+        response_text = "\n\n".join(
+            (b.get("text") or "").strip()
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "text"
+        ).strip()
+        tool_calls = [
+            {"id": b.get("id"), "name": b.get("name"), "input": b.get("input") or {}}
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "tool_use"
+        ]
 
         # The advisor is a single blocking call behind an HTTP API, which caps the
         # whole round trip at 30s. That makes latency_ms and out_tokens the two
@@ -1212,9 +1295,16 @@ def _advise_finance(payload):
             f"in_tokens={usage.get('input_tokens', -1)} "
             f"out_tokens={usage.get('output_tokens', -1)} "
             f"cache_read={usage.get('cache_read_input_tokens', 0)} "
-            f"latency_ms={elapsed_ms} stop={stop_reason}"
+            f"latency_ms={elapsed_ms} stop={stop_reason} "
+            f"tools={len(tools) if tools else 0} calls={len(tool_calls)} "
+            f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'}"
         )
-        return _resp(200, {"response": response_text, "truncated": truncated})
+        return _resp(200, {
+            "response": response_text,
+            "truncated": truncated,
+            "tool_calls": tool_calls,
+            "assistant_content": content,
+        })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)
         print(f"Bedrock error (adviseFinance) after {elapsed_ms}ms: {e}")

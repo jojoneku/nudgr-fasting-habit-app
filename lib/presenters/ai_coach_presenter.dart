@@ -7,6 +7,7 @@ import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_tool.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
@@ -14,6 +15,7 @@ import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
+import '../presenters/finance_tool_executor.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
@@ -23,6 +25,7 @@ import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
+import '../utils/finance_tool_catalogue.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
@@ -89,6 +92,24 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// channel.
   final ImageCompressor _imageCompressor;
 
+  /// Runs the tools Nudgy calls. **Nullable**: null means this build offers no
+  /// tools at all, and the advisor stays the read-only adviser it was. Tools
+  /// are only declared to the model when this is present, so the model can
+  /// never propose a change nothing is able to carry out.
+  final FinanceToolExecutor? _toolExecutor;
+
+  /// The proposal surface a confirm card binds to, when the injected executor
+  /// has one. Resolved here rather than type-tested inside a `build()`.
+  /// The cast is explicit because [FinanceProposalHost] is deliberately not a
+  /// subtype of [FinanceToolExecutor] — the two describe different audiences —
+  /// so Dart cannot promote across them.
+  FinanceProposalHost? get financeProposals {
+    final executor = _toolExecutor;
+    return executor is FinanceProposalHost
+        ? executor as FinanceProposalHost
+        : null;
+  }
+
   /// The user-curated advisor memory, injected into every advisor turn.
   AdvisorProfile _advisorProfile = AdvisorProfile.empty();
 
@@ -127,6 +148,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     StorageService? storage,
     AiCoachService? cloudFallback,
     ImageCompressor? imageCompressor,
+    FinanceToolExecutor? toolExecutor,
   })  : _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
@@ -137,6 +159,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _ledger = ledger,
         _storage = storage,
         _cloudFallback = cloudFallback,
+        _toolExecutor = toolExecutor,
         _imageCompressor = imageCompressor ?? const ImageCompressor(),
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
@@ -294,22 +317,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       final context = _buildContext(image: compressed);
       final buffer = StringBuffer();
 
-      final Stream<String> stream;
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-        // Advisor is cloud-only and uses the stronger-model op.
+        // Advisor is cloud-only, uses the stronger-model op, and may run a
+        // tool loop, so it does not share the token-stream path below.
         final cloud = _advisorService;
         if (cloud == null) {
           throw const AiCoachException(
               'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
         }
         _activeTier = AiCoachTier.cloud;
-        final historical = context.financeHistoricalSummary();
-        stream = cloud.adviseFinance(
-          messages: _userVisibleMessages(),
-          context: context,
-          profile: _advisorProfile.promptSummary(),
-          historical: historical.isEmpty ? null : historical,
-        );
+        await _runAdvisorTurn(cloud, context);
       } else {
         // Prefer the primary (on-device) service; fall back to the cloud tier
         // for this response when the primary isn't ready but the cloud is.
@@ -319,21 +336,21 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 ? _cloudFallback!
                 : _service;
         _activeTier = service.tier;
-        stream = service.respond(
+        final stream = service.respond(
           messages: _userVisibleMessages(),
           context: context,
           isThinking: _isThinkingEnabled,
         );
-      }
 
-      await for (final token in stream) {
-        if (isDisposed) break; // sheet dismissed mid-stream — stop updating
-        buffer.write(token);
-        _updateLastMessage(buffer.toString(), isStreaming: true);
-        safeNotify();
-      }
+        await for (final token in stream) {
+          if (isDisposed) break; // sheet dismissed mid-stream — stop updating
+          buffer.write(token);
+          _updateLastMessage(buffer.toString(), isStreaming: true);
+          safeNotify();
+        }
 
-      _updateLastMessage(buffer.toString(), isStreaming: false);
+        _updateLastMessage(buffer.toString(), isStreaming: false);
+      }
     } on AiCoachException catch (e) {
       // Typed failure from the service — the message already says exactly
       // what went wrong (connection vs auth vs rate-limit vs server error).
@@ -351,6 +368,105 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _persistAdvisor();
       }
       safeNotify();
+    }
+  }
+
+  /// Model round trips allowed inside one user turn.
+  ///
+  /// A runaway loop is the standard failure of this pattern, and the user pays
+  /// for it in latency and in daily cap. Five is a starting value, not a
+  /// measured one.
+  static const int maxToolHops = 5;
+
+  /// Run one advisor turn, including any tool loop it asks for.
+  ///
+  /// The transcript sent to the model is local to this turn rather than
+  /// appended to [_messages]: tool_use and tool_result turns are protocol, not
+  /// conversation, and rendering them as chat bubbles would show the user
+  /// plumbing. They also must not be persisted — a resumed conversation
+  /// replaying a half-finished tool loop would carry tool ids that mean
+  /// nothing to a later turn.
+  Future<void> _runAdvisorTurn(
+      AiCoachService cloud, AiCoachContext context) async {
+    final historical = context.financeHistoricalSummary();
+    final transcript = _userVisibleMessages();
+    // Tools are offered only when something can actually run them. Declaring
+    // them with no executor would let the model propose changes that silently
+    // never happen, which is worse than not offering.
+    final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
+
+    for (var hop = 1; hop <= maxToolHops; hop++) {
+      final reply = await cloud.adviseFinance(
+        messages: transcript,
+        context: context,
+        profile: _advisorProfile.promptSummary(),
+        historical: historical.isEmpty ? null : historical,
+        tools: tools,
+      );
+      if (isDisposed) return;
+
+      if (!reply.wantsTools) {
+        _updateLastMessage(reply.text, isStreaming: false);
+        return;
+      }
+
+      // Show any prose the model wrote alongside its tool calls, so the user
+      // is not left watching an idle spinner while the tools run.
+      if (reply.text.isNotEmpty) {
+        _updateLastMessage(reply.text, isStreaming: true);
+        safeNotify();
+      }
+
+      if (hop == maxToolHops) {
+        // Out of hops with a tool call still pending. Say so rather than
+        // leaving the last partial thought looking like a finished answer.
+        _updateLastMessage(
+          reply.text.isEmpty
+              ? "I couldn't finish that one. Try asking for one change at a time."
+              : "${reply.text}\n\n_I couldn't finish that one. Try asking for "
+                  "one change at a time._",
+          isStreaming: false,
+        );
+        return;
+      }
+
+      transcript.add(AiChatMessage.assistantToolUse(
+        text: reply.text,
+        contentBlocks: reply.assistantContent,
+      ));
+
+      final results = <Map<String, Object?>>[];
+      for (final call in reply.toolCalls) {
+        final result = await _runTool(call);
+        if (isDisposed) return;
+        results.add(result.toContentBlock());
+      }
+      transcript.add(AiChatMessage.toolResults(results));
+    }
+  }
+
+  /// Dispatch one tool call. Reads run; mutations become proposals.
+  Future<AiToolResult> _runTool(AiToolCall call) async {
+    final executor = _toolExecutor;
+    if (executor == null) {
+      return AiToolResult.failed(
+          call.id, 'Tools are unavailable in this session.');
+    }
+    final tool = financeToolNamed(call.name);
+    if (tool == null) {
+      // The model named something that is not in the catalogue it was given.
+      // Say so plainly instead of guessing at an intent.
+      return AiToolResult.failed(
+          call.id, 'There is no tool called "${call.name}".');
+    }
+    try {
+      return tool.mutates
+          ? await executor.propose(call)
+          : await executor.runRead(call);
+    } catch (e) {
+      debugPrint('AiCoachPresenter tool ${call.name} failed: $e');
+      return AiToolResult.failed(
+          call.id, 'That did not go through. Nothing was changed.');
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -59,6 +60,13 @@ class TreasuryPresenters {
   final InstallmentPresenter installments;
   final GroceryCartPresenter groceryCart;
 
+  /// Runs the tools Nudgy calls. Owns nothing: reads come off [bills] and
+  /// [budget], and every write goes back through their mutators.
+  ///
+  /// Assembled here rather than in a shell because it needs two owners at once,
+  /// and building it by hand in each shell is how mobile and web drift apart.
+  final FinanceActionsExecutor financeActions;
+
   TreasuryPresenters._({
     required this.monthScope,
     required this.ledger,
@@ -68,6 +76,7 @@ class TreasuryPresenters {
     required this.history,
     required this.installments,
     required this.groceryCart,
+    required this.financeActions,
   });
 
   /// Builds the graph.
@@ -140,6 +149,7 @@ class TreasuryPresenters {
         monthScope: scope,
       ),
       groceryCart: GroceryCartPresenter(storage, ledger: ledger),
+      financeActions: FinanceActionsExecutor(bills: bills, budget: budget),
     );
   }
 
