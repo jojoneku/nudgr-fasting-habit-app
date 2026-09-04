@@ -13,6 +13,19 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.74] - 2026-09-04
+
+### Added
+- the confirm card, and the recurrence-scope control
+- the finance tool executor, wired into the graph
+- the client-side tool loop
+- the finance tool catalogue, declared as data
+- tool calling on adviseFinance, MCP-shaped catalogue
+
+### Fixed
+- give the advisor its own transport timeout
+- give the model its length budget, and stop hiding truncation
+
 ## [1.1.73] - 2026-09-04
 
 - Maintenance and internal improvements.
@@ -724,7 +737,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.73...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.74...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -799,3 +812,4 @@ distributed via `manifest.json`.
 [1.1.71]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.71
 [1.1.72]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.72
 [1.1.73]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.73
+[1.1.74]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.74
