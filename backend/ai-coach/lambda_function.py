@@ -1149,6 +1149,74 @@ def _clip(value, cap, label):
     return text
 
 
+# ── Prompt caching ───────────────────────────────────────────────────────────────────
+#
+# The advisor re-sends its whole prompt every turn: the system prefix, the
+# snapshot, the historical record, the tool catalogue, and the full conversation
+# so far. That reached 28k input tokens by turn 37 of a real chat, reprocessed
+# from scratch each time, and pushed latency past 30s — which the API Gateway
+# integration timeout turns into a 504 the user reads as "the advisor had a
+# hiccup". Caching the stable prefix is what makes a long conversation stop
+# getting slower the longer it runs.
+#
+# Two breakpoints, because two different things are stable for different
+# reasons:
+#
+#   1. tools + system. Bedrock's cache prefix runs tools -> system -> messages,
+#      so a breakpoint at the end of the system block also covers the tool
+#      catalogue ahead of it. This is the big one: the snapshot and historical
+#      record are most of the prompt and change only when the ledger does.
+#   2. The conversation up to the second-to-last user turn. The newest turn is
+#      deliberately left outside so the prefix that gets cached is the part that
+#      will still be a prefix next turn — cache turn N-2 now, read it back and
+#      cache N-1 on the following call. Marking the newest turn instead would
+#      write a cache entry that the next message immediately invalidates.
+#
+# Entries live ~5 minutes and are billed at 1.25x on write, 0.1x on read, so a
+# back-and-forth conversation — every turn inside the previous turn's TTL — is
+# both faster and cheaper. A one-off question pays the write and reads nothing;
+# that is the intended trade.
+_CACHE_CONTROL = {"type": "ephemeral"}
+
+
+def _cached_system(system_prompt):
+    """The system prompt as a single cacheable block."""
+    return [{"type": "text", "text": system_prompt, "cache_control": _CACHE_CONTROL}]
+
+
+def _mark_conversation_cache(bedrock_messages):
+    """Put a cache breakpoint at the end of the second-to-last user turn.
+
+    Mutates and returns `bedrock_messages`. A turn's content may be a bare
+    string (the common case) or a list of blocks (the tool loop, and any turn
+    carrying an image); `cache_control` only goes on a block, so a string turn
+    is promoted to one text block first.
+
+    No-ops when there is only one user turn — there is no prefix worth caching
+    yet, and the system block already carries its own breakpoint.
+    """
+    user_positions = [
+        i for i, m in enumerate(bedrock_messages) if m.get("role") == "user"
+    ]
+    if len(user_positions) < 2:
+        return bedrock_messages
+
+    target = bedrock_messages[user_positions[-2]]
+    content = target.get("content")
+    if isinstance(content, str):
+        content = [{"type": "text", "text": content}]
+        target["content"] = content
+    if not isinstance(content, list) or not content:
+        return bedrock_messages
+
+    # The LAST block of the turn — a breakpoint marks the end of a prefix, so on
+    # an image turn it has to sit after the image, not before it.
+    last = content[-1]
+    if isinstance(last, dict):
+        last["cache_control"] = _CACHE_CONTROL
+    return bedrock_messages
+
+
 def _advise_finance(payload):
     """Financial advisor chat (Plan: ai-financial-advisor).
 
@@ -1253,8 +1321,8 @@ def _advise_finance(payload):
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": system_prompt,
-                "messages": bedrock_messages,
+                "system": _cached_system(system_prompt),
+                "messages": _mark_conversation_cache(bedrock_messages),
                 **({"tools": tools} if tools else {}),
             }),
         )
@@ -1281,9 +1349,14 @@ def _advise_finance(payload):
         # The advisor is a single blocking call behind an HTTP API, which caps the
         # whole round trip at 30s. That makes latency_ms and out_tokens the two
         # numbers that decide what _ADVISOR_MAX_TOKENS can safely be — without them
-        # the ceiling can only be guessed at. cache_read_input_tokens is 0 until
-        # prompt caching is turned on; it is logged now so the before/after is
-        # visible when it is.
+        # the ceiling can only be guessed at.
+        #
+        # cache_read + cache_write are how you tell whether the caching above is
+        # actually working. A healthy back-and-forth reads most of its input from
+        # cache: cache_read climbing while in_tokens stays small is the win. Both
+        # sitting at 0 on a long conversation means the prefix is being
+        # invalidated every turn — check whether the snapshot text is stable
+        # before blaming the model.
         usage = result.get("usage") or {}
         stop_reason = result.get("stop_reason")
         truncated = stop_reason == "max_tokens"
@@ -1295,6 +1368,7 @@ def _advise_finance(payload):
             f"in_tokens={usage.get('input_tokens', -1)} "
             f"out_tokens={usage.get('output_tokens', -1)} "
             f"cache_read={usage.get('cache_read_input_tokens', 0)} "
+            f"cache_write={usage.get('cache_creation_input_tokens', 0)} "
             f"latency_ms={elapsed_ms} stop={stop_reason} "
             f"tools={len(tools) if tools else 0} calls={len(tool_calls)} "
             f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'}"
