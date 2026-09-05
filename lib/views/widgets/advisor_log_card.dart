@@ -42,7 +42,13 @@ class AdvisorLogCard extends StatelessWidget {
       // A pending proposal outranks the logging states: the tool loop is
       // blocked on this answer, and nothing else in the chat can progress
       // until the user gives one.
-      body = FinanceProposalCard(host: proposals!, action: pending);
+      // Keyed by proposal, so the next one in a run gets its own State rather
+      // than inheriting the previous card's "busy" and recurrence choice.
+      body = FinanceProposalCard(
+        key: ValueKey(pending.call.id),
+        host: proposals!,
+        action: pending,
+      );
     } else if (state.phase == ChatPhase.classifying) {
       body = _Thinking(cs: cs);
     } else if (state.entries.isNotEmpty) {
