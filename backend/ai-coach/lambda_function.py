@@ -189,12 +189,34 @@ def verify_supabase_token(token):
     return claims
 
 
+# The header the app puts its Supabase token in when it comes via CloudFront.
+#
+# It cannot use `Authorization`. CloudFront's OAC signs origin requests by
+# WRITING that header — the SigV4 signature goes there — so whatever the viewer
+# sent is overwritten before it reaches us, and the function sees no token at
+# all. (OAC's "do not override authorization header" setting does not help: it
+# preserves the viewer header by not signing, and then Lambda rejects the
+# request instead.)
+#
+# So the token travels beside the signature rather than in place of it.
+_TOKEN_HEADER = "x-nudgr-authorization"
+
+
 def bearer_token_from_headers(headers):
-    """Return the raw Bearer token from a plain header mapping, or ''."""
+    """Return the caller's Supabase bearer token, or ''.
+
+    Checks the CloudFront-safe header first, then `Authorization` for the paths
+    that still use it — the API Gateway ops, and a Function URL called directly.
+    """
     headers = headers or {}
-    auth = headers.get("authorization") or headers.get("Authorization") or ""
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
+    for name in (_TOKEN_HEADER, "authorization", "Authorization"):
+        value = headers.get(name) or ""
+        if value.lower().startswith("bearer "):
+            return value[7:].strip()
+        if name == _TOKEN_HEADER and value.strip():
+            # Tolerate a bare token in our own header; the "Bearer " prefix is
+            # a convention of Authorization, not a requirement here.
+            return value.strip()
     return ""
 
 
