@@ -30,15 +30,22 @@ class _RecordingExecutor implements FinanceToolExecutor {
   final List<String> reads = [];
   final List<String> proposals = [];
 
+  /// Called while the tool is "running", before it answers. The status strip
+  /// only exists to describe this window, so a test cannot check it from the
+  /// outside — it has to look from in here.
+  void Function()? onCall;
+
   @override
   Future<AiToolResult> runRead(AiToolCall call) async {
     reads.add(call.name);
+    onCall?.call();
     return AiToolResult(toolUseId: call.id, ok: true, summary: 'found 1 match');
   }
 
   @override
   Future<AiToolResult> propose(AiToolCall call) async {
     proposals.add(call.name);
+    onCall?.call();
     return declineProposals
         ? AiToolResult.declined(call.id)
         : AiToolResult(toolUseId: call.id, ok: true, summary: 'saved');
@@ -213,6 +220,47 @@ void main() {
     // that silently never happen.
     expect(capturedTools(), isEmpty);
     expect(p.messages.last.text, 'Here is my read.');
+    p.dispose();
+  });
+
+  test('a running read names itself while the user waits', () async {
+    // The gap this covers: the model has already written "let me check", so
+    // the bubble's own thinking label is gone, and the next thing on screen is
+    // a whole round trip away. Silence there reads as a hang.
+    scriptReplies([
+      _toolTurn('findBills', text: 'Let me look at your bills.'),
+      const AdvisorReply(text: 'You have three due this week.'),
+    ]);
+    final executor = _RecordingExecutor();
+    final p = build(executor: executor);
+    String? statusDuringTool;
+    executor.onCall = () => statusDuringTool = p.advisorStatus;
+
+    await p.send('what bills do I have?');
+
+    expect(statusDuringTool, 'Checking your bills…');
+    // And it goes away with the turn, so nothing spins over a finished answer.
+    expect(p.advisorStatus, isNull);
+    p.dispose();
+  });
+
+  test('a pending proposal reports no status — the card speaks for itself',
+      () async {
+    scriptReplies([
+      _toolTurn('addBill', text: 'Sure, adding that.'),
+      const AdvisorReply(text: 'Done.'),
+    ]);
+    final executor = _RecordingExecutor();
+    final p = build(executor: executor);
+    String? statusDuringTool;
+    executor.onCall = () => statusDuringTool = p.advisorStatus;
+
+    await p.send('add my internet bill, 999, due the 15th');
+
+    expect(executor.proposals, ['addBill']);
+    // A spinner next to a card asking a question would be two things competing
+    // to explain the same moment.
+    expect(statusDuringTool, isNull);
     p.dispose();
   });
 
