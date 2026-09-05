@@ -134,6 +134,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final List<AdvisorConversation> _conversations = [];
   String? _currentConversationId;
   bool _isResponding = false;
+
+  /// What Nudgy is doing right now, in the user's own words, or null when
+  /// nothing needs saying.
+  ///
+  /// The empty streaming bubble already carries a "thinking" label, but it
+  /// stops the moment the model writes its first word — and a tool-calling
+  /// turn writes its prose FIRST ("sure, I can add that") and then goes quiet
+  /// for another whole round trip while the tools run and the next hop is
+  /// fetched. That silence is what read as a frozen app: a finished-looking
+  /// reply, an input bar disabled for reasons nothing explained, and no sign
+  /// that a confirm card was still on its way.
+  String? _advisorStatus;
   bool _isThinkingEnabled = false;
   bool _isInitializing = true;
   String? _errorMessage;
@@ -185,6 +197,30 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   bool get isInitializing => _isInitializing;
   AiCoachTier get activeTier => _activeTier;
   AiCoachEntryPoint get entryPoint => _entryPoint;
+
+  /// Placeholder for the input bar, which is disabled for three quite
+  /// different reasons and used to blame all of them on the model not being
+  /// ready. Mid-turn that is simply untrue, and it is the reading that made a
+  /// working advisor look broken.
+  String get inputHint {
+    if (_isInitializing) return 'Getting ready…';
+    if (_isResponding) return 'Nudgy is working…';
+    if (!isModelAvailable) return 'Coach not ready…';
+    return 'Ask your coach…';
+  }
+
+  /// A line describing work in flight, for the status strip under the chat.
+  /// Gated on [isResponding] so it can never outlive the turn that set it.
+  ///
+  /// A retry outranks whatever else was being said. [isRetryingAdvisor] has
+  /// existed since retries were added and nothing ever read it, so a dropped
+  /// connection silently restarted the answer with the user watching a spinner
+  /// that had, as far as they could tell, been going the whole time.
+  String? get advisorStatus {
+    if (!_isResponding) return null;
+    if (isRetryingAdvisor) return 'Connection hiccup — trying again…';
+    return _advisorStatus;
+  }
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
 
@@ -440,6 +476,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       debugPrint('AiCoachPresenter.send error: $e');
     } finally {
       _isResponding = false;
+      _advisorStatus = null;
       _trimHistory();
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
         _persistAdvisor();
@@ -471,6 +508,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
+    // The first hop needs no strip: the bubble is empty, so its own thinking
+    // label is on screen. The strip is for after the model has written words.
+    _advisorStatus = null;
 
     for (var hop = 1; hop <= maxToolHops; hop++) {
       final reply = await _streamAdvisorHopWithRetries(
@@ -514,12 +554,45 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
       final results = <Map<String, Object?>>[];
       for (final call in reply.toolCalls) {
+        // Named before the call, not after: this is the stretch with nothing
+        // else on screen, and the whole point is to say what is taking time
+        // while it takes it.
+        _advisorStatus = _statusFor(call);
+        safeNotify();
         final result = await _runTool(call);
         if (isDisposed) return;
         results.add(result.toContentBlock());
       }
       transcript.add(AiChatMessage.toolResults(results));
+      // Tools are done; the next hop is another round trip of silence.
+      _advisorStatus = _workingStatus;
+      safeNotify();
     }
+  }
+
+  /// Shown between hops, when the model is being asked again and has not yet
+  /// started writing.
+  static const _workingStatus = 'Working on it…';
+
+  /// What to say while [call] runs.
+  ///
+  /// A mutation says nothing: it puts a confirm card on screen, and the card is
+  /// a better answer to "what is happening" than any status line. A read says
+  /// which of the user's own lists it is going through, so the wait reads as
+  /// work rather than as a hang.
+  static String? _statusFor(AiToolCall call) {
+    if (financeToolNamed(call.name)?.mutates ?? false) return null;
+    switch (call.name) {
+      case 'findBills':
+        return 'Checking your bills…';
+      case 'findReceivables':
+        return "Checking what you're owed…";
+      case 'findSetAsides':
+        return 'Checking your set-asides…';
+      case 'findBudgets':
+        return 'Checking your budgets…';
+    }
+    return 'Looking that up…';
   }
 
   /// How many times a single advisor hop is attempted before giving up.
@@ -643,6 +716,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           case AdvisorEventKind.start:
             break;
           case AdvisorEventKind.delta:
+            // Words are arriving, so the strip has nothing left to explain.
+            _advisorStatus = null;
             buffer.write(event.text);
             _updateLastMessage(buffer.toString(), isStreaming: true);
             safeNotify();

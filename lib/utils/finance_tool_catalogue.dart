@@ -28,8 +28,10 @@ const List<AiTool> kFinanceTools = [
     kind: AiToolKind.read,
     description:
         'Find bills matching a phrase, with their ids. Call this before '
-        'editing or deleting a bill, and to check whether one already exists '
-        'before adding it.',
+        'editing or deleting a bill. Do NOT call it before adding one: the '
+        'snapshot already lists this month\'s bills, and a search the user '
+        'did not ask for costs them a whole extra round trip of waiting '
+        'before the confirm card appears.',
     inputSchema: {
       'type': 'object',
       'properties': {
@@ -95,9 +97,11 @@ const List<AiTool> kFinanceTools = [
     name: 'addBill',
     kind: AiToolKind.create,
     description:
-        'Propose a new bill (money the user owes and will pay). The user '
-        'confirms before anything is saved. Search first if it might already '
-        'exist.',
+        'Propose a new bill (money the user owes and will pay). Call this as '
+        'soon as you have a name, an amount and a due day — do not ask '
+        'permission in prose first, because calling it IS how the user is '
+        'asked: they get a confirmation card and nothing is saved until they '
+        'accept it.',
     inputSchema: {
       'type': 'object',
       'required': ['name', 'amount', 'dueDay'],
@@ -132,7 +136,9 @@ const List<AiTool> kFinanceTools = [
     kind: AiToolKind.create,
     description:
         'Propose a new receivable (money owed TO the user, expected to come '
-        'in). The user confirms before anything is saved.',
+        'in). Call it as soon as you have a name and an amount — the '
+        'confirmation card is how the user is asked, so asking in prose first '
+        'only makes them wait.',
     inputSchema: {
       'type': 'object',
       'required': ['name', 'amount'],
@@ -155,7 +161,9 @@ const List<AiTool> kFinanceTools = [
     description:
         'Propose setting money aside for a purpose — savings, a goal such as '
         'braces, a sinking fund. This is a transfer between the user\'s own '
-        'accounts, never spending. The user confirms before anything is saved.',
+        'accounts, never spending. Call it as soon as you have a name, an '
+        'amount and a type — the confirmation card is how the user is asked, '
+        'so asking in prose first only makes them wait.',
     inputSchema: {
       'type': 'object',
       'required': ['name', 'amount', 'type'],
