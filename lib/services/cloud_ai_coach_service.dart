@@ -341,6 +341,13 @@ class CloudAiCoachService implements AiCoachService {
         // Harmless if the endpoint is ever pointed straight at a Function URL —
         // it is then just an unread header.
         ..headers['x-amz-content-sha256'] = payloadHash(body)
+        // The Supabase token rides in its OWN header, not Authorization.
+        // CloudFront's OAC signs origin requests by writing Authorization, so a
+        // token placed there is overwritten at the edge and the advisor sees no
+        // token at all — which surfaces as "your session has expired" on a
+        // perfectly good session. _headers still sets Authorization for the
+        // direct paths; this is the copy that survives the signing.
+        ..headers['x-nudgr-authorization'] = _headers['Authorization'] ?? ''
         ..body = body;
 
       final response = await client

@@ -158,6 +158,15 @@ Two resource-policy statements are required, not one: `lambda:InvokeFunctionUrl`
 scoped by `AWS:SourceArn` to this distribution. With only the first, requests
 fail with Lambda's generic "Forbidden" and look identical to the account block.
 
+**The token cannot travel in `Authorization`.** OAC signs origin requests by
+*writing* that header — the SigV4 signature goes there — so a Supabase token
+placed in it is overwritten at the edge and the advisor sees no token at all,
+which surfaces to the user as "your session has expired" on a perfectly good
+session. The token therefore rides in **`x-nudgr-authorization`**, beside the
+signature rather than in place of it. (OAC's "do not override authorization
+header" setting is not a way out: it preserves the viewer header by not signing,
+and then Lambda rejects the request instead.)
+
 **The client must send `x-amz-content-sha256`.** CloudFront signs headers but
 not the body, and per AWS: *"If you use PUT or POST methods with your Lambda
 function URL, your users must compute the SHA256 of the body and include the

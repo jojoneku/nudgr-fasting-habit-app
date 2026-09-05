@@ -44,7 +44,10 @@ _ALLOWED_ORIGINS = (
     "https://nudgr-app.web.app",
     "https://nudgr-app.firebaseapp.com",
 )
-_CORS_HEADERS = "authorization,content-type"
+# x-nudgr-authorization carries the Supabase token (CloudFront overwrites
+# Authorization with its own signature); x-amz-content-sha256 is the body
+# hash OAC requires the caller to supply.
+_CORS_HEADERS = ("authorization,content-type,x-nudgr-authorization,x-amz-content-sha256")
 
 _ADVISOR_PATH = "/v1/advisor"
 
