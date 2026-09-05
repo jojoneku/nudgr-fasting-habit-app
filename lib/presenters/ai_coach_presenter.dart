@@ -221,6 +221,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     if (isRetryingAdvisor) return 'Connection hiccup — trying again…';
     return _advisorStatus;
   }
+
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
 
