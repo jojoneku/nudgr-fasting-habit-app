@@ -173,6 +173,34 @@ def test_bearer_token_extraction():
     assert lf.bearer_token_from_headers(None) == ""
 
 
+def test_the_cloudfront_safe_header_is_read():
+    # Requests through CloudFront cannot carry the token in Authorization: OAC
+    # overwrites that header with its own SigV4 signature, so a token placed
+    # there never arrives and the caller is told their session expired.
+    assert lf.bearer_token_from_headers(
+        {"x-nudgr-authorization": "Bearer abc"}) == "abc"
+    # A bare token is accepted here; the "Bearer " prefix is an Authorization
+    # convention, not a requirement of our own header.
+    assert lf.bearer_token_from_headers({"x-nudgr-authorization": "abc"}) == "abc"
+
+
+def test_the_cloudfront_header_wins_over_a_signature_in_authorization():
+    # This is the real shape of a CloudFront request: our header holds the
+    # user's token, Authorization holds CloudFront's signature. Reading
+    # Authorization first would try to verify the signature as a JWT.
+    headers = {
+        "x-nudgr-authorization": "Bearer user-token",
+        "authorization": "AWS4-HMAC-SHA256 Credential=AKIA.../s3/aws4_request",
+    }
+    assert lf.bearer_token_from_headers(headers) == "user-token"
+
+
+def test_authorization_still_works_without_the_new_header():
+    # The API Gateway ops and a directly-called Function URL still use it.
+    assert lf.bearer_token_from_headers(
+        {"authorization": "Bearer legacy"}) == "legacy"
+
+
 # ── The gateway path must be untouched ───────────────────────────────────────
 
 def test_gateway_authorizer_claims_still_win():
