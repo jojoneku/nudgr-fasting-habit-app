@@ -19,6 +19,7 @@ import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
+import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 /// Field the ledger list is ordered by (reference "Filter & sort" sheet).
@@ -1101,10 +1102,41 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
-    final exists = _accounts.any((a) => a.id == account.id);
+    final previous = _accounts.where((a) => a.id == account.id).firstOrNull;
+    final incoming = reconcileGoalStamps(account, previous, DateTime.now());
+    final exists = _accounts.any((a) => a.id == incoming.id);
     _accounts = exists
-        ? [for (final a in _accounts) a.id == account.id ? account : a]
-        : [..._accounts, account];
+        ? [for (final a in _accounts) a.id == incoming.id ? incoming : a]
+        : [..._accounts, incoming];
+    _stampFundedGoals();
+    safeNotify();
+    await _storage.saveAccounts(_accounts);
+  }
+
+  /// Marks a funded goal as spent on what it was for. Explicit user action only
+  /// — see [redeemGoal].
+  Future<void> markGoalRedeemed(String accountId, {double? amount}) async {
+    final now = DateTime.now();
+    _accounts = [
+      for (final a in _accounts)
+        if (a.id == accountId) redeemGoal(a, now, amount: amount) else a,
+    ];
+    safeNotify();
+    await _storage.saveAccounts(_accounts);
+  }
+
+  /// Starts a completed goal over against a fresh target, keeping the account
+  /// (and therefore its whole transaction history) intact.
+  Future<void> restartGoalAccount(String accountId,
+      {required double newTarget}) async {
+    final now = DateTime.now();
+    _accounts = [
+      for (final a in _accounts)
+        if (a.id == accountId) restartGoal(a, now, newTarget: newTarget) else a,
+    ];
+    // A restart onto a target the balance already clears is funded immediately;
+    // nothing else would stamp it until the next transaction.
+    _stampFundedGoals();
     safeNotify();
     await _storage.saveAccounts(_accounts);
   }
@@ -2399,6 +2431,38 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         else
           a,
     ];
+    _stampFundedGoals();
+  }
+
+  /// XP for fully funding a savings goal. Sized against the other Treasury
+  /// award (50 for clearing a month of bills) — months of setting money aside
+  /// is at least that.
+  static const int _kGoalFundedXp = 50;
+
+  /// Records the moment a goal first reaches its target, and pays out for it.
+  ///
+  /// Hangs off [_applyBalanceDelta] because that is the single choke point every
+  /// balance change flows through, so no funding route can miss it. The rule
+  /// itself lives in `goal_lifecycle.dart`, shared with the dashboard presenter.
+  ///
+  /// The award needs no `_awardedXpKeys` bookkeeping: the stamp is write-once
+  /// per cycle, so "newly stamped" already means "not paid for yet". Restarting
+  /// a goal clears the stamp and can earn it again, which is correct — that is
+  /// a second goal reached, not the same one re-counted.
+  void _stampFundedGoals() {
+    final now = DateTime.now();
+    final before = {
+      for (final a in _accounts)
+        if (a.goalFundedAt != null) a.id,
+    };
+    _accounts = [for (final a in _accounts) stampIfFunded(a, now)];
+    final newlyFunded = _accounts
+        .where((a) => a.goalFundedAt != null && !before.contains(a.id))
+        .length;
+    if (newlyFunded > 0) {
+      // ignore: unawaited_futures
+      _stats.addXp(_kGoalFundedXp * newlyFunded);
+    }
   }
 
   void _reverseBalanceDelta(

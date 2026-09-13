@@ -564,31 +564,20 @@ jobs:
             --no-cli-pager
           aws lambda wait function-updated \
             --function-name food-advisor-stream
-          # Wall clock is what actually bounds an advisor turn, and this is the
-          # ceiling. At the console-set 45s a long answer was still being
-          # generated when the function was killed: the stream stopped with no
-          # terminator, which the app is required to treat as a failure, so it
-          # wiped the prose already on screen and re-generated the whole answer
-          # into the same 45s ceiling — three times, billed three times, then
-          # "connection hiccup" and nothing to show.
+          # CODE ONLY — deliberately. The advisor's wall-clock timeout is what
+          # actually bounds a long turn, and it is tempting to set it here so it
+          # cannot drift. It does not work: `github-ci-lambda-deploy` is scoped
+          # to update-function-code, so an added update-function-configuration
+          # call fails with AccessDeniedException and takes the whole deploy job
+          # down with it — including the smoke test below, which is the part
+          # that catches silent breakage. Tried on 2026-09-11, reverted the same
+          # day.
           #
-          # 120s matches CloudAiCoachService.advisorTimeoutSeconds, the client's
-          # own ceiling, which must stay the higher of the two (a client that
-          # gives up first reports a connection error while the backend is still
-          # working happily). ADVISOR_STREAM_BUDGET_SEC (100s) stops a turn
-          # gracefully below this, so the timeout is the backstop and not the
-          # normal path.
-          #
-          # Set here rather than in the console so it survives the next person
-          # who recreates the function. --timeout ONLY: this call replaces any
-          # map it is handed, so passing --environment would drop every variable
-          # not repeated on the command line.
-          aws lambda update-function-configuration \
-            --function-name food-advisor-stream \
-            --timeout 120 \
-            --no-cli-pager
-          aws lambda wait function-updated \
-            --function-name food-advisor-stream
+          # The timeout and ADVISOR_STREAM_BUDGET_SEC are therefore a one-time
+          # infra change, documented with its exact command in
+          # backend/ai-coach/README.md ("The wall clock"). Move it back here
+          # only after the CI user is granted lambda:UpdateFunctionConfiguration
+          # on this function.
 
       # The advisor's own smoke test. It asserts the things that break silently:
       # that the adapter actually started the server (a non-200 here usually

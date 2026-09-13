@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -14,6 +16,8 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 /// savings accounts, with an add-goal FAB. Reachable both as its own Treasury
 /// tab and from the Dashboard's goals section. All figures come from
 /// [TreasuryDashboardPresenter]; it owns its own add/edit sheets.
+final _completedFmt = DateFormat('MMM d, yyyy');
+
 class GoalsSavingsScreen extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
@@ -47,6 +51,41 @@ class GoalsSavingsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _confirmMarkSpent(
+      BuildContext context, FinancialAccount account) async {
+    final ok = await AppConfirmDialog.confirm(
+      context: context,
+      title: 'Spent ${account.name}?',
+      body: 'Marks this goal complete and files it under Completed. The money '
+          'and its transactions stay in your ledger either way — this only '
+          'records that you spent it on what you were saving for.',
+      confirmLabel: 'Yes, spent it',
+    );
+    if (ok) await presenter.markGoalRedeemed(account.id);
+  }
+
+  Future<void> _confirmArchive(
+      BuildContext context, FinancialAccount account) async {
+    final ok = await AppConfirmDialog.confirm(
+      context: context,
+      title: 'Archive ${account.name}?',
+      body: 'Files it away and takes it out of your account pickers. Nothing '
+          'is deleted — the transactions stay in your ledger, and you can '
+          'bring it back from the accounts list any time.',
+      confirmLabel: 'Archive',
+    );
+    if (ok) await presenter.archiveGoal(account.id);
+  }
+
+  Future<void> _promptRestart(
+      BuildContext context, FinancialAccount account) async {
+    await AppBottomSheet.show(
+      context: context,
+      title: 'Start ${account.name} again',
+      body: _RestartGoalSheet(presenter: presenter, account: account),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -55,10 +94,10 @@ class GoalsSavingsScreen extends StatelessWidget {
       builder: (context, _) {
         // Goals (with a target) and savings holding a target render as progress
         // cards; plain savings (no target) render as simple balance rows.
-        final activeGoals = [
-          ...presenter.goalAccounts,
-          ...presenter.savingsAccounts.where((a) => (a.goalTarget ?? 0) > 0),
-        ];
+        // Both lists are presenter-owned so this build() stays free of
+        // stage filtering.
+        final activeGoals = presenter.activeGoalAccounts;
+        final completedGoals = presenter.completedGoalAccounts;
         final plainSavings = presenter.savingsAccounts
             .where((a) => (a.goalTarget ?? 0) <= 0)
             .toList();
@@ -84,7 +123,9 @@ class GoalsSavingsScreen extends StatelessWidget {
             children: [
               _TotalSavedHero(total: presenter.totalSavingsAndGoals),
               const SizedBox(height: 20),
-              if (activeGoals.isEmpty && plainSavings.isEmpty)
+              if (activeGoals.isEmpty &&
+                  completedGoals.isEmpty &&
+                  plainSavings.isEmpty)
                 const AppCard(
                   variant: AppCardVariant.elevated,
                   child: AppEmptyState(
@@ -108,6 +149,11 @@ class GoalsSavingsScreen extends StatelessWidget {
                               HapticFeedback.selectionClick();
                               _showEditSheet(context, activeGoals[i]);
                             },
+                            onMarkSpent: activeGoals[i].goalStage ==
+                                    GoalStage.funded
+                                ? () =>
+                                    _confirmMarkSpent(context, activeGoals[i])
+                                : null,
                           ),
                           if (i < activeGoals.length - 1)
                             Divider(
@@ -122,6 +168,37 @@ class GoalsSavingsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (completedGoals.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                AppSection(
+                  title: 'Completed',
+                  child: AppCard(
+                    variant: AppCardVariant.elevated,
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < completedGoals.length; i++) ...[
+                          _CompletedGoalRow(
+                            account: completedGoals[i],
+                            onRestart: () =>
+                                _promptRestart(context, completedGoals[i]),
+                            onArchive: () =>
+                                _confirmArchive(context, completedGoals[i]),
+                          ),
+                          if (i < completedGoals.length - 1)
+                            Divider(
+                              height: 1,
+                              indent: 16,
+                              endIndent: 16,
+                              color: theme.colorScheme.outlineVariant
+                                  .withValues(alpha: 0.4),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (plainSavings.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 AppSection(
@@ -242,6 +319,158 @@ class _SavingsRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A goal the user reached and spent. Shows what it delivered rather than a
+/// progress bar: after the purchase the balance is back to ₱0, and 0% would
+/// report a success as a failure.
+class _CompletedGoalRow extends StatelessWidget {
+  final FinancialAccount account;
+  final VoidCallback onRestart;
+  final VoidCallback onArchive;
+
+  const _CompletedGoalRow({
+    required this.account,
+    required this.onRestart,
+    required this.onArchive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final green = context.appColors.success;
+    final funded = account.goalRedeemedAmount ?? account.goalTarget ?? 0;
+    final on = account.goalRedeemedAt;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 22, color: green),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  account.name,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Funded ${formatPeso(funded)}'
+                  '${on == null ? '' : ' · spent ${_completedFmt.format(on)}'}',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onRestart,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(44, 44),
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Start again'),
+          ),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              tooltip: 'Archive',
+              onPressed: onArchive,
+              icon: const Icon(Icons.inventory_2_outlined, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Restarts a completed goal against a fresh target, keeping the account and
+/// its transaction history. Asks for the new target rather than reusing the old
+/// one: a goal worth repeating usually costs something different the next time.
+class _RestartGoalSheet extends StatefulWidget {
+  final TreasuryDashboardPresenter presenter;
+  final FinancialAccount account;
+
+  const _RestartGoalSheet({required this.presenter, required this.account});
+
+  @override
+  State<_RestartGoalSheet> createState() => _RestartGoalSheetState();
+}
+
+class _RestartGoalSheetState extends State<_RestartGoalSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: (widget.account.goalTarget ?? 0) > 0
+          ? widget.account.goalTarget!.toStringAsFixed(2)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  double? get _target => double.tryParse(_controller.text.trim());
+  bool get _canSave => (_target ?? 0) > 0;
+
+  Future<void> _save() async {
+    final target = _target;
+    if (target == null || target <= 0) return;
+    await widget.presenter
+        .restartGoalAccount(widget.account.id, newTarget: target);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Clears the completed stamp and starts tracking toward a new target. '
+          'The account and everything in its history stay put.',
+          style: theme.textTheme.bodySmall
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 16),
+        AppTextField(
+          controller: _controller,
+          label: 'New target',
+          prefix: const Text('₱ '),
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: amountInputFormatters,
+          textInputAction: TextInputAction.done,
+          onChanged: (_) => setState(() {}),
+          onSubmitted: (_) => _canSave ? _save() : null,
+        ),
+        const SizedBox(height: 24),
+        AppPrimaryButton(
+          label: 'Start again',
+          leading: Icons.restart_alt,
+          onPressed: _canSave ? _save : null,
+        ),
+      ],
     );
   }
 }

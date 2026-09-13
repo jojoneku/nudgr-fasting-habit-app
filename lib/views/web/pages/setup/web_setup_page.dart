@@ -1111,7 +1111,10 @@ class _AccountTableRow extends StatelessWidget {
                     child: SizedBox(
                       width: 180,
                       child: WebProgressBar(
-                          value: account.balance / goalTarget, color: color),
+                          value: account.hasGoalTarget
+                              ? account.goalProgress
+                              : account.balance / goalTarget,
+                          color: color),
                     ),
                   ),
                 ],

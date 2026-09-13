@@ -3003,12 +3003,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final destination = e.destinationAccountId;
     if (destination == null) return false;
     final account = accounts.where((a) => a.id == destination).firstOrNull;
-    if (account == null || account.category != AccountCategory.goal) {
-      return false;
-    }
-    final target = account.goalTarget;
-    if (target == null || target <= 0) return false;
-    return account.balance >= target;
+    if (account == null) return false;
+    // Reads the lifecycle stamp, not the live balance. Testing `balance >=
+    // target` meant that spending a completed goal dropped it back under target
+    // and the recurring set-aside resumed — quietly re-saving ₱2,000/month for
+    // a phone already bought. Funded and redeemed both end the recurrence;
+    // restarting the goal clears the stamp and starts it again.
+    return account.goalStage == GoalStage.funded ||
+        account.goalStage == GoalStage.redeemed;
   }
 
   Future<void> _autoGenerateRecurringBudgetedExpenses(String month) async {
