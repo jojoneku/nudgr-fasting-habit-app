@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
+import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/treasury_history_backfill.dart';
 
@@ -293,6 +294,75 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<FinancialAccount> get savingsAccounts => _accounts
       .where((a) => a.isActive && a.category == AccountCategory.savings)
       .toList();
+
+  // --- Goal lifecycle (docs/goal_lifecycle_spec.md) ---
+
+  /// Everything that renders as a progress card: goal accounts, plus savings
+  /// accounts the user gave a target. Excludes redeemed goals, which have their
+  /// own completed section rather than sitting in the active list at 0%.
+  List<FinancialAccount> get activeGoalAccounts => [
+        ...goalAccounts,
+        ...savingsAccounts.where((a) => (a.goalTarget ?? 0) > 0),
+      ].where((a) => a.goalStage != GoalStage.redeemed).toList();
+
+  /// Goals the user has confirmed they spent, most recently completed first.
+  /// Kept rather than deleted: the account still owns its funding transfers and
+  /// the purchase, and "I saved ₱6,000 in 3 months" is worth keeping.
+  List<FinancialAccount> get completedGoalAccounts {
+    final done = _accounts
+        .where((a) => a.isActive && a.goalStage == GoalStage.redeemed)
+        .toList()
+      ..sort((a, b) => b.goalRedeemedAt!.compareTo(a.goalRedeemedAt!));
+    return done;
+  }
+
+  bool get hasCompletedGoals => completedGoalAccounts.isNotEmpty;
+
+  /// Marks a funded goal as spent on what it was for. Explicit user action only
+  /// — the app never infers this, because "bought the phone" and "raided the
+  /// jar" are a success and a setback that look identical from the balance.
+  Future<void> markGoalRedeemed(String accountId, {double? amount}) async {
+    final now = DateTime.now();
+    _accounts = [
+      for (final a in _accounts)
+        if (a.id == accountId) redeemGoal(a, now, amount: amount) else a,
+    ];
+    notifyListeners();
+    await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
+  }
+
+  /// Files a completed goal away into the existing "Archived" inventory group.
+  ///
+  /// Reuses `isActive`, which the app already treats as archived — "Hidden
+  /// everywhere until reactivated", and every account picker already filters on
+  /// it. So this needs no new concept: it just offers the existing one at the
+  /// moment it becomes useful, instead of leaving finished goals cluttering the
+  /// transfer dropdowns forever. Reversible from the accounts inventory, and the
+  /// transactions are untouched either way.
+  Future<void> archiveGoal(String accountId) async {
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    if (account == null) return;
+    await updateAccount(
+        account.copyWith(isActive: false, updatedAt: DateTime.now()));
+  }
+
+  /// Starts a completed goal over against a fresh target, keeping the account
+  /// and its whole transaction history.
+  Future<void> restartGoalAccount(String accountId,
+      {required double newTarget}) async {
+    final now = DateTime.now();
+    _accounts = [
+      for (final a in _accounts)
+        if (a.id == accountId)
+          stampIfFunded(restartGoal(a, now, newTarget: newTarget), now)
+        else
+          a,
+    ];
+    notifyListeners();
+    await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
+  }
 
   /// Active time-deposit accounts, earliest maturity first — money that unlocks
   /// on a future date. Powers the advisor's forward liquidity view.
@@ -1513,14 +1583,22 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   // --- Account CRUD ---
 
   Future<void> addAccount(FinancialAccount account) async {
-    _accounts = [..._accounts, account];
+    // A goal created with an opening balance already at its target is funded on
+    // day one; nothing else would stamp it until the next transaction.
+    _accounts = [..._accounts, stampIfFunded(account, DateTime.now())];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
-    _accounts = [for (final a in _accounts) a.id == account.id ? account : a];
+    // The account editor routes through here, so a re-planned goal target has
+    // to be reconciled on this path too — not just LedgerPresenter.saveAccount.
+    final now = DateTime.now();
+    final previous = _accounts.where((a) => a.id == account.id).firstOrNull;
+    final incoming =
+        stampIfFunded(reconcileGoalStamps(account, previous, now), now);
+    _accounts = [for (final a in _accounts) a.id == incoming.id ? incoming : a];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();

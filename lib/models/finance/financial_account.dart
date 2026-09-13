@@ -38,6 +38,35 @@ enum AccountCategory {
   custodian,
 }
 
+/// Where a goal account sits in its lifecycle. Derived from the two stamps
+/// below, never stored — see [FinancialAccount.goalStage].
+///
+/// The distinction that matters: `balance` is a *current quantity*, while
+/// reaching and spending a goal are *historical facts*. Deriving achievement
+/// from the live balance made a completed goal (spent, back to ₱0) render
+/// identically to one never started.
+enum GoalStage {
+  /// Not a goal account, or a goal with no usable target.
+  notAGoal,
+
+  /// Still accumulating toward the target.
+  saving,
+
+  /// Reached the target at least once. Stays funded even if the balance is
+  /// later drawn down — that is the whole point of recording it.
+  funded,
+
+  /// The user confirmed the money was spent on what it was for.
+  redeemed,
+}
+
+/// copyWith sentinel: distinguishes "leave this field as is" (omit it) from
+/// "clear it" (pass an explicit `null`). Needed by the goal stamps, which have
+/// to be clearable when a goal is restarted or its target re-planned upward —
+/// `field ?? this.field` never could. Mirrors the pattern in
+/// `budgeted_expense.dart`.
+const Object _kUnset = Object();
+
 // Supports both main accounts and sub-accounts (savings pots, goals, time deposits).
 //
 // Main account:  parentAccountId == null, category ∈ {bank, ewallet, cash, ...}
@@ -59,6 +88,24 @@ class FinancialAccount {
   final String icon; // MDI icon name
   final bool isActive;
   final double? goalTarget; // only used when category == goal
+
+  /// When the balance first reached [goalTarget]. Write-once per goal cycle and
+  /// never cleared by a withdrawal: spending a goal must not look like never
+  /// having saved for it. Cleared only on an explicit restart, or when the user
+  /// raises the target above the current balance (a re-plan, not an
+  /// achievement).
+  final DateTime? goalFundedAt;
+
+  /// When the user confirmed the money was spent on what the goal was for.
+  /// **Only ever set by explicit user action** — the app cannot tell "bought the
+  /// phone" from "raided the jar for an emergency", and those are a success and
+  /// a setback. Guessing would mislabel one as the other.
+  final DateTime? goalRedeemedAt;
+
+  /// How much left the account at redemption, captured so the completed card
+  /// can say what the goal actually delivered once the balance is long gone.
+  final double? goalRedeemedAmount;
+
   final DateTime? maturityDate; // only used when category == timeDeposit
   final String?
       linkedAccountId; // custodian only: the liquid account where these funds physically live
@@ -82,6 +129,9 @@ class FinancialAccount {
     required this.icon,
     this.isActive = true,
     this.goalTarget,
+    this.goalFundedAt,
+    this.goalRedeemedAt,
+    this.goalRedeemedAmount,
     this.maturityDate,
     this.linkedAccountId,
     this.creditLimit,
@@ -120,6 +170,37 @@ class FinancialAccount {
   // balance = funds held for others — excluded from net worth and liquid cash
   bool get isCustodian => category == AccountCategory.custodian;
 
+  // --- Goal lifecycle (meaningful only when category == goal) ---
+
+  /// Whether this account is a goal with a usable target to track against.
+  bool get hasGoalTarget =>
+      category == AccountCategory.goal && (goalTarget ?? 0) > 0;
+
+  /// Lifecycle position. See [GoalStage]; derived, never stored.
+  GoalStage get goalStage {
+    if (!hasGoalTarget) return GoalStage.notAGoal;
+    if (goalRedeemedAt != null) return GoalStage.redeemed;
+    if (goalFundedAt != null) return GoalStage.funded;
+    return GoalStage.saving;
+  }
+
+  /// Progress toward the target, 0..1.
+  ///
+  /// Pinned at 1.0 once funded, whatever the balance says. A goal that was
+  /// reached and then spent is complete, not back to zero, and a bar that fell
+  /// to 0% would report a success as a regression.
+  double get goalProgress {
+    if (!hasGoalTarget) return 0;
+    if (goalFundedAt != null) return 1;
+    return (balance / goalTarget!).clamp(0.0, 1.0);
+  }
+
+  /// Whether a funded (not yet redeemed) goal has had money taken out of it.
+  /// Drives the quiet "spent it?" hint next to the Mark-as-spent action — a
+  /// nudge only, never an automatic redemption.
+  bool get goalLooksSpent =>
+      goalStage == GoalStage.funded && balance < goalTarget!;
+
   // --- Credit getters (meaningful only when isLiability) ---
 
   /// What you currently owe on this card/line. Zero for non-liability accounts.
@@ -153,6 +234,10 @@ class FinancialAccount {
       icon: json['icon'] as String,
       isActive: json['isActive'] as bool? ?? true,
       goalTarget: (json['goalTarget'] as num?)?.toDouble(),
+      goalFundedAt: DateTime.tryParse(json['goalFundedAt'] as String? ?? ''),
+      goalRedeemedAt:
+          DateTime.tryParse(json['goalRedeemedAt'] as String? ?? ''),
+      goalRedeemedAmount: (json['goalRedeemedAmount'] as num?)?.toDouble(),
       maturityDate: json['maturityDate'] != null
           ? DateTime.parse(json['maturityDate'] as String)
           : null,
@@ -178,6 +263,9 @@ class FinancialAccount {
         'icon': icon,
         'isActive': isActive,
         'goalTarget': goalTarget,
+        'goalFundedAt': goalFundedAt?.toIso8601String(),
+        'goalRedeemedAt': goalRedeemedAt?.toIso8601String(),
+        'goalRedeemedAmount': goalRedeemedAmount,
         'maturityDate': maturityDate?.toIso8601String(),
         'linkedAccountId': linkedAccountId,
         'creditLimit': creditLimit,
@@ -198,6 +286,11 @@ class FinancialAccount {
     String? icon,
     bool? isActive,
     double? goalTarget,
+    // Sentinel-guarded: restarting a goal, or re-planning its target upward,
+    // has to be able to clear these back to null.
+    Object? goalFundedAt = _kUnset,
+    Object? goalRedeemedAt = _kUnset,
+    Object? goalRedeemedAmount = _kUnset,
     DateTime? maturityDate,
     String? linkedAccountId,
     double? creditLimit,
@@ -218,6 +311,15 @@ class FinancialAccount {
       icon: icon ?? this.icon,
       isActive: isActive ?? this.isActive,
       goalTarget: goalTarget ?? this.goalTarget,
+      goalFundedAt: identical(goalFundedAt, _kUnset)
+          ? this.goalFundedAt
+          : goalFundedAt as DateTime?,
+      goalRedeemedAt: identical(goalRedeemedAt, _kUnset)
+          ? this.goalRedeemedAt
+          : goalRedeemedAt as DateTime?,
+      goalRedeemedAmount: identical(goalRedeemedAmount, _kUnset)
+          ? this.goalRedeemedAmount
+          : goalRedeemedAmount as double?,
       maturityDate: maturityDate ?? this.maturityDate,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       creditLimit: creditLimit ?? this.creditLimit,
