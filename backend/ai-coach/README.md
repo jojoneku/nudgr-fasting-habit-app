@@ -127,20 +127,48 @@ screen, re-generated the same long answer into the same 45s ceiling, and did it
 three times before giving up. The user saw "Connection hiccup — trying again…"
 three times and kept nothing; Bedrock billed all three.
 
-Two things fix it, and both are needed:
+**`ADVISOR_STREAM_BUDGET_SEC` (default 38s)** is what makes that unreachable. It
+is a soft deadline inside `advise_finance_stream`: when it is spent the turn
+breaks out of the Bedrock stream, appends a line saying it stopped early, and
+emits a real `end` frame. The user reads a short answer instead of an error, and
+the client has nothing to retry.
 
-- **Function timeout 120s**, now set by CI (`update-function-configuration
-  --timeout 120`) rather than by hand in the console, so it survives the next
-  person who recreates the function. It must stay *below*
-  `CloudAiCoachService.advisorTimeoutSeconds` (also 120s — raise the client
-  first, ship it, then raise this).
-- **`ADVISOR_STREAM_BUDGET_SEC`, default 100s.** A soft deadline inside
-  `advise_finance_stream`. When it is spent the turn breaks out of the Bedrock
-  stream, appends a line saying it stopped early, and emits a real `end` frame.
-  The user reads a short answer instead of an error, and the client has nothing
-  to retry. This is what makes the failure mode unreachable regardless of what
-  the timeout is set to — keep the margin between the two, since the closing
-  frames still have to flush through the adapter and CloudFront.
+The default has to be correct for the timeout the function **actually** has,
+which is 45s. A budget above the real timeout is not a budget — the function
+dies first and the mechanism never fires. So 38s: enough for a reply written to
+the ~900-word budget the prompt states, truncating the overshoots, with ~7s left
+to flush the closing frames through the adapter and CloudFront.
+
+#### Raising the ceiling (one-time, needs console or admin CLI)
+
+38s truncates genuinely long answers. To let them finish, raise the function
+timeout and the budget **together, in one call** — a budget left at 38 under a
+120s timeout just truncates early, and a budget of 100 under a 45s timeout does
+nothing at all:
+
+```sh
+aws lambda update-function-configuration \
+  --function-name food-advisor-stream --region ap-southeast-1 \
+  --timeout 120 \
+  --environment "Variables={ADVISOR_STREAM_BUDGET_SEC=100,<every existing key>}"
+```
+
+⚠️ `--environment` **replaces the whole map**. Read the current one first
+(`aws lambda get-function-configuration`) and repeat every existing key, or the
+function loses `AWS_LWA_INVOKE_MODE`, `SUPABASE_URL`, the model ids, and the
+rest — and dies at boot.
+
+120s is the ceiling because it matches `CloudAiCoachService.advisorTimeoutSeconds`,
+the client's own limit, which must stay at or above the function's (a client that
+gives up first shows a connection error while the backend is still working
+happily). Raise the client first, ship it, then raise this.
+
+**This is not done from CI.** `github-ci-lambda-deploy` is scoped to
+`update-function-code`; a `update-function-configuration` call from the deploy
+job fails with `AccessDeniedException` and takes the whole job down with it,
+smoke test included. That was tried on 2026-09-11 and reverted the same day. To
+move it into CI, grant that user `lambda:UpdateFunctionConfiguration` on this
+function first.
 
 CloudFront's 60s origin read timeout is **not** a cap on the whole response: it
 bounds the gap between packets, and a streaming turn emits deltas continuously.

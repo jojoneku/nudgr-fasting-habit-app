@@ -49,8 +49,20 @@ _ADVISOR_MAX_TOKENS = int(os.environ.get("ADVISOR_MAX_TOKENS", "3000"))
 # Keep the margin. The frames still have to be written out and flushed through
 # the adapter and CloudFront after the break, and a budget equal to the timeout
 # is a budget that expires while doing it.
+#
+# WHY THE DEFAULT IS 38 AND NOT SOMETHING ROOMIER: it has to be correct for the
+# timeout the function ACTUALLY has, which is 45s, not the one we would like it
+# to have. A default above the real timeout is not a budget at all -- the
+# function dies first and the whole mechanism never fires. 38s covers a reply
+# written to the ~900-word budget the prompt states, and truncates the
+# overshoots, which is the intended behaviour.
+#
+# Raising the ceiling is one console change, not a code change: set the
+# function timeout to 120 and ADVISOR_STREAM_BUDGET_SEC to 100 together, in the
+# same call. backend/ai-coach/README.md has the command and the reason the two
+# must move together.
 _ADVISOR_STREAM_BUDGET_SEC = float(
-    os.environ.get("ADVISOR_STREAM_BUDGET_SEC", "100"))
+    os.environ.get("ADVISOR_STREAM_BUDGET_SEC", "38"))
 _DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
 # Verbose request logging, OFF by default. Even when enabled it never logs the
 # Authorization header (a live Supabase JWT) or the request body (chat text,
