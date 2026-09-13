@@ -136,7 +136,8 @@ void main() {
           days: List.filled(7, true),
         );
         expect(q.copyWith(alarmStyle: true).alarmStyle, isTrue);
-        expect(q.copyWith(alarmStyle: true).copyWith(alarmStyle: false).alarmStyle,
+        expect(
+            q.copyWith(alarmStyle: true).copyWith(alarmStyle: false).alarmStyle,
             isFalse);
         // Omitting it must preserve, not reset.
         expect(q.copyWith(alarmStyle: true).copyWith(title: 'x').alarmStyle,

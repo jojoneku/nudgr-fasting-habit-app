@@ -34,8 +34,7 @@ class _QuestAlarmScreenState extends State<QuestAlarmScreen> {
   void initState() {
     super.initState();
     _ownsPresenter = widget.presenter == null;
-    _presenter =
-        widget.presenter ?? QuestAlarmPresenter(alarm: widget.alarm);
+    _presenter = widget.presenter ?? QuestAlarmPresenter(alarm: widget.alarm);
     _presenter.closeRequest.addListener(_onCloseRequested);
     _presenter.init();
   }

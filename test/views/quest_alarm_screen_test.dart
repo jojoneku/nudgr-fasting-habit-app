@@ -118,8 +118,7 @@ void main() {
 
     testWidgets('mark as done queues the completion, then releases',
         (tester) async {
-      when(notifications.completeQuestFromAlarm(any))
-          .thenAnswer((_) async {});
+      when(notifications.completeQuestFromAlarm(any)).thenAnswer((_) async {});
       final p = await pump(tester, questAlarm);
       await tester.tap(find.text('Mark as Done'));
       await tester.pump();
@@ -144,8 +143,7 @@ void main() {
     // Half-asleep double taps are the normal case for an alarm, so the side
     // effect must fire once even if the button is hit twice.
     testWidgets('a repeat tap after closing is ignored', (tester) async {
-      when(notifications.completeQuestFromAlarm(any))
-          .thenAnswer((_) async {});
+      when(notifications.completeQuestFromAlarm(any)).thenAnswer((_) async {});
       when(notifications.showQuestSnooze(any, any,
               alarmStyle: anyNamed('alarmStyle')))
           .thenAnswer((_) async {});

@@ -79,8 +79,8 @@ class _FastingAppState extends State<FastingApp> {
       // navigator exists. Retry once after the frame that builds it rather
       // than dropping the alarm; bounded so a missing navigator can't spin.
       if (retry) {
-        WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _showAlarm(alarm, retry: false));
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _showAlarm(alarm, retry: false));
       }
       return;
     }
