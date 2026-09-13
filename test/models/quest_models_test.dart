@@ -101,6 +101,48 @@ void main() {
         expect(restored.routineId, 'routine-abc');
       });
 
+      test('round-trips alarmStyle', () {
+        final q = Quest(
+          id: 1,
+          title: 'Take meds',
+          hour: 22,
+          minute: 0,
+          days: List.filled(7, true),
+          alarmStyle: true,
+        );
+        final restored = Quest.fromJson(q.toJson());
+        expect(restored.alarmStyle, isTrue);
+      });
+
+      test('alarmStyle defaults to false for quests saved before the flag', () {
+        // Alarm behaviour draws over the lock screen, so it must never be
+        // inherited by existing quests on upgrade — only opted into.
+        final legacy = {
+          'id': 1,
+          'title': 'Stretch',
+          'hour': 7,
+          'minute': 0,
+          'days': List.filled(7, true),
+        };
+        expect(Quest.fromJson(legacy).alarmStyle, isFalse);
+      });
+
+      test('copyWith toggles alarmStyle in both directions', () {
+        final q = Quest(
+          id: 1,
+          title: 'Stretch',
+          hour: 7,
+          minute: 0,
+          days: List.filled(7, true),
+        );
+        expect(q.copyWith(alarmStyle: true).alarmStyle, isTrue);
+        expect(q.copyWith(alarmStyle: true).copyWith(alarmStyle: false).alarmStyle,
+            isFalse);
+        // Omitting it must preserve, not reset.
+        expect(q.copyWith(alarmStyle: true).copyWith(title: 'x').alarmStyle,
+            isTrue);
+      });
+
       test('round-trips partialDates', () {
         final q = Quest(
           id: 1,
