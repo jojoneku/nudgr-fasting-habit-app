@@ -2,7 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
-import 'package:flutter/services.dart' show MethodChannel, PlatformException;
+import 'package:flutter/services.dart'
+    show MethodChannel, MissingPluginException, PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:open_filex/open_filex.dart';
@@ -10,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:intl/intl.dart';
+import '../models/alarm_notification.dart';
 import '../models/quest.dart';
 import 'storage_service.dart';
 
@@ -75,7 +77,10 @@ Future<void> _handleQuestNotificationAction(
       break;
     case NotificationService.questActionSnooze:
       await _snoozeQuestNotification(
-          questId, data['title'] as String? ?? 'Quest');
+        questId,
+        data['title'] as String? ?? 'Quest',
+        data[AlarmNotification.payloadFlag] == true,
+      );
       break;
   }
 }
@@ -103,11 +108,12 @@ Future<void> _enqueueQuestCompletion(int questId) async {
 
 /// Reschedules a quest reminder [NotificationService.questSnoozeMinutes] minutes
 /// from now, carrying the same action buttons and payload.
-Future<void> _snoozeQuestNotification(int questId, String title) async {
+Future<void> _snoozeQuestNotification(
+    int questId, String title, bool alarmStyle) async {
   try {
     final service = NotificationService();
     await service.init(); // self-heal in this isolate (no-op if initialised)
-    await service.showQuestSnooze(questId, title);
+    await service.showQuestSnooze(questId, title, alarmStyle: alarmStyle);
   } catch (e) {
     debugPrint('NotificationService: snooze failed: $e');
   }
@@ -190,6 +196,23 @@ class NotificationService {
   /// isolate (fresh memory), where the drain happens on next foreground.
   static void Function()? onQuestActionDrain;
 
+  /// Set by the app shell so a full-screen alarm arriving while the app is
+  /// alive routes straight to the alarm screen.
+  static void Function(AlarmNotification)? onAlarmNotification;
+
+  /// An alarm that launched the app from a terminated state. Cold-start taps
+  /// are not delivered to [onAlarmNotification] (there is no listener yet), so
+  /// they are parked here for the shell to claim on its first frame.
+  static AlarmNotification? _pendingAlarm;
+
+  /// Claims the cold-start alarm, if any. Consuming clears it so a later
+  /// resume does not re-open the alarm screen for an alarm already handled.
+  static AlarmNotification? takePendingAlarm() {
+    final alarm = _pendingAlarm;
+    _pendingAlarm = null;
+    return alarm;
+  }
+
   // Budget warnings: stable int in 560–599. Must stay disjoint from the
   // credit-due range above — both derive ids from a hash, and the previous
   // 601–640 range overlapped 620–719, letting a budget warning and a credit
@@ -264,6 +287,39 @@ class NotificationService {
     return await android?.canScheduleExactNotifications() ?? false;
   }
 
+  /// Whether Android will honour a full-screen intent from this app.
+  ///
+  /// Android 14+ only grants `USE_FULL_SCREEN_INTENT` to calling and alarm
+  /// apps; without it an alarm-style quest quietly downgrades to an ordinary
+  /// heads-up banner, so the quest editor checks this before offering the
+  /// toggle as working. Older versions grant it from the manifest.
+  Future<bool> canUseFullScreenIntent() async {
+    if (kIsWeb) return false;
+    try {
+      final allowed = await _systemSettingsChannel
+          .invokeMethod<bool>('canUseFullScreenIntent');
+      return allowed ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('NotificationService: canUseFullScreenIntent failed: $e');
+      return false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
+  /// Opens the Android 14+ "Full screen notifications" special-access screen.
+  Future<void> openFullScreenIntentSettings() async {
+    if (kIsWeb) return;
+    try {
+      await _systemSettingsChannel.invokeMethod('openFullScreenIntentSettings');
+    } on PlatformException catch (e) {
+      debugPrint(
+          'NotificationService: openFullScreenIntentSettings failed: $e');
+    } on MissingPluginException {
+      // Host without the channel (tests, older build) — nothing to open.
+    }
+  }
+
   Future<void> openSystemNotificationSettings() async {
     if (kIsWeb) return;
     try {
@@ -331,6 +387,18 @@ class NotificationService {
         // (some Android versions/states) through the same handler.
         if (response.actionId != null) {
           _handleQuestNotificationAction(response);
+          return;
+        }
+        // Body tap, or a full-screen intent Android fired on its own while the
+        // app was already running: show the alarm screen rather than whatever
+        // page the app happened to be sitting on.
+        final alarm = AlarmNotification.fromPayload(response.payload);
+        if (alarm != null) {
+          if (onAlarmNotification != null) {
+            onAlarmNotification!(alarm);
+          } else {
+            _pendingAlarm = alarm;
+          }
         }
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
@@ -474,7 +542,10 @@ class NotificationService {
       final launchDetails = await flutterLocalNotificationsPlugin
           .getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp ?? false) {
-        _handleInstallApkPayload(launchDetails!.notificationResponse?.payload);
+        final payload = launchDetails!.notificationResponse?.payload;
+        if (!_handleInstallApkPayload(payload)) {
+          _pendingAlarm = AlarmNotification.fromPayload(payload);
+        }
       }
     } catch (e) {
       debugPrint('NotificationService: launch-details check failed: $e');
@@ -800,6 +871,10 @@ class NotificationService {
       quest.recurrenceAnchorDate,
       quest.reminderMinutes,
       quest.title,
+      // Part of the signature: toggling alarm style changes how the very same
+      // schedule is posted, so without it the dedupe would skip the reschedule
+      // and the quest would keep its old full-screen behaviour.
+      quest.alarmStyle,
     ].join('|');
     if (!_scheduleChanged('quest/${quest.id}', sig)) return;
     debugPrint(
@@ -812,11 +887,18 @@ class NotificationService {
       channelDescription: 'Recurring reminders for habits and quests',
       importance: Importance.max,
       priority: Priority.max,
-      fullScreenIntent: true,
+      // Alarm-clock behaviour is opt-in per quest. A full-screen intent wakes
+      // the screen and draws over the keyguard, which is right for a quest the
+      // user explicitly wants to be interrupted by and wrong for every other
+      // one — and Android 14+ only grants USE_FULL_SCREEN_INTENT to genuine
+      // alarm/call use anyway.
+      fullScreenIntent: quest.alarmStyle,
       playSound: true,
       enableVibration: true,
       vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
-      category: AndroidNotificationCategory.reminder,
+      category: quest.alarmStyle
+          ? AndroidNotificationCategory.alarm
+          : AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
       actions: _questActions(),
     );
@@ -868,13 +950,34 @@ class NotificationService {
         ),
       ];
 
-  /// JSON payload carrying the quest identity for the action handler.
-  String _questPayload(Quest quest) =>
-      jsonEncode({'id': quest.id, 'title': quest.title});
+  /// JSON payload carrying the quest identity for the action handler, plus the
+  /// alarm flag the app (and `MainActivity`) read to decide whether this
+  /// notification may draw over the lock screen.
+  String _questPayload(Quest quest) => jsonEncode({
+        'id': quest.id,
+        'title': quest.title,
+        'body': questNotificationBody,
+        if (quest.alarmStyle) AlarmNotification.payloadFlag: true,
+      });
+
+  /// Body text shared by every quest reminder, so the alarm screen can show the
+  /// same line the notification did.
+  static const String questNotificationBody = "It's time for your quest!";
+
+  /// Records a quest completion triggered from the alarm screen.
+  ///
+  /// Routes through the same pending-actions queue as the notification action
+  /// buttons and the home-screen widget, so the RPG side (XP, streaks, stats)
+  /// is applied once, by [QuestPresenter], rather than duplicated here.
+  Future<void> completeQuestFromAlarm(int questId) async {
+    await _enqueueQuestCompletion(questId);
+    onQuestActionDrain?.call();
+  }
 
   /// Reschedules a single quest reminder [questSnoozeMinutes] minutes from now,
   /// carrying the same action buttons and payload. Called by the snooze action.
-  Future<void> showQuestSnooze(int questId, String title) async {
+  Future<void> showQuestSnooze(int questId, String title,
+      {bool alarmStyle = false}) async {
     if (!_isInitialized || !_masterEnabled) return;
     final when = tz.TZDateTime.now(tz.local)
         .add(const Duration(minutes: questSnoozeMinutes));
@@ -885,7 +988,12 @@ class NotificationService {
       channelDescription: 'Recurring reminders for habits and quests',
       importance: Importance.max,
       priority: Priority.max,
-      category: AndroidNotificationCategory.reminder,
+      // A snoozed alarm is still an alarm: it must wake the screen again in 15
+      // minutes, otherwise snoozing silently downgrades it to a shade banner.
+      fullScreenIntent: alarmStyle,
+      category: alarmStyle
+          ? AndroidNotificationCategory.alarm
+          : AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
       actions: _questActions(),
     );
@@ -899,7 +1007,12 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        payload: jsonEncode({'id': questId, 'title': title}),
+        payload: jsonEncode({
+          'id': questId,
+          'title': title,
+          'body': questNotificationBody,
+          if (alarmStyle) AlarmNotification.payloadFlag: true,
+        }),
       );
     } catch (e) {
       debugPrint('NotificationService: Error scheduling snooze: $e');
@@ -1702,6 +1815,18 @@ class NotificationService {
     final NotificationDetails details =
         NotificationDetails(android: androidDetails);
 
+    // A full-screen one-shot (fasting goal reached, eating window over) wakes
+    // the device the same way a quest alarm does, so it needs the same alarm
+    // payload — without it the launch would fall through to the Hub.
+    final String? effectivePayload = payload ??
+        (fullScreen
+            ? jsonEncode({
+                AlarmNotification.payloadFlag: true,
+                'title': title,
+                'body': body,
+              })
+            : null);
+
     // If the target time is already now/past, SKIP — do not fire it here.
     // This method is re-run on every app open / sync (reschedule), so showing
     // a now/past one-shot immediately made quests re-notify on every reopen.
@@ -1725,7 +1850,7 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        payload: payload,
+        payload: effectivePayload,
       );
     } catch (e) {
       debugPrint('NotificationService: Error scheduling notification $id: $e');
