@@ -2321,10 +2321,21 @@ class MockNotificationService extends _i1.Mock
       ) as _i14.Future<void>);
 
   @override
+  _i14.Future<void> completeQuestFromAlarm(int? questId) => (super.noSuchMethod(
+        Invocation.method(
+          #completeQuestFromAlarm,
+          [questId],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
+
+  @override
   _i14.Future<void> showQuestSnooze(
     int? questId,
-    String? title,
-  ) =>
+    String? title, {
+    bool? alarmStyle = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #showQuestSnooze,
@@ -2332,6 +2343,7 @@ class MockNotificationService extends _i1.Mock
             questId,
             title,
           ],
+          {#alarmStyle: alarmStyle},
         ),
         returnValue: _i14.Future<void>.value(),
         returnValueForMissingStub: _i14.Future<void>.value(),
@@ -6052,6 +6064,27 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as List<_i24.FinancialAccount>);
 
   @override
+  List<_i24.FinancialAccount> get activeGoalAccounts => (super.noSuchMethod(
+        Invocation.getter(#activeGoalAccounts),
+        returnValue: <_i24.FinancialAccount>[],
+        returnValueForMissingStub: <_i24.FinancialAccount>[],
+      ) as List<_i24.FinancialAccount>);
+
+  @override
+  List<_i24.FinancialAccount> get completedGoalAccounts => (super.noSuchMethod(
+        Invocation.getter(#completedGoalAccounts),
+        returnValue: <_i24.FinancialAccount>[],
+        returnValueForMissingStub: <_i24.FinancialAccount>[],
+      ) as List<_i24.FinancialAccount>);
+
+  @override
+  bool get hasCompletedGoals => (super.noSuchMethod(
+        Invocation.getter(#hasCompletedGoals),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   List<_i24.FinancialAccount> get timeDepositAccounts => (super.noSuchMethod(
         Invocation.getter(#timeDepositAccounts),
         returnValue: <_i24.FinancialAccount>[],
@@ -6536,6 +6569,46 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
         ),
         returnValueForMissingStub: null,
       ) as double?);
+
+  @override
+  _i14.Future<void> markGoalRedeemed(
+    String? accountId, {
+    double? amount,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #markGoalRedeemed,
+          [accountId],
+          {#amount: amount},
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
+
+  @override
+  _i14.Future<void> archiveGoal(String? accountId) => (super.noSuchMethod(
+        Invocation.method(
+          #archiveGoal,
+          [accountId],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
+
+  @override
+  _i14.Future<void> restartGoalAccount(
+    String? accountId, {
+    required double? newTarget,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #restartGoalAccount,
+          [accountId],
+          {#newTarget: newTarget},
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
 
   @override
   List<_i24.FinancialAccount> subAccountsOf(String? parentId) =>
