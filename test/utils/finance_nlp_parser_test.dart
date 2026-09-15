@@ -868,9 +868,21 @@ void main() {
       expect(run('-500 food gcash aug 3', now: wed).date, DateTime(2026, 8, 3));
     });
 
-    test('a future-looking month/day is read as last year', () {
+    test('a month/day far enough ahead is read as last year', () {
+      // Four months out in August: the christmas gone, not the one coming.
       expect(run('-500 food gcash december 25', now: wed).date,
           DateTime(2025, 12, 25));
+    });
+
+    test('a month/day only days ahead is taken at face value', () {
+      // Said on 19 Aug about the 20th, and about 2 September. Rewinding these
+      // a full year is how a trip's expenses and a set-aside — anything with a
+      // date a few days out, reimbursable or not — were filed in 2025, out of
+      // every month the app displays.
+      expect(run('-500 food gcash aug 20', now: wed).date,
+          DateTime(2026, 8, 20));
+      expect(run('-500 food gcash sept 2', now: wed).date,
+          DateTime(2026, 9, 2));
     });
 
     test('an ISO date', () {

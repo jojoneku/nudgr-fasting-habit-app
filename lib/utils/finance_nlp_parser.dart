@@ -361,18 +361,22 @@ _DateHit? _findDate(String text, DateTime now, Set<String> accountWords,
       final month = _kMonths[monthWord]!;
       final day = int.parse(dayStr);
       var value = _safeDate(today.year, month, day);
-      // A bare "sept 20" names no year, and the two directions want opposite
+      // A bare "sept 20" names no year, and the two directions want different
       // readings of it.
       //
-      // A transaction has already happened, so a date that would land ahead is
-      // last year's: "december 25" logged in August is the christmas gone, not
-      // the one coming.
+      // A payback has not happened yet, so it takes whichever reading sits
+      // nearest today — this year's if it is still to come, next year's once
+      // it has passed ("jan 5" said in December).
       //
-      // A payback has NOT happened, so it takes whichever reading sits nearest
-      // today — this year's if it is still to come, next year's once it has
-      // passed ("jan 5" said in December). Reading a payback backwards is what
-      // put an expected reimbursement in September 2025, five days after it was
-      // entered, where a month-filtered bills list could never show it.
+      // A transaction has usually already happened, so a date that would land
+      // ahead reads as last year's — but only once it is far enough ahead to
+      // mean it. "december 25" logged in August is the christmas gone; "sept
+      // 20" said on the 15th, or "oct 2" said in September, is a date days
+      // away that the user plainly meant, and rewinding those a full year is
+      // how a trip's expenses and a set-aside ended up filed in 2025, out of
+      // every month the app displays. The line is drawn at the end of NEXT
+      // month, because a month is the unit this app thinks in and nobody
+      // pre-logs further out than that.
       if (forward) {
         final nextYear = _safeDate(today.year + 1, month, day);
         if (value != null &&
@@ -381,7 +385,11 @@ _DateHit? _findDate(String text, DateTime now, Set<String> accountWords,
           value = nextYear;
         }
       } else if (value != null && value.isAfter(today)) {
-        value = _safeDate(today.year - 1, month, day);
+        final monthsAhead =
+            (value.year - today.year) * 12 + value.month - today.month;
+        if (monthsAhead > 1) {
+          value = _safeDate(today.year - 1, month, day);
+        }
       }
       if (value != null) return _DateHit(value, named.start, named.end);
     }
