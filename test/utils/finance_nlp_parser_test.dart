@@ -110,6 +110,45 @@ void main() {
     });
   });
 
+  // ── Two cards, and a bank whose name shares a word with one of them ────────
+  //
+  // With a SECOND card in the pool, none of the machinery above gets a chance:
+  // "credit card" prefixes both cards and so resolves to neither, "card" alone
+  // names nothing, and "bpi" then quietly resolves on its own — to BPI SAVINGS.
+  // A card charge was logged against a savings account, and the words that were
+  // supposed to name the card are what redirected it.
+  group('an account named loosely, with two cards', () {
+    final bpiCard = _acc('Credit Card CC (BPI)',
+        id: 'bpicc', cat: AccountCategory.creditCard);
+    final mayaCard = _acc('Credit Card (Maya)',
+        id: 'mayacc', cat: AccountCategory.creditCard);
+    final bpiSavings = _acc('BPI Savings', id: 'bpisav');
+    final pool = [bpiCard, mayaCard, bpiSavings, gcash];
+
+    PreparseResult parse(String input) => run(input, overrideAccounts: pool);
+
+    test('the card wins over the bank that shares its word', () {
+      expect(parse('252 food charged on bpi credit card').accountId, 'bpicc');
+      expect(parse('252 food charged on bpi cc').accountId, 'bpicc');
+    });
+
+    test('the other card is still reachable the same way', () {
+      expect(parse('252 food maya credit card').accountId, 'mayacc');
+    });
+
+    test('words that name both cards resolve to neither', () {
+      // Genuinely ambiguous: two cards answer to "credit card". Better an
+      // unresolved account the card can ask about than a coin flip.
+      final r = parse('252 food charged on credit card');
+      expect(r.accountId, isNull);
+      expect(r.isFullyResolved, isFalse);
+    });
+
+    test('the bank still resolves when only it is named', () {
+      expect(parse('252 food bpi savings').accountId, 'bpisav');
+    });
+  });
+
   group('hard errors', () {
     test('empty input', () {
       expect(run('').hardError, FinanceParseError.empty);
@@ -829,9 +868,21 @@ void main() {
       expect(run('-500 food gcash aug 3', now: wed).date, DateTime(2026, 8, 3));
     });
 
-    test('a future-looking month/day is read as last year', () {
+    test('a month/day far enough ahead is read as last year', () {
+      // Four months out in August: the christmas gone, not the one coming.
       expect(run('-500 food gcash december 25', now: wed).date,
           DateTime(2025, 12, 25));
+    });
+
+    test('a month/day only days ahead is taken at face value', () {
+      // Said on 19 Aug about the 20th, and about 2 September. Rewinding these
+      // a full year is how a trip's expenses and a set-aside — anything with a
+      // date a few days out, reimbursable or not — were filed in 2025, out of
+      // every month the app displays.
+      expect(
+          run('-500 food gcash aug 20', now: wed).date, DateTime(2026, 8, 20));
+      expect(
+          run('-500 food gcash sept 2', now: wed).date, DateTime(2026, 9, 2));
     });
 
     test('an ISO date', () {
@@ -990,7 +1041,10 @@ void main() {
       final r = run('-800 food gcash spotted Jana, she pays me back friday',
           now: wed);
       expect(r.owedBy, 'Jana');
-      expect(r.expectedReimbursementDate, DateTime(2026, 8, 14));
+      // The friday COMING (the 21st), not the one gone. Every other date in a
+      // message looks back, because a transaction has already happened; a
+      // payback has not. Read backwards this asserted a debt already settled.
+      expect(r.expectedReimbursementDate, DateTime(2026, 8, 21));
       // The transaction itself is undated — it happened now, not on Friday.
       expect(r.date, isNull);
     });
@@ -999,8 +1053,26 @@ void main() {
       final r = run(
           '-800 food gcash yesterday, spotted Jana, she pays me back monday',
           now: wed);
+      // The expense looks back (yesterday), the payback looks forward — the
+      // two directions in one message.
       expect(r.date, DateTime(2026, 8, 18));
-      expect(r.expectedReimbursementDate, DateTime(2026, 8, 17));
+      expect(r.expectedReimbursementDate, DateTime(2026, 8, 24));
+    });
+
+    test('a payback day that has not come yet stays in this year', () {
+      // Said on the 19th about the 20th. Rolling a "future" date back a year
+      // (right for a transaction, which has already happened) put the expected
+      // reimbursement in 2025 — and a month-filtered bills list never showed
+      // it, so a logged reimbursable looked like it had never been tracked.
+      final r =
+          run('-252 food gcash reimbursable by alphaus on aug 20', now: wed);
+      expect(r.reimbursable, isTrue);
+      expect(r.expectedReimbursementDate, DateTime(2026, 8, 20));
+      // And the EXPENSE is not back-dated by the same phrase. The cue used to
+      // stem "reimburse", which the commonest spelling of all — reimbursABLE —
+      // does not contain, so the date fell through to the transaction and was
+      // rolled back a year: an expense filed in August 2025.
+      expect(r.date, isNull);
     });
 
     test('no payback date stays null, which the form reads as ASAP', () {
