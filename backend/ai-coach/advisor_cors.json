@@ -1,0 +1,14 @@
+{
+  "AllowOrigins": [
+    "https://nudgr-app.web.app",
+    "https://nudgr-app.firebaseapp.com"
+  ],
+  "AllowHeaders": [
+    "authorization",
+    "content-type",
+    "x-nudgr-authorization",
+    "x-amz-content-sha256"
+  ],
+  "AllowMethods": ["POST"],
+  "MaxAge": 3600
+}
