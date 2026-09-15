@@ -36,34 +36,26 @@ from lambda_function import (
     verify_supabase_token,
 )
 
-# Mirrors backend/ai-coach/cors.json. Firebase serves the app from both hosts and
-# CORS matches an origin exactly, so both are named. `authorization` must be
-# listed explicitly — a wildcard does not cover it on an authenticated request,
-# which is exactly the trap that took the web build down once already.
-_ALLOWED_ORIGINS = (
-    "https://nudgr-app.web.app",
-    "https://nudgr-app.firebaseapp.com",
-)
-# x-nudgr-authorization carries the Supabase token (CloudFront overwrites
-# Authorization with its own signature); x-amz-content-sha256 is the body
-# hash OAC requires the caller to supply.
-_CORS_HEADERS = ("authorization,content-type,x-nudgr-authorization,x-amz-content-sha256")
+# CORS is NOT set here. The Lambda Function URL owns it.
+#
+# The Function URL's own CORS config answers the preflight itself — OPTIONS never
+# reaches this app through that path — and, crucially, it INJECTS
+# `access-control-allow-origin` into every response it passes back. When this app
+# set the same header too, the browser received it twice, and two values is not
+# "more allowed": Chrome rejects the response outright, so every advisor turn
+# died as a CORS error with zero bytes read and the user was told to check a
+# connection that was fine. A 401 became unreadable the same way.
+#
+# There is no way to opt out of that injection from in here, which is why the
+# app yields the header entirely rather than trying to match it. The deployed
+# config is recorded in backend/ai-coach/advisor_cors.json — both Firebase
+# origins, with `authorization` and `x-nudgr-authorization` named explicitly,
+# never a wildcard.
 
 _ADVISOR_PATH = "/v1/advisor"
 
 
-def _cors_for(origin):
-    if origin in _ALLOWED_ORIGINS:
-        return [
-            (b"access-control-allow-origin", origin.encode()),
-            (b"access-control-allow-headers", _CORS_HEADERS.encode()),
-            (b"access-control-allow-methods", b"POST,OPTIONS"),
-            (b"vary", b"origin"),
-        ]
-    return []
-
-
-async def _send_json(send, status, body, *, origin=None):
+async def _send_json(send, status, body):
     raw = json.dumps(body).encode()
     await send({
         "type": "http.response.start",
@@ -71,7 +63,6 @@ async def _send_json(send, status, body, *, origin=None):
         "headers": [
             (b"content-type", b"application/json"),
             (b"content-length", str(len(raw)).encode()),
-            *_cors_for(origin),
         ],
     })
     await send({"type": "http.response.body", "body": raw, "more_body": False})
@@ -94,15 +85,17 @@ async def app(scope, receive, send):
         return
 
     headers = {k.decode().lower(): v.decode() for k, v in scope.get("headers") or []}
-    origin = headers.get("origin")
     method = scope.get("method", "GET")
     path = scope.get("path", "/")
 
+    # Reached only when something calls this app directly, since the Function
+    # URL answers the browser's preflight before it gets here. Answering bare —
+    # no allow headers — keeps the origin allowlist in exactly one place.
     if method == "OPTIONS":
         await send({
             "type": "http.response.start",
             "status": 204,
-            "headers": [(b"content-length", b"0"), *_cors_for(origin)],
+            "headers": [(b"content-length", b"0")],
         })
         await send({"type": "http.response.body", "body": b"", "more_body": False})
         return
@@ -111,7 +104,7 @@ async def app(scope, receive, send):
     # answering it here would quietly create a second general coach API that
     # nobody meant to operate.
     if path.rstrip("/") != _ADVISOR_PATH or method != "POST":
-        await _send_json(send, 404, {"error": "not_found"}, origin=origin)
+        await _send_json(send, 404, {"error": "not_found"})
         return
 
     # Auth first, and before anything that costs money. There is no authorizer
@@ -124,7 +117,7 @@ async def app(scope, receive, send):
         await _send_json(send, 401, {
             "error": "unauthorized",
             "message": "Valid Bearer token required",
-        }, origin=origin)
+        })
         return
 
     user_id = claims["sub"]
@@ -135,7 +128,7 @@ async def app(scope, receive, send):
         await _send_json(send, 400, {
             "error": "invalid_json",
             "message": "Body is not valid JSON",
-        }, origin=origin)
+        })
         return
 
     payload = body.get("payload", {}) or {}
@@ -156,14 +149,14 @@ async def app(scope, receive, send):
             await _send_json(send, 503, {
                 "error": "rate_limit_unavailable",
                 "message": "Service temporarily unavailable. Please try again.",
-            }, origin=origin)
+            })
         else:
             print(f"rate_limit_hit user={user_id} count={count} cap={_DAILY_CAP}")
             await _send_json(send, 429, {
                 "error": "rate_limit_exceeded",
                 "message": f"Daily limit of {_DAILY_CAP} AI requests reached. "
                            "Try again tomorrow.",
-            }, origin=origin)
+            })
         return
 
     # Build before committing to a 200. A malformed turn is still expressible as
@@ -176,7 +169,7 @@ async def app(scope, receive, send):
             error_body = json.loads(err.get("body") or "{}")
         except json.JSONDecodeError:
             error_body = {"error": "bad_request"}
-        await _send_json(send, status, error_body, origin=origin)
+        await _send_json(send, status, error_body)
         return
 
     print(f"advisor stream start user={user_id} bytes={len(raw_body)}")
@@ -189,7 +182,6 @@ async def app(scope, receive, send):
             # first token leaves before the last one exists.
             (b"cache-control", b"no-cache, no-transform"),
             (b"x-accel-buffering", b"no"),
-            *_cors_for(origin),
         ],
     })
 

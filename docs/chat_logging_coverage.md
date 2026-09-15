@@ -6,6 +6,13 @@ against the manual ledger form (`lib/views/treasury/ledger/add_transaction_sheet
 Read this before sending a user to chat for something, or before assuming chat
 is a full replacement for the form.
 
+**Before either path:** a message the regex resolves completely — one amount,
+an account and category it can name — skips the model and raises the confirm
+card straight from the local parse (`_tryLocalFastPath`). Fast means no round
+trip, **not** no confirmation: nothing commits until the card is answered. The
+one exception is a surface with no card to answer — the home-screen quick log
+and the widget pass `autoResolve`, and those still commit straight through.
+
 **Pipeline (Plan 058):** the whole message goes to the cloud extractor in ONE
 call (`lib/utils/finance_entry_extraction.dart`), which returns every
 transaction in it as an array; names are bound against the live account and
@@ -36,15 +43,17 @@ reach it.
 | **account** | Dropdown, all active non-sub | Exact / prefix / fuzzy / multi-word span; sole-account fallback |
 | **transferTo** | Dropdown | `to` / `into` / `from` markers, else word order |
 | **category** | Picker sheet | Name, prefix, learned dictionary (typo-tolerant), AI inference |
-| **description** | Free text, uncapped | Derived from raw input, metadata stripped, capped at 120 with an ellipsis |
+| **description** | Free text, uncapped | `title: …` or `title "…"` is used verbatim; otherwise derived from raw input, metadata stripped, capped at 120 with an ellipsis |
 | **note** | Free text | `note: …` or `// …` to end of segment |
 | **date** | Date picker, any date | Resolved to an absolute date by the model against today; a date chip on the card edits it. The fallback path still uses the phrase table in §4 |
 | **reimbursable** | Switch | Auto-detected from phrasing |
 | **expectedReimbursementDate** | Date picker | A date behind a payback cue ("pays me back friday") |
 | **owedBy** | Free text | Extracted from lend/payback phrasing, or supplied by the AI |
 
-`billId`, `receivableId` and `installmentId` are set by neither surface — they
-are written by the Bills and Installments pages.
+`billId` and `installmentId` are set by neither surface — they are written by
+the Bills and Installments pages. `reimbursementReceivableId` **is** set by
+both: a reimbursable expense spawns its linked receivable on the way in, from
+chat exactly as from the form.
 
 Field parity is now complete except **custodian accounts** (§3) and the
 operations chat structurally cannot perform: **edit and delete**.

@@ -185,7 +185,10 @@ void main() {
 
     test('strips amount + account from the stored description', () async {
       await _waitForLoad(ledger);
+      // The local parse raises the confirm card rather than committing; the
+      // label is cleaned on the way onto it, so it is what gets saved.
       await ledger.sendChatInput('-500 food gcash');
+      await ledger.confirmEntries();
       expect(ledger.allTransactions, hasLength(1));
       final desc = ledger.allTransactions.first.description;
       expect(desc, isNot(contains('500')));

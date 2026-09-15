@@ -278,6 +278,15 @@ DateTime _recentWeekday(DateTime now, int weekday, {required bool forcePast}) {
   return today.subtract(Duration(days: delta));
 }
 
+/// The next [weekday] strictly after today — today itself is not "friday" when
+/// someone says they'll pay you back on friday.
+DateTime _nextWeekday(DateTime now, int weekday) {
+  final today = _dayOf(now);
+  var delta = weekday - today.weekday;
+  if (delta <= 0) delta += 7;
+  return today.add(Duration(days: delta));
+}
+
 /// Finds the first date phrase in [text].
 ///
 /// Deliberately conservative about what counts as a date, because a false
@@ -289,7 +298,14 @@ DateTime _recentWeekday(DateTime now, int weekday, {required bool forcePast}) {
 ///    ([accountWords]), so "mar 20" stays Maribank rather than becoming March.
 ///  * Slash forms ("08/20") are not read at all: they are indistinguishable
 ///    from the division the calculator syntax allows.
-_DateHit? _findDate(String text, DateTime now, Set<String> accountWords) {
+///
+/// Every reading is past-biased, because a transaction is something that has
+/// already happened. [forward] flips that for the one date in a message that
+/// legitimately points ahead — when someone pays you back. "Pays me back
+/// friday" means the friday coming, and "reimbursable on sept 20" said five
+/// days before the 20th means this year's, not last year's.
+_DateHit? _findDate(String text, DateTime now, Set<String> accountWords,
+    {bool forward = false}) {
   final today = _dayOf(now);
 
   final relative = RegExp(
@@ -317,8 +333,12 @@ _DateHit? _findDate(String text, DateTime now, Set<String> accountWords) {
     '\\b(last\\s+)?(${_kWeekdays.keys.join('|')})\\b',
   ).firstMatch(text);
   if (weekday != null) {
-    final value = _recentWeekday(now, _kWeekdays[weekday.group(2)!]!,
-        forcePast: weekday.group(1) != null);
+    // "last friday" is explicit, so it stays in the past even for a payback.
+    final explicitlyPast = weekday.group(1) != null;
+    final value = forward && !explicitlyPast
+        ? _nextWeekday(now, _kWeekdays[weekday.group(2)!]!)
+        : _recentWeekday(now, _kWeekdays[weekday.group(2)!]!,
+            forcePast: explicitlyPast);
     return _DateHit(value, weekday.start, weekday.end);
   }
 
@@ -338,12 +358,38 @@ _DateHit? _findDate(String text, DateTime now, Set<String> accountWords) {
     final dayStr = named.group(2) ?? named.group(3)!;
     // A short month name that could be an account prefix is not a date.
     if (!(monthWord.length <= 4 && accountWords.contains(monthWord))) {
-      var value =
-          _safeDate(today.year, _kMonths[monthWord]!, int.parse(dayStr));
-      // A date later this year is far more likely last year's than the future.
-      if (value != null && value.isAfter(today)) {
-        value =
-            _safeDate(today.year - 1, _kMonths[monthWord]!, int.parse(dayStr));
+      final month = _kMonths[monthWord]!;
+      final day = int.parse(dayStr);
+      var value = _safeDate(today.year, month, day);
+      // A bare "sept 20" names no year, and the two directions want different
+      // readings of it.
+      //
+      // A payback has not happened yet, so it takes whichever reading sits
+      // nearest today — this year's if it is still to come, next year's once
+      // it has passed ("jan 5" said in December).
+      //
+      // A transaction has usually already happened, so a date that would land
+      // ahead reads as last year's — but only once it is far enough ahead to
+      // mean it. "december 25" logged in August is the christmas gone; "sept
+      // 20" said on the 15th, or "oct 2" said in September, is a date days
+      // away that the user plainly meant, and rewinding those a full year is
+      // how a trip's expenses and a set-aside ended up filed in 2025, out of
+      // every month the app displays. The line is drawn at the end of NEXT
+      // month, because a month is the unit this app thinks in and nobody
+      // pre-logs further out than that.
+      if (forward) {
+        final nextYear = _safeDate(today.year + 1, month, day);
+        if (value != null &&
+            nextYear != null &&
+            today.difference(nextYear).abs() < today.difference(value).abs()) {
+          value = nextYear;
+        }
+      } else if (value != null && value.isAfter(today)) {
+        final monthsAhead =
+            (value.year - today.year) * 12 + value.month - today.month;
+        if (monthsAhead > 1) {
+          value = _safeDate(today.year - 1, month, day);
+        }
       }
       if (value != null) return _DateHit(value, named.start, named.end);
     }
@@ -364,11 +410,44 @@ DateTime? _safeDate(int year, int month, int day) {
 /// A `note:` or `//` marker and everything after it, to the end of the segment.
 final _noteMarker = RegExp(r'(?:\bnote\s*:|//)\s*(.*)$', caseSensitive: false);
 
+/// An explicit label the user wrote for the entry: `title "Hotel to Pier"`,
+/// `titled 'Lunch'`, or `title: Hotel to Pier` to the end of the segment.
+///
+/// Without this the words were left in the message like any others, so the
+/// stored description was the whole sentence with its parsed fields hollowed
+/// out of it — while the label the user had actually typed, in quotes, was the
+/// one part that never became the label. The quoted forms are tried first, so
+/// `title "Hotel to Pier" charged on bpi cc` does not swallow the tail.
+final _titleMarker = RegExp(
+  r"""\btitled?\s*:?\s*(?:"([^"]+)"|\u201c([^\u201d]+)\u201d|'([^']+)')"""
+  r"|\btitled?\s*:\s*(.+)$",
+  caseSensitive: false,
+);
+
+/// The explicit label in [rawInput], or null when it names none. The commit
+/// path uses it verbatim: a label the user typed needs no cleaning, and
+/// cleaning it would be actively wrong ("Hotel to Pier" loses its "to").
+String? chatDescriptionTitle(String rawInput) {
+  final m = _titleMarker.firstMatch(rawInput);
+  if (m == null) return null;
+  for (var g = 1; g <= m.groupCount; g++) {
+    final captured = m.group(g)?.trim();
+    if (captured != null && captured.isNotEmpty) return captured;
+  }
+  return null;
+}
+
 /// Cue words that mark a following date as the *payback* date rather than the
 /// transaction date ("spotted jana 800, she'll pay me back friday").
 final _paybackCue = RegExp(
   r'pay(?:s|ing)?\s+(?:me\s+)?back|paid\s+(?:me\s+)?back|payback'
-  r'|reimburse\w*|owes?\s+me',
+  // "reimburs", not "reimburse": the stem of "reimbursABLE" has no e, so
+  // `reimburse\w*` matched "reimbursement" and "reimbursed" but NOT the most
+  // ordinary spelling of all. _detectReimbursable already stems it correctly,
+  // so the flag fired while the cue did not — and the date behind the cue was
+  // read as the date of the EXPENSE. "reimbursable by alphaus on sept 20",
+  // said on the 15th, back-dated the expense itself to September 2025.
+  r'|reimburs\w*|owes?\s+me',
 );
 
 /// Verbs that name a person outright — the word after one is who owes you.
@@ -459,13 +538,20 @@ _Extras _extractExtras({
   }
   text = text.replaceAll(noteRe, ' ').trim();
 
+  // 1b. Title — removed for the same reason as the note, and with more at
+  // stake: a label is free text, so "Hotel to Pier" put a "to" between two
+  // words in the middle of the message, which is the one signal transfer
+  // direction has.
+  text =
+      text.replaceAll(_titleMarker, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
   // 2. Payback date — a date that follows a payback cue belongs to the
   // receivable, not the transaction, so it is claimed first.
   DateTime? paybackDate;
   final cue = _paybackCue.firstMatch(text);
   if (cue != null) {
     final after = text.substring(cue.end);
-    final hit = _findDate(after, now, accountWords);
+    final hit = _findDate(after, now, accountWords, forward: true);
     if (hit != null) {
       paybackDate = hit.date;
       // Remove only the date span. The cue words stay: downstream patterns
@@ -1041,6 +1127,33 @@ _AccountMatch _resolveAccountPhrase(
   if (prefixHits.length > 1) return const _AccountMatch.ambiguous();
   if (prefixHits.length == 1 && t.length >= _minAccountPrefixLength) {
     return _AccountMatch.hit(prefixHits.first.id);
+  }
+
+  // 3. Name-words coverage, for a name written loosely or out of order.
+  //
+  // "BPI Credit Card" is the account "Credit Card CC (BPI)" — every word the
+  // user typed is one of that account's own name words, and no other account
+  // claims all three. Without this the phrase matched nothing: "credit card"
+  // is a prefix of BOTH cards and so resolved to neither, "card" matched
+  // nothing alone, and "bpi" then quietly resolved on its own — to BPI
+  // SAVINGS, which is how a credit-card charge got logged against a savings
+  // account. The words the user typed to name the card are what redirected it.
+  //
+  // Two or more tokens only. A lone word is left to the prefix pass: "savings"
+  // is a word in several account names and resolving it by coverage would make
+  // an unambiguous prefix ambiguous.
+  //
+  // This is the same rule _collapseNameFragments applies to adjacent spans that
+  // DID resolve; the difference is that here nothing resolved to collapse.
+  final phraseWords =
+      t.split(RegExp(r'[^a-z0-9ñ]+')).where((w) => w.isNotEmpty);
+  if (phraseWords.length > 1) {
+    final wanted = phraseWords.toSet();
+    final covering = accounts
+        .where((a) => _accountNameWords(a).containsAll(wanted))
+        .toList();
+    if (covering.length == 1) return _AccountMatch.hit(covering.first.id);
+    if (covering.length > 1) return const _AccountMatch.ambiguous();
   }
 
   // 3. Fuzzy match (Damerau–Levenshtein ≤ 1, phrase ≥ _minAccountFuzzyLength).

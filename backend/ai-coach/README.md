@@ -237,6 +237,31 @@ mismatch, surfaced as a 403 that looks nothing like a hashing problem.
 `CloudAiCoachService.payloadHash` does this, and its digests are pinned in
 `test/services/advisor_payload_hash_test.dart`.
 
+### CORS belongs to the Function URL, and to nothing else
+
+The Function URL's own CORS config answers the browser's preflight — OPTIONS
+never reaches `app.py` — **and injects `access-control-allow-origin` into every
+response it passes back**. That injection cannot be turned off from inside the
+app, so the app must not set the header at all.
+
+When it did, both copies arrived and the browser refused the response: two values
+of `access-control-allow-origin` is not "more allowed", it is invalid. Every
+advisor turn failed as a CORS error with zero bytes read, on an endpoint that was
+answering correctly — `curl` saw a clean 401 or a clean stream, because `curl`
+does not enforce CORS. `test_app.py` now asserts the app emits no CORS header on
+the preflight, on errors, and on the streamed 200.
+
+The deployed config is committed as `advisor_cors.json` (both Firebase origins;
+`authorization` and `x-nudgr-authorization` named explicitly — a wildcard does
+not cover a header on an authenticated request). Reapply it with:
+
+```bash
+aws lambda update-function-url-config --function-name food-advisor-stream   --region ap-southeast-1 --cors file://backend/ai-coach/advisor_cors.json
+```
+
+Note this is a *different* config from `cors.json`, which is the HTTP API's and
+is checked by `scripts/check_api_cors.sh`. Two front doors, two CORS configs.
+
 Verified end to end: a response emitted in 10 frames 300ms apart arrived through
 CloudFront 300ms apart. **CloudFront passes the stream through without
 buffering** — which was the one assumption this whole approach rested on.
