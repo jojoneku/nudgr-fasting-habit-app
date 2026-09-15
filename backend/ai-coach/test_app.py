@@ -149,40 +149,51 @@ def test_routing_is_checked_before_auth_is_not_assumed(_no_bedrock):
 
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
+#
+# The app must emit NO CORS headers. The Function URL's CORS config answers the
+# preflight and injects `access-control-allow-origin` into every response it
+# passes back; a copy from here arrives as a SECOND value of the same header and
+# the browser rejects the whole response, which is how every advisor turn died as
+# a CORS error with nothing read. These tests exist to keep that header from
+# being reintroduced here, not to describe what CORS the endpoint serves — that
+# lives in backend/ai-coach/advisor_cors.json.
 
-def test_preflight_from_an_allowed_origin_is_answered(_no_bedrock):
+_CORS_HEADERS = (
+    "access-control-allow-origin",
+    "access-control-allow-headers",
+    "access-control-allow-methods",
+    "access-control-allow-credentials",
+)
+
+
+def _assert_no_cors(rec, where):
+    for header in _CORS_HEADERS:
+        assert header not in rec.headers, f"{where} emitted {header}"
+
+
+def test_a_preflight_is_answered_without_cors_headers(_no_bedrock):
+    # Only direct callers get here at all — through the Function URL the
+    # preflight never reaches this app.
     rec = _call(method="OPTIONS",
                 headers={"origin": "https://nudgr-app.web.app"})
     assert rec.status == 204
-    h = rec.headers
-    assert h["access-control-allow-origin"] == "https://nudgr-app.web.app"
-    # `authorization` must be named explicitly — a wildcard does not cover it on
-    # an authenticated request, which is the trap that took web down once.
-    assert "authorization" in h["access-control-allow-headers"]
-    assert "content-type" in h["access-control-allow-headers"]
+    _assert_no_cors(rec, "the preflight")
     assert _no_bedrock["n"] == 0
 
 
-def test_both_firebase_origins_are_allowed(_no_bedrock):
-    for origin in ("https://nudgr-app.web.app",
-                   "https://nudgr-app.firebaseapp.com"):
-        rec = _call(method="OPTIONS", headers={"origin": origin})
-        assert rec.headers["access-control-allow-origin"] == origin, origin
-
-
-def test_an_unknown_origin_gets_no_allow_header(_no_bedrock):
-    rec = _call(method="OPTIONS", headers={"origin": "https://evil.example"})
-    assert rec.status == 204
-    assert "access-control-allow-origin" not in rec.headers
-
-
-def test_a_401_still_carries_cors_so_the_browser_can_read_it(_no_bedrock):
-    # Without this the browser reports a CORS failure instead of the 401, and
-    # the user is told to check their connection when they need to sign in.
+def test_an_error_response_carries_no_cors_header(_no_bedrock):
+    # The 401 is the one that matters most: duplicated here, the browser reports
+    # a CORS failure instead of the 401, and a user who needs to sign in is told
+    # to check their connection.
     rec = _call(headers={"origin": "https://nudgr-app.web.app"})
     assert rec.status == 401
-    assert rec.headers["access-control-allow-origin"] == \
-        "https://nudgr-app.web.app"
+    _assert_no_cors(rec, "the 401")
+
+
+def test_a_404_carries_no_cors_header(_no_bedrock):
+    rec = _call(path="/admin", headers={"origin": "https://nudgr-app.web.app"})
+    assert rec.status in (401, 404)
+    _assert_no_cors(rec, "the 404")
 
 
 # ── Authenticated requests ───────────────────────────────────────────────────
@@ -274,6 +285,23 @@ def test_a_continuation_hop_does_not_re_charge_the_cap(_valid_token,
         'a continuation hop must not be charged again'
 
 
+def test_a_streamed_200_carries_no_cors_header(_valid_token, monkeypatch):
+    # The success path is the one the outage actually hit: with a copy of
+    # `access-control-allow-origin` here, the browser saw two values on the
+    # response and discarded the whole stream before a single frame was read.
+    monkeypatch.setattr(advisor_app, "advise_finance_stream",
+                        lambda payload, request: iter(['{"type": "end"}\n']))
+    body = json.dumps({
+        "payload": {
+            "context": {"summary": "ACCOUNTS\n- Cash: 100"},
+            "messages": [{"role": "user", "text": "how am i doing?"}],
+        }
+    }).encode()
+    rec = _call(headers={**_valid_token,
+                         "origin": "https://nudgr-app.web.app"}, body=body)
+    assert rec.status == 200
+    assert rec.headers["content-type"] == "application/x-ndjson"
+    _assert_no_cors(rec, "the streamed 200")
 # ── Running out of wall clock mid-answer ─────────────────────────────────────
 #
 # The failure these protect against, from the app's side: a long answer was
