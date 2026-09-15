@@ -179,6 +179,19 @@ FinanceCategory _cat(String id, String name, CategoryType type) =>
       colorHex: '#FFFFFF',
     );
 
+/// Sends [text] and answers the review card when the message resolved cleanly.
+///
+/// The local fast path no longer commits on the spot — it raises the same
+/// confirm card every other path does — so a test about what reaches storage
+/// has to tap through it, exactly as the user now does.
+Future<void> _logViaChat(LedgerPresenter presenter, String text) async {
+  await presenter.sendChatInput(text);
+  if (presenter.chatState.phase == ChatPhase.reviewing &&
+      presenter.chatState.entries.every((e) => e.isReady)) {
+    await presenter.confirmEntries();
+  }
+}
+
 Future<void> _waitForLoad(LedgerPresenter presenter) async {
   while (presenter.isLoading) {
     await Future.delayed(const Duration(milliseconds: 5));
@@ -213,12 +226,21 @@ void main() {
   });
 
   group('regex+dict fast-path', () {
-    test('fully-resolved input commits without AI call', () async {
+    test('fully-resolved input is confirmed without an AI call', () async {
       final ai = FakeAiCoachService([]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
       await presenter.sendChatInput('-500 food gcash');
+
+      // Fast means no model call, not no confirmation: the card is raised
+      // from the local parse, with nothing saved until it is answered.
+      expect(ai.callCount, 0);
+      expect(presenter.chatState.phase, ChatPhase.reviewing);
+      expect(presenter.chatState.entries.single.isReady, isTrue);
+      expect(presenter.allTransactions, isEmpty);
+
+      await presenter.confirmEntries();
 
       expect(presenter.allTransactions, hasLength(1));
       expect(ai.callCount, 0);
@@ -898,7 +920,11 @@ void main() {
 
         await presenter.sendChatInput('-500 food gcash', autoResolve: true);
 
+        // A one-shot surface has no card to answer, so this is the one path
+        // that still commits straight through. Losing that would make the
+        // widget and the quick log silently drop what they were given.
         expect(presenter.allTransactions, hasLength(1));
+        expect(presenter.chatState.phase, ChatPhase.idle);
         expect(presenter.pendingFormPrefill, isNull);
         expect(presenter.queuedFormPrefillCount, 0);
       });
@@ -931,7 +957,7 @@ void main() {
           expectedDate = date;
         };
 
-        await presenter.sendChatInput(
+        await _logViaChat(presenter, 
           'Log 252 Reimburseable by Alphaus on Sept 20. '
           'Title "Hotel to Pier" Charged on BPI Credit Card',
         );
@@ -1012,7 +1038,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash and -300 hamburger bpi');
+      await _logViaChat(presenter, '-500 food gcash and -300 hamburger bpi');
       expect((presenter.chatState.lastStep as StepResolved).deferred,
           hasLength(1));
 
@@ -1021,7 +1047,7 @@ void main() {
       expect(presenter.allTransactions, isEmpty);
 
       // A fresh single entry behaves normally — no ambush from the old queue.
-      await presenter.sendChatInput('-100 food gcash');
+      await _logViaChat(presenter, '-100 food gcash');
       expect(presenter.allTransactions, hasLength(1));
       expect(presenter.chatState.phase, ChatPhase.idle);
     });
@@ -1065,7 +1091,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-150 food gcash coffee and donuts');
+      await _logViaChat(presenter, '-150 food gcash coffee and donuts');
 
       expect(presenter.allTransactions, hasLength(1));
       expect(presenter.allTransactions.first.amount, 150);
@@ -1099,7 +1125,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash note: Split with Mika');
+      await _logViaChat(presenter, '-500 food gcash note: Split with Mika');
 
       expect(ai.callCount, 0);
       final txn = presenter.allTransactions.single;
@@ -1113,7 +1139,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash yesterday');
+      await _logViaChat(presenter, '-500 food gcash yesterday');
 
       final txn = presenter.allTransactions.single;
       final expected = DateTime.now().subtract(const Duration(days: 1));
@@ -1131,7 +1157,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash');
+      await _logViaChat(presenter, '-500 food gcash');
 
       final txn = presenter.allTransactions.single;
       final now = DateTime.now();
@@ -1144,7 +1170,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-285+15 food gcash');
+      await _logViaChat(presenter, '-285+15 food gcash');
 
       expect(presenter.allTransactions.single.amount, 300);
       expect(ai.callCount, 0);
@@ -1161,7 +1187,7 @@ void main() {
         spawnedDate = expected;
       };
 
-      await presenter.sendChatInput(
+      await _logViaChat(presenter, 
           '-800 food gcash spotted Jana, she pays me back friday');
 
       final txn = presenter.allTransactions.single;
@@ -1185,7 +1211,7 @@ void main() {
         spawnedDate = expected;
       };
 
-      await presenter.sendChatInput('-500 food gcash work expense');
+      await _logViaChat(presenter, '-500 food gcash work expense');
 
       expect(presenter.allTransactions.single.reimbursable, isTrue);
       expect(spawned, isTrue);
@@ -1197,7 +1223,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash lunch');
+      await _logViaChat(presenter, '-500 food gcash lunch');
 
       final txn = presenter.allTransactions.single;
       expect(txn.reimbursable, isFalse);
@@ -1246,7 +1272,7 @@ void main() {
       await _waitForLoad(presenter);
 
       final longLabel = List.filled(40, 'groceries').join(' ');
-      await presenter.sendChatInput('-500 food gcash $longLabel');
+      await _logViaChat(presenter, '-500 food gcash $longLabel');
 
       final description = presenter.allTransactions.single.description;
       expect(description.length, lessThanOrEqualTo(121));
@@ -1260,7 +1286,7 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter.sendChatInput('-500 food gcash jollibee');
+      await _logViaChat(presenter, '-500 food gcash jollibee');
 
       final description = presenter.allTransactions.single.description;
       expect(description, isNot(contains('…')));
@@ -1272,8 +1298,8 @@ void main() {
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
-      await presenter
-          .sendChatInput('transfer 200 bpi to gcash yesterday note: Top up');
+      await _logViaChat(
+          presenter, 'transfer 200 bpi to gcash yesterday note: Top up');
 
       final legs = presenter.allTransactions;
       expect(legs, hasLength(2));
@@ -1521,7 +1547,7 @@ void main() {
         final presenter = LedgerPresenter(storage, stats, ai: onDevice);
         await _waitForLoad(presenter);
 
-        await presenter.sendChatInput('-500 food gcash');
+        await _logViaChat(presenter, '-500 food gcash');
 
         expect(presenter.allTransactions, hasLength(1),
             reason: 'offline logging must keep working');
@@ -1534,7 +1560,7 @@ void main() {
         final presenter = withCloud(cloud);
         await _waitForLoad(presenter);
 
-        await presenter.sendChatInput('-500 food gcash');
+        await _logViaChat(presenter, '-500 food gcash');
 
         expect(presenter.allTransactions, hasLength(1));
       });
@@ -1545,7 +1571,7 @@ void main() {
         final presenter = withCloud(cloud);
         await _waitForLoad(presenter);
 
-        await presenter.sendChatInput('-500 food gcash');
+        await _logViaChat(presenter, '-500 food gcash');
 
         expect(presenter.allTransactions, hasLength(1));
       });
@@ -1558,7 +1584,7 @@ void main() {
         final presenter = withCloud(cloud);
         await _waitForLoad(presenter);
 
-        await presenter.sendChatInput('bought some stuff at the mall');
+        await _logViaChat(presenter, 'bought some stuff at the mall');
 
         expect(presenter.chatState.unclear, 'How much was it?');
         expect(presenter.allTransactions, isEmpty);
@@ -1672,15 +1698,22 @@ void main() {
         LedgerPresenter(storage, stats,
             ai: FakeAiCoachService([]), cloudAi: cloud);
 
-    test('a fully-resolved single entry commits with no model call', () async {
+    test('a fully-resolved single entry skips the model, not the card',
+        () async {
       final cloud = FakeAiCoachService([]);
       final presenter = withCloud(cloud);
       await _waitForLoad(presenter);
 
       await presenter.sendChatInput('-500 food gcash');
 
-      expect(presenter.allTransactions, hasLength(1));
       expect(cloud.extractCallCount, 0, reason: 'no waiting on Bedrock');
+      expect(presenter.chatState.phase, ChatPhase.reviewing);
+      expect(presenter.allTransactions, isEmpty);
+
+      await presenter.confirmEntries();
+
+      expect(presenter.allTransactions, hasLength(1));
+      expect(cloud.extractCallCount, 0);
       expect(presenter.chatState.phase, ChatPhase.idle);
       expect(presenter.lastCommittedSummary, isNotNull);
     });

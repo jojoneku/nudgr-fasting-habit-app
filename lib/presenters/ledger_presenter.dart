@@ -1317,7 +1317,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         safeNotify();
         return;
       }
-      if (await _tryLocalFastPath(text)) return;
+      if (await _tryLocalFastPath(text, autoResolve: autoResolve)) return;
       final extracted = await _extractEntries(text);
       if (extracted != null) {
         await _presentExtraction(extracted, text, autoResolve: autoResolve);
@@ -1327,26 +1327,32 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await _legacyChatInput(text, autoResolve: autoResolve);
   }
 
-  /// Commits a single, unambiguous entry locally and instantly. Returns true
-  /// when it did, meaning the caller should not call the model at all.
+  /// Resolves a single, unambiguous entry locally and instantly, skipping the
+  /// model. Returns true when it handled the message.
   ///
-  /// This is the one case where skipping the confirm card is right. The card
-  /// exists because a model may have misread the message — but nothing read it
-  /// here. The regex matched one amount against the user's own account and
-  /// category names, deterministically, with no inference anywhere; there is
-  /// no guess to check. Making that wait ~1-2s on Bedrock to be told what it
-  /// already knew is a tax on the most common entry there is ("-500 food
-  /// gcash"), which is why it ran instantly before Plan 058 and does again.
+  /// Fast means no Bedrock call, NOT no confirmation. The saving here is the
+  /// ~1-2s round trip on the most common entry there is ("-500 food gcash");
+  /// the confirm card costs nothing and is what keeps a misread from becoming
+  /// a saved row. It used to commit on the spot on the grounds that the regex
+  /// infers nothing — but it does: a prefix is not an exact name, and the
+  /// learned dictionary tolerates a typo. "Charged on BPI Credit Card" resolved
+  /// through those to BPI SAVINGS and was filed before the user could see it.
+  /// A card the user dismisses in one tap is the cheaper error.
+  ///
+  /// [autoResolve] surfaces have no review UI (the home-screen quick log, the
+  /// widget), so there they still commit directly — that is the contract those
+  /// callers are written against.
   ///
   /// Deliberately narrow. Anything the regex is bad at goes to the model:
   ///
   ///  * More than one entry — segmentation is the very thing it gets wrong.
-  ///  * Any unresolved field — an inferred category is a guess, and guesses
-  ///    belong on the card.
+  ///  * Any unresolved field — an inferred category is a guess, and the model
+  ///    is better at guessing than the dictionary is.
   ///  * Any hard error — "-500 -300 food gcash" is not a broken message, it is
   ///    two entries the extractor reads fine. Only the fallback path still
   ///    reports it as an error, and only when there is no model to ask.
-  Future<bool> _tryLocalFastPath(String text) async {
+  Future<bool> _tryLocalFastPath(String text,
+      {required bool autoResolve}) async {
     final batch = preparseFinanceBatch(
       input: text,
       categories: _categories,
@@ -1365,7 +1371,22 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _deferredSegments = const [];
     _queuedFormPrefills = const [];
     _pendingFormPrefill = null;
-    await _commitParsed(preparse.toDraft());
+
+    // Clean the label now rather than at commit, so the card shows the row the
+    // way it will be saved.
+    final draft = _withCleanDescription(preparse.toDraft());
+    if (autoResolve) {
+      await _commitParsed(draft);
+      return true;
+    }
+    _chatState = LedgerChatState(
+      phase: ChatPhase.reviewing,
+      entries: [ExtractedEntry(txn: draft)],
+      draft: draft,
+      turns: [LedgerChatTurn(text: text, isUser: true, at: DateTime.now())],
+      turnCount: 0,
+    );
+    safeNotify();
     return true;
   }
 

@@ -6,6 +6,13 @@ against the manual ledger form (`lib/views/treasury/ledger/add_transaction_sheet
 Read this before sending a user to chat for something, or before assuming chat
 is a full replacement for the form.
 
+**Before either path:** a message the regex resolves completely — one amount,
+an account and category it can name — skips the model and raises the confirm
+card straight from the local parse (`_tryLocalFastPath`). Fast means no round
+trip, **not** no confirmation: nothing commits until the card is answered. The
+one exception is a surface with no card to answer — the home-screen quick log
+and the widget pass `autoResolve`, and those still commit straight through.
+
 **Pipeline (Plan 058):** the whole message goes to the cloud extractor in ONE
 call (`lib/utils/finance_entry_extraction.dart`), which returns every
 transaction in it as an array; names are bound against the live account and
