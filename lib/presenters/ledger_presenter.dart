@@ -2270,6 +2270,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// actually described (e.g. "-500 jollibee gcash" → "jollibee"). Falls back to
   /// the category name when nothing descriptive remains.
   String _cleanDescription(ParsedTransaction draft) {
+    // A label the user typed themselves is the label. Nothing below should
+    // touch it: the connector-word pass alone would turn `title "Hotel to
+    // Pier"` into "Hotel Pier".
+    final titled = chatDescriptionTitle(draft.description);
+    if (titled != null) return titled;
+
     // Drop the spans the preparser already turned into a note and a date, so
     // the label doesn't repeat fields the transaction now carries structurally.
     var s = chatDescriptionSource(
@@ -2309,7 +2315,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         r"(?:i'?ll\s+|she'?ll\s+|he'?ll\s+|they'?ll\s+|will\s+|gonna\s+)?"
         r'(?:pay|pays|paying)\s+(?:me\s+)?back'
         r'|paid\s+(?:me\s+)?back|payback|owes?\s+me'
-        r'|reimbursable|reimbursement|reimbursed?',
+        // Stemmed and bounded. `reimbursed?` matched the "reimburse" inside
+        // "Reimburseable" and left the "able" behind, so a perfectly ordinary
+        // message was filed as "Log able by Alphaus on .".
+        r'|\breimburs\w*\b',
         caseSensitive: false,
       ),
       ' ',

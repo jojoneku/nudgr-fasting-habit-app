@@ -904,6 +904,59 @@ void main() {
       });
     });
 
+    // One message, four ways to get it wrong — all of them silent, and all of
+    // them reached without the model, because the regex path resolved every
+    // field and committed on the spot.
+    group('a card charge with a title and a payback date', () {
+      test('lands on the card, under its own name, owed back this year',
+          () async {
+        final bpiCard = _acc('bpicc', 'Credit Card CC (BPI)',
+            cat: AccountCategory.creditCard);
+        final bpiSavings = _acc('bpisav', 'BPI Savings', balance: 5000);
+        final reimb =
+            _cat('reimb', 'Alphaus Reimbursement', CategoryType.expense);
+        when(storage.loadAccounts())
+            .thenAnswer((_) async => [bpiCard, bpiSavings, gcash]);
+        when(storage.loadFinanceCategories())
+            .thenAnswer((_) async => [reimb, food, salary]);
+
+        final ai = FakeAiCoachService([]);
+        final presenter = LedgerPresenter(storage, stats, ai: ai);
+        await _waitForLoad(presenter);
+
+        TransactionRecord? spawnedFor;
+        DateTime? expectedDate;
+        presenter.onSpawnReimbursementReceivable = (txn, date) async {
+          spawnedFor = txn;
+          expectedDate = date;
+        };
+
+        await presenter.sendChatInput(
+          'Log 252 Reimburseable by Alphaus on Sept 20. '
+          'Title "Hotel to Pier" Charged on BPI Credit Card',
+        );
+
+        final txn = presenter.allTransactions.single;
+        // "BPI Credit Card" is the card. It used to resolve to BPI SAVINGS:
+        // "credit card" prefixed both cards and so matched neither, leaving
+        // "bpi" to resolve on its own.
+        expect(txn.accountId, 'bpicc');
+        // The label the user typed, not the sentence with holes in it. This
+        // was stored as 'Log able by Alphaus on . Title "Hotel to Pier"…'.
+        expect(txn.description, 'Hotel to Pier');
+        expect(txn.amount, 252);
+        expect(txn.reimbursable, isTrue);
+        // And the receivable is owed back in a month that still exists. The
+        // payback date was rolled a year back, into a month the bills list
+        // filters away — which is what "it didn't add a receivable" was.
+        expect(spawnedFor, isNotNull);
+        expect(expectedDate, isNotNull);
+        expect(expectedDate!.year, DateTime.now().year);
+        expect(expectedDate!.month, 9);
+        expect(expectedDate!.day, 20);
+      });
+    });
+
     // The form the chat hands off to used to show the raw message in its
     // Description field — sitting right beside the Amount and Account fields
     // holding those very values. Only the commit path cleaned the label.

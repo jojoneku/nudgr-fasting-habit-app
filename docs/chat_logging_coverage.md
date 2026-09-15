@@ -36,15 +36,17 @@ reach it.
 | **account** | Dropdown, all active non-sub | Exact / prefix / fuzzy / multi-word span; sole-account fallback |
 | **transferTo** | Dropdown | `to` / `into` / `from` markers, else word order |
 | **category** | Picker sheet | Name, prefix, learned dictionary (typo-tolerant), AI inference |
-| **description** | Free text, uncapped | Derived from raw input, metadata stripped, capped at 120 with an ellipsis |
+| **description** | Free text, uncapped | `title: …` or `title "…"` is used verbatim; otherwise derived from raw input, metadata stripped, capped at 120 with an ellipsis |
 | **note** | Free text | `note: …` or `// …` to end of segment |
 | **date** | Date picker, any date | Resolved to an absolute date by the model against today; a date chip on the card edits it. The fallback path still uses the phrase table in §4 |
 | **reimbursable** | Switch | Auto-detected from phrasing |
 | **expectedReimbursementDate** | Date picker | A date behind a payback cue ("pays me back friday") |
 | **owedBy** | Free text | Extracted from lend/payback phrasing, or supplied by the AI |
 
-`billId`, `receivableId` and `installmentId` are set by neither surface — they
-are written by the Bills and Installments pages.
+`billId` and `installmentId` are set by neither surface — they are written by
+the Bills and Installments pages. `reimbursementReceivableId` **is** set by
+both: a reimbursable expense spawns its linked receivable on the way in, from
+chat exactly as from the form.
 
 Field parity is now complete except **custodian accounts** (§3) and the
 operations chat structurally cannot perform: **edit and delete**.
