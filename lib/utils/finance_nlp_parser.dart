@@ -542,10 +542,8 @@ _Extras _extractExtras({
   // stake: a label is free text, so "Hotel to Pier" put a "to" between two
   // words in the middle of the message, which is the one signal transfer
   // direction has.
-  text = text
-      .replaceAll(_titleMarker, ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
+  text =
+      text.replaceAll(_titleMarker, ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
   // 2. Payback date — a date that follows a payback cue belongs to the
   // receivable, not the transaction, so it is claimed first.

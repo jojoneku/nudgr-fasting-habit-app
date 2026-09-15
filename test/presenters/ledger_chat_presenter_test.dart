@@ -957,7 +957,8 @@ void main() {
           expectedDate = date;
         };
 
-        await _logViaChat(presenter, 
+        await _logViaChat(
+          presenter,
           'Log 252 Reimburseable by Alphaus on Sept 20. '
           'Title "Hotel to Pier" Charged on BPI Credit Card',
         );
@@ -1187,8 +1188,8 @@ void main() {
         spawnedDate = expected;
       };
 
-      await _logViaChat(presenter, 
-          '-800 food gcash spotted Jana, she pays me back friday');
+      await _logViaChat(
+          presenter, '-800 food gcash spotted Jana, she pays me back friday');
 
       final txn = presenter.allTransactions.single;
       expect(txn.reimbursable, isTrue);

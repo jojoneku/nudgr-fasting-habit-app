@@ -879,10 +879,10 @@ void main() {
       // a full year is how a trip's expenses and a set-aside — anything with a
       // date a few days out, reimbursable or not — were filed in 2025, out of
       // every month the app displays.
-      expect(run('-500 food gcash aug 20', now: wed).date,
-          DateTime(2026, 8, 20));
-      expect(run('-500 food gcash sept 2', now: wed).date,
-          DateTime(2026, 9, 2));
+      expect(
+          run('-500 food gcash aug 20', now: wed).date, DateTime(2026, 8, 20));
+      expect(
+          run('-500 food gcash sept 2', now: wed).date, DateTime(2026, 9, 2));
     });
 
     test('an ISO date', () {
@@ -1064,8 +1064,8 @@ void main() {
       // (right for a transaction, which has already happened) put the expected
       // reimbursement in 2025 — and a month-filtered bills list never showed
       // it, so a logged reimbursable looked like it had never been tracked.
-      final r = run('-252 food gcash reimbursable by alphaus on aug 20',
-          now: wed);
+      final r =
+          run('-252 food gcash reimbursable by alphaus on aug 20', now: wed);
       expect(r.reimbursable, isTrue);
       expect(r.expectedReimbursementDate, DateTime(2026, 8, 20));
       // And the EXPENSE is not back-dated by the same phrase. The cue used to
