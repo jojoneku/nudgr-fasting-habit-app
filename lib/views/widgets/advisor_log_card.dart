@@ -15,13 +15,24 @@ import 'finance/finance_proposal_card.dart';
 ///
 /// Collapses to nothing when the ledger chat is idle.
 class AdvisorLogCard extends StatelessWidget {
-  const AdvisorLogCard({super.key, required this.ledger, this.proposals});
+  const AdvisorLogCard({
+    super.key,
+    required this.ledger,
+    this.proposals,
+    this.maxRowsHeight,
+  });
 
   final LedgerPresenter ledger;
 
   /// Where a change Nudgy proposed waits for an answer. Null when this build
   /// has no tool executor, in which case the card behaves exactly as before.
   final FinanceProposalHost? proposals;
+
+  /// Ceiling for the review card's scrolling rows, measured by the chat shell
+  /// from its own height. This card sits in a strip that does not scroll, so
+  /// without a ceiling a seven-entry list paints outside the sheet and takes
+  /// the commit button with it.
+  final double? maxRowsHeight;
 
   static final _money = NumberFormat('#,##0.##', 'en_US');
 
@@ -42,15 +53,30 @@ class AdvisorLogCard extends StatelessWidget {
       // A pending proposal outranks the logging states: the tool loop is
       // blocked on this answer, and nothing else in the chat can progress
       // until the user gives one.
-      body = FinanceProposalCard(host: proposals!, action: pending);
+      // Keyed by proposal, so the next one in a run gets its own State rather
+      // than inheriting the previous card's "busy" and recurrence choice.
+      body = FinanceProposalCard(
+        key: ValueKey(pending.call.id),
+        host: proposals!,
+        action: pending,
+      );
     } else if (state.phase == ChatPhase.classifying) {
       body = _Thinking(cs: cs);
     } else if (state.entries.isNotEmpty) {
       // Plan 058: rows from the one-call extractor, reviewed and completed in
       // place. The StepResolved branch below still serves the regex fallback.
-      body = EntryReviewCard(ledger: ledger, state: state);
+      body = EntryReviewCard(
+        ledger: ledger,
+        state: state,
+        maxRowsHeight: maxRowsHeight,
+      );
     } else if (step is StepResolved) {
-      body = _Resolved(ledger: ledger, step: step, money: _money);
+      body = _Resolved(
+        ledger: ledger,
+        step: step,
+        money: _money,
+        maxRowsHeight: maxRowsHeight,
+      );
     } else if (step is StepClarify) {
       body = _Clarify(ledger: ledger, step: step);
     }
@@ -95,21 +121,32 @@ class _Thinking extends StatelessWidget {
 }
 
 class _Resolved extends StatelessWidget {
-  const _Resolved(
-      {required this.ledger, required this.step, required this.money});
+  const _Resolved({
+    required this.ledger,
+    required this.step,
+    required this.money,
+    this.maxRowsHeight,
+  });
 
   final LedgerPresenter ledger;
   final StepResolved step;
   final NumberFormat money;
+
+  /// Same ceiling the review card gets, for the same reason: the fallback path
+  /// also batches, and a long batch here would push its own Log button out of
+  /// the sheet.
+  final double? maxRowsHeight;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final txns = step.transactions;
     final deferred = step.deferred.length;
+    final rowsCap = maxRowsHeight ?? MediaQuery.sizeOf(context).height * 0.32;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // One message can describe several transactions. Rendering only the
         // first while "Log it" commits all of them would misreport what the
@@ -125,14 +162,25 @@ class _Resolved extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-        for (var i = 0; i < txns.length; i++) ...[
-          if (i > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Divider(height: 1, color: cs.outlineVariant),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: rowsCap),
+          child: ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            itemCount: txns.length,
+            itemBuilder: (_, i) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (i > 0)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(height: 1, color: cs.outlineVariant),
+                  ),
+                _ResolvedEntry(ledger: ledger, txn: txns[i], money: money),
+              ],
             ),
-          _ResolvedEntry(ledger: ledger, txn: txns[i], money: money),
-        ],
+          ),
+        ),
         if (deferred > 0) ...[
           const SizedBox(height: 10),
           Text(

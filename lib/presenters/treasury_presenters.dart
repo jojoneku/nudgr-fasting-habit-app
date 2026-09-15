@@ -61,7 +61,8 @@ class TreasuryPresenters {
   final GroceryCartPresenter groceryCart;
 
   /// Runs the tools Nudgy calls. Owns nothing: reads come off [bills] and
-  /// [budget], and every write goes back through their mutators.
+  /// [budget], transactions go to [ledger]'s review card, and every write goes
+  /// back through their mutators.
   ///
   /// Assembled here rather than in a shell because it needs two owners at once,
   /// and building it by hand in each shell is how mobile and web drift apart.
@@ -149,7 +150,13 @@ class TreasuryPresenters {
         monthScope: scope,
       ),
       groceryCart: GroceryCartPresenter(storage, ledger: ledger),
-      financeActions: FinanceActionsExecutor(bills: bills, budget: budget),
+      financeActions: FinanceActionsExecutor(
+        bills: bills,
+        budget: budget,
+        // Transactions are the ledger's to own; the executor only hands
+        // Nudgy's rows to its review card.
+        ledger: ledger,
+      ),
     );
   }
 

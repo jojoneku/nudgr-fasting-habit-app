@@ -54,7 +54,7 @@ git checkout -b feat/fasting-loop-timer
 git push -u origin HEAD
 gh pr create --base dev --title "feat: ..."
 # After approval:
-gh pr merge --squash
+gh pr merge --merge
 git checkout dev && git pull
 git branch -d feat/fasting-loop-timer
 ```
@@ -148,9 +148,20 @@ EOF
 # Check CI passes first
 gh pr checks <NUMBER>
 
-# Squash merge (preferred for this project)
-gh pr merge <NUMBER> --squash --delete-branch
+# Merge commit — what this project actually uses
+gh pr merge <NUMBER> --merge --delete-branch
 ```
+
+**Why `--merge`, not `--squash`:** every feature PR into `dev` lands as a
+merge commit with its individual commits preserved (`Merge pull request #NNN
+from jojoneku/...`) — checked across the last 40 merges, with no exceptions.
+This file used to say squash was preferred; it never was. Match the history
+rather than mixing strategies into it.
+
+Merging into `dev` is not a quiet operation. The push triggers CI on `dev`,
+then `Promote dev → main` opens and auto-merges a dev→main PR, which runs
+`Release — Build & Deploy APK` plus the Supabase and Lambda deploys. A merge
+here ships a release.
 
 ### Post-Merge Cleanup
 

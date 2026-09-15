@@ -412,6 +412,38 @@ void main() {
       verify(storage.savePersonalDict(any)).called(greaterThanOrEqualTo(1));
     });
 
+    test('repeat-learn: same-day repeats count toward the learn threshold',
+        () async {
+      final storage = MockStorageService();
+      // No history at all — every sighting happens today. `loadNutritionHistory`
+      // deliberately excludes today's log, so counting history alone made
+      // same-day repeats invisible and nothing was ever learned.
+      final p = await _makePresenter(
+          cloudAi: cloudAi, foodDb: db, injectedStorage: storage);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.singleDish,
+          items: [
+            _extracted(
+                name: 'banana muffin',
+                grams: 52,
+                macros: _macros(150, 2.5, 22, 6)),
+          ],
+        ),
+      );
+
+      await p.parseChat('52g banana muffin');
+      await p.parseChat('52g banana muffin');
+      await Future.delayed(const Duration(milliseconds: 20));
+      verifyNever(storage.savePersonalDict(any));
+
+      // 3rd sighting today → promoted, without waiting for a calendar day.
+      await p.parseChat('52g banana muffin');
+      await Future.delayed(const Duration(milliseconds: 20));
+      verify(storage.savePersonalDict(any)).called(greaterThanOrEqualTo(1));
+    });
+
     test('explicit gram override — user states 12g, cloud returned 40g',
         () async {
       // The Dart gram-reconciliation guard should clamp to 12g and

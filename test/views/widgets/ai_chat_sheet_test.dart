@@ -7,8 +7,15 @@ import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_chat_message.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
+import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
@@ -339,6 +346,104 @@ void main() {
             reason: 'the return key is the only way to break a line there');
         expect(presenter.messages.any((m) => m.text == 'a note'), isFalse);
       });
+    });
+  });
+  group('confirm card in a squeezed sheet', () {
+    late MockStorageService storage;
+
+    FinancialAccount acc(String id, String name) => FinancialAccount(
+          id: id,
+          name: name,
+          category: AccountCategory.bank,
+          balance: 1000,
+          colorHex: '#FFFFFF',
+          icon: 'wallet',
+        );
+
+    setUp(() {
+      storage = MockStorageService();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts())
+          .thenAnswer((_) async => [acc('cash', 'CASH')]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => [
+            FinanceCategory(
+              id: 'food',
+              name: 'Food',
+              type: CategoryType.expense,
+              icon: 'tag',
+              colorHex: '#FFFFFF',
+            ),
+          ]);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceCategories(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(stats.addXp(any)).thenAnswer((_) async {});
+    });
+
+    testWidgets('seven entries keep the commit button inside the sheet',
+        (tester) async {
+      // The reported bug: a long confirm card in the sheet's fixed tail
+      // painted its rows outside the sheet and took "Log all 7" with it, with
+      // nothing to scroll. A RenderFlex overflow fails this test on its own;
+      // the assertions below check the button is actually reachable.
+      late LedgerPresenter ledger;
+      await tester.runAsync(() async {
+        ledger = LedgerPresenter(storage, stats);
+        while (ledger.isLoading) {
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+        }
+      });
+      ledger.debugSeedReview([
+        for (var i = 1; i <= 7; i++)
+          ExtractedEntry(
+            txn: ParsedTransaction(
+              amount: i * 10,
+              type: TransactionType.outflow,
+              accountId: 'cash',
+              categoryId: 'food',
+              description: 'Row $i',
+              descriptionIsClean: true,
+            ),
+          ),
+      ]);
+
+      final presenter = AiCoachPresenter(
+        stats: stats,
+        service: cloud,
+        ledger: ledger,
+      );
+      presenter.openSession(AiCoachEntryPoint.financeAdvisor);
+
+      await tester.binding.setSurfaceSize(const Size(393, 852));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(MaterialApp(
+        theme: buildDarkTheme(),
+        home: Scaffold(
+          // 40% of the screen: the sheet's smallest drag position, where the
+          // card had the least room and overflowed hardest.
+          body: Align(
+            alignment: Alignment.bottomCenter,
+            child: SizedBox(
+              height: 341,
+              child: AiChatBody(
+                presenter: presenter,
+                entryPoint: AiCoachEntryPoint.financeAdvisor,
+                showDragHandle: true,
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Log all 7'), findsOneWidget);
+      final button = tester.getRect(find.text('Log all 7'));
+      expect(button.bottom, lessThanOrEqualTo(852.0));
+      expect(button.top, greaterThanOrEqualTo(852.0 - 341));
     });
   });
 }

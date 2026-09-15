@@ -69,3 +69,8 @@ docs/design/treasury-web-reference/
 
 # Transient release-notes artifact produced by scripts/release_changelog.sh
 RELEASE_NOTES.md
+
+# Real device data dumps. Kept out of the repo since it went public: the
+# tracked copies were ~30 days of real activity telemetry, a day of meal logs
+# and finance records (audit 2026-07-04, finding 9).
+nudgr_data_backup/

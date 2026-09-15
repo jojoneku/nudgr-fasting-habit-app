@@ -28,9 +28,35 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
   bool _applyToFuture = false;
   bool _busy = false;
 
+  /// One turn can carry several proposals in a row, and the executor swaps the
+  /// next one in during the same microtask that clears the last — so no frame
+  /// is ever built without a card, this State is reused, and both fields below
+  /// would arrive at proposal two still holding proposal one's answers. That
+  /// left "Add it" permanently disabled (the user had to close the sheet and
+  /// come back to re-enable it) and, worse, silently carried a "every month
+  /// ahead" choice onto a row the user never widened.
+  ///
+  /// The call site also keys this widget by proposal id, which gets it a fresh
+  /// State. This is the belt to that key's braces: nothing about the fix should
+  /// depend on a caller remembering to pass one.
+  @override
+  void didUpdateWidget(FinanceProposalCard old) {
+    super.didUpdateWidget(old);
+    if (old.action.call.id != widget.action.call.id) {
+      // Plain assignment, not setState: a rebuild is already on its way, and
+      // marking dirty from here is at best redundant.
+      _busy = false;
+      _applyToFuture = false;
+    }
+  }
+
   Future<void> _confirm() async {
     setState(() => _busy = true);
     await widget.host.confirm(applyToFuture: _applyToFuture);
+    // The card is normally gone by now (the pending proposal is cleared), but
+    // a write that failed leaves it on screen — and a dead button is not a
+    // usable answer to "that didn't save".
+    if (mounted) setState(() => _busy = false);
   }
 
   @override

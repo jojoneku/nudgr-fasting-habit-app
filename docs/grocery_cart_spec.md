@@ -23,7 +23,8 @@ The total is always presented as a **breakdown** — `₱X confirmed · ~₱Y es
 - **Summary header** — big running total, breakdown line, optional budget row (remaining / over-budget).
 - **Item list** — each row: name, price-state subtitle, −/+ quantity stepper, line total. Tap a row to set/confirm its price; swipe to remove.
 - **Bottom bar** — primary "Add item" action (bottom 30%), clear-cart button.
-- **Add-item sheet** — name (shows "Last paid ₱X" hint when remembered), quantity stepper, optional price. Blank price → remembered estimate or unpriced.
+- **Price book** (header 🧾 icon) — the full list of learned prices, searchable with the same typeahead ranking. Tap a row to correct it, swipe to forget it, the cart icon adds it to the trip, and "Add price" records one straight off a receipt with no cart line. Reached from the shared `GroceryCartView`, so mobile and web get it together.
+- **Add-item sheet** — name with a **price-memory typeahead**, unit chips, quantity stepper (−/+ by the unit's step), optional price, and a live line preview. Blank price → remembered estimate or unpriced. "Add & next" is the filled primary action (the loop a shopper stays in); "Add & close" is secondary.
 
 ## 🔄 Flow
 
@@ -33,11 +34,15 @@ The total is always presented as a **breakdown** — `₱X confirmed · ~₱Y es
 
 **Stale price:** Remembered estimate looks wrong → tap → overwrite → becomes confirmed and memory self-corrects.
 
+**Recall while typing:** Type "bear" → every past variant stays listed with its last price ("Bear Brand 1L · ₱92.00 each", "Bear Brand powdered milk 240g · ₱128.00 each") until one is tapped or the name is typed out. Tapping fills the name + unit and leaves the price blank, so the item lands as an **estimate**; "Use it" on the hint row copies the remembered price into the box instead, confirming it.
+
 ## 🛠 Technical Notes
 
 - **Presenter:** `GroceryCartPresenter extends ChangeNotifier with SafeNotifier`. Constructor-injected `StorageService`. Totals via `fold`; auto-fill via `lookup()`; all RPG-free math lives here.
 - **Persistence:** `StorageService` keys `grocery_cart`, `grocery_price_memory`, `grocery_budget` — user-scoped via `_k(userId)`. The active cart and budget are local-only (transient); the **price memory syncs** to the cloud (folded into the `userCollections` blob), so it backs up and survives sign-out / restores on re-login.
 - **Key normalization:** `RememberedPrice.keyFor()` → `barcode:<code>` or `name:<lowercased, space-collapsed>`.
+- **Price book:** `savePriceBookEntry()` / `deletePriceBookEntry()` / `clearPriceBook()` edit the memory directly. `savePriceBookEntry` takes `replacingKey` so a rename doesn't orphan the old key, and preserves `timesSeen` — correcting a price is not a purchase.
+- **Typeahead:** `searchPriceMemory()` in `lib/utils/grocery_price_search.dart` — pure, tiered ranking (exact › prefix › word-prefix › contains › all-tokens › fuzzy), frequency then recency as the tiebreak. Reuses `food_fuzzy.dart` for compound splits ("bearbrand" → "bear brand") and Damerau–Levenshtein typo tolerance. Exposed as `GroceryCartPresenter.suggestions(query)`; an empty query returns the most-bought items. `lookup()` stays the exact-key hit that drives auto-fill.
 
 ## ✅ Also shipped (units, checkout, trip history)
 

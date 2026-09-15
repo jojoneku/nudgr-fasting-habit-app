@@ -22,38 +22,89 @@ import '../../../presenters/ledger_presenter.dart';
 /// `surfaceContainerLow`, the advisor card's `surfaceContainerHighest`), so the
 /// rows use `surfaceContainerLowest` plus a hairline border — a well reads as a
 /// row on all three, where a raised fill would vanish on one of them.
-class EntryReviewCard extends StatelessWidget {
+///
+/// Height note: the rows scroll, the action row does not. A message can carry
+/// seven entries, and every host renders this card in a fixed strip that does
+/// not scroll — so an un-capped column of rows pushed "Log all 7" off the
+/// bottom of the sheet and painted the top rows outside it. The rows live in
+/// their own scroller capped at [maxRowsHeight], which keeps the commit button
+/// reachable no matter how long the list is.
+class EntryReviewCard extends StatefulWidget {
   const EntryReviewCard({
     super.key,
     required this.ledger,
     required this.state,
+    this.maxRowsHeight,
   });
 
   final LedgerPresenter ledger;
   final LedgerChatState state;
 
+  /// Ceiling for the scrolling rows region. Null asks for a fraction of the
+  /// screen, which is right for the two hosts that sit on a full page; the
+  /// assistant sheet passes its own measured value, because its container can
+  /// be dragged down to 40% of the screen and a screen-fraction cap would
+  /// overflow it again.
+  final double? maxRowsHeight;
+
+  @override
+  State<EntryReviewCard> createState() => _EntryReviewCardState();
+}
+
+class _EntryReviewCardState extends State<EntryReviewCard> {
   static final _money = NumberFormat('#,##0.##', 'en_US');
+
+  /// Held by the State, not built in `build()`: the rows rebuild on every chip
+  /// the user fills, and a fresh controller each time would throw the scroll
+  /// position away mid-review.
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final ledger = widget.ledger;
+    final state = widget.state;
     final entries = state.entries;
     final ready = state.isReadyToCommit;
     final outstanding = state.unresolvedCount;
+    final rowsCap =
+        widget.maxRowsHeight ?? MediaQuery.sizeOf(context).height * 0.32;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        for (var i = 0; i < entries.length; i++) ...[
-          if (i > 0) const SizedBox(height: 6),
-          _ReviewRow(
-            ledger: ledger,
-            entry: entries[i],
-            index: i,
-            money: _money,
-            showRemove: entries.length > 1,
+        // shrinkWrap so a one-row card stays one row tall: a plain scroll view
+        // would take the whole cap and leave a short list floating in a tall
+        // empty well.
+        ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: rowsCap),
+          child: Scrollbar(
+            controller: _scroll,
+            child: ListView.builder(
+              controller: _scroll,
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: entries.length,
+              itemBuilder: (_, i) => Padding(
+                padding: EdgeInsets.only(top: i == 0 ? 0 : 6),
+                child: _ReviewRow(
+                  ledger: ledger,
+                  entry: entries[i],
+                  index: i,
+                  money: _money,
+                  showRemove: entries.length > 1,
+                ),
+              ),
+            ),
           ),
-        ],
+        ),
         const SizedBox(height: 8),
         // Count and the "still needs a chip" nudge share the action row's left
         // slot: on a drawer that sits above the keyboard, a status line of its

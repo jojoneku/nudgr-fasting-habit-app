@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/models/grocery/saved_trip.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/grocery_price_search.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 /// Owns the active grocery cart and the learned price memory (Plan 038).
@@ -148,6 +149,42 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Price memory lookup ──────────────────────────────────────────────────────
 
+  /// Everything the user has ever confirmed a price for, most-bought first.
+  /// Backs the add-item sheet's "you've bought this before" suggestions.
+  List<RememberedPrice> get priceMemory =>
+      searchPriceMemory('', _priceMemory.values, limit: _priceMemory.length);
+
+  bool get hasPriceMemory => _priceMemory.isNotEmpty;
+
+  /// Ranked price-memory matches for a partially typed item name.
+  ///
+  /// [lookup] is an exact-key hit and stays that way (it drives auto-fill);
+  /// this is the typeahead alongside it, so "bear" surfaces both
+  /// "Bear Brand 1L" and "Bear Brand powdered 240g" with their last prices.
+  /// An empty [query] returns the user's most-bought items.
+  List<RememberedPrice> suggestions(String query, {int limit = 6}) =>
+      searchPriceMemory(query, _priceMemory.values, limit: limit);
+
+  /// One-line preview of what the add-item form will put in the cart, e.g.
+  /// "2 kg × ₱95.00 = ₱190.00" or "×1 · price unknown — add it at the shelf".
+  /// Lives here so the sheet's `build()` stays free of line-total math.
+  String addPreviewLabel({
+    required double quantity,
+    double? unitPrice,
+    required ItemUnit unit,
+    RememberedPrice? remembered,
+  }) {
+    final qty = quantity <= 0 ? 1.0 : quantity;
+    final qtyLabel = unit.quantityLabel(qty);
+    final price = unitPrice ?? remembered?.lastPrice;
+    if (price == null) {
+      return '$qtyLabel · no price yet — it will show as unpriced';
+    }
+    final total = _toCents(price * qty);
+    final prefix = unitPrice == null ? '~' : '';
+    return '$qtyLabel × ${formatPeso(price)} = $prefix${formatPeso(total)}';
+  }
+
   /// Returns the remembered price for an item identity, or null if unseen.
   RememberedPrice? lookup({String? barcode, String? name}) {
     if ((name == null || name.trim().isEmpty) &&
@@ -156,6 +193,69 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     }
     final key = RememberedPrice.keyFor(barcode: barcode, name: name ?? '');
     return _priceMemory[key];
+  }
+
+  // ── Price book (direct memory editing) ───────────────────────────────────────
+
+  /// Adds or overwrites a price-book entry **without touching the cart** — the
+  /// "build my own prices" path, so a price can be recorded from a receipt or a
+  /// shelf photo without pretending to shop.
+  ///
+  /// Pass [replacingKey] when an edit renames an entry: the key is derived from
+  /// the name, so the old key would otherwise be orphaned alongside the new one.
+  /// [timesSeen] is preserved across an edit — a correction is not a purchase.
+  Future<void> savePriceBookEntry({
+    required String name,
+    required double price,
+    ItemUnit unit = ItemUnit.piece,
+    String? barcode,
+    String? replacingKey,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || price < 0) return;
+
+    final key = RememberedPrice.keyFor(barcode: barcode, name: trimmed);
+    final previous = _priceMemory[replacingKey ?? key] ?? _priceMemory[key];
+    if (replacingKey != null && replacingKey != key) {
+      _priceMemory.remove(replacingKey);
+    }
+
+    _priceMemory[key] = RememberedPrice(
+      key: key,
+      displayName: trimmed,
+      lastPrice: price,
+      unit: unit,
+      lastSeen: DateTime.now(),
+      timesSeen: previous?.timesSeen ?? 1,
+      barcode: barcode ?? previous?.barcode,
+    );
+    safeNotify();
+    await _persistMemory();
+  }
+
+  Future<void> deletePriceBookEntry(String key) async {
+    if (_priceMemory.remove(key) == null) return;
+    safeNotify();
+    await _persistMemory();
+  }
+
+  /// Wipes the whole price book. Cart and trip history are untouched.
+  Future<void> clearPriceBook() async {
+    if (_priceMemory.isEmpty) return;
+    _priceMemory.clear();
+    safeNotify();
+    await _persistMemory();
+  }
+
+  /// What the price book is worth knowing at a glance: "12 items · ₱1,204.00
+  /// total if you bought one of each".
+  String get priceBookSummary {
+    if (_priceMemory.isEmpty) return 'No prices saved yet';
+    final n = _priceMemory.length;
+    final basket =
+        _toCents(_priceMemory.values.fold(0.0, (sum, p) => sum + p.lastPrice));
+    return '$n ${n == 1 ? 'item' : 'items'} · ${formatPeso(basket)} '
+        'for one of each';
   }
 
   // ── Mutations ────────────────────────────────────────────────────────────────

@@ -35,6 +35,14 @@ class Quest {
   final bool isOneTime;
   final int? reminderMinutes; // null = no reminder
 
+  /// Opt-in alarm-clock behaviour for this quest's reminder.
+  ///
+  /// When true the notification is posted as a full-screen intent, so it wakes
+  /// the screen and shows [QuestAlarmScreen] over the lock screen instead of
+  /// a shade banner. Defaults to false: a habit nudge is not an alarm, and
+  /// Android 14+ restricts `USE_FULL_SCREEN_INTENT` to genuine alarm/call use.
+  final bool alarmStyle;
+
   // --- New fields (plan 005) ---
   final LinkedStat? linkedStat;
   final String? anchorNote;
@@ -70,6 +78,7 @@ class Quest {
     this.xpReward = 10,
     this.isOneTime = false,
     this.reminderMinutes,
+    this.alarmStyle = false,
     this.linkedStat,
     this.anchorNote,
     this.minimumVersion,
@@ -99,6 +108,7 @@ class Quest {
     bool? isOneTime,
     int? reminderMinutes,
     bool clearReminderMinutes = false,
+    bool? alarmStyle,
     LinkedStat? linkedStat,
     bool clearLinkedStat = false,
     String? anchorNote,
@@ -131,6 +141,7 @@ class Quest {
       reminderMinutes: clearReminderMinutes
           ? null
           : (reminderMinutes ?? this.reminderMinutes),
+      alarmStyle: alarmStyle ?? this.alarmStyle,
       linkedStat: clearLinkedStat ? null : (linkedStat ?? this.linkedStat),
       anchorNote: clearAnchorNote ? null : (anchorNote ?? this.anchorNote),
       minimumVersion:
@@ -220,6 +231,7 @@ class Quest {
       xpReward: json['xpReward'] as int? ?? 10,
       isOneTime: json['isOneTime'] as bool? ?? false,
       reminderMinutes: json['reminderMinutes'] as int?,
+      alarmStyle: json['alarmStyle'] as bool? ?? false,
       linkedStat: linkedStat,
       anchorNote: json['anchorNote'] as String?,
       minimumVersion: json['minimumVersion'] as String?,
@@ -250,6 +262,7 @@ class Quest {
       'xpReward': xpReward,
       'isOneTime': isOneTime,
       'reminderMinutes': reminderMinutes,
+      'alarmStyle': alarmStyle,
       'linkedStat': linkedStat?.name,
       'anchorNote': anchorNote,
       'minimumVersion': minimumVersion,

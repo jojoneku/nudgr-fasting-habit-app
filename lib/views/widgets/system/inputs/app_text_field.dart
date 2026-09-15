@@ -34,6 +34,7 @@ class AppTextField extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.inputFormatters,
+    this.textAlign = TextAlign.start,
   });
 
   final TextEditingController? controller;
@@ -62,6 +63,10 @@ class AppTextField extends StatelessWidget {
   final bool autofocus;
   final List<TextInputFormatter>? inputFormatters;
 
+  /// Horizontal alignment of the entered text — centred for stepper-flanked
+  /// numeric boxes, start everywhere else.
+  final TextAlign textAlign;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -87,6 +92,7 @@ class AppTextField extends StatelessWidget {
       maxLength: maxLength,
       enabled: enabled,
       style: textStyle,
+      textAlign: textAlign,
       inputFormatters: inputFormatters,
       onChanged: onChanged,
       onSubmitted: onSubmitted,

@@ -100,7 +100,7 @@ end". The other four ops stay on the HTTP API — they finish well inside 30s.
 
 | | |
 |---|---|
-| Function | `food-advisor-stream` — ap-southeast-1, python3.12, **arm64**, 1024 MB, 45s |
+| Function | `food-advisor-stream` — ap-southeast-1, python3.12, **arm64**, 1024 MB, **120s** |
 | Handler | `run.sh`, via `AWS_LAMBDA_EXEC_WRAPPER=/opt/bootstrap` |
 | Layer | `arn:aws:lambda:ap-southeast-1:753240598075:layer:LambdaAdapterLayerArm64:28` |
 | URL | `https://hwshru3edc3n7clcvv6p57x42u0wivou.lambda-url.ap-southeast-1.on.aws/` |
@@ -115,6 +115,65 @@ old buffered path** — so enabling and rolling back are both one value:
    `https://d117xbrhlnuvq9.cloudfront.net/v1/advisor` (the CloudFront domain,
    not the Function URL — see below).
 2. Push to `main`. Clearing the secret rolls back with no code change.
+
+### The wall clock, which is what actually ends a long turn
+
+`max_tokens` is the backstop; **time is the real limit**. The function was set to
+45s, and a long answer was still being generated when Lambda killed it. The
+stream then stopped with no `end` and no `error` frame — and the app is required
+to treat a stream with no terminator as a failure, because the alternative is
+presenting half an answer as a whole one. So it wiped the prose already on
+screen, re-generated the same long answer into the same 45s ceiling, and did it
+three times before giving up. The user saw "Connection hiccup — trying again…"
+three times and kept nothing; Bedrock billed all three.
+
+**`ADVISOR_STREAM_BUDGET_SEC` (default 38s)** is what makes that unreachable. It
+is a soft deadline inside `advise_finance_stream`: when it is spent the turn
+breaks out of the Bedrock stream, appends a line saying it stopped early, and
+emits a real `end` frame. The user reads a short answer instead of an error, and
+the client has nothing to retry.
+
+The default has to be correct for the timeout the function **actually** has,
+which is 45s. A budget above the real timeout is not a budget — the function
+dies first and the mechanism never fires. So 38s: enough for a reply written to
+the ~900-word budget the prompt states, truncating the overshoots, with ~7s left
+to flush the closing frames through the adapter and CloudFront.
+
+#### Raising the ceiling (one-time, needs console or admin CLI)
+
+38s truncates genuinely long answers. To let them finish, raise the function
+timeout and the budget **together, in one call** — a budget left at 38 under a
+120s timeout just truncates early, and a budget of 100 under a 45s timeout does
+nothing at all:
+
+```sh
+aws lambda update-function-configuration \
+  --function-name food-advisor-stream --region ap-southeast-1 \
+  --timeout 120 \
+  --environment "Variables={ADVISOR_STREAM_BUDGET_SEC=100,<every existing key>}"
+```
+
+⚠️ `--environment` **replaces the whole map**. Read the current one first
+(`aws lambda get-function-configuration`) and repeat every existing key, or the
+function loses `AWS_LWA_INVOKE_MODE`, `SUPABASE_URL`, the model ids, and the
+rest — and dies at boot.
+
+120s is the ceiling because it matches `CloudAiCoachService.advisorTimeoutSeconds`,
+the client's own limit, which must stay at or above the function's (a client that
+gives up first shows a connection error while the backend is still working
+happily). Raise the client first, ship it, then raise this.
+
+**This is not done from CI.** `github-ci-lambda-deploy` is scoped to
+`update-function-code`; a `update-function-configuration` call from the deploy
+job fails with `AccessDeniedException` and takes the whole job down with it,
+smoke test included. That was tried on 2026-09-11 and reverted the same day. To
+move it into CI, grant that user `lambda:UpdateFunctionConfiguration` on this
+function first.
+
+CloudFront's 60s origin read timeout is **not** a cap on the whole response: it
+bounds the gap between packets, and a streaming turn emits deltas continuously.
+It is worth re-checking there first if a long turn still dies at ~60s, since
+CloudFront's own maximum is 60s without a quota increase.
 
 ### Three things that fail silently
 
@@ -148,8 +207,10 @@ SigV4-signs to the Lambda. Nothing is publicly invokable.
 | Endpoint | `https://d117xbrhlnuvq9.cloudfront.net/v1/advisor` |
 
 Configured deliberately: caching **disabled**, compression **off** (it can force
-buffering and defeat streaming), origin read timeout **60s** to clear the
-Lambda's 45s, and origin request policy `AllViewerExceptHostHeader` — OAC has to
+buffering and defeat streaming), origin read timeout **60s** — a per-packet
+idle timeout, not a cap on the whole response, so it clears a 120s streaming
+turn as long as deltas keep arriving — and origin request policy
+`AllViewerExceptHostHeader` — OAC has to
 set the Host header it signs against, so forwarding the viewer's would break
 every signature.
 

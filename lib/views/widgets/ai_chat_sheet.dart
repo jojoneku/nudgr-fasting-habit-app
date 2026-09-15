@@ -370,11 +370,35 @@ class _AiChatBodyState extends State<AiChatBody> {
 
   @override
   Widget build(BuildContext context) {
-    final meta = _entryMeta[widget.entryPoint]!;
     // viewInsetsOf, not MediaQuery.of: this pads for the keyboard only, and a
     // full MediaQuery dependency rebuilt the whole chat on unrelated metrics
     // changes (screenshot overlays, system bars, orientation).
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    // Measured, not guessed: the confirm card sits in this Column's fixed
+    // (non-scrolling) tail, so its ceiling has to come from the height this
+    // shell actually got. The sheet can be dragged down to 40% of the screen,
+    // and the keyboard eats into that again — a screen-fraction ceiling would
+    // be taller than the whole sheet there, which is the overflow this fixes.
+    //
+    // The 88 is the card's own chrome that the rows do not get: its padding
+    // plus the action row that must stay reachable at any height.
+    return LayoutBuilder(
+      builder: (context, constraints) => _body(
+        context,
+        bottomInset,
+        cardRowsCap: ((constraints.maxHeight - bottomInset) * 0.42 - 88)
+            .clamp(88.0, 340.0),
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    double bottomInset, {
+    required double cardRowsCap,
+  }) {
+    final meta = _entryMeta[widget.entryPoint]!;
 
     return Column(
       children: [
@@ -423,6 +447,14 @@ class _AiChatBodyState extends State<AiChatBody> {
             );
           },
         ),
+        // What Nudgy is doing between the moment it stops writing and the
+        // moment a confirm card lands. Without it a tool-calling turn shows a
+        // finished-looking reply over a disabled input for the length of a
+        // whole extra round trip, which reads as the app having given up.
+        ListenableBuilder(
+          listenable: _presenter,
+          builder: (_, __) => _StatusStrip(label: _presenter.advisorStatus),
+        ),
         if (_advisorMode)
           ListenableBuilder(
             // Both drive this one card: the ledger for logging, the proposal
@@ -435,6 +467,7 @@ class _AiChatBodyState extends State<AiChatBody> {
             builder: (_, __) => AdvisorLogCard(
               ledger: _ledger!,
               proposals: _presenter.financeProposals,
+              maxRowsHeight: cardRowsCap,
             ),
           ),
         Padding(
@@ -455,6 +488,7 @@ class _AiChatBodyState extends State<AiChatBody> {
                   enabled: _presenter.isModelAvailable &&
                       !_presenter.isResponding &&
                       !_presenter.isInitializing,
+                  hint: _presenter.inputHint,
                   onSend: _send,
                   // Photo upload is an advisor-only capability (its op is
                   // the only one wired for vision).
@@ -755,6 +789,63 @@ class _MessageListState extends State<_MessageList> {
   }
 }
 
+/// A one-line "still working" strip under the conversation.
+///
+/// Deliberately in the same slot as the confirm card and never at the same
+/// time as one: the card is the better answer to "what is happening", so the
+/// presenter reports no status while a proposal is waiting.
+class _StatusStrip extends StatelessWidget {
+  const _StatusStrip({required this.label});
+
+  /// Null when nothing is in flight — the strip then takes no height at all.
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final text = label;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      alignment: Alignment.bottomCenter,
+      child: text == null
+          ? const SizedBox(width: double.infinity)
+          : Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant, width: 0.5),
+              ),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      text,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
 /// Floating "back to the newest message" button. Fades and drops out of the
 /// way whenever the tail is already on screen, so it costs nothing while the
 /// user is reading the live conversation.
@@ -1048,6 +1139,10 @@ class _InputBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onSend;
 
+  /// Placeholder text, decided by the presenter — the bar is disabled for
+  /// several different reasons and the user is owed the right one.
+  final String hint;
+
   /// When non-null, shows a camera button that attaches a photo (advisor only).
   final VoidCallback? onAttach;
 
@@ -1055,6 +1150,7 @@ class _InputBar extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.enabled,
+    required this.hint,
     required this.onSend,
     this.onAttach,
   });
@@ -1123,7 +1219,7 @@ class _InputBar extends StatelessWidget {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
-                  hintText: enabled ? 'Ask your coach…' : 'Coach not ready…',
+                  hintText: hint,
                   hintStyle: TextStyle(
                     color: cs.onSurfaceVariant,
                     fontSize: 14,

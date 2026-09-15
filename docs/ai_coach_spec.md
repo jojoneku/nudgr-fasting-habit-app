@@ -297,6 +297,57 @@ New `StorageService` keys:
 | `aiCoachHistory` | `List<AiChatMessage>` JSON | Last 50 messages persisted |
 | `aiCoachDownloaded` | `bool` | Whether Qwen3 model is on device |
 
+## Prompt Injection Posture
+
+The controls, in the order that actually matters.
+
+**1. The model cannot write. This is the one that carries the weight.**
+`FinanceActionsExecutor` separates `runRead()` (findBills, findReceivables,
+findSetAsides, findBudgets) from `propose()`. Every mutator builds a
+`PendingFinanceAction`; `_write()` runs only from `confirm()`, which is a human
+tap on a confirm card. A fully hijacked model produces a confirmation dialog,
+not a transaction. Keep it that way: any future tool that writes without a
+confirm surface removes the entire defense, whatever the prompts say.
+
+**2. Tool schemas withhold the dangerous knobs.** No schema exposes
+`applyToFuture` (see `lib/utils/finance_tool_catalogue.dart`), so the model
+cannot widen the recurrence scope of an action the user does confirm. The card
+asks; the model does not get to answer.
+
+**3. Blast radius is capped per user.** Every call is authenticated per user and
+every table is RLS-scoped to `auth.uid()`. A compromised model reaches only the
+caller's own rows. There is no cross-tenant path.
+
+**4. Input is size-capped.** `_MAX_TEXT_LEN` (500), `_MAX_PROMPT_LEN` (6000) and
+the snapshot clip bound both cost and how much attacker text can fit.
+
+**5. The prompts now say it.** `_ADVISOR_SYSTEM_PREFIX` opens with an INPUT
+TRUST BOUNDARY section stating that the snapshot, profile, conversation, tool
+results and OCR'd text are data and never instructions; that a tool call may
+only come from the user's own message this turn; and that the instructions are
+not to be revealed. Both vision prompts carry the equivalent rule.
+
+Until 2026-09-12 point 5 existed only as a docstring on `_advise_finance`,
+which defended nothing. `backend/ai-coach/test_app.py::TestPromptTrustBoundary`
+now asserts the rules are present in what is actually sent to Bedrock.
+
+### Where the untrusted input actually comes from
+
+Most text in a prompt is the user's own (their chat, notes, account names).
+Injecting yourself to manipulate your own advisor is not a security boundary,
+so severity there is low by construction. The content that need NOT have come
+from the user is what to watch:
+
+- **Photos.** A crafted receipt or food label with instructions printed on it is
+  read by `_parse_food_from_image` / `_parse_receipt_from_image` and lands in a
+  prompt. Worst realistic case is a misparsed expense on a review card. Both
+  prompts carry the trust rule; the confirm card is the backstop.
+- **Community-contributed content.** `community_food_db_spec.md` and
+  `grocery_community_prices_spec.md` are the only designs that put *another
+  user's* text into a prompt, via `display_name` on a candidate. Both are still
+  DRAFT. When either ships, treat `display_name` as hostile: it is the first
+  genuine cross-user injection surface in this app.
+
 ## Edge Cases
 - **Offline + cloud tier selected:** Fall back to on-device silently; show "offline mode" badge
 - **Model not downloaded + offline:** Use `NullAiCoachService` canned responses; prompt to download when online

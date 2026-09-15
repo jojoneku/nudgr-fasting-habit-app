@@ -134,6 +134,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final List<AdvisorConversation> _conversations = [];
   String? _currentConversationId;
   bool _isResponding = false;
+
+  /// What Nudgy is doing right now, in the user's own words, or null when
+  /// nothing needs saying.
+  ///
+  /// The empty streaming bubble already carries a "thinking" label, but it
+  /// stops the moment the model writes its first word — and a tool-calling
+  /// turn writes its prose FIRST ("sure, I can add that") and then goes quiet
+  /// for another whole round trip while the tools run and the next hop is
+  /// fetched. That silence is what read as a frozen app: a finished-looking
+  /// reply, an input bar disabled for reasons nothing explained, and no sign
+  /// that a confirm card was still on its way.
+  String? _advisorStatus;
   bool _isThinkingEnabled = false;
   bool _isInitializing = true;
   String? _errorMessage;
@@ -152,7 +164,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? cloudFallback,
     ImageCompressor? imageCompressor,
     FinanceToolExecutor? toolExecutor,
-  })  : _stats = stats,
+    Duration retryHorizon = defaultRetryHorizon,
+  })  : _retryHorizon = retryHorizon,
+        _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
         _treasury = treasury,
@@ -185,6 +199,31 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   bool get isInitializing => _isInitializing;
   AiCoachTier get activeTier => _activeTier;
   AiCoachEntryPoint get entryPoint => _entryPoint;
+
+  /// Placeholder for the input bar, which is disabled for three quite
+  /// different reasons and used to blame all of them on the model not being
+  /// ready. Mid-turn that is simply untrue, and it is the reading that made a
+  /// working advisor look broken.
+  String get inputHint {
+    if (_isInitializing) return 'Getting ready…';
+    if (_isResponding) return 'Nudgy is working…';
+    if (!isModelAvailable) return 'Coach not ready…';
+    return 'Ask your coach…';
+  }
+
+  /// A line describing work in flight, for the status strip under the chat.
+  /// Gated on [isResponding] so it can never outlive the turn that set it.
+  ///
+  /// A retry outranks whatever else was being said. [isRetryingAdvisor] has
+  /// existed since retries were added and nothing ever read it, so a dropped
+  /// connection silently restarted the answer with the user watching a spinner
+  /// that had, as far as they could tell, been going the whole time.
+  String? get advisorStatus {
+    if (!_isResponding) return null;
+    if (isRetryingAdvisor) return 'Connection hiccup — trying again…';
+    return _advisorStatus;
+  }
+
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
 
@@ -440,6 +479,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       debugPrint('AiCoachPresenter.send error: $e');
     } finally {
       _isResponding = false;
+      _advisorStatus = null;
       _trimHistory();
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
         _persistAdvisor();
@@ -471,6 +511,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
+    // The first hop needs no strip: the bubble is empty, so its own thinking
+    // label is on screen. The strip is for after the model has written words.
+    _advisorStatus = null;
 
     for (var hop = 1; hop <= maxToolHops; hop++) {
       final reply = await _streamAdvisorHopWithRetries(
@@ -514,12 +557,45 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
       final results = <Map<String, Object?>>[];
       for (final call in reply.toolCalls) {
+        // Named before the call, not after: this is the stretch with nothing
+        // else on screen, and the whole point is to say what is taking time
+        // while it takes it.
+        _advisorStatus = _statusFor(call);
+        safeNotify();
         final result = await _runTool(call);
         if (isDisposed) return;
         results.add(result.toContentBlock());
       }
       transcript.add(AiChatMessage.toolResults(results));
+      // Tools are done; the next hop is another round trip of silence.
+      _advisorStatus = _workingStatus;
+      safeNotify();
     }
+  }
+
+  /// Shown between hops, when the model is being asked again and has not yet
+  /// started writing.
+  static const _workingStatus = 'Working on it…';
+
+  /// What to say while [call] runs.
+  ///
+  /// A mutation says nothing: it puts a confirm card on screen, and the card is
+  /// a better answer to "what is happening" than any status line. A read says
+  /// which of the user's own lists it is going through, so the wait reads as
+  /// work rather than as a hang.
+  static String? _statusFor(AiToolCall call) {
+    if (financeToolNamed(call.name)?.mutates ?? false) return null;
+    switch (call.name) {
+      case 'findBills':
+        return 'Checking your bills…';
+      case 'findReceivables':
+        return "Checking what you're owed…";
+      case 'findSetAsides':
+        return 'Checking your set-asides…';
+      case 'findBudgets':
+        return 'Checking your budgets…';
+    }
+    return 'Looking that up…';
   }
 
   /// How many times a single advisor hop is attempted before giving up.
@@ -534,7 +610,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// billed for the whole function duration whether or not anyone reads it, so
   /// an unbounded loop would quietly spend real money on an outage. Only
   /// [AiCoachException.retryable] failures are attempted again; an expired
-  /// session or a spent daily cap fails once, immediately.
+  /// session or a spent daily cap fails once, immediately — and so does
+  /// anything that took longer than [defaultRetryHorizon] to fail, which is
+  /// the case three attempts made worse rather than better.
   static const maxAdvisorAttempts = 3;
 
   /// Backoff before each retry. Deliberately short — someone is watching this
@@ -544,6 +622,39 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     Duration(milliseconds: 400),
     Duration(milliseconds: 1200),
   ];
+
+  /// How long an attempt may run, by default, before retrying it stops being
+  /// worth doing.
+  ///
+  /// [maxAdvisorAttempts] assumes the fault was a blip: a dropped connection, a
+  /// 5xx, a TLS handshake refused. Those fail in the first second or two, cost
+  /// nothing to run again, and usually work on the second go.
+  ///
+  /// A hop that streamed prose for half a minute and *then* died did not hit a
+  /// blip. It hit a ceiling — the advisor's own wall clock — and the next
+  /// attempt writes the same long answer into the same ceiling and dies at the
+  /// same place. That is what the "connection hiccup" strip was reporting on
+  /// long answers: three full re-generations of a reply the user was already
+  /// reading, each one wiping the screen first, each one billed in full, and
+  /// the same failure at the end of it.
+  ///
+  /// So past this mark a retryable failure is surfaced instead of retried. The
+  /// half-written answer stays on screen (it is the only part that arrived) and
+  /// the manual retry affordance stays available — re-spending the turn is then
+  /// the user's call, not a loop's.
+  ///
+  /// Twenty seconds because no blip takes that long to happen, and no advisor
+  /// answer that is going to fit finishes that late. It deliberately gives up
+  /// on one real case: a genuine mid-stream network drop at second 25 is now
+  /// surfaced rather than retried. The partial is kept, which is the better
+  /// trade against re-running every long answer three times.
+  static const defaultRetryHorizon = Duration(seconds: 20);
+
+  /// Injected so a test can state the horizon instead of waiting out the real
+  /// one. [Duration.zero] means no patience at all: every failure counts as
+  /// late, which is how the "do not re-generate a long answer" path is
+  /// exercised without a twenty-second test.
+  final Duration _retryHorizon;
 
   /// The attempt currently in flight, 1-based. Anything above 1 means a retry
   /// is underway, which the UI says out loud rather than leaving the user
@@ -574,6 +685,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         if (isDisposed) return null;
       }
 
+      // Timed, not just counted: how long the attempt lasted is what says
+      // whether it hit a blip or a ceiling. See [defaultRetryHorizon].
+      final clock = Stopwatch()..start();
       final outcome = await _streamAdvisorHop(
         cloud,
         context: context,
@@ -581,6 +695,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         historical: historical,
         tools: tools,
       );
+      clock.stop();
       if (isDisposed) return null;
       if (outcome.reply != null) {
         _advisorAttempt = 1;
@@ -589,22 +704,49 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
       final failure = outcome.failure;
       final isLast = attempt == maxAdvisorAttempts;
-      if (failure == null || !failure.retryable || isLast) {
+      final ranTooLong = clock.elapsed >= _retryHorizon;
+      if (failure == null || !failure.retryable || isLast || ranTooLong) {
         _advisorAttempt = 1;
+        final message = _messageForFailure(
+          failure,
+          outcome.partial,
+          ranTooLong: ranTooLong,
+        );
         // Only now does the failure reach the user, so two silent recoveries
         // look like one slightly slow answer rather than three errors.
-        _failAdvisorHop(
-            outcome.partial, failure?.userMessage ?? _genericFailure,
+        _failAdvisorHop(outcome.partial, message,
             retryable: failure?.retryable ?? false);
         return null;
       }
-      debugPrint('AiCoachPresenter advisor attempt $attempt failed, retrying: '
-          '${failure.userMessage}');
+      debugPrint('AiCoachPresenter advisor attempt $attempt failed after '
+          '${clock.elapsedMilliseconds}ms, retrying: ${failure.userMessage}');
     }
     return null;
   }
 
   static const _genericFailure = 'Something went wrong. Try again.';
+
+  /// What to put on screen for a hop that did not produce a reply.
+  ///
+  /// The service's own message is right for everything except one case: an
+  /// answer that streamed for a long time and then stopped. "Try again" is bad
+  /// advice there — the same question produces the same long answer and it
+  /// stops in the same place. Asking for less, or for the rest of it, is the
+  /// thing that actually works, so say that instead.
+  static String _messageForFailure(AiCoachException? failure, String partial,
+      {required bool ranTooLong}) {
+    // Only for a fault we would otherwise have retried. A refused session that
+    // happened to take 25 seconds to come back still needs its own message —
+    // this copy would send the user to shorten a question that was never the
+    // problem.
+    if (ranTooLong &&
+        (failure?.retryable ?? false) &&
+        partial.trim().isNotEmpty) {
+      return 'That answer ran long and stopped partway. Ask me to carry on '
+          'from where it stopped, or for a shorter version.';
+    }
+    return failure?.userMessage ?? _genericFailure;
+  }
 
   /// Runs one hop of the advisor, rendering its prose as it arrives.
   ///
@@ -643,6 +785,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           case AdvisorEventKind.start:
             break;
           case AdvisorEventKind.delta:
+            // Words are arriving, so the strip has nothing left to explain.
+            _advisorStatus = null;
             buffer.write(event.text);
             _updateLastMessage(buffer.toString(), isStreaming: true);
             safeNotify();

@@ -61,6 +61,24 @@ void main() {
           {AiToolKind.read, AiToolKind.create});
     });
 
+    test('logging transactions is a create, and takes no id anywhere', () {
+      // Nudgy proposes rows onto the ledger's review card; it never writes
+      // one, and it has no existing row to name.
+      final tool = financeToolNamed('logTransactions');
+      expect(tool, isNotNull);
+      expect(tool!.kind, AiToolKind.create);
+      expect(schemaKeysDeep(tool.inputSchema).map((k) => '$k'),
+          isNot(contains('id')));
+
+      final entries = (tool.inputSchema['properties'] as Map)['entries'] as Map;
+      final item = entries['items'] as Map;
+      expect(item['required'], containsAll(['amount', 'description']));
+      // An entry with no amount cannot be reviewed as money, and one with no
+      // label cannot be recognised on the card.
+      expect((item['properties'] as Map).keys,
+          containsAll(['account', 'category', 'date']));
+    });
+
     test('lookup resolves a real name and rejects an invented one', () {
       expect(financeToolNamed('addSetAside')?.name, 'addSetAside');
       expect(financeToolNamed('deleteEverything'), isNull);

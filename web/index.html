@@ -21,26 +21,24 @@
   <meta name="description" content="Treasury — your finances, on the big screen.">
 
   <!--
-    Security headers. The directives below are the subset that is safe to set
-    via <meta> without breaking Flutter's CanvasKit/WASM/script loading. They
-    add real clickjacking + base-tag-injection protection at zero runtime risk.
+    Security headers. The real ones now ship from firebase.json as HTTP response
+    headers; what is left here is only the <meta>-safe subset, kept so a build
+    served from something other than Firebase Hosting is not completely bare.
 
-    The full Content-Security-Policy (connect-src/script-src for Supabase,
-    Google OAuth, and gstatic CanvasKit/fonts) MUST be applied at the HOSTING
-    layer as a real HTTP header — a strict CSP delivered via <meta> reliably
-    breaks Flutter web's bootstrap. Recommended response headers for the host:
+    Do not rely on this block. Per the CSP spec browsers IGNORE frame-ancestors
+    delivered via <meta>, so for as long as this was the only clickjacking
+    protection there was none: the Treasury dashboard was framable by anyone.
+    That is what firebase.json fixes.
 
-      Content-Security-Policy:
-        default-src 'self';
-        connect-src 'self' https://*.supabase.co https://accounts.google.com;
-        script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com;
-        img-src 'self' data: https:;
-        frame-ancestors 'none'; base-uri 'self'; object-src 'none';
-      X-Frame-Options: DENY
-      X-Content-Type-Options: nosniff
-      Referrer-Policy: strict-origin-when-cross-origin
+    The full loading policy (connect-src / script-src for Supabase, Google OAuth,
+    gstatic CanvasKit, the coach API and the advisor CloudFront domain) rides in
+    firebase.json as Content-Security-Policy-Report-Only. It is NOT enforced yet
+    on purpose: a strict CSP is the classic way to white-screen a Flutter web
+    app, since CanvasKit is fetched from gstatic and instantiated as wasm. To
+    promote it, load the deployed app with the console open, exercise sign-in,
+    sync, receipt scan and the advisor, and check for violation reports. When a
+    run is clean, move the Report-Only value into Content-Security-Policy and
+    delete the Report-Only header.
     (Plan 052 S3)
   -->
   <meta http-equiv="Content-Security-Policy"

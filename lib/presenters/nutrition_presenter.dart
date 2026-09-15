@@ -2790,6 +2790,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       carbsPer100g: e.carbs != null ? e.carbs! * 100 / e.grams! : null,
       fatPer100g: e.fat != null ? e.fat! * 100 / e.grams! : null,
     );
+    // Most learn calls are fire-and-forget from inside a parse loop, so without
+    // this an open Food Library never sees the new entry appear.
+    safeNotify();
   }
 
   /// Open cloud/photo AI estimates are normally never auto-learned (a one-off
@@ -2821,14 +2824,25 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     _learnFromEntry(queryName, entry, allowLowConfidence: true);
   }
 
-  /// Count of prior logged entries (across history) whose name matches [name],
+  /// Count of prior logged entries whose name matches [name],
   /// case-insensitively. Drives [_kLearnAfterLogs] repeat-learning.
+  ///
+  /// Counts **today plus history**. `loadNutritionHistory()` deliberately
+  /// excludes today's log (it is held separately in [_todayLog]), so counting
+  /// only [_history] made same-day repeats invisible — logging a cloud-estimated
+  /// food three times in one day learned nothing, and logging it once a day
+  /// needed four calendar days to stick. The caller adds 1 for the entry being
+  /// logged right now, which is not yet in [_todayLog] at decision time.
   int _priorLogCount(String name) {
     final norm = name.trim().toLowerCase();
     var n = 0;
+    bool matches(FoodEntry e) => e.name.trim().toLowerCase() == norm;
+    for (final e in _todayLog.allEntries) {
+      if (matches(e)) n++;
+    }
     for (final log in _history) {
       for (final e in log.allEntries) {
-        if (e.name.trim().toLowerCase() == norm) n++;
+        if (matches(e)) n++;
       }
     }
     return n;

@@ -68,6 +68,22 @@ operations chat structurally cannot perform: **edit and delete**.
 The form has a "Paid for someone" preset button for the third case, so that one
 is a shortcut rather than an exclusive.
 
+### Nudgy can hand entries to the same card
+
+The financial advisor (Nudgy) has a `logTransactions` tool
+(`lib/utils/finance_tool_catalogue.dart`). It is used when the message never
+looked like a log to the router — most often a re-log that names no amount
+("log the oil change again, I don't think it saved"), where the figures are in
+the conversation rather than in the sentence.
+
+The rows it sends are bound by the **same** binder as the typed path
+(`parseFinanceExtractionResponse`), so a category or account name the model
+invented becomes a picker on the row, never a fabricated id, and they land on
+the same `EntryReviewCard`. The tool result says NOT SAVED YET in as many
+words: nothing commits until the user taps Log, exactly as on the typed path.
+
+Nudgy still cannot edit or delete a transaction, or touch accounts — see §3.
+
 ## 3. The form can do things chat cannot
 
 - **Edit or delete.** Chat only ever creates. Every correction is a form trip.

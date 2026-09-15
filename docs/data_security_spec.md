@@ -1,9 +1,33 @@
 # Data Security & Encryption Spec
 
-> Status: **Draft / Plan** — authored 2026-06-26. Phased so each phase ships and
-> verifies independently. Phases are ordered by *risk-adjusted value*: the
-> earliest phases are backup-safe and need no data migration; the later phases
-> require on-device QA before merge.
+> Status: **Phase 0 shipped** — authored 2026-06-26, Phase 0 landed 2026-09-12.
+> Phases 1 and 2 remain open. Phased so each phase ships and verifies
+> independently. Phases are ordered by *risk-adjusted value*: the earliest
+> phases are backup-safe and need no data migration; the later phases require
+> on-device QA before merge.
+>
+> **What shipped in Phase 0** (`lib/services/backup_service.dart`):
+> `backup.json` is AES-256-GCM, data key in `flutter_secure_storage` via the
+> injectable `BackupKeyStore` seam, `nonce || ciphertext || mac` base64 in a
+> `{version: 2, payload}` envelope. A v1 plaintext file from an older build
+> still restores and is replaced by the next write. An unusable keystore skips
+> the write rather than falling back to plaintext. Covered by
+> `test/services/backup_service_test.dart` (round trip, ciphertext-on-disk,
+> tamper detection, v1 back-compat, lost/wrong key, keystore failure).
+> `android:allowBackup="false"` was already in the manifest.
+>
+> **Also shipped alongside, not originally in this spec:** the Supabase session
+> moved out of plaintext `SharedPreferences` into the keystore
+> (`lib/services/secure_session_storage.dart`), with a migration that copies
+> any existing plaintext session across before deleting it. That was the
+> 2026-07-04 audit's `auth_service.dart:39` finding, and it is the same class
+> of problem as this spec's §1 "at rest: not encrypted".
+>
+> **Still open:** Phase 1 (encrypting the ~135 user-data keys in
+> `SharedPreferences`) and Phase 2 (cloud snapshot). Phase 1 is NOT partially
+> done — the local store is still plaintext. Constraint #4 below is the reason
+> it did not ship here: it needs a crash-safe migration over real health and
+> finance data, validated on a device, and CI cannot sign that off.
 
 ## 1. Why
 
@@ -14,12 +38,12 @@ syncs to Supabase and runs an AI coach endpoint. The current posture:
 - **In transit:** good. All sync / AI / edge-function calls use HTTPS + a
   per-user Supabase JWT (Google OAuth). No hardcoded secrets in source; the only
   value bundled into the web build is the public Supabase *anon* key.
-- **At rest: not encrypted.** Every user-data key is plaintext JSON in
-  `SharedPreferences` (`lib/services/local_storage_service.dart`). A full
-  plaintext copy is written to `backup.json` (`lib/services/backup_service.dart`)
-  and a full plaintext dump is uploaded to the Supabase `backups` table
-  (`lib/services/snapshot_service.dart`). Android `allowBackup` defaults to
-  **true**, so the plaintext store is swept into Google's cloud auto-backup.
+- **At rest: partly encrypted.** Every user-data key is still plaintext JSON in
+  `SharedPreferences` (`lib/services/local_storage_service.dart`) — Phase 1.
+  A full plaintext dump is still uploaded to the Supabase `backups` table
+  (`lib/services/snapshot_service.dart`) — Phase 2. `backup.json` is **no
+  longer plaintext** (Phase 0, shipped), and Android `allowBackup` is now
+  **false**, so the store is no longer swept into Google's cloud auto-backup.
 
 This spec closes the at-rest gap and hardens trust, **without breaking the
 existing backup/restore and cross-device sync**.

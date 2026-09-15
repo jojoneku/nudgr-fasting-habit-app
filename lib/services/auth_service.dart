@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'secure_session_storage.dart';
+
 class AuthService {
   GoogleSignIn? _googleSignIn;
 
@@ -40,6 +42,23 @@ class AuthService {
       url: url,
       anonKey: anonKey,
       debug: kDebugMode,
+      // Mobile keeps its session in the platform keystore rather than the
+      // SDK default of plaintext SharedPreferences — see
+      // [SecureSessionStorage], which also migrates and then deletes any
+      // plaintext session an earlier build left behind.
+      //
+      // Web stays on the default deliberately. flutter_secure_storage on web
+      // is browser storage with extra steps and no key protection, so
+      // swapping it in would add moving parts without adding protection
+      // (docs/data_security_spec.md §Phase 1 scopes web out for this reason).
+      //
+      // Written as a branch rather than `localStorage: kIsWeb ? null : ...`
+      // so it does not depend on that parameter being nullable in the SDK;
+      // an all-defaults FlutterAuthClientOptions is what `initialize` uses
+      // when the argument is omitted.
+      authOptions: kIsWeb
+          ? FlutterAuthClientOptions()
+          : FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
     );
     _initialized = true;
   }

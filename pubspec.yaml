@@ -47,6 +47,12 @@ dependencies:
   sqflite: ^2.3.0
   path_provider: ^2.1.0
   crypto: ^3.0.3
+  # AES-GCM for the on-device backup file (docs/data_security_spec.md Phase 0).
+  # `crypto` above is hashing only. Named by the spec precisely so this is not
+  # hand-rolled: pointycastle is already in the tree transitively, but reaching
+  # into a transitive dependency to assemble a cipher by hand is the failure
+  # mode the spec is guarding against.
+  cryptography: ^2.7.0
   http: ^1.2.0
   health: ^12.2.0
   flutter_colorpicker: ^1.1.0

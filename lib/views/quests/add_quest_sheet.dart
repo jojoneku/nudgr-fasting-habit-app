@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/habit_routine.dart';
 import '../../models/quest.dart';
 import '../../presenters/quest_presenter.dart';
+import '../../services/notification_service.dart';
 import '../../utils/app_motion.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_text_styles.dart';
@@ -31,6 +32,12 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
   late List<bool> _days;
   late bool _isOneTime;
   late int? _reminderMinutes;
+  late bool _alarmStyle;
+
+  /// Null until Android has been asked. False means alarm style is switched on
+  /// but the OS will downgrade it to an ordinary banner, so the editor says so
+  /// instead of quietly promising an alarm that never wakes the screen.
+  bool? _fullScreenIntentAllowed;
   late LinkedStat? _linkedStat;
   late RecurrenceType _recurrenceType;
   late int _weeklyWeekday;
@@ -52,6 +59,8 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
     _days = q != null ? List.from(q.days) : List.filled(7, true);
     _isOneTime = q?.isOneTime ?? false;
     _reminderMinutes = q?.reminderMinutes;
+    _alarmStyle = q?.alarmStyle ?? false;
+    _probeFullScreenIntent();
     _linkedStat = q?.linkedStat;
     _recurrenceType = q?.recurrenceType ?? RecurrenceType.daily;
     _weeklyWeekday = q?.weeklyWeekday ?? DateTime.now().weekday - 1;
@@ -73,6 +82,12 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
       _anchorCtrl.text.isNotEmpty || _minVersionCtrl.text.isNotEmpty;
 
   // ─── Time picker dialog ────────────────────────────────────────────────────
+
+  Future<void> _probeFullScreenIntent() async {
+    final allowed = await NotificationService().canUseFullScreenIntent();
+    if (!mounted) return;
+    setState(() => _fullScreenIntentAllowed = allowed);
+  }
 
   Future<void> _pickTime(BuildContext context) async {
     TimeOfDay temp = _time;
@@ -199,6 +214,15 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                     onTimeTap: () => _pickTime(context),
                     onReminderChanged: (v) =>
                         setState(() => _reminderMinutes = v),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _AlarmStyleTile(
+                    value: _alarmStyle,
+                    onChanged: (v) => setState(() => _alarmStyle = v),
+                    needsSystemPermission:
+                        _alarmStyle && _fullScreenIntentAllowed == false,
+                    onGrantPermission: () =>
+                        NotificationService().openFullScreenIntentSettings(),
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
@@ -400,6 +424,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
         isOneTime: _isOneTime,
         reminderMinutes: _reminderMinutes,
         clearReminderMinutes: _reminderMinutes == null,
+        alarmStyle: _alarmStyle,
         linkedStat: _linkedStat,
         clearLinkedStat: _linkedStat == null,
         anchorNote:
@@ -425,6 +450,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
         days: _days,
         isOneTime: _isOneTime,
         reminderMinutes: _reminderMinutes,
+        alarmStyle: _alarmStyle,
         linkedStat: _linkedStat,
         anchorNote:
             _anchorCtrl.text.trim().isEmpty ? null : _anchorCtrl.text.trim(),
@@ -559,6 +585,87 @@ class _ScheduleCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ─── Alarm-style toggle ───────────────────────────────────────────────────────
+
+/// Opt-in alarm-clock behaviour for one quest.
+///
+/// Off by default and deliberately explicit: turning it on lets the reminder
+/// wake the screen and show over the lock screen, which is right for the few
+/// quests you want to be interrupted by and wrong for the rest.
+class _AlarmStyleTile extends StatelessWidget {
+  const _AlarmStyleTile({
+    required this.value,
+    required this.onChanged,
+    required this.needsSystemPermission,
+    required this.onGrantPermission,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  /// Android 14+ withholding USE_FULL_SCREEN_INTENT, which silently turns the
+  /// alarm back into an ordinary banner.
+  final bool needsSystemPermission;
+  final VoidCallback onGrantPermission;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          SwitchListTile.adaptive(
+            value: value,
+            onChanged: onChanged,
+            secondary: Icon(Icons.alarm_outlined, size: 18, color: cs.primary),
+            title: Text('Alarm style', style: theme.textTheme.bodyMedium),
+            subtitle: Text(
+              'Wakes the screen and shows over the lock screen.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
+          ),
+          if (needsSystemPermission)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, 0, AppSpacing.sm, AppSpacing.sm),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: cs.error),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Android is blocking full-screen alarms for Nudgr, so '
+                      "this will only show a banner until it's allowed.",
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: onGrantPermission,
+                    child: const Text('Allow'),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

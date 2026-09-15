@@ -1,10 +1,33 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
+import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/notification_preferences.dart';
+import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
+
+FinancialAccount _acc(String id, String name) => FinancialAccount(
+      id: id,
+      name: name,
+      category: AccountCategory.bank,
+      balance: 1000,
+      colorHex: '#FFFFFF',
+      icon: 'wallet',
+    );
+
+FinanceCategory _cat(String id, String name) => FinanceCategory(
+      id: id,
+      name: name,
+      type: CategoryType.expense,
+      icon: 'tag',
+      colorHex: '#FFFFFF',
+    );
 
 AiToolCall call(String name, Map<String, Object?> input,
         [String id = 'tu_1']) =>
@@ -178,6 +201,116 @@ void main() {
       expect(second.ok, isFalse);
       expect(second.summary, contains('still waiting'));
       expect(executor.pending!.call.id, 'tu_1');
+    });
+  });
+
+  group('logTransactions', () {
+    late MockStorageService storage;
+    late MockStatsPresenter stats;
+
+    setUp(() {
+      storage = MockStorageService();
+      stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts())
+          .thenAnswer((_) async => [_acc('cash', 'CASH')]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_cat('transpo', 'Transportation')]);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceCategories(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(stats.addXp(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+    });
+
+    Future<LedgerPresenter> ledger() async {
+      final p = LedgerPresenter(storage, stats);
+      while (p.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      return p;
+    }
+
+    AiToolCall logCall(List<Map<String, Object?>> entries) =>
+        call('logTransactions', {'entries': entries});
+
+    test('the rows land on the review card and nothing is written', () async {
+      final led = await ledger();
+      final executor = FinanceActionsExecutor(bills: bills, ledger: led);
+
+      final result = await executor.propose(logCall([
+        {
+          'amount': 295,
+          'description': 'Motor Oil Change - Oil',
+          'type': 'outflow',
+          'account': 'CASH',
+          'category': 'Transportation',
+        },
+        {
+          'amount': 50,
+          'description': 'Motor Oil Change - Labour',
+          'type': 'outflow',
+          'account': 'CASH',
+          'category': 'Transportation',
+        },
+      ]));
+
+      expect(result.ok, isTrue);
+      // The model must not narrate a save: the card is still waiting.
+      expect(result.summary, contains('NOT SAVED YET'));
+      expect(led.chatState.entries.length, 2);
+      expect(led.chatState.entries.first.txn.amount, 295);
+      expect(led.chatState.entries.first.txn.accountId, 'cash');
+      expect(led.chatState.entries.first.txn.categoryId, 'transpo');
+      expect(led.chatState.entries.every((e) => e.isReady), isTrue);
+      // No proposal card: the review card is this tool's confirm surface.
+      expect(executor.pending, isNull);
+      expect(led.allTransactions, isEmpty);
+    });
+
+    test('an account name the model invented becomes a gap, not an id',
+        () async {
+      final led = await ledger();
+      final executor = FinanceActionsExecutor(bills: bills, ledger: led);
+
+      final result = await executor.propose(logCall([
+        {
+          'amount': 130,
+          'description': 'Lunch At Alvas',
+          'account': 'Imaginary Wallet',
+          'category': 'Transportation',
+        },
+      ]));
+
+      final entry = led.chatState.entries.single;
+      expect(entry.txn.accountId, isNull);
+      expect(entry.missing, contains(EntryField.account));
+      expect(result.summary, contains('still needs'));
+    });
+
+    test('entries with nothing usable are reported as unreadable', () async {
+      final led = await ledger();
+      final executor = FinanceActionsExecutor(bills: bills, ledger: led);
+
+      final result = await executor.propose(logCall([
+        {'description': 'something'},
+      ]));
+
+      expect(result.ok, isFalse);
+      expect(led.chatState.entries, isEmpty);
+    });
+
+    test('a build with no ledger says so instead of pretending', () async {
+      final result = await executor.propose(logCall([
+        {'amount': 100, 'description': 'Gas', 'account': 'CASH'},
+      ]));
+
+      expect(result.ok, isFalse);
+      expect(result.summary, contains('not available'));
     });
   });
 }

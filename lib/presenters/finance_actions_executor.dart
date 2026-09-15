@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -6,10 +7,13 @@ import 'package:flutter/foundation.dart';
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budgeted_expense.dart';
+import '../models/finance/extracted_entry.dart';
 import '../models/finance/receivable.dart';
+import '../utils/finance_entry_extraction.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
 import 'finance_tool_executor.dart';
+import 'ledger_presenter.dart';
 
 /// Runs Nudgy's finance tools against the presenters that own the data.
 ///
@@ -20,16 +24,28 @@ import 'finance_tool_executor.dart';
 /// A read runs immediately. A mutation does not: [propose] parks a
 /// [PendingFinanceAction] and returns a future that only completes when the
 /// user answers, so there is no code path from a model reply to a write.
+///
+/// `logTransactions` is the one mutation that does not park a
+/// [PendingFinanceAction], because transactions already have a confirm
+/// surface: the ledger's review card, where every gap is a picker. It hands
+/// the rows there and returns immediately, and the card — not this class —
+/// commits when the user taps Log.
 class FinanceActionsExecutor extends ChangeNotifier
     implements FinanceToolExecutor, FinanceProposalHost {
   FinanceActionsExecutor({
     required BillsReceivablesPresenter bills,
     BudgetPresenter? budget,
+    LedgerPresenter? ledger,
   })  : _bills = bills,
-        _budget = budget;
+        _budget = budget,
+        _ledger = ledger;
 
   final BillsReceivablesPresenter _bills;
   final BudgetPresenter? _budget;
+
+  /// Owner of transactions. Nullable for the same reason [_budget] is: a build
+  /// that cannot log must fail the call plainly rather than pretend.
+  final LedgerPresenter? _ledger;
 
   PendingFinanceAction? _pending;
   Completer<AiToolResult>? _decision;
@@ -119,6 +135,12 @@ class FinanceActionsExecutor extends ChangeNotifier
       return Future.value(AiToolResult.failed(
           call.id, 'Another change is still waiting to be confirmed.'));
     }
+    // Transactions have their own confirm surface — the ledger's review card,
+    // the same one the extractor fills — so they do not become a
+    // [PendingFinanceAction]. Handing them to that card IS the proposal.
+    if (call.name == 'logTransactions') {
+      return Future.value(_handOffToLedger(call));
+    }
     final action = _describe(call);
     if (action == null) {
       return Future.value(
@@ -163,6 +185,76 @@ class FinanceActionsExecutor extends ChangeNotifier
     _decision = null;
     decision.complete(AiToolResult.declined(action.call.id));
     notifyListeners();
+  }
+
+  // ── Transactions ──────────────────────────────────────────────────────────
+
+  /// Binds the model's entries against the user's real accounts and categories
+  /// and puts them on the ledger's review card.
+  ///
+  /// Nothing is written here, and the result says so in as many words: the
+  /// model is told the rows are waiting on a tap, because a summary that reads
+  /// like a save is how the user ends up believing money was logged when it was
+  /// not (advisor rule 8).
+  ///
+  /// The binding is the extractor's own, reused verbatim — an account or
+  /// category name the model invented is dropped to a picker on the row rather
+  /// than fabricated into an id, exactly as it is on the typed-message path.
+  AiToolResult _handOffToLedger(AiToolCall call) {
+    final ledger = _ledger;
+    if (ledger == null) {
+      return AiToolResult.failed(
+          call.id, 'Logging transactions is not available here.');
+    }
+    if (!ledger.isSelectedDateToday) {
+      return AiToolResult.failed(
+          call.id,
+          'The ledger is parked on a past day, so nothing can be logged. Ask '
+          'the user to go back to today first.');
+    }
+    final raw = call.input['entries'];
+    if (raw is! List || raw.isEmpty) {
+      return AiToolResult.failed(
+          call.id, 'No entries were given, so there is nothing to log.');
+    }
+
+    // parseFinanceExtractionResponse reads text, not maps: it is the extractor
+    // response parser, and re-encoding here is what keeps ONE binder in the
+    // app rather than a second, subtly different one for tool calls.
+    final bound = parseFinanceExtractionResponse(
+      text: jsonEncode({'entries': raw}),
+      accounts: ledger.accounts,
+      categories: ledger.categories,
+      now: DateTime.now(),
+    );
+    final entries = bound?.entries ?? const <ExtractedEntry>[];
+    if (entries.isEmpty) {
+      return AiToolResult.failed(
+          call.id,
+          "I couldn't read those entries. Each one needs an amount and a "
+          'description.');
+    }
+
+    ledger.presentEntriesForReview(entries);
+    notifyListeners();
+
+    final lines = <String>[];
+    for (final e in entries) {
+      final gaps = e.missing.map((f) => f.label.toLowerCase()).join(', ');
+      lines.add('- ${e.txn.description.isEmpty ? "entry" : e.txn.description} '
+          '${_peso(e.txn.amount ?? 0)}'
+          '${gaps.isEmpty ? "" : " — still needs: $gaps"}');
+    }
+    final needsInput = entries.any((e) => e.missing.isNotEmpty);
+    return AiToolResult(
+      toolUseId: call.id,
+      ok: true,
+      summary: 'NOT SAVED YET. ${entries.length} '
+          '${entries.length == 1 ? "entry is" : "entries are"} on the review '
+          'card in front of the user:\n${lines.join('\n')}\n'
+          '${needsInput ? "Tell them which chip to fill, then to tap Log." : "Tell them to tap Log to commit."} '
+          'Do not repeat the list back and do not say anything was recorded.',
+    );
   }
 
   // ── Describing and writing ────────────────────────────────────────────────

@@ -49,6 +49,38 @@ Future<void> pumpCard(WidgetTester tester, FakeHost host,
   ));
 }
 
+/// Mirrors what `FinanceActionsExecutor` really does when one turn carries
+/// several proposals: confirming the first swaps the second straight in and
+/// notifies once, so no frame is ever built without a card on screen.
+class SwappingHost extends ChangeNotifier implements FinanceProposalHost {
+  SwappingHost(this._pending, this._next);
+
+  PendingFinanceAction? _pending;
+  PendingFinanceAction? _next;
+  final List<bool> confirmedScopes = [];
+
+  @override
+  PendingFinanceAction? get pending => _pending;
+
+  @override
+  Future<void> confirm({bool applyToFuture = false}) async {
+    confirmedScopes.add(applyToFuture);
+    _pending = _next;
+    _next = null;
+    notifyListeners();
+  }
+
+  @override
+  void decline() {}
+}
+
+PendingFinanceAction secondAction() => PendingFinanceAction(
+      call: const AiToolCall(id: 'tu_2', name: 'addBill', input: {}),
+      title: 'Add bill: Internet, ₱999',
+      details: const [(label: 'Amount', value: '₱999')],
+      isRecurring: true,
+    );
+
 void main() {
   testWidgets('shows what will happen before anything is written',
       (tester) async {
@@ -119,6 +151,59 @@ void main() {
       matching: find.byType(InkWell),
     ));
     expect(size.height, greaterThanOrEqualTo(44));
+  });
+
+  group('several proposals in a row', () {
+    /// Rebuilds off the host with NO key, which is the harsh case: Flutter
+    /// reuses the State, so the card itself has to notice the swap.
+    Future<void> pumpRun(WidgetTester tester, SwappingHost host) =>
+        tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: ListenableBuilder(
+              listenable: host,
+              builder: (_, __) {
+                final pending = host.pending;
+                // The run ends with nothing pending, exactly as the real host
+                // does — the harness has to survive that, not assert on it.
+                if (pending == null) return const SizedBox.shrink();
+                return FinanceProposalCard(host: host, action: pending);
+              },
+            ),
+          ),
+        ));
+
+    testWidgets('the next card is answerable without reopening the sheet',
+        (tester) async {
+      // The bug: "Add it" stayed disabled on every card after the first, and
+      // the only way back was to dismiss the sheet and come in again.
+      final host = SwappingHost(action(recurring: true), secondAction());
+      await pumpRun(tester, host);
+
+      await tester.tap(find.text('Add it'));
+      await tester.pump();
+
+      expect(find.text('Add bill: Internet, ₱999'), findsOneWidget);
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(button.onPressed, isNotNull,
+          reason: 'the second proposal cannot be confirmed');
+    });
+
+    testWidgets('a widened scope does not carry onto the next proposal',
+        (tester) async {
+      // Worse than the dead button: proposal two would have been written
+      // across every future month because proposal one was.
+      final host = SwappingHost(action(recurring: true), secondAction());
+      await pumpRun(tester, host);
+
+      await tester.tap(find.text('Every month ahead'));
+      await tester.pump();
+      await tester.tap(find.text('Add it'));
+      await tester.pump();
+      await tester.tap(find.text('Add it'));
+      await tester.pump();
+
+      expect(host.confirmedScopes, [true, false]);
+    });
   });
 
   testWidgets('renders in both themes', (tester) async {

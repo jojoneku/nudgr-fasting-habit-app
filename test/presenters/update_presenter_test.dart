@@ -21,6 +21,7 @@ class _FakeUpdateService extends UpdateService {
   File? cached;
   bool supports = true;
   bool failDownload = false;
+  bool failIntegrity = false;
   String? openedPath;
   String? installError;
 
@@ -40,6 +41,9 @@ class _FakeUpdateService extends UpdateService {
   }) async {
     onProgress?.call(25, 100);
     onProgress?.call(100, 100);
+    if (failIntegrity) {
+      throw ApkIntegrityException('hash mismatch');
+    }
     if (failDownload) throw Exception('network down');
     return File('/updates/nudgr-${manifest.version}-42.apk');
   }
@@ -132,6 +136,31 @@ void main() {
       await presenter.downloadUpdate();
       expect(presenter.state, UpdateFlowState.available);
     });
+
+    test('integrity failure → error, and does NOT tell the user to retry',
+        () async {
+      // A hash mismatch is not a transport problem. Retrying re-downloads the
+      // same bytes to the same wrong digest, so the connection/retry wording
+      // used for a dropped download would send the user in a circle and hide
+      // the one signal worth noticing.
+      service.failIntegrity = true;
+      await presenter.downloadUpdate();
+
+      expect(presenter.state, UpdateFlowState.error);
+      expect(presenter.errorMessage, contains('could not be verified'));
+      expect(presenter.errorMessage, isNot(contains('connection')));
+      expect(presenter.errorMessage, isNot(contains('retry')));
+    });
+
+    test('integrity failure never leaves an installable path behind', () async {
+      service.failIntegrity = true;
+      await presenter.downloadUpdate();
+
+      // installUpdate() must have nothing to hand the package installer.
+      final result = await presenter.installUpdate();
+      expect(result, 'No downloaded update found.');
+      expect(service.openedPath, isNull);
+    });
   });
 
   group('installUpdate', () {
@@ -166,5 +195,41 @@ void main() {
     expect(presenter.updateAvailable, isFalse);
     presenter.resetDismissed();
     expect(presenter.updateAvailable, isTrue);
+  });
+
+  group('UpdateManifest.apkSha256', () {
+    // A literal, not 'ab' * 32: Dart default parameter values must be
+    // compile-time constants and String * int is not one.
+    const validSha =
+        'abababababababababababababababababababababababababababababababab';
+
+    Map<String, dynamic> json({Object? sha = validSha}) => {
+          'version': '1.2.0',
+          'build_number': 42,
+          'apk_url': 'https://example.com/app-release.apk',
+          'release_notes': 'notes',
+          'released_at': '2026-07-01T00:00:00Z',
+          if (sha != null) 'apk_sha256': sha,
+        };
+
+    test('parses the hash', () {
+      expect(UpdateManifest.fromJson(json()).apkSha256, validSha);
+    });
+
+    test('normalises case and surrounding whitespace', () {
+      // CI writes lowercase hex, but the comparison is a string equality
+      // against a value that came out of external JSON — normalise rather than
+      // reject a manifest that is correct but differently cased.
+      final padded = '  ${validSha.toUpperCase()}  ';
+      final m = UpdateManifest.fromJson(json(sha: padded));
+      expect(m.apkSha256, validSha);
+    });
+
+    test('absent hash parses as null rather than throwing', () {
+      // Parsing stays lenient; UpdateService is what refuses to install
+      // without a hash. Throwing here would break the version-check banner for
+      // a user who cannot self-update anyway.
+      expect(UpdateManifest.fromJson(json(sha: null)).apkSha256, isNull);
+    });
   });
 }

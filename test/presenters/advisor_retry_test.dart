@@ -51,11 +51,15 @@ void main() {
     return calls;
   }
 
-  AiCoachPresenter build() {
+  /// [retryHorizon] is stated rather than waited out. Duration.zero means "no
+  /// patience": every failure counts as a late one, which is how the long-answer
+  /// path is exercised without a twenty-second test.
+  AiCoachPresenter build({Duration? retryHorizon}) {
     final p = AiCoachPresenter(
       stats: stats,
       fasting: fasting,
       service: service,
+      retryHorizon: retryHorizon ?? AiCoachPresenter.defaultRetryHorizon,
     );
     p.openSession(AiCoachEntryPoint.financeAdvisor);
     return p;
@@ -134,6 +138,70 @@ void main() {
       expect(p.errorMessage, 'still down');
       expect(p.canRetryLastTurn, isTrue,
           reason: 'a transient failure stays retryable by hand');
+      p.dispose();
+    });
+  });
+
+  group('a long answer that ran out of time', () {
+    // The reported bug: on a long reply the whole answer was re-generated from
+    // scratch, three times, with "Connection hiccup — trying again…" on screen
+    // each time, and nothing to show at the end of it. The cause was never
+    // transient — the turn was hitting a wall clock, so every attempt died in
+    // the same place.
+    test('is not re-generated, and keeps the prose that arrived', () async {
+      final calls = script([
+        () => advisorStreamCutOff('Rebuild the fund first, then'),
+      ]);
+      final p = build(retryHorizon: Duration.zero);
+
+      await p.send('map out the next two years');
+
+      // A second attempt writes the same answer into the same ceiling, wipes
+      // the screen to do it, and bills for it.
+      expect(calls[0], 1);
+      // The half-written answer is the only part that arrived.
+      expect(lastAssistantText(p), 'Rebuild the fund first, then');
+      p.dispose();
+    });
+
+    test('says what to do instead of "try again"', () async {
+      script([() => advisorStreamCutOff('Focus: rebuild the fund.')]);
+      final p = build(retryHorizon: Duration.zero);
+
+      await p.send('map out the next two years');
+
+      expect(p.errorMessage, contains('ran long'));
+      expect(p.errorMessage, contains('shorter'));
+      // Re-asking is still the user's call to make, just not a loop's.
+      expect(p.canRetryLastTurn, isTrue);
+      p.dispose();
+    });
+
+    test('a fast cut-off is still retried', () async {
+      // The horizon is about time, not about prose: a stream that dies at once
+      // is a blip whether or not it managed to write a word first.
+      final calls = script([
+        () => advisorStreamCutOff('Looking at your budget, '),
+        () => advisorStreamOf(const AdvisorReply(text: 'Food is it.')),
+      ]);
+      final p = build();
+
+      await p.send('how am i doing?');
+
+      expect(calls[0], 2);
+      expect(lastAssistantText(p), 'Food is it.');
+      p.dispose();
+    });
+
+    test('a late failure with no prose keeps the real message', () async {
+      // Nothing arrived, so there is no long answer to blame — the user should
+      // read what actually went wrong.
+      script([() => failing('Advisor unreachable.', retryable: true)]);
+      final p = build(retryHorizon: Duration.zero);
+
+      await p.send('anything?');
+
+      expect(p.errorMessage, 'Advisor unreachable.');
       p.dispose();
     });
   });

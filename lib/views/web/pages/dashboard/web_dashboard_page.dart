@@ -1094,8 +1094,12 @@ class _SavingsGoalsCard extends StatelessWidget {
     for (var i = 0; i < goals.length; i++) {
       final a = goals[i];
       final target = a.goalTarget ?? 0;
-      final progress = target > 0 ? (a.balance / target).clamp(0.0, 1.0) : 0.0;
-      final pct = target > 0 ? (a.balance / target * 100).round() : 0;
+      // `goalProgress` pins a funded goal at 100%, so spending it doesn't make
+      // the bar collapse to 0% as though it was never saved for.
+      final progress = a.hasGoalTarget
+          ? a.goalProgress
+          : (target > 0 ? (a.balance / target).clamp(0.0, 1.0) : 0.0);
+      final pct = (progress * 100).round();
       final color = resolveSliceColor(a.colorHex, i,
           brightness: Theme.of(context).brightness);
       if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));

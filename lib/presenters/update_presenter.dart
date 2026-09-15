@@ -120,6 +120,16 @@ class UpdatePresenter extends ChangeNotifier {
       notifyListeners();
       await notifications?.showUpdateReadyNotification(
           manifest.version, file.path);
+    } on ApkIntegrityException catch (e) {
+      // Not a connection problem, and retrying re-downloads the same bytes to
+      // the same wrong digest — so do not offer the retry wording here. Point
+      // the user at the release page, which is the path that does not depend
+      // on this check passing.
+      debugPrint('UpdatePresenter: APK integrity check failed: $e');
+      _errorMessage = 'This update could not be verified and was discarded. '
+          'Install it from the GitHub release page instead.';
+      _state = UpdateFlowState.error;
+      notifyListeners();
     } catch (e) {
       debugPrint('UpdatePresenter: download failed: $e');
       _errorMessage = 'Download failed. Check your connection and retry.';

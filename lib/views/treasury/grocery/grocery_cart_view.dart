@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/grocery/add_cart_item_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/grocery/price_book_screen.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _tripDateFmt = DateFormat('MMM d · h:mm a');
@@ -41,6 +42,12 @@ class GroceryCartView extends StatelessWidget {
       title: 'Trip budget',
       body: _SetBudgetSheet(presenter: presenter),
     );
+  }
+
+  void _openPriceBook(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => PriceBookScreen(presenter: presenter),
+    ));
   }
 
   void _showHistorySheet(BuildContext context) {
@@ -85,6 +92,7 @@ class GroceryCartView extends StatelessWidget {
                   presenter: presenter,
                   onEditBudget: () => _showSetBudgetSheet(context),
                   onShowHistory: () => _showHistorySheet(context),
+                  onOpenPriceBook: () => _openPriceBook(context),
                 ),
                 Expanded(
                   child: presenter.isEmpty
@@ -116,11 +124,13 @@ class _CartSummaryHeader extends StatelessWidget {
   final GroceryCartPresenter presenter;
   final VoidCallback onEditBudget;
   final VoidCallback onShowHistory;
+  final VoidCallback onOpenPriceBook;
 
   const _CartSummaryHeader({
     required this.presenter,
     required this.onEditBudget,
     required this.onShowHistory,
+    required this.onOpenPriceBook,
   });
 
   @override
@@ -154,6 +164,12 @@ class _CartSummaryHeader extends StatelessWidget {
                     letterSpacing: 1.5,
                   ),
                 ),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Price book',
+                onPressed: onOpenPriceBook,
+                icon: const Icon(Icons.receipt_long_outlined),
               ),
               if (presenter.hasTripHistory)
                 IconButton(

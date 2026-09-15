@@ -34,9 +34,12 @@ The `PersonalFoodDictionary` (`lib/services/personal_food_dictionary.dart`) cach
 
 Entries auto-promote into the dict when:
 - A DB hit scored ≥ 0.75 via `_hybridResolveItem` (existing rule), OR
-- A cloud `parseFoodWithCandidates` pick had confidence ≥ 0.8 (Plan 026)
+- A cloud `parseFoodWithCandidates` pick had confidence ≥ 0.8 (Plan 026), OR
+- **Repetition** — an open cloud/local estimate (no DB row behind it) is cached once the same food name has been logged `_kLearnAfterLogs` (3) times. A single open estimate is never cached: one hallucination would bypass the bundled DB permanently. `cloudAiFallback` (the generic ~2 kcal/g synthetic) and `keywordDensity` are excluded outright — those are guesses, not estimates, and repetition does not make a guess true.
 
-After 2 weeks of normal logging, this is the hot path for most meals.
+`_priorLogCount` counts **today plus history**. `loadNutritionHistory()` deliberately excludes today's log (it lives in `_todayLog`), so counting history alone made same-day repeats invisible — logging a cloud-estimated food three times in one day learned nothing, and logging it once a day took four calendar days to stick. Since the cloud estimator is the common path for out-of-DB foods, that read as "learned foods never fill up".
+
+After 2 weeks of normal logging, this is the hot path for most meals. The full list is browsable and editable at **Food Library → My Foods**, where foods can also be added by hand.
 
 ---
 

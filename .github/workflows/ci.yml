@@ -326,9 +326,18 @@ jobs:
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }} \
             --dart-define=AI_ADVISOR_ENDPOINT=${{ secrets.AI_ADVISOR_ENDPOINT }}
 
+      # apk_sha256 is REQUIRED, not decorative. UpdateService refuses to hand
+      # the package installer an APK whose hash it cannot check, so a manifest
+      # published without this key breaks in-app updates rather than silently
+      # installing something unverified. Hash the exact artifact that is about
+      # to be uploaded to the release, and fail the build if it is absent.
       - name: Generate manifest.json
         if: steps.changes.outputs.changed == 'true'
         run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          APK_SHA256=$(sha256sum "$APK" | cut -d' ' -f1)
+          echo "APK sha256: $APK_SHA256"
           python3 -c "
           import json, sys
           notes = open('RELEASE_NOTES.md').read().strip()
@@ -337,14 +346,25 @@ jobs:
             'build_number': int(sys.argv[2]),
             'apk_url': sys.argv[3],
             'release_notes': notes,
-            'released_at': sys.argv[4]
+            'released_at': sys.argv[4],
+            'apk_sha256': sys.argv[5]
           }, indent=2))
           " \
             "${{ steps.meta.outputs.new_version }}" \
             "${{ steps.meta.outputs.build_number }}" \
             "${{ steps.meta.outputs.apk_url }}" \
-            "${{ steps.meta.outputs.released_at }}" > manifest.json
+            "${{ steps.meta.outputs.released_at }}" \
+            "$APK_SHA256" > manifest.json
           cat manifest.json
+          python3 -c "
+          import json, re, sys
+          m = json.load(open('manifest.json'))
+          h = m.get('apk_sha256') or ''
+          if not re.fullmatch(r'[0-9a-f]{64}', h):
+              sys.exit('::error::manifest.json has no valid apk_sha256 (%r). '
+                       'Shipping it would break every in-app update.' % h)
+          print('manifest carries a valid apk_sha256')
+          "
 
       - name: Create GitHub Release
         if: steps.changes.outputs.changed == 'true'
@@ -544,6 +564,20 @@ jobs:
             --no-cli-pager
           aws lambda wait function-updated \
             --function-name food-advisor-stream
+          # CODE ONLY — deliberately. The advisor's wall-clock timeout is what
+          # actually bounds a long turn, and it is tempting to set it here so it
+          # cannot drift. It does not work: `github-ci-lambda-deploy` is scoped
+          # to update-function-code, so an added update-function-configuration
+          # call fails with AccessDeniedException and takes the whole deploy job
+          # down with it — including the smoke test below, which is the part
+          # that catches silent breakage. Tried on 2026-09-11, reverted the same
+          # day.
+          #
+          # The timeout and ADVISOR_STREAM_BUDGET_SEC are therefore a one-time
+          # infra change, documented with its exact command in
+          # backend/ai-coach/README.md ("The wall clock"). Move it back here
+          # only after the CI user is granted lambda:UpdateFunctionConfiguration
+          # on this function.
 
       # The advisor's own smoke test. It asserts the things that break silently:
       # that the adapter actually started the server (a non-200 here usually
@@ -582,6 +616,18 @@ jobs:
       - name: Verify the production API allows browser calls (CORS)
         if: steps.changes.outputs.changed == 'true'
         run: scripts/check_api_cors.sh
+
+      # ...and that it still REFUSES anyone without a Supabase token. The JWT
+      # authorizer on food-coach-api has no IaC behind it (template.yaml names
+      # different resources and has never been applied to production), so until
+      # this step it was an unasserted console setting. Same for the advisor's
+      # Function URL, which must stay AWS_IAM so CloudFront's OAC is the only
+      # way in. Needs apigatewayv2:GetAuthorizers + GetRoutes and
+      # lambda:GetFunctionUrlConfig on the deploy credentials; without them the
+      # script warns and passes rather than failing the deploy.
+      - name: Verify the production API refuses unauthenticated calls
+        if: steps.changes.outputs.changed == 'true'
+        run: scripts/check_api_auth.sh
 
   deploy_web:
     name: Deploy Treasury Web (Firebase Hosting)

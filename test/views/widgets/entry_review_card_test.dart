@@ -224,6 +224,52 @@ void main() {
     expect(p.chatState.entries.single.missing, isEmpty);
   });
 
+  testWidgets('a long list scrolls instead of pushing the commit button off',
+      (tester) async {
+    // The bug this covers: seven entries in one message rendered as an
+    // un-capped column inside a strip that does not scroll, so the rows
+    // painted outside the sheet and "Log all 7" went with them.
+    final p = await presenter(tester);
+    final many = [
+      for (var i = 1; i <= 7; i++) _entry(amount: i * 10, description: 'Row $i')
+    ];
+    p.debugSeedReview(many);
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: SizedBox(
+          height: 300,
+          // A Column, not the SizedBox directly: a tight height would force
+          // the card to 300 and the measurement below would prove nothing.
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListenableBuilder(
+                listenable: p,
+                builder: (_, __) => EntryReviewCard(
+                  ledger: p,
+                  state: p.chatState,
+                  maxRowsHeight: 150,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // The card fits its host, and the button is inside it.
+    expect(tester.getSize(find.byType(EntryReviewCard)).height, lessThan(300));
+    expect(find.text('Log all 7'), findsOneWidget);
+    expect(tester.getRect(find.text('Log all 7')).bottom, lessThan(300));
+
+    // And the rows the cap hid are reachable by scrolling.
+    expect(find.text('Row 1'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pumpAndSettle();
+    expect(find.text('Row 7'), findsOneWidget);
+  });
+
   testWidgets('the remove button only appears on multi-entry messages',
       (tester) async {
     final p = await presenter(tester);
