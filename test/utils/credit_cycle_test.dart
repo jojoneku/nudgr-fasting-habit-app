@@ -5,44 +5,30 @@ import 'package:intermittent_fasting/utils/credit_cycle.dart';
 void main() {
   group('creditDueDate', () {
     test('fixed day after the close is due the same month', () {
-      expect(
-        creditDueDate(DateTime(2026, 9, 1), dueDay: 15),
-        DateTime(2026, 9, 15),
-      );
+      expect(creditDueDate(DateTime(2026, 9, 1), dueDay: 15),
+          DateTime(2026, 9, 15));
     });
 
     test('fixed day on/before the close rolls to next month', () {
-      expect(
-        creditDueDate(DateTime(2026, 9, 20), dueDay: 5),
-        DateTime(2026, 10, 5),
-      );
-      expect(
-        creditDueDate(DateTime(2026, 9, 20), dueDay: 20),
-        DateTime(2026, 10, 20),
-      );
+      expect(creditDueDate(DateTime(2026, 9, 20), dueDay: 5),
+          DateTime(2026, 10, 5));
+      expect(creditDueDate(DateTime(2026, 9, 20), dueDay: 20),
+          DateTime(2026, 10, 20));
     });
 
     test('days-after counts real days across month lengths', () {
       // Sep has 30 days, Oct has 31: the offset lands on different days.
-      expect(
-        creditDueDate(DateTime(2026, 9, 20), daysAfter: 15),
-        DateTime(2026, 10, 5),
-      );
-      expect(
-        creditDueDate(DateTime(2026, 10, 20), daysAfter: 15),
-        DateTime(2026, 11, 4),
-      );
-      expect(
-        creditDueDate(DateTime(2026, 12, 20), daysAfter: 15),
-        DateTime(2027, 1, 4),
-      );
+      expect(creditDueDate(DateTime(2026, 9, 20), daysAfter: 15),
+          DateTime(2026, 10, 5));
+      expect(creditDueDate(DateTime(2026, 10, 20), daysAfter: 15),
+          DateTime(2026, 11, 4));
+      expect(creditDueDate(DateTime(2026, 12, 20), daysAfter: 15),
+          DateTime(2027, 1, 4));
     });
 
     test('days-after wins over a fixed day', () {
-      expect(
-        creditDueDate(DateTime(2026, 9, 20), dueDay: 5, daysAfter: 20),
-        DateTime(2026, 10, 10),
-      );
+      expect(creditDueDate(DateTime(2026, 9, 20), dueDay: 5, daysAfter: 20),
+          DateTime(2026, 10, 10));
     });
   });
 
@@ -74,11 +60,8 @@ void main() {
   });
 
   test('user example: closes the 15th — Sep 16 lands on Oct 15', () {
-    final c = creditCycleContaining(
-      DateTime(2026, 9, 16),
-      statementDay: 15,
-      dueDay: 5,
-    );
+    final c = creditCycleContaining(DateTime(2026, 9, 16),
+        statementDay: 15, dueDay: 5);
     expect(c.close, DateTime(2026, 10, 15));
     expect(c.due, DateTime(2026, 11, 5));
   });
@@ -119,27 +102,20 @@ void main() {
 
   group('minimum rule defaults and JSON', () {
     FinancialAccount of(AccountCategory c) => FinancialAccount(
-      id: 'a',
-      name: 'a',
-      category: c,
-      balance: 0,
-      colorHex: '#FFFFFF',
-      icon: 'x',
-    );
+        id: 'a',
+        name: 'a',
+        category: c,
+        balance: 0,
+        colorHex: '#FFFFFF',
+        icon: 'x');
 
     test('card revolves, line and BNPL pay in full', () {
-      expect(
-        of(AccountCategory.creditCard).effectiveMinimumRule,
-        CreditMinimumRule.percentOfBalance,
-      );
-      expect(
-        of(AccountCategory.creditLine).effectiveMinimumRule,
-        CreditMinimumRule.payInFull,
-      );
-      expect(
-        of(AccountCategory.bnpl).effectiveMinimumRule,
-        CreditMinimumRule.payInFull,
-      );
+      expect(of(AccountCategory.creditCard).effectiveMinimumRule,
+          CreditMinimumRule.percentOfBalance);
+      expect(of(AccountCategory.creditLine).effectiveMinimumRule,
+          CreditMinimumRule.payInFull);
+      expect(of(AccountCategory.bnpl).effectiveMinimumRule,
+          CreditMinimumRule.payInFull);
     });
 
     test('new fields round-trip, and old JSON still loads', () {
@@ -171,13 +147,10 @@ void main() {
 
     test('copyWith can clear the offset and rule back to null', () {
       final a = of(AccountCategory.creditLine).copyWith(
-        dueDaysAfterStatement: 15,
-        minimumRule: CreditMinimumRule.fixedAmount,
-      );
-      final cleared = a.copyWith(
-        dueDaysAfterStatement: null,
-        minimumRule: null,
-      );
+          dueDaysAfterStatement: 15,
+          minimumRule: CreditMinimumRule.fixedAmount);
+      final cleared =
+          a.copyWith(dueDaysAfterStatement: null, minimumRule: null);
       expect(cleared.dueDaysAfterStatement, isNull);
       expect(cleared.minimumRule, isNull);
     });
