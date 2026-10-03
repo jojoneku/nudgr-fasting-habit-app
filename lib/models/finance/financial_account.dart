@@ -84,6 +84,16 @@ enum CreditMinimumRule {
   payInFull,
 }
 
+/// The minimum rule a [category] gets when none is chosen: a credit card
+/// revolves (percent of balance with a floor); a credit line or BNPL plan
+/// bills its statement to be settled in full. Shared by
+/// [FinancialAccount.effectiveMinimumRule] and the account forms, which preset
+/// a new account's rule from its category.
+CreditMinimumRule defaultMinimumRuleFor(AccountCategory category) =>
+    category == AccountCategory.creditCard
+        ? CreditMinimumRule.percentOfBalance
+        : CreditMinimumRule.payInFull;
+
 // Supports both main accounts and sub-accounts (savings pots, goals, time deposits).
 //
 // Main account:  parentAccountId == null, category ∈ {bank, ewallet, cash, ...}
@@ -213,10 +223,7 @@ class FinancialAccount {
   /// (percent of balance with a floor); a credit line or BNPL plan bills its
   /// statement to be settled in full.
   CreditMinimumRule get effectiveMinimumRule =>
-      minimumRule ??
-      (category == AccountCategory.creditCard
-          ? CreditMinimumRule.percentOfBalance
-          : CreditMinimumRule.payInFull);
+      minimumRule ?? defaultMinimumRuleFor(category);
 
   // balance = funds held for others — excluded from net worth and liquid cash
   bool get isCustodian => category == AccountCategory.custodian;

@@ -1655,19 +1655,27 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.cancel(_billReminderId(billId));
   }
 
-  /// Schedule a monthly reminder on a credit account's payment [dueDay] at 9 AM.
-  Future<void> scheduleCreditDueReminder({
+  /// Schedule a ONE-SHOT reminder at 9 AM on [dueDate], the due date of a
+  /// credit account's open statement. Shares the account's id slot with the
+  /// old monthly reminder, so scheduling this replaces any repeating one still
+  /// registered. No-ops when that moment has already passed. Paired with
+  /// [cancelCreditDueReminder].
+  Future<void> scheduleCreditStatementDueReminder({
     required String accountId,
     required String accountName,
-    required int dueDay,
+    required DateTime dueDate,
   }) async {
     if (!_isInitialized || !_masterEnabled) return;
-    final day = dueDay.clamp(1, 28);
-    if (!_scheduleChanged('creditDue/$accountId', '$day|$accountName')) return;
+    final target = DateTime(dueDate.year, dueDate.month, dueDate.day, 9, 0);
+    if (!_scheduleChanged(
+        'creditDue/$accountId', '${target.toIso8601String()}|$accountName')) {
+      return;
+    }
     final id = _creditDueId(accountId);
     await flutterLocalNotificationsPlugin.cancel(id);
-
-    final scheduled = _nextInstanceOfMonthDay(day, 9, 0);
+    // Nothing to schedule if the reminder moment has already passed.
+    if (!target.isAfter(DateTime.now())) return;
+    final scheduled = _getRelativeScheduledTime(target);
 
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -1692,7 +1700,6 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
       );
     } catch (e) {
       debugPrint(

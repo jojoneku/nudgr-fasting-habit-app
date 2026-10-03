@@ -1233,12 +1233,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       creditLines = t.creditAccounts.map((a) {
-        final due = t.creditDueInfo(a);
         return AdvisorCreditLine(
           name: a.name,
           owed: a.currentPayable,
           available: a.availableCredit,
-          dueLabel: due?.label,
+          // The when alone: the minimum is its own field, and the dashboard's
+          // due line already carries it.
+          dueLabel: t.creditDueWhenLabel(a),
           minimumDue: t.creditMinimumDue(a),
           aprMonthly: a.financeChargeRate,
           utilization: a.utilization,

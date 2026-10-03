@@ -476,7 +476,6 @@ class _CreditSection extends StatelessWidget {
             _CreditAccountCard(
               account: accounts[i],
               dueInfo: presenter.creditDueInfo(accounts[i]),
-              minimumDue: presenter.creditMinimumDue(accounts[i]),
               cycleNote: presenter.creditCycleNote(accounts[i]),
               onTap: () {
                 HapticFeedback.selectionClick();
@@ -494,12 +493,14 @@ class _CreditSection extends StatelessWidget {
 
 class _CreditAccountCard extends StatelessWidget {
   final FinancialAccount account;
-  final ({String label, bool imminent})? dueInfo;
-  final double? minimumDue;
 
-  /// Where this card sits in its statement cycle — "Statement closes Aug 5", or
-  /// a warning that it has no statement day and so is never billed. Null once
-  /// the cycle has closed and the statement is a bill.
+  /// The unpaid statement's due line, self-contained ("Due Nov 4 · min ₱850",
+  /// "Due Nov 4 · ₱12,000 in full") or "No payment due". Rendered as-is.
+  final ({String label, bool imminent})? dueInfo;
+
+  /// Where this card sits in its statement cycle — "Statement closes Oct 20 ·
+  /// due Nov 4" — or a warning that it has no billing cycle and so is never
+  /// billed.
   final ({String label, bool warning})? cycleNote;
   final VoidCallback onTap;
   final ValueChanged<FinancialAccount>? onPay;
@@ -507,7 +508,6 @@ class _CreditAccountCard extends StatelessWidget {
   const _CreditAccountCard({
     required this.account,
     required this.dueInfo,
-    required this.minimumDue,
     required this.cycleNote,
     required this.onTap,
     this.onPay,
@@ -584,14 +584,14 @@ class _CreditAccountCard extends StatelessWidget {
                   color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  minimumDue != null
-                      ? '${dueInfo!.label} · min ${formatPeso(minimumDue!)}'
-                      : dueInfo!.label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
-                    fontWeight:
-                        dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    dueInfo!.label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
+                      fontWeight:
+                          dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
               ],

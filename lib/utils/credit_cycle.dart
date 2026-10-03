@@ -10,7 +10,10 @@
 // The bill generator, the dashboard due line and the "next statement" note all
 // read cycles from here so they cannot disagree about which cycle is which.
 
+import '../models/finance/bill.dart';
+import '../models/finance/credit_brand_presets.dart';
 import '../models/finance/financial_account.dart';
+import 'credit_finance_charge.dart';
 import 'finance_format.dart';
 
 /// One statement cycle of a credit account.
@@ -128,4 +131,140 @@ extension CreditCycleAccount on FinancialAccount {
           dueDay: paymentDueDay,
           daysAfter: dueDaysAfterStatement)
       : null;
+}
+
+// ─── Statement bills ─────────────────────────────────────────────────────────
+//
+// A cycle says when a statement closes and falls due; whether anything is
+// actually owed on it is the statement BILL's business. The dashboard due line,
+// the minimum due and the due-date reminder all read "is there a statement
+// waiting on payment, and when" from the helpers below, so a card with a
+// balance but a ₱0 (or settled) statement never reads as "due".
+
+/// What is still owed on statement bill [b]: nothing once it is marked paid
+/// (a partial payment also closes the bill), else the amount less anything
+/// already recorded against it.
+double creditStatementRemaining(Bill b) {
+  if (b.isPaid) return 0;
+  final left = b.amount - (b.paidAmount ?? 0);
+  return left > 0 ? left : 0;
+}
+
+/// Due date of statement bill [b]: its filing month plus its due day, the day
+/// clamped to the month's length. Null when the month key is malformed.
+DateTime? creditStatementDueDate(Bill b) {
+  final parts = b.month.split('-');
+  if (parts.length != 2) return null;
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  if (year == null || month == null || month < 1 || month > 12) return null;
+  final lastDay = DateTime(year, month + 1, 0).day;
+  return DateTime(year, month, b.dueDay.clamp(1, lastDay));
+}
+
+/// The statement of account [accountId] still waiting on payment: the
+/// earliest-due unpaid credit-card bill for it (generated or hand-keyed) with
+/// money left on it. Null when nothing is owed on any statement — the card may
+/// still carry a balance, but it belongs to a cycle that has not closed yet.
+Bill? findOpenCreditStatement(Iterable<Bill> bills, String accountId) {
+  Bill? best;
+  DateTime? bestDue;
+  for (final b in bills) {
+    if (b.billType != BillType.creditCard || b.accountId != accountId) {
+      continue;
+    }
+    if (creditStatementRemaining(b) <= 0) continue;
+    final due = creditStatementDueDate(b);
+    if (due == null) continue;
+    if (bestDue == null || due.isBefore(bestDue)) {
+      best = b;
+      bestDue = due;
+    }
+  }
+  return best;
+}
+
+/// The cycle statement bill [b] belongs to for account [a]: the one whose
+/// payment falls due in the bill's month. Null when [a] has no billing cycle
+/// or no cycle is due that month (a hand-keyed bill filed under an arbitrary
+/// month). Should two cycles fall due in one month (a long days-after-close
+/// rule across February), the one due on the bill's day wins, else the later.
+CreditCycle? cycleForStatement(FinancialAccount a, Bill b) {
+  if (!a.hasBillingCycle) return null;
+  final parts = b.month.split('-');
+  if (parts.length != 2) return null;
+  final year = int.tryParse(parts[0]);
+  final month = int.tryParse(parts[1]);
+  if (year == null || month == null) return null;
+  CreditCycle? match;
+  // Due at most kMaxDueDaysAfterStatement (45) days after close, so the close
+  // is in the bill's month or one of the two before it.
+  for (var back = 2; back >= 0; back--) {
+    final anchor = DateTime(year, month - back);
+    final cycle = a.cycleClosingIn(anchor.year, anchor.month)!;
+    if (cycle.dueMonthKey != b.month) continue;
+    if (cycle.due.day == b.dueDay) return cycle;
+    match = cycle;
+  }
+  return match;
+}
+
+/// Minimum amount due on a [statement] of account [a] under its
+/// [FinancialAccount.effectiveMinimumRule] — the brand preset's rate and floor
+/// (BSP defaults otherwise), a fixed amount capped at the statement, or the
+/// whole statement.
+double creditStatementMinimum(FinancialAccount a, double statement) {
+  final preset = creditBrandPresetByKey(a.creditBrand);
+  return computeMinimumForRule(
+    rule: a.effectiveMinimumRule,
+    statement: statement,
+    minPaymentRate: preset?.minPaymentRate ?? 0.0357,
+    minPaymentFloor: preset?.minPaymentFloor ?? 850,
+    fixedAmount: a.minimumFixedAmount,
+  );
+}
+
+/// How far payment of one credit statement has got.
+class CreditStatementProgress {
+  /// The statement amount.
+  final double amount;
+
+  /// Paid toward it so far, capped at [amount] (any excess stays on the
+  /// account and lowers the next statement by itself).
+  final double paid;
+
+  /// The minimum due on the whole statement ([amount] under pay-in-full).
+  final double minimum;
+
+  const CreditStatementProgress({
+    required this.amount,
+    required this.paid,
+    required this.minimum,
+  });
+
+  /// Paid toward [amount] and the minimum from the bill as stored: paid in full
+  /// once flagged paid, else whatever [Bill.paidAmount] says so far.
+  factory CreditStatementProgress.ofBill(Bill b, FinancialAccount a) {
+    final paid = b.isPaid ? b.amount : (b.paidAmount ?? 0);
+    return CreditStatementProgress(
+      amount: b.amount,
+      paid: paid.clamp(0.0, b.amount < 0 ? 0.0 : b.amount),
+      minimum: creditStatementMinimum(a, b.amount),
+    );
+  }
+
+  /// Still owed on the statement.
+  double get remaining => amount - paid > 0.005 ? amount - paid : 0;
+
+  /// Still owed toward the minimum.
+  double get minimumRemaining => minimum - paid > 0.005 ? minimum - paid : 0;
+
+  /// True once the minimum is covered — no late fee from here on.
+  bool get minimumMet => minimumRemaining == 0;
+
+  /// True once the whole statement is covered.
+  bool get fullyPaid => remaining == 0;
+
+  /// True once anything has been paid toward it.
+  bool get started => paid > 0.005;
 }
