@@ -9,6 +9,7 @@ import '../models/finance/bill.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
 import '../models/finance/receivable.dart';
+import '../models/finance/transaction_record.dart';
 import '../utils/finance_entry_extraction.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
@@ -106,9 +107,157 @@ class FinanceActionsExecutor extends ChangeNotifier
             .map((b) => 'id=${b.id} "${names[b.categoryId] ?? b.categoryId}" '
                 'limit ${_peso(b.allocatedAmount)}');
         return _rows(call, rows, 'budgets', month);
+
+      case 'findTransactions':
+        return _findTransactions(call);
     }
     return AiToolResult.failed(call.id, 'Unknown read tool "${call.name}".');
   }
+
+  /// Default and ceiling on rows returned by `findTransactions`. The totals
+  /// always cover every match, so a capped list is never mistaken for the
+  /// whole period.
+  static const int _txnDefaultLimit = 50;
+  static const int _txnMaxLimit = 150;
+
+  /// The ledger, filtered on demand. No ids: nothing can edit or delete a
+  /// transaction through Nudgy, so an id would only be something to misuse.
+  ///
+  /// A transfer is stored as two legs; only the outflow leg is listed, as
+  /// "from → to", so moving money between accounts reads as one movement and
+  /// is never counted as spending or income.
+  AiToolResult _findTransactions(AiToolCall call) {
+    final ledger = _ledger;
+    if (ledger == null) {
+      return AiToolResult.failed(
+          call.id, 'Transactions are not available here.');
+    }
+    final i = call.input;
+    final query = _str(i['query']).toLowerCase();
+    final categoryQuery = _str(i['category']).toLowerCase();
+    final accountQuery = _str(i['account']).toLowerCase();
+    final type = _str(i['type']);
+    final from = DateTime.tryParse(_str(i['from']));
+    final to = DateTime.tryParse(_str(i['to']));
+    // A query with no dates means "find it wherever it is"; nothing at all
+    // means "this month", the same default every other find tool uses.
+    final month = _str(i['month']).isNotEmpty
+        ? _str(i['month'])
+        : (query.isEmpty && from == null && to == null)
+            ? _bills.selectedMonth
+            : null;
+    // Not [_int]: that falls back to 1, and a missing limit means the default.
+    final raw = i['limit'];
+    final asked = raw is num ? raw.toInt() : int.tryParse(_str(raw));
+    final limit = asked == null || asked <= 0
+        ? _txnDefaultLimit
+        : min(asked, _txnMaxLimit);
+
+    final accounts = {for (final a in ledger.accounts) a.id: a.name};
+    final categories = {for (final c in ledger.categories) c.id: c.name};
+
+    bool isTransfer(TransactionRecord t) =>
+        t.transferGroupId != null || t.type == TransactionType.transfer;
+
+    final matched = ledger.allTransactions.where((t) {
+      if (isTransfer(t) && t.type == TransactionType.inflow) return false;
+      final day = DateTime(t.date.year, t.date.month, t.date.day);
+      if (from != null || to != null) {
+        if (from != null && day.isBefore(from)) return false;
+        if (to != null && day.isAfter(to)) return false;
+      } else if (month != null && t.month != month) {
+        return false;
+      }
+      final kind = isTransfer(t) ? 'transfer' : t.type.name;
+      if (type.isNotEmpty && kind != type) return false;
+      final account = accounts[t.accountId] ?? '';
+      final toAccount = accounts[t.transferToAccountId] ?? '';
+      final category = categories[t.categoryId] ?? '';
+      if (accountQuery.isNotEmpty &&
+          !account.toLowerCase().contains(accountQuery) &&
+          !toAccount.toLowerCase().contains(accountQuery)) {
+        return false;
+      }
+      if (categoryQuery.isNotEmpty &&
+          !category.toLowerCase().contains(categoryQuery)) {
+        return false;
+      }
+      if (query.isNotEmpty) {
+        final haystack = [
+          t.description,
+          t.note ?? '',
+          category,
+          account,
+          toAccount,
+          t.owedBy ?? '',
+        ].join(' ').toLowerCase();
+        if (!haystack.contains(query)) return false;
+      }
+      return true;
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final scope = from != null || to != null
+        ? '${from == null ? 'the start' : _day(from)} to '
+            '${to == null ? 'today' : _day(to)}'
+        : month ?? 'all history';
+    if (matched.isEmpty) {
+      return AiToolResult(
+        toolUseId: call.id,
+        ok: true,
+        summary: 'No transactions matched in $scope. Do not invent any — say '
+            'you could not find them, and offer a wider search.',
+      );
+    }
+
+    var spent = 0.0;
+    var received = 0.0;
+    for (final t in matched) {
+      if (isTransfer(t)) continue;
+      if (t.type == TransactionType.outflow) spent += t.amount;
+      if (t.type == TransactionType.inflow) received += t.amount;
+    }
+
+    final rows = matched.take(limit).map((t) {
+      final account = accounts[t.accountId] ?? 'unknown account';
+      final String flow;
+      if (isTransfer(t)) {
+        flow = 'transfer $account → '
+            '${accounts[t.transferToAccountId] ?? 'unknown account'}';
+      } else {
+        final category = categories[t.categoryId] ?? 'Uncategorised';
+        flow = '${t.type == TransactionType.inflow ? 'in' : 'out'} · '
+            '$category · $account';
+      }
+      final owedBy = (t.owedBy ?? '').trim();
+      final owed = !t.reimbursable
+          ? ''
+          : owedBy.isEmpty
+              ? ' [reimbursable]'
+              : ' [reimbursable, owed by $owedBy]';
+      final note =
+          (t.note ?? '').trim().isEmpty ? '' : ' — note: "${t.note!.trim()}"';
+      return '${_day(t.date)} "${t.description}" ${_peso(t.amount)} '
+          '$flow$owed$note';
+    }).toList();
+
+    final shown = rows.length < matched.length
+        ? 'Showing the newest ${rows.length} of ${matched.length}; narrow by '
+            'month, dates or query to see the rest.'
+        : 'All ${matched.length} shown.';
+    return AiToolResult(
+      toolUseId: call.id,
+      ok: true,
+      summary: '${matched.length} transactions in $scope. '
+          'Spent ${_peso(spent)}, received ${_peso(received)} '
+          '(transfers between the user\'s own accounts excluded from both). '
+          '$shown\n${rows.join('\n')}',
+    );
+  }
+
+  static String _day(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   /// A search that found nothing says so plainly. Returning an empty list with
   /// no explanation invites the model to invent an id and carry on.

@@ -79,6 +79,16 @@ void main() {
           containsAll(['account', 'category', 'date']));
     });
 
+    test('reviewing transactions is a read and takes no id', () {
+      // On demand only: a read the model calls when asked, never a lever on
+      // ledger rows, which Nudgy cannot edit or delete.
+      final tool = financeToolNamed('findTransactions');
+      expect(tool, isNotNull);
+      expect(tool!.kind, AiToolKind.read);
+      expect(schemaKeysDeep(tool.inputSchema).map((k) => '$k'),
+          isNot(contains('id')));
+    });
+
     test('lookup resolves a real name and rejects an invented one', () {
       expect(financeToolNamed('addSetAside')?.name, 'addSetAside');
       expect(financeToolNamed('deleteEverything'), isNull);

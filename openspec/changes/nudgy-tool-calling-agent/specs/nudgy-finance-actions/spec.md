@@ -31,7 +31,7 @@ A mutating tool call MUST NOT write to storage. It SHALL place the chat in `Chat
 - **THEN** Nudgy does not state or imply that anything was saved, added, recorded or logged
 
 ### Requirement: Mutations target rows resolved by a search tool
-Nudgy SHALL have read tools (`findBills`, `findReceivables`, `findSetAsides`, `findBudgets`) that resolve a phrase to matching rows and their ids. Every editing or deleting tool SHALL take an id obtained from a search result. Nudgy MUST NOT construct or guess an id. Search tools SHALL execute without a confirm card, as they mutate nothing.
+Nudgy SHALL have read tools (`findBills`, `findReceivables`, `findSetAsides`, `findBudgets`) that resolve a phrase to matching rows and their ids. Every editing or deleting tool SHALL take an id obtained from a search result. Nudgy MUST NOT construct or guess an id. Search tools SHALL execute without a confirm card, as they mutate nothing. Nudgy SHALL also have a `findTransactions` read tool for reviewing ledger transactions, past or present, that it calls only when the user asks to review or look up transactions; it SHALL return no transaction ids.
 
 #### Scenario: Edit resolves the row first
 - **WHEN** the user says "change my internet bill to ₱1,299"
