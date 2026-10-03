@@ -107,25 +107,35 @@ CreditCycle creditCycleContaining(
   final y = date.year;
   final m = closesThisMonth ? date.month : date.month + 1;
   final anchor = DateTime(y, m); // normalises a December roll-over
-  return creditCycleClosingIn(anchor.year, anchor.month,
-      statementDay: stmt, dueDay: dueDay, daysAfter: daysAfter);
+  return creditCycleClosingIn(
+    anchor.year,
+    anchor.month,
+    statementDay: stmt,
+    dueDay: dueDay,
+    daysAfter: daysAfter,
+  );
 }
 
 /// Account-level conveniences. Null when [a] has no billing cycle configured.
 extension CreditCycleAccount on FinancialAccount {
   /// The cycle closing in [year]/[month] for this account.
   CreditCycle? cycleClosingIn(int year, int month) => hasBillingCycle
-      ? creditCycleClosingIn(year, month,
+      ? creditCycleClosingIn(
+          year,
+          month,
           statementDay: statementDay!,
           dueDay: paymentDueDay,
-          daysAfter: dueDaysAfterStatement)
+          daysAfter: dueDaysAfterStatement,
+        )
       : null;
 
   /// The cycle a charge on [date] lands in for this account.
   CreditCycle? cycleContaining(DateTime date) => hasBillingCycle
-      ? creditCycleContaining(date,
+      ? creditCycleContaining(
+          date,
           statementDay: statementDay!,
           dueDay: paymentDueDay,
-          daysAfter: dueDaysAfterStatement)
+          daysAfter: dueDaysAfterStatement,
+        )
       : null;
 }

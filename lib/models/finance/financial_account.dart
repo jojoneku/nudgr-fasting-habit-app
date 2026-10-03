@@ -124,8 +124,7 @@ class FinancialAccount {
   final double? goalRedeemedAmount;
 
   final DateTime? maturityDate; // only used when category == timeDeposit
-  final String?
-      linkedAccountId; // custodian only: the liquid account where these funds physically live
+  final String? linkedAccountId; // custodian only: the liquid account where these funds physically live
   // Liability-only credit fields (creditCard / creditLine / bnpl). All nullable
   // so stored accounts from older versions deserialize unchanged.
   final double? creditLimit; // total approved limit
@@ -201,6 +200,7 @@ class FinancialAccount {
       category == AccountCategory.creditCard ||
       category == AccountCategory.creditLine ||
       category == AccountCategory.bnpl;
+
   /// True when the account can be billed: it knows when the statement closes
   /// and when payment falls due (a fixed day or a days-after-close offset).
   bool get hasBillingCycle =>
@@ -269,8 +269,8 @@ class FinancialAccount {
   /// Floors at 0 via [currentPayable] so an overpaid card isn't negative.
   double? get utilization =>
       (isLiability && creditLimit != null && creditLimit! > 0)
-          ? currentPayable / creditLimit!
-          : null;
+      ? currentPayable / creditLimit!
+      : null;
 
   factory FinancialAccount.fromJson(Map<String, dynamic> json) {
     return FinancialAccount(
@@ -285,8 +285,9 @@ class FinancialAccount {
       isActive: json['isActive'] as bool? ?? true,
       goalTarget: (json['goalTarget'] as num?)?.toDouble(),
       goalFundedAt: DateTime.tryParse(json['goalFundedAt'] as String? ?? ''),
-      goalRedeemedAt:
-          DateTime.tryParse(json['goalRedeemedAt'] as String? ?? ''),
+      goalRedeemedAt: DateTime.tryParse(
+        json['goalRedeemedAt'] as String? ?? '',
+      ),
       goalRedeemedAmount: (json['goalRedeemedAmount'] as num?)?.toDouble(),
       maturityDate: json['maturityDate'] != null
           ? DateTime.parse(json['maturityDate'] as String)
@@ -302,37 +303,38 @@ class FinancialAccount {
       minimumFixedAmount: (json['minimumFixedAmount'] as num?)?.toDouble(),
       financeChargeRate: (json['financeChargeRate'] as num?)?.toDouble(),
       creditBrand: json['creditBrand'] as String?,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'category': category.name,
-        'parentAccountId': parentAccountId,
-        'balance': balance,
-        'currency': currency,
-        'colorHex': colorHex,
-        'icon': icon,
-        'isActive': isActive,
-        'goalTarget': goalTarget,
-        'goalFundedAt': goalFundedAt?.toIso8601String(),
-        'goalRedeemedAt': goalRedeemedAt?.toIso8601String(),
-        'goalRedeemedAmount': goalRedeemedAmount,
-        'maturityDate': maturityDate?.toIso8601String(),
-        'linkedAccountId': linkedAccountId,
-        'creditLimit': creditLimit,
-        'statementDay': statementDay,
-        'paymentDueDay': paymentDueDay,
-        'dueDaysAfterStatement': dueDaysAfterStatement,
-        'minimumRule': minimumRule?.name,
-        'minimumFixedAmount': minimumFixedAmount,
-        'financeChargeRate': financeChargeRate,
-        'creditBrand': creditBrand,
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'category': category.name,
+    'parentAccountId': parentAccountId,
+    'balance': balance,
+    'currency': currency,
+    'colorHex': colorHex,
+    'icon': icon,
+    'isActive': isActive,
+    'goalTarget': goalTarget,
+    'goalFundedAt': goalFundedAt?.toIso8601String(),
+    'goalRedeemedAt': goalRedeemedAt?.toIso8601String(),
+    'goalRedeemedAmount': goalRedeemedAmount,
+    'maturityDate': maturityDate?.toIso8601String(),
+    'linkedAccountId': linkedAccountId,
+    'creditLimit': creditLimit,
+    'statementDay': statementDay,
+    'paymentDueDay': paymentDueDay,
+    'dueDaysAfterStatement': dueDaysAfterStatement,
+    'minimumRule': minimumRule?.name,
+    'minimumFixedAmount': minimumFixedAmount,
+    'financeChargeRate': financeChargeRate,
+    'creditBrand': creditBrand,
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   FinancialAccount copyWith({
     String? name,
