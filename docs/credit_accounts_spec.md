@@ -47,6 +47,9 @@ final int? paymentDueDay;         // 1–28, day payment is due
 final double? financeChargeRate;  // monthly NOMINAL rate, e.g. 0.03 (3%); null = no interest calc
 final String? creditBrand;        // preset key, e.g. 'bpi_rewards'; null = manual
 ```
+- Later additions (see §12): `dueDaysAfterStatement` (due = close + N days, wins over
+  `paymentDueDay`), `minimumRule` (`percentOfBalance` / `fixedAmount` / `payInFull`) and
+  `minimumFixedAmount`.
 - `toJson`/`fromJson`/`copyWith` extended; all nullable → **backward compatible** with stored data.
 - Validation lives in the model: these fields are only meaningful when `isLiability`.
 
@@ -141,6 +144,8 @@ Source: BPI "Rates and Fees" + "Sample Interest Calculation" pages (verify on im
 When `category ∈ {creditCard, creditLine, bnpl}`, reveal a **Credit details** section:
 - Credit limit · Statement day · Payment due day · (advanced) Monthly finance rate · Brand preset
   picker (seeds the rate fields). Touch targets ≥ 44px; theme-aware colors only.
+- Payment-due rule and minimum-payment rule controls — see §12.5. The web
+  `WebAccountFormDialog` mirrors the mobile form field for field.
 
 ### 8.2 Credit section on the dashboard (`treasury_dashboard_view.dart`)
 A new section **below the accounts list**, fed by the existing `liabilityAccounts` getter, rendering
@@ -188,6 +193,97 @@ so net worth now moves the right way too.
 - `credit_finance_charge_test`: charge + min-due + late-fee against the BPI worked example.
 - `treasury_dashboard_presenter_test`: `creditAccounts`, totals.
 - Widget: credit row renders limit/payable/due in both themes.
+
+## 12. Billing cycle, due rules and minimums
+
+Supersedes the due-date and minimum-due parts of §6–§8 where they disagree. The cycle math is
+`lib/utils/credit_cycle.dart`; the bill generator, the dashboard due line, the cycle note and the
+due reminder all read cycles from there, so they cannot disagree about which cycle is which.
+
+### 12.1 What a cycle is
+A cycle runs from the day **after** one statement close through the next close, **inclusive**.
+- A charge dated **on** the close day stays on that statement.
+- A charge dated the day **after** rides the next one.
+
+Example — closes the 20th, due 15 days later: a charge on Sep 20 is on the Sep 20 statement (due
+Oct 5); a charge on Sep 21 lands on the Oct 20 statement (due Nov 4).
+
+`statementDay` stays clamped to 1–28 so every month has a close.
+
+### 12.2 Two due rules
+An account stores **exactly one** of:
+
+| Rule | Field | Due date |
+|---|---|---|
+| Day of month | `paymentDueDay` (1–28) | The first such day strictly after the close (closes the 20th, due the 5th → next month). |
+| Days after statement | `dueDaysAfterStatement` (1–`kMaxDueDaysAfterStatement` = 45) | Close + N days, crossing month ends naturally. |
+
+When both are present (older data), the offset wins. The account forms clear the other field on
+save.
+
+**Why offset exists:** many PH issuers say "due 15 days after the statement", not "due on the 5th".
+A fixed day only matches that while every cycle is the same length. After a 31-day month the real
+due date shifts a day against any fixed day of month, so a fixed day is sometimes wrong by a day.
+The offset rule is exact for those issuers.
+
+An account **has a billing cycle** (`FinancialAccount.hasBillingCycle`) only with a statement day
+**and** one of the two due rules. Without one, the dashboard warns that it is never billed.
+
+### 12.3 Minimum payment rules
+`minimumRule` decides the minimum on a statement (`computeMinimumForRule`):
+
+| Rule | Minimum |
+|---|---|
+| `percentOfBalance` | `max(statement × rate, floor)`, using the card preset's rate/floor, or the BSP-style defaults (3.57%, ₱850). |
+| `fixedAmount` | `minimumFixedAmount` (e.g. a monthly installment), never above the statement. |
+| `payInFull` | The whole statement. |
+
+Category defaults when `minimumRule` is null (`defaultMinimumRuleFor` / `effectiveMinimumRule`):
+**credit card → percent of balance**; **credit line and BNPL → pay in full**. The forms save the
+rule explicitly, so a later change to a default never silently re-rules an existing account.
+
+### 12.4 Dashboard semantics
+- The **due line** reflects only an **unpaid statement with money on it**: "Due in 4 days · min ₱850",
+  or "Due in 4 days · ₱3,000 in full" under pay-in-full. The presenter builds the whole label;
+  the view renders it as-is.
+- Otherwise it reads **"No payment due"**, including when the card has a balance on a cycle that
+  has not closed yet. That balance has no minimum until it is billed.
+- **Pay stays available whenever anything is owed** (`currentPayable > 0`), even with no payment
+  due. Paying early is always allowed.
+- The **cycle note** always shows the current cycle, e.g. "Statement closes Oct 20 · due Nov 4",
+  or a warning when the account has no billing cycle. Mobile and web both show it.
+
+### 12.5 Account form (mobile + web)
+Inside **Credit details**:
+- **Payment due**: segmented "Day of month" | "Days after statement". Day of month shows the
+  1–28 due-day picker. Days after statement shows a 1–45 "Due after" picker and the hint
+  *"Some issuers count days from the statement, e.g. due 15 days after."* An account saved with an
+  offset opens in offset mode.
+- **Minimum payment**: segmented "% of balance" | "Fixed amount" | "Pay in full". Fixed amount
+  shows a required amount field (> ₱0). A new account follows its category default until the user
+  picks a rule. An existing credit account opens on its `effectiveMinimumRule`.
+- On save, a non-credit category stores none of these fields. A credit category stores one due rule,
+  an explicit `minimumRule`, and `minimumFixedAmount` only under `fixedAmount`.
+- These terms are **form-only**: chat and quick-log never create or edit accounts
+  (see `docs/chat_logging_coverage.md` §3).
+
+### 12.6 Statement generator rules
+`BillsReceivablesPresenter` snapshots closed cycles into `BillType.creditCard` bills:
+- **Amount = balance as of the close** (`LedgerPresenter.payableAsOf(account, cycle.close)`), never
+  today's balance. The app may open days later, and charges after the close belong to the next
+  statement.
+- **Never a ₱0 bill.** A cycle that closed owing nothing gets no statement.
+- Each bill is filed under the month its payment is **due** (`CreditCycle.dueMonthKey`), with that
+  day as its due day. A cycle closing the 20th and due the 5th is therefore not overdue as soon as
+  it is generated.
+- **Current month:** billed once today reaches the close.
+- **Past cycles are backfilled only while their due date is still ahead.** The previous month is
+  always checked, since its statement is often still payable. A past-due cycle is skipped because
+  its unpaid balance is already carried into the newer statement, and billing it too would count
+  the same debt twice.
+- **Phantom ₱0 auto-statements are cleaned up.** Earlier versions backfilled ₱0 "review me"
+  placeholders whenever the card owed something today. Unpaid, untransacted ₱0 auto-statements
+  are swept away before generation.
 
 ---
 

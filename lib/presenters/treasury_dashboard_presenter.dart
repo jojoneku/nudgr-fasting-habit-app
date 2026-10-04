@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
-import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -13,7 +12,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
-import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -77,10 +76,12 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     LedgerPresenter? ledger,
     BudgetPresenter? budget,
     BillsReceivablesPresenter? bills,
+    DateTime Function()? clock,
   ])  : _storage = storage,
         _ledger = ledger,
         _budget = budget,
-        _billsPresenter = bills {
+        _billsPresenter = bills,
+        _clock = clock ?? DateTime.now {
     load();
     _ledger?.addListener(_syncFromLedger);
     _budget?.addListener(_syncFromBudget);
@@ -89,6 +90,10 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   final StorageService _storage;
   final LedgerPresenter? _ledger;
+
+  /// "Now" for the credit due/cycle lines. Injected so tests can pin a date;
+  /// [DateTime.now] otherwise.
+  final DateTime Function() _clock;
 
   /// The owner of the budgets this presenter reports on. Optional so the
   /// dashboard still builds standalone (tests, single-screen mounts), where it
@@ -220,71 +225,131 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get totalCreditAvailable =>
       creditAccounts.fold(0.0, (sum, a) => sum + (a.availableCredit ?? 0));
 
-  /// Next payment-due label for a credit account and whether it's imminent
-  /// (within 3 days). Returns null when the account has no due day configured.
-  /// Rolls to next month once this month's due day has passed.
-  ({String label, bool imminent})? creditDueInfo(FinancialAccount a) {
-    final day = a.paymentDueDay;
-    if (day == null) return null;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    // Clamp the due day to the target month's length so day 29–31 doesn't
-    // overflow into the next month (e.g. DateTime(2026, 2, 31) → Mar 3).
-    DateTime dueOn(int year, int month) {
-      final lastDay = DateTime(year, month + 1, 0).day;
-      return DateTime(year, month, day.clamp(1, lastDay));
-    }
+  /// The statement of [a] still waiting on payment — the earliest-due unpaid
+  /// credit-card bill for it, generated or hand-keyed, with money left on it —
+  /// or null when no statement is owed.
+  ///
+  /// The single source for "is anything due on this card". A balance alone is
+  /// not: money charged since the last close sits on the NEXT statement, and a
+  /// statement that closed at ₱0 asks for nothing.
+  Bill? openCreditStatement(FinancialAccount a) =>
+      findOpenCreditStatement(_bills, a.id);
 
-    var due = dueOn(now.year, now.month);
-    if (due.isBefore(today)) due = dueOn(now.year, now.month + 1);
-    final diff = due.difference(today).inDays;
-    final label = diff == 0
-        ? 'Due today'
-        : diff == 1
-            ? 'Due tomorrow'
-            : 'Due in $diff days';
-    return (label: label, imminent: diff <= 3);
+  /// The due line for a credit account, self-contained — the views render the
+  /// label as-is. [imminent] is true within 3 days of the due date or once
+  /// overdue, while the minimum is still unpaid. Null for non-credit accounts.
+  ///
+  ///   - nothing paid yet: "Due in 5 days · min ₱850.00" (pay-in-full:
+  ///     "Due in 5 days · ₱10,006.00 in full")
+  ///   - paid, but short of the minimum: "Due in 5 days · ₱350.00 left of min"
+  ///     (pay-in-full: "Due in 5 days · ₱4,000.00 left to pay")
+  ///   - minimum covered, statement not: "Min paid · ₱1,861.00 left to avoid
+  ///     interest" — never imminent, even past the due date: no late fee.
+  ///   - paid in full, or no statement owed: "No payment due".
+  ///
+  /// Driven by the open statement ([openCreditStatement]) and how much of it
+  /// is paid — kept on the bill by its owner, which reads the payments off the
+  /// ledger — not by the calendar. It used to count down to the account's due
+  /// day every month regardless, so a card whose statement closed at ₱0 still
+  /// read "Due tomorrow · min ₱850" against a balance not due for a month.
+  ({String label, bool imminent})? creditDueInfo(FinancialAccount a) {
+    if (!a.isLiability) return null;
+    final statement = openCreditStatement(a);
+    final days = statement == null ? null : _daysUntilDue(statement);
+    if (statement == null || days == null) {
+      return (label: 'No payment due', imminent: false);
+    }
+    final progress = CreditStatementProgress.ofBill(statement, a);
+    final payInFull = a.effectiveMinimumRule == CreditMinimumRule.payInFull;
+    if (progress.minimumMet && !payInFull) {
+      return (
+        label: 'Min paid · ${formatPeso(progress.remaining)} left to avoid '
+            'interest',
+        imminent: false,
+      );
+    }
+    final String suffix;
+    if (!progress.started) {
+      suffix = payInFull
+          ? ' · ${formatPeso(progress.remaining)} in full'
+          : ' · min ${formatPeso(progress.minimumRemaining)}';
+    } else {
+      suffix = payInFull
+          ? ' · ${formatPeso(progress.remaining)} left to pay'
+          : ' · ${formatPeso(progress.minimumRemaining)} left of min';
+    }
+    return (label: '${_dueWhenLabel(days)}$suffix', imminent: days <= 3);
+  }
+
+  /// Just the when of [a]'s open statement — "Due in 4 days", "Overdue by 1
+  /// day" — without the amount, or null when no statement is owed. For
+  /// consumers that report the minimum separately (the advisor snapshot).
+  String? creditDueWhenLabel(FinancialAccount a) {
+    if (!a.isLiability) return null;
+    final statement = openCreditStatement(a);
+    final days = statement == null ? null : _daysUntilDue(statement);
+    return days == null ? null : _dueWhenLabel(days);
+  }
+
+  /// Whole days from today to [statement]'s due date; negative once overdue.
+  int? _daysUntilDue(Bill statement) {
+    final due = creditStatementDueDate(statement);
+    if (due == null) return null;
+    final now = _clock();
+    // UTC midnights: a DST shift between the two dates cannot shave a day.
+    return DateTime.utc(due.year, due.month, due.day)
+        .difference(DateTime.utc(now.year, now.month, now.day))
+        .inDays;
+  }
+
+  String _dueWhenLabel(int days) {
+    if (days < 0) return 'Overdue by ${-days} ${days == -1 ? 'day' : 'days'}';
+    if (days == 0) return 'Due today';
+    if (days == 1) return 'Due tomorrow';
+    return 'Due in $days days';
   }
 
   /// Where a credit account sits in its statement cycle, as a line under the
-  /// due date. Null once the cycle has closed — the statement is a bill by then,
-  /// so the Bills tab speaks for itself.
+  /// due date. Null for non-credit accounts.
   ///
-  /// Closes two gaps where the card looked fully configured but the Bills tab
-  /// stayed empty:
-  ///   - No statement day (or no due day) means the generator skips the account
-  ///     entirely and it is never billed — silently, until now.
-  ///   - A cycle that has not closed yet has no bill to find. The balance and
-  ///     due date are both real, so the absence read as a missing statement.
+  ///   - No billing cycle (no statement day, or neither a due day nor a
+  ///     days-after-close rule): a warning, since the generator skips the
+  ///     account entirely and it is never billed — silently, until this line.
+  ///   - Otherwise always the cycle running today: "Statement closes Oct 20 ·
+  ///     due Nov 4" — where anything charged now will be billed.
+  ///
+  /// It used to go quiet once the month's close day passed, assuming the
+  /// statement was a bill by then. When that statement closed at ₱0 there was
+  /// no bill, and the card's balance had no visible home at all.
   ({String label, bool warning})? creditCycleNote(FinancialAccount a) {
     if (!a.isLiability) return null;
-    final stmtDay = a.statementDay;
-    if (stmtDay == null || a.paymentDueDay == null) {
+    final cycle = a.cycleContaining(_clock());
+    if (cycle == null) {
       return (
-        label: 'Needs a statement day and due day to bill automatically',
+        label: 'Needs a statement day and due date to bill automatically',
         warning: true,
       );
     }
-    final now = DateTime.now();
-    if (now.day >= stmtDay.clamp(1, 28)) return null; // closed → it's a bill
-    final closesOn = DateTime(now.year, now.month, stmtDay.clamp(1, 28));
     return (
-      label: 'Statement closes ${monthDayLabel(closesOn)}',
+      label: 'Statement closes ${monthDayLabel(cycle.close)}'
+          ' · due ${monthDayLabel(cycle.due)}',
       warning: false,
     );
   }
 
-  /// Estimated minimum amount due for a credit account, using its brand preset
-  /// (or BSP-default rates). Null when nothing is owed. Display-only — finance
-  /// charges are not auto-posted to the balance.
+  /// What is still owed toward the minimum on [a]'s open statement, under
+  /// its minimum rule ([FinancialAccount.effectiveMinimumRule]): a share of the
+  /// statement with a floor (brand preset or BSP defaults), a fixed amount
+  /// capped at the statement, or the whole statement — less anything already
+  /// paid toward it. Null when no statement is owed (a balance on a cycle that
+  /// has not closed yet has no minimum) or once the minimum is covered.
+  /// Display-only — finance charges are not auto-posted to the balance.
   double? creditMinimumDue(FinancialAccount a) {
-    if (!a.isLiability || a.currentPayable <= 0) return null;
-    final preset = creditBrandPresetByKey(a.creditBrand);
-    return computeMinimumDue(
-      balance: a.currentPayable,
-      minPaymentRate: preset?.minPaymentRate ?? 0.0357,
-      minPaymentFloor: preset?.minPaymentFloor ?? 850,
-    );
+    if (!a.isLiability) return null;
+    final statement = openCreditStatement(a);
+    if (statement == null) return null;
+    final left = CreditStatementProgress.ofBill(statement, a).minimumRemaining;
+    return left > 0 ? left : null;
   }
 
   List<FinancialAccount> get goalAccounts => _accounts
@@ -533,9 +598,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       return ad.compareTo(bd);
     });
 
-  double get monthUnpaidBills => _bills
-      .where((b) => b.month == _currentMonth && !b.isPaid)
-      .fold(0.0, (sum, b) => sum + b.amount);
+  /// Still owed on this month's unpaid bills. A credit statement paid in
+  /// part counts only what is left on it.
+  double get monthUnpaidBills =>
+      _bills.where((b) => b.month == _currentMonth && !b.isPaid).fold(
+          0.0,
+          (sum, b) =>
+              sum +
+              (b.billType == BillType.creditCard
+                  ? creditStatementRemaining(b)
+                  : b.amount));
 
   double get endingCash =>
       totalLiquidCash + pendingReceivables - monthUnpaidBills;
@@ -1645,7 +1717,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _budgetedExpenses = await _storage.loadBudgetedExpenses();
     _categories = await _storage.loadFinanceCategories();
     _summaries = await _storage.loadMonthlySummaries();
-    _currentMonth = toMonthKey(DateTime.now());
+    _currentMonth = toMonthKey(_clock());
 
     _isLoading = false;
     notifyListeners();

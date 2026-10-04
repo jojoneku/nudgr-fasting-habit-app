@@ -529,7 +529,7 @@ class _CreditCard extends StatelessWidget {
         billsPresenter: billsPresenter,
         account: a,
         dueInfo: presenter.creditDueInfo(a),
-        minimumDue: presenter.creditMinimumDue(a),
+        cycleNote: presenter.creditCycleNote(a),
       ));
     }
 
@@ -549,15 +549,22 @@ class _CreditAccountRow extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final BillsReceivablesPresenter billsPresenter;
   final FinancialAccount account;
+
+  /// The unpaid statement's due line, self-contained ("Due Nov 4 · min ₱850",
+  /// "Due Nov 4 · ₱12,000 in full") or "No payment due". Rendered as-is.
   final ({String label, bool imminent})? dueInfo;
-  final double? minimumDue;
+
+  /// Where this card sits in its statement cycle — "Statement closes Oct 20 ·
+  /// due Nov 4" — or a warning that it has no billing cycle. Same line the
+  /// mobile credit card shows.
+  final ({String label, bool warning})? cycleNote;
 
   const _CreditAccountRow({
     required this.presenter,
     required this.billsPresenter,
     required this.account,
     required this.dueInfo,
-    required this.minimumDue,
+    required this.cycleNote,
   });
 
   Future<void> _payNow(BuildContext context) async {
@@ -588,6 +595,7 @@ class _CreditAccountRow extends StatelessWidget {
     final utilization = account.utilization;
     final available = account.availableCredit;
     final due = dueInfo;
+    final note = cycleNote;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -641,13 +649,41 @@ class _CreditAccountRow extends StatelessWidget {
                   size: 14,
                   color: due.imminent ? cs.error : cs.onSurfaceVariant),
               const SizedBox(width: WebInsets.xs),
-              Text(
-                minimumDue != null
-                    ? '${due.label} · min ${formatPeso(minimumDue!)}'
-                    : due.label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: due.imminent ? cs.error : cs.onSurfaceVariant,
-                  fontWeight: due.imminent ? FontWeight.w600 : FontWeight.w400,
+              Expanded(
+                child: Text(
+                  due.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: due.imminent ? cs.error : cs.onSurfaceVariant,
+                    fontWeight:
+                        due.imminent ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (note != null) ...[
+          const SizedBox(height: WebInsets.xs),
+          Row(
+            children: [
+              Icon(
+                note.warning
+                    ? Icons.warning_amber_rounded
+                    : Icons.hourglass_bottom,
+                size: 14,
+                color: note.warning
+                    ? context.appColors.orange
+                    : cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: WebInsets.xs),
+              Expanded(
+                child: Text(
+                  note.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: note.warning
+                        ? context.appColors.orange
+                        : cs.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],

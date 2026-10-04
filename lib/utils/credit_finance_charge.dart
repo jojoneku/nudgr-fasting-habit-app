@@ -8,6 +8,8 @@
 // All rates are clamped to the BSP cap (Circular 1165: ≤ 3%/month). See
 // docs/credit_accounts_spec.md for sources.
 
+import '../models/finance/financial_account.dart';
+
 /// BSP maximum monthly finance charge.
 const double kBspMonthlyRateCap = 0.03;
 
@@ -41,6 +43,40 @@ double computeMinimumDue({
   final base = computed < minPaymentFloor ? minPaymentFloor : computed;
   final capped = base > balance ? balance : base;
   return capped + pastDue;
+}
+
+/// Minimum amount due on a [statement] balance under [rule].
+///
+///   - [CreditMinimumRule.percentOfBalance]: [computeMinimumDue] with the
+///     given rate and floor (a card preset's, BSP defaults otherwise).
+///   - [CreditMinimumRule.fixedAmount]: [fixedAmount] (e.g. a monthly
+///     installment), never above the statement. Falls back to the whole
+///     statement when no positive amount is set.
+///   - [CreditMinimumRule.payInFull]: the whole statement.
+///
+/// Zero when nothing is owed on the statement.
+double computeMinimumForRule({
+  required CreditMinimumRule rule,
+  required double statement,
+  double minPaymentRate = 0.0357,
+  double minPaymentFloor = 850,
+  double? fixedAmount,
+}) {
+  if (statement <= 0) return 0;
+  switch (rule) {
+    case CreditMinimumRule.percentOfBalance:
+      return computeMinimumDue(
+        balance: statement,
+        minPaymentRate: minPaymentRate,
+        minPaymentFloor: minPaymentFloor,
+      );
+    case CreditMinimumRule.fixedAmount:
+      final fixed =
+          (fixedAmount != null && fixedAmount > 0) ? fixedAmount : statement;
+      return fixed < statement ? fixed : statement;
+    case CreditMinimumRule.payInFull:
+      return statement;
+  }
 }
 
 /// Late fee = the smaller of [lateFeeFlat] and the [unpaidMinimumDue].

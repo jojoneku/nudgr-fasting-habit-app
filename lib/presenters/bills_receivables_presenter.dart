@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
@@ -78,10 +79,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     StatsPresenter stats, {
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
+    DateTime Function()? clock,
   })  : _storage = storage,
         _ledger = ledger,
         _stats = stats,
         _monthScope = monthScope,
+        _clock = clock ?? DateTime.now,
         _notifications = notifications ?? NotificationService() {
     if (monthScope != null) {
       _selectedMonth = monthScope.month;
@@ -95,12 +98,19 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _ledger.onUpdateReimbursementReceivable = updateReimbursementReceivable;
     _ledger.reimbursementReceivableExpectedDateResolver =
         reimbursementReceivableExpectedDate;
+    // Statement payment progress is read off the ledger (rule 8): a payment
+    // logged there — from any page — settles the statement it pays.
+    _ledger.addListener(_onLedgerChanged);
   }
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
   final NotificationService _notifications;
+
+  /// "Now" for the credit-statement paths (generation, reconciliation, due
+  /// reminders). Injected so tests can pin a date; [DateTime.now] otherwise.
+  final DateTime Function() _clock;
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
   final TreasuryMonthScope? _monthScope;
@@ -117,7 +127,23 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   @override
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
+    _ledger.removeListener(_onLedgerChanged);
     super.dispose();
+  }
+
+  /// True once [load] has read the bills — before that there is nothing to
+  /// reconcile against the ledger, and an empty list must not be saved.
+  bool _billsLoaded = false;
+
+  /// The ledger changed (a payment, an edit, a deleted transfer): re-derive
+  /// every open credit statement's paid state from it, and persist only when
+  /// something actually moved.
+  void _onLedgerChanged() {
+    if (!_billsLoaded || _ledger.isLoading) return;
+    if (!_refreshStatementProgress()) return;
+    safeNotify();
+    unawaited(_storage.saveBills(_allBills));
+    unawaited(_syncCreditDueReminders());
   }
 
   /// Runs after every mutation of this presenter's own state.
@@ -130,6 +156,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// sits *below* this presenter and subscribing upward would be a cycle.
   Future<void> _notifyDependents() async {
     _syncReimbursementsToLedger();
+    // Paying, unpaying, editing or deleting a statement changes what (if
+    // anything) is due on the card, so the one-shot due reminder follows.
+    await _syncCreditDueReminders();
   }
 
   /// Pushes the set of still-outstanding reimbursement receivables to the
@@ -231,8 +260,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       .where((b) => b.isPaid)
       .fold(0.0, (sum, b) => sum + (b.paidAmount ?? b.amount));
 
-  double get totalBillsPending =>
-      bills.where((b) => !b.isPaid).fold(0.0, (sum, b) => sum + b.amount);
+  /// Still owed across the month's unpaid bills. A partly paid credit
+  /// statement counts only what is left on it.
+  double get totalBillsPending => bills
+      .where((b) => !b.isPaid)
+      .fold(0.0, (sum, b) => sum + _unpaidPortion(b));
+
+  double _unpaidPortion(Bill b) => b.billType == BillType.creditCard
+      ? creditStatementRemaining(b)
+      : b.amount;
 
   double get totalNextMonth {
     final billsNm = _allBills
@@ -593,6 +629,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // (e.g., day 1 of a new month) sees the statement without requiring a
     // full reload.
     await _autoGenerateCreditStatements();
+    await _syncCreditDueReminders();
     safeNotify();
   }
 
@@ -602,6 +639,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = await _storage.loadBills();
     _allReceivables = await _storage.loadReceivables();
     _allExpenses = await _storage.loadBudgetedExpenses();
+    _billsLoaded = true;
     _awardedXpKeys
       ..clear()
       ..addAll(await _storage.loadAwardedXpKeys());
@@ -695,11 +733,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       if (prefs.getBool(_kShiftedStatementMonthMigrationDone) ?? false) return;
 
       var changed = false;
-      final currentMonthKey = toMonthKey(DateTime.now());
+      final currentMonthKey = toMonthKey(_clock());
+      // Fixed-day accounts only. A days-after-close account postdates the
+      // due-month fix, so none of its statements were ever mis-filed — and its
+      // due day says nothing about which month the payment falls in.
       final shiftedAccounts = _ledger.accounts.where((a) =>
           a.isLiability &&
           a.statementDay != null &&
           a.paymentDueDay != null &&
+          a.dueDaysAfterStatement == null &&
           a.paymentDueDay!.clamp(1, 28) <= a.statementDay!.clamp(1, 28));
       for (final a in shiftedAccounts) {
         // Only current-or-past months: a future-month statement can only have
@@ -889,8 +931,13 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     );
     safeNotify();
     await _storage.saveBills(_allBills);
-    // A paid bill needs no reminder.
-    await _notifications.cancelBillReminder(bill.id);
+    // A paid bill needs no reminder; a statement paid only in part keeps it.
+    final settled = _allBills.where((b) => b.id == billId).firstOrNull;
+    if (settled == null || settled.isPaid) {
+      await _notifications.cancelBillReminder(bill.id);
+    } else {
+      await _syncBillReminder(settled);
+    }
     await _checkAllBillsPaidXp();
     await _notifyDependents();
   }
@@ -907,7 +954,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     DateTime? paidDate,
     bool recordInLedger = true,
   }) async {
-    final date = paidDate ?? DateTime.now();
+    final date = paidDate ?? _clock();
 
     String? txnId;
     if (recordInLedger) {
@@ -959,6 +1006,25 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         txnId = txn.id;
       }
     }
+    // A credit statement's paid state is the ledger's payments since its
+    // close, not this one entry: ₱850 on a ₱2,711 statement leaves ₱1,861
+    // owing, and the statement stays open until the payments cover it.
+    final current = _allBills.where((b) => b.id == bill.id).firstOrNull ?? bill;
+    if (txnId == null && _statementCycle(current) != null) {
+      if (!recordInLedger &&
+          paidAmount >= creditStatementRemaining(current) - 0.005) {
+        // Logged elsewhere and said to cover it: take the user's word, as for
+        // any bill. (A ledger-derived refresh never reopens a paid statement.)
+        _updateBill(current.copyWith(
+          isPaid: true,
+          paidDate: date,
+          paidAmount: paidAmount,
+        ));
+      } else {
+        _updateBill(_withLedgerProgress(current, paidOn: date));
+      }
+      return;
+    }
     _updateBill(bill.copyWith(
       isPaid: true,
       paidDate: date,
@@ -966,6 +1032,114 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       transactionId: txnId,
     ));
   }
+
+  // ─── Credit statement payment progress ──────────────────────────────────────
+  //
+  // How much of a credit statement is paid is read off the ledger — every
+  // payment into the card dated after the statement closed, capped at the
+  // statement — so the Bills "Pay" button, the dashboard's quick pay and a
+  // transfer typed into the ledger by hand all settle it the same way. It used
+  // to be a flag: any amount at all marked it paid (hiding what was left), and
+  // the dashboard's quick pay only marked it once the WHOLE card hit ₱0, so
+  // paying the statement exactly while newer charges sat on the card left it
+  // "due".
+
+  /// The account a credit statement bill pays down, or null when [b] is not a
+  /// credit-card bill for a liability.
+  FinancialAccount? _statementAccount(Bill b) {
+    if (b.billType != BillType.creditCard || b.accountId == null) return null;
+    final a = _ledger.accounts.where((x) => x.id == b.accountId).firstOrNull;
+    return a != null && a.isLiability ? a : null;
+  }
+
+  /// The billing cycle [b] is the statement of, or null when its paid state
+  /// cannot be derived (no cycle on the account, or a hand-keyed bill filed
+  /// under a month no cycle falls due in) — those keep the plain paid flag.
+  CreditCycle? _statementCycle(Bill b) {
+    final a = _statementAccount(b);
+    return a == null ? null : cycleForStatement(a, b);
+  }
+
+  /// [b] with its paid state re-derived from the ledger. Paid in full once the
+  /// payments since its close cover it; otherwise open, with what has been
+  /// paid so far in [Bill.paidAmount]. Never reopens a statement already
+  /// marked paid — that is only ever done by undoing the payment — so a
+  /// statement settled before its payments reached the ledger stays settled.
+  Bill _withLedgerProgress(Bill b, {DateTime? paidOn}) {
+    if (b.isPaid || b.amount <= 0) return b;
+    final a = _statementAccount(b);
+    final cycle = a == null ? null : cycleForStatement(a, b);
+    if (a == null || cycle == null) return b;
+    final raw = _ledger.paymentsToLiabilitySince(a.id, cycle.close);
+    final paid = raw < b.amount ? raw : b.amount;
+    if (paid >= b.amount - 0.005) {
+      return b.copyWith(
+        isPaid: true,
+        paidAmount: b.amount,
+        paidDate: paidOn ?? b.paidDate ?? _clock(),
+      );
+    }
+    final started = paid > 0.005;
+    final paidAmount = started ? paid : null;
+    if (paidAmount == b.paidAmount) return b;
+    return b.copyWith(
+      paidAmount: paidAmount,
+      paidDate: started ? (paidOn ?? b.paidDate ?? _clock()) : null,
+    );
+  }
+
+  /// Re-derives every open credit statement in memory. True when any changed.
+  bool _refreshStatementProgress() {
+    final next = [for (final b in _allBills) _withLedgerProgress(b)];
+    var changed = false;
+    for (var i = 0; i < next.length; i++) {
+      if (!identical(next[i], _allBills[i])) changed = true;
+    }
+    if (changed) _allBills = next;
+    return changed;
+  }
+
+  /// How far payment of credit statement [b] has got — paid so far, what is
+  /// left, the minimum and whether it is covered — or null when [b] is not a
+  /// credit-card bill for a liability account.
+  CreditStatementProgress? statementProgress(Bill b) {
+    final current = _allBills.where((x) => x.id == b.id).firstOrNull ?? b;
+    final a = _statementAccount(current);
+    return a == null ? null : CreditStatementProgress.ofBill(current, a);
+  }
+
+  /// [statementProgress] while a credit statement is part-paid — something
+  /// paid, something still left — else null. The one state the plain
+  /// paid/unpaid flag cannot show.
+  CreditStatementProgress? _partialProgress(Bill b) {
+    final p = statementProgress(b);
+    return p != null && p.started && !p.fullyPaid ? p : null;
+  }
+
+  /// "Paid ₱850.00 of ₱2,711.35" for a part-paid credit statement, with
+  /// " · min met" once a card's minimum is covered; null otherwise.
+  String? statementProgressNote(Bill b) {
+    final p = _partialProgress(b);
+    if (p == null) return null;
+    final minMet = p.minimumMet && p.minimum < p.amount;
+    return 'Paid ${formatPeso(p.paid)} of ${formatPeso(p.amount)}'
+        '${minMet ? ' · min met' : ''}';
+  }
+
+  /// Share of a part-paid credit statement already paid (0–1); null when the
+  /// statement is unpaid, fully paid, or not a credit statement.
+  double? statementProgressFraction(Bill b) {
+    final p = _partialProgress(b);
+    return p == null || p.amount <= 0 ? null : p.paid / p.amount;
+  }
+
+  /// What is still owed on [b]: the unpaid remainder of a credit statement, or
+  /// the full amount of any other bill.
+  double billAmountOwed(Bill b) => statementProgress(b)?.remaining ?? b.amount;
+
+  /// True when [b] has a payment that "Mark unpaid" can reverse — a paid bill,
+  /// or a credit statement with a partial payment on it.
+  bool hasUndoablePayment(Bill b) => b.isPaid || _partialProgress(b) != null;
 
   // ─── Undo a settlement ───────────────────────────────────────────────────────
   //
@@ -1019,7 +1193,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// True when undoing [bill]'s payment has a ledger entry to take back out, so
   /// the view can offer (and explain) the choice instead of guessing.
   bool billHasLedgerEntry(Bill bill) =>
-      bill.isPaid && _billSettlementTxnIds(bill).isNotEmpty;
+      _hasPayment(bill) && _billSettlementTxnIds(bill).isNotEmpty;
+
+  /// True when [bill] has a payment to undo: it is paid, or it is a credit
+  /// statement paid in part.
+  bool _hasPayment(Bill bill) => bill.isPaid || (bill.paidAmount ?? 0) > 0;
 
   /// Reverses [billId]'s payment: the bill returns to unpaid with its paid
   /// date/amount and ledger link cleared, and (unless [removeTransaction] is
@@ -1035,7 +1213,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     bool removeTransaction = true,
   }) async {
     final bill = _allBills.where((b) => b.id == billId).firstOrNull;
-    if (bill == null || !bill.isPaid) return;
+    if (bill == null || !_hasPayment(bill)) return;
 
     final reopened =
         await _applyBillReversal(bill, removeTransaction: removeTransaction);
@@ -1058,12 +1236,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       }
     }
 
-    final reopened = bill.copyWith(
+    // A credit statement then re-reads whatever payments are still on the
+    // ledger (one kept by `removeTransaction: false`, or another payment
+    // altogether), so the undo leaves it exactly as paid as the money says.
+    final reopened = _withLedgerProgress(bill.copyWith(
       isPaid: false,
       paidDate: null,
       paidAmount: null,
       transactionId: null,
-    );
+    ));
     _updateBill(reopened);
     return reopened;
   }
@@ -1551,7 +1732,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return eligible.first.id;
   }
 
-  /// Marks every still-unpaid bill in [billIds] paid for its own full amount.
+  /// Marks every still-unpaid bill in [billIds] paid for what is left on it
+  /// (its full amount, less anything already paid toward a credit statement).
   /// [accountId] funds all of them (ignored, and not required, when
   /// [recordInLedger] is false).
   Future<BatchResult> markBillsPaid(
@@ -1568,7 +1750,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       try {
         await _applyBillPayment(
           bill,
-          paidAmount: bill.amount,
+          paidAmount: _unpaidPortion(bill),
           accountId: accountId,
           paidDate: paidDate,
           recordInLedger: recordInLedger,
@@ -1597,7 +1779,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }) async {
     final ids = billIds.toSet();
     final targets =
-        _allBills.where((b) => ids.contains(b.id) && b.isPaid).toList();
+        _allBills.where((b) => ids.contains(b.id) && _hasPayment(b)).toList();
     if (targets.isEmpty) return (applied: 0, skipped: 0);
     final reopened = <Bill>[];
     for (final bill in targets) {
@@ -2549,27 +2731,56 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _autoGenerateRecurringBudgetedExpenses(month);
   }
 
-  /// Snapshots closed credit statements into bills for all months up to today.
-  /// Runs close-date detection across every month since the oldest existing
-  /// statement, so a multi-month gap (app was closed on statement day) gets
-  /// backfilled on the next open. Never generates for future cycle months.
+  /// Snapshots closed credit statements into bills, one per closed cycle that
+  /// actually left money owing.
   ///
-  /// The bill is filed under the month its payment is DUE, which is the cycle
-  /// month only when the due day falls after the statement close; when the due
-  /// day is on/before the close (e.g. closes the 15th, due the 4th) payment
-  /// belongs to the following month — filing it under the cycle month made it
-  /// show as overdue the moment it was generated.
+  /// Every date comes from the account's billing cycle (`utils/credit_cycle`):
+  /// the bill is filed under the month its payment is DUE ([CreditCycle.
+  /// dueMonthKey]) with that day as its due day, so a fixed due day and a
+  /// "N days after statement" rule both land on the right date, and a cycle
+  /// that closes on the 20th and is due the 5th never reads as overdue the
+  /// moment it is generated.
   ///
-  /// Current month: uses live `currentPayable`.
-  /// Past months: generates a ₱0 placeholder only when a balance still exists
-  /// today — actual historical balances are not recoverable, so the placeholder
-  /// reminds the user to review rather than silently mis-stating the amount.
+  /// The amount is always the balance as of the cycle's CLOSE
+  /// ([LedgerPresenter.payableAsOf]), never today's: this runs whenever the app
+  /// is next opened, and anything charged after the close belongs to the next
+  /// statement. A cycle that closed owing nothing gets no bill at all.
+  ///
+  ///   - Current month: billed once today has reached the close.
+  ///   - Past months (from just after the oldest stored statement, and always
+  ///     the previous month): billed only while the payment is not yet past
+  ///     due. A past-due cycle's unpaid balance is carried into the newer
+  ///     statement, so billing it as well would count the same debt twice.
+  ///
+  /// This used to backfill past months with a ₱0 "review me" placeholder
+  /// whenever the card owed something TODAY. Today's balance says nothing about
+  /// an old cycle — a charge made the day after a close made that closed,
+  /// empty statement look unpaid — so the placeholders are gone, and any
+  /// already stored (unpaid, untransacted, ₱0) are swept up here first.
   Future<void> _autoGenerateCreditStatements() async {
-    final now = DateTime.now();
+    final now = _clock();
+    final today = DateTime(now.year, now.month, now.day);
     final currentMonthKey = toMonthKey(now);
-    final categoryId = _defaultCreditCategoryId();
-    if (categoryId == null) return;
     var changed = false;
+
+    // ── Sweep the ₱0 placeholders the old backfill left behind. An unpaid,
+    // untransacted auto-statement for nothing is never a record the user acted
+    // on; it only made the card read as "due".
+    final beforeSweep = _allBills.length;
+    _allBills = _allBills
+        .where((b) => !(_isAutoStatement(b) &&
+            !b.isPaid &&
+            b.transactionId == null &&
+            b.amount <= 0))
+        .toList();
+    if (_allBills.length != beforeSweep) changed = true;
+
+    final categoryId = _defaultCreditCategoryId();
+    if (categoryId == null) {
+      if (_refreshStatementProgress()) changed = true;
+      if (changed) await _storage.saveBills(_allBills);
+      return;
+    }
 
     // ── De-duplicate GENERATED statement bills. A card carries at most one
     // auto-statement per month; a stray second one is an internal duplicate, so
@@ -2614,11 +2825,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       changed = true;
     }
 
-    final creditAccts = _ledger.accounts.where((a) =>
-        a.isActive &&
-        a.isLiability &&
-        a.statementDay != null &&
-        a.paymentDueDay != null);
+    final creditAccts =
+        _ledger.accounts.where((a) => a.isActive && a.hasBillingCycle);
 
     // Determine the earliest month to backfill from (one after the oldest
     // existing auto-statement, or the current month when there are none).
@@ -2636,9 +2844,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // second card whose statement day fell after the first card's then never
     // got billed for that month, and never would: the window stayed shut on
     // each later run too.
-    if (startMonth.compareTo(currentMonthKey) > 0) {
-      startMonth = currentMonthKey;
-    }
+    //
+    // And always reach back one month: the cycle that closed last month is
+    // often still payable now (closes the 20th, due the 5th), and with no older
+    // statement on file — a first run — it was never looked at.
+    final prevMonthKey = previousMonth(currentMonthKey);
+    if (startMonth.compareTo(prevMonthKey) > 0) startMonth = prevMonthKey;
 
     // Build the list of months to evaluate (startMonth … currentMonth).
     final monthsToCheck = <String>[];
@@ -2650,16 +2861,13 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
     for (final month in monthsToCheck) {
       final isCurrentMonth = month == currentMonthKey;
+      final monthStart = DateTime.parse('$month-01');
 
       for (final a in creditAccts) {
-        final stmtDay = a.statementDay!.clamp(1, 28);
-        final dueDay = a.paymentDueDay!.clamp(1, 28);
-        // The cycle closing in [month] is payable within the same month only
-        // when the due day falls after the statement close (closes 1st → due
-        // 15th). Otherwise payment rolls into the following month (closes
-        // 15th → due 4th of NEXT month); filing the bill under the cycle
-        // month would make it read as overdue the moment it is generated.
-        final dueMonth = dueDay > stmtDay ? month : nextMonth(month);
+        // The statement closing in [month], and the month its payment is due
+        // in — the cycle month itself, or a later one.
+        final cycle = a.cycleClosingIn(monthStart.year, monthStart.month)!;
+        final dueMonth = cycle.dueMonthKey;
 
         final existing = _allBills
             .where((b) =>
@@ -2668,26 +2876,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
                 b.month == dueMonth)
             .firstOrNull;
 
-        // Reconcile the statement of the cycle that closed this month when
-        // the card is fully cleared.
-        if (isCurrentMonth &&
-            existing != null &&
-            !existing.isPaid &&
-            a.currentPayable <= 0) {
-          _updateBill(existing.copyWith(
-            isPaid: true,
-            paidDate: now,
-            paidAmount: existing.amount,
-          ));
-          changed = true;
-          continue;
-        }
+        // Already billed. Whether it is paid is read off the ledger below
+        // ([_refreshStatementProgress]), not off the card hitting ₱0.
         if (existing != null) continue;
 
         // Legacy guard (pre due-month fix): a shifted card's past cycle may
         // still carry its settled statement under the cycle month itself.
-        // Recognise it so backfill doesn't stack a ₱0 placeholder for a cycle
-        // the user already handled.
+        // Recognise it so backfill doesn't bill a cycle the user already
+        // handled a second time.
         if (!isCurrentMonth && dueMonth != month) {
           final legacyCovers = _allBills.any((b) =>
               _isAutoStatement(b) &&
@@ -2717,28 +2913,17 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             b.month == dueMonth);
         if (userBillCoversCard) continue;
 
-        // For current month: statement day must have passed.
-        if (isCurrentMonth && now.day < stmtDay) continue;
-        // For either month type: skip if nothing is currently owed (no point
-        // generating a ₱0 placeholder — the card was either fully paid or never
-        // used in that cycle).
-        if (a.currentPayable <= 0) continue;
+        // Current month: the statement does not exist until it closes.
+        if (isCurrentMonth && today.isBefore(cycle.close)) continue;
+        // Past months: a cycle already past due is not backfilled — whatever
+        // it left unpaid rides on the newer statement.
+        if (!isCurrentMonth && cycle.due.isBefore(today)) continue;
 
-        // Bill the balance as of the cycle's CLOSE date, not today's. This runs
-        // whenever the app is next opened, so reading the live balance billed
-        // anything charged after the close into the cycle that had already
-        // closed — and the amount was never corrected afterwards.
-        //
-        // Past months stay at 0: a placeholder that asks to be reviewed is
-        // safer than a reconstructed figure, since the transaction log may not
-        // reach back that far and a wrong number would read as authoritative.
-        final amount = isCurrentMonth
-            ? _ledger.payableAsOf(a.id, DateTime(now.year, now.month, stmtDay))
-            : 0.0;
-
-        // Nothing had closed yet: every peso on the card was charged after the
-        // close date, so it belongs to the next cycle, not this statement.
-        if (isCurrentMonth && amount <= 0) continue;
+        // Bill the balance as of the cycle's CLOSE date, not today's. A
+        // cycle that closed owing nothing is no bill: everything on the card
+        // was charged after the close and belongs to the next statement.
+        final amount = _ledger.payableAsOf(a.id, cycle.close);
+        if (amount <= 0) continue;
 
         _allBills = [
           ..._allBills,
@@ -2747,7 +2932,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             name: '${a.name} statement',
             billType: BillType.creditCard,
             amount: amount,
-            dueDay: dueDay,
+            dueDay: cycle.due.day,
             month: dueMonth,
             categoryId: categoryId,
             accountId: a.id,
@@ -2757,6 +2942,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         changed = true;
       }
     }
+
+    // Settle what the ledger says is paid — payments made since each close,
+    // including ones made before the statement was generated just now.
+    if (_refreshStatementProgress()) changed = true;
 
     if (changed) await _storage.saveBills(_allBills);
   }
@@ -2826,20 +3015,27 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final account =
         _ledger.accounts.where((a) => a.id == accountId).firstOrNull;
     if (account == null || !account.isLiability) return;
-    final when = date ?? DateTime.now();
+    final when = date ?? _clock();
+    // Stamp the transfer with the statement it pays, so undoing that
+    // statement's payment takes this transfer back out too.
+    final statement = findOpenCreditStatement(_allBills, accountId);
     await _ledger.addTransfer(
       fromAccountId: fromAccountId,
       toAccountId: accountId,
       amount: amount,
       description: '${account.name} payment',
       date: when,
+      billId: statement?.id,
     );
 
-    // Reconcile the statement bill so a card paid from here doesn't keep
-    // showing as "due". If this payment cleared the card (nothing left owed),
-    // mark this month's unpaid statement bill(s) for it paid. Partial payments
-    // leave the bill open — you still owe. Mirrors the clear-on-load
-    // reconciliation in [_autoGenerateCreditStatements].
+    // Settle the statement from the ledger: paying it in full closes it even
+    // with newer charges on the card, and a partial payment leaves it open
+    // with what is left. (This used to wait for the WHOLE card to reach ₱0.)
+    var changed = _refreshStatementProgress();
+
+    // A hand-keyed credit-card bill that maps to no billing cycle has no
+    // ledger-derived state, so it keeps the old rule: settled once the card
+    // is cleared.
     final stillOwed = _ledger.accounts
             .where((a) => a.id == accountId)
             .firstOrNull
@@ -2847,44 +3043,57 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         0;
     if (stillOwed <= 0) {
       final month = toMonthKey(when);
-      // A shifted card's statement (due day on/before close day) is filed
-      // under the month AFTER the cycle it closed in, so also reconcile an
-      // unpaid auto-statement sitting in next month — that's the bill this
-      // payment just settled.
-      final next = nextMonth(month);
-      final statements = _allBills
+      final flagOnly = _allBills
           .where((b) =>
               b.accountId == accountId &&
               !b.isPaid &&
               b.billType == BillType.creditCard &&
-              (b.month == month || (b.month == next && b.isAutoStatement)))
+              b.month.compareTo(month) >= 0 &&
+              _statementCycle(b) == null)
           .toList();
-      for (final b in statements) {
+      for (final b in flagOnly) {
         _updateBill(b.copyWith(
           isPaid: true,
           paidDate: when,
           paidAmount: b.amount,
         ));
+        changed = true;
       }
-      if (statements.isNotEmpty) {
-        safeNotify();
-        await _storage.saveBills(_allBills);
-      }
+    }
+    if (changed) {
+      safeNotify();
+      await _storage.saveBills(_allBills);
     }
     await _notifyDependents();
   }
 
-  /// (Re)schedules or cancels per-account payment-due reminders, respecting the
-  /// global bills-reminder toggle.
-  Future<void> _syncCreditDueReminders(bool enabled) async {
-    final creditAccounts = _ledger.accounts
-        .where((a) => a.isActive && a.isLiability && a.paymentDueDay != null);
-    for (final a in creditAccounts) {
-      if (enabled) {
-        await _notifications.scheduleCreditDueReminder(
+  /// (Re)schedules or cancels each credit account's payment-due reminder,
+  /// respecting the global bills-reminder toggle ([enabled], or the cached
+  /// preference when omitted).
+  ///
+  /// One shot, at 9:00 on the due date of the account's open statement (see
+  /// [findOpenCreditStatement]), and cancelled when no statement is waiting on
+  /// payment. This used to repeat monthly on the account's due day whether or
+  /// not anything was due — so a card whose statement closed at ₱0 still said
+  /// "payment is due today" — and could not express a days-after-close rule.
+  Future<void> _syncCreditDueReminders([bool? enabled]) async {
+    if (_ledger.isLoading) return; // accounts unknown — next sync covers it
+    final on = enabled ?? _billsReminderEnabled;
+    for (final a in _ledger.accounts.where((a) => a.isLiability)) {
+      final statement =
+          on && a.isActive ? findOpenCreditStatement(_allBills, a.id) : null;
+      // Once the minimum is covered nothing is DUE (no late fee), so there
+      // is nothing to remind about.
+      final minimumMet = statement != null &&
+          CreditStatementProgress.ofBill(statement, a).minimumMet;
+      final due = statement == null || minimumMet
+          ? null
+          : creditStatementDueDate(statement);
+      if (due != null) {
+        await _notifications.scheduleCreditStatementDueReminder(
           accountId: a.id,
           accountName: a.name,
-          dueDay: a.paymentDueDay!,
+          dueDate: due,
         );
       } else {
         await _notifications.cancelCreditDueReminder(a.id);

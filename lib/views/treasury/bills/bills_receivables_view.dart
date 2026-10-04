@@ -893,14 +893,15 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final v = _catVisual(b.categoryId, fallback: context.appColors.bills);
     final sel = _selectionFor(_BatchSection.bills, b.id);
     final locked = _locked(_BatchSection.bills);
-    final String? note = b.isPaid
-        ? 'Paid ${formatPeso(b.paidAmount ?? b.amount)}'
-            '${b.paidDate != null ? ' · ${DateFormat('MMM d').format(b.paidDate!)}' : ''}'
-        : b.isAutoStatement
-            ? 'Auto-generated statement'
-            : (b.paymentNote != null && b.paymentNote!.isNotEmpty
-                ? b.paymentNote
-                : null);
+    final String? note = widget.presenter.statementProgressNote(b) ??
+        (b.isPaid
+            ? 'Paid ${formatPeso(b.paidAmount ?? b.amount)}'
+                '${b.paidDate != null ? ' · ${DateFormat('MMM d').format(b.paidDate!)}' : ''}'
+            : b.isAutoStatement
+                ? 'Auto-generated statement'
+                : (b.paymentNote != null && b.paymentNote!.isNotEmpty
+                    ? b.paymentNote
+                    : null));
     return ObligationCard(
       key: ValueKey('bill_${b.id}'),
       icon: v.icon,
@@ -913,12 +914,15 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       badgeColor: _billTypeColor(b.billType),
       note: note,
       amount: b.amount,
+      progress: widget.presenter.statementProgressFraction(b),
       dateLabel:
           'due ${DateFormat('MMM d').format(widget.presenter.billDueDate(b))}',
       actionLabel: 'Pay',
       done: b.isPaid,
       onAction: b.isPaid || locked ? null : () => _showMarkBillPaidSheet(b),
-      onUndo: b.isPaid && !locked ? () => _undoBillPayment(b) : null,
+      onUndo: widget.presenter.hasUndoablePayment(b) && !locked
+          ? () => _undoBillPayment(b)
+          : null,
       undoLabel: 'Mark unpaid',
       onEdit: locked ? null : () => _showAddBillSheet(b),
       onDelete: locked ? null : () => _confirmDeleteBill(b),
@@ -1506,7 +1510,9 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
   @override
   void initState() {
     super.initState();
-    _amountController.text = widget.bill.amount.toStringAsFixed(2);
+    // A part-paid credit statement prefills what is left, not the full bill.
+    _amountController.text =
+        widget.presenter.billAmountOwed(widget.bill).toStringAsFixed(2);
     // For CC/liability bills, restrict payer to non-liability accounts.
     final payers = widget.presenter.payerAccountsFor(widget.bill);
     final preferred = widget.bill.accountId;

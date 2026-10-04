@@ -2613,19 +2613,19 @@ class MockNotificationService extends _i1.Mock
       ) as _i14.Future<void>);
 
   @override
-  _i14.Future<void> scheduleCreditDueReminder({
+  _i14.Future<void> scheduleCreditStatementDueReminder({
     required String? accountId,
     required String? accountName,
-    required int? dueDay,
+    required DateTime? dueDate,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #scheduleCreditDueReminder,
+          #scheduleCreditStatementDueReminder,
           [],
           {
             #accountId: accountId,
             #accountName: accountName,
-            #dueDay: dueDay,
+            #dueDate: dueDate,
           },
         ),
         returnValue: _i14.Future<void>.value(),
@@ -6542,6 +6542,16 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       );
 
   @override
+  _i30.Bill? openCreditStatement(_i24.FinancialAccount? a) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #openCreditStatement,
+          [a],
+        ),
+        returnValueForMissingStub: null,
+      ) as _i30.Bill?);
+
+  @override
   ({bool imminent, String label})? creditDueInfo(_i24.FinancialAccount? a) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -6550,6 +6560,15 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
         ),
         returnValueForMissingStub: null,
       ) as ({bool imminent, String label})?);
+
+  @override
+  String? creditDueWhenLabel(_i24.FinancialAccount? a) => (super.noSuchMethod(
+        Invocation.method(
+          #creditDueWhenLabel,
+          [a],
+        ),
+        returnValueForMissingStub: null,
+      ) as String?);
 
   @override
   ({String label, bool warning})? creditCycleNote(_i24.FinancialAccount? a) =>

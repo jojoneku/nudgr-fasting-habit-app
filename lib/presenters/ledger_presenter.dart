@@ -495,6 +495,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return owed > 0 ? owed : 0;
   }
 
+  /// Total paid toward liability [accountId] AFTER the statement that closed on
+  /// [closeExclusive]: every amount that reduced what is owed (payments,
+  /// transfer-in legs, refunds) dated from the day after the close through
+  /// [until] (that day included; open-ended when null). Zero for a missing or
+  /// non-liability account.
+  ///
+  /// The close day itself belongs to the statement, as in [payableAsOf], so a
+  /// payment made on or before it was already netted into the statement's
+  /// amount and must not count toward settling it a second time. Same sign
+  /// rule as [payableAsOf]: on a liability an inflow lowers the balance.
+  double paymentsToLiabilitySince(
+    String accountId,
+    DateTime closeExclusive, {
+    DateTime? until,
+  }) {
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    if (account == null || !account.isLiability) return 0;
+    final from = DateTime(
+        closeExclusive.year, closeExclusive.month, closeExclusive.day + 1);
+    final to =
+        until == null ? null : DateTime(until.year, until.month, until.day + 1);
+    var paid = 0.0;
+    for (final t in _allTransactions) {
+      if (t.accountId != accountId || t.date.isBefore(from)) continue;
+      if (to != null && !t.date.isBefore(to)) continue;
+      if (t.type == TransactionType.inflow) paid += t.amount;
+    }
+    return paid;
+  }
+
   /// Per-transaction account balance: the involved account's balance
   /// immediately *after* that transaction. Reconstructed by unwinding each
   /// account's CURRENT [FinancialAccount.balance] backward (newest → oldest)

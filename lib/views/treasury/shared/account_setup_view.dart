@@ -66,6 +66,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   final _goalTargetController = TextEditingController();
   final _creditLimitController = TextEditingController();
   final _financeRateController = TextEditingController();
+  final _minimumFixedController = TextEditingController();
 
   AccountCategory _category = AccountCategory.bank;
   String _selectedColor = _colorOptions[0];
@@ -76,6 +77,16 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   String? _linkedAccountId;
   int? _statementDay;
   int? _paymentDueDay;
+
+  /// Payment-due rule: false = a fixed day of month ([_paymentDueDay]), true =
+  /// a number of days after the statement closes ([_dueDaysAfterStatement]).
+  bool _dueAfterStatement = false;
+  int? _dueDaysAfterStatement;
+
+  /// The user's explicit minimum-payment pick. Null means "not chosen yet", so
+  /// a new account keeps following its category default as the category
+  /// changes (see [_minimumRule]).
+  CreditMinimumRule? _minimumRuleChoice;
   String? _creditBrand;
   bool _isSubmitting = false;
 
@@ -103,6 +114,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   /// The opening "balance" field means *amount owed* for credit accounts.
   String get _balanceLabel =>
       _isCredit ? 'Current Balance Owed' : 'Opening Balance';
+
+  /// Minimum-payment rule shown and saved: the explicit pick, else the
+  /// category default (credit card → % of balance; line/BNPL → pay in full).
+  CreditMinimumRule get _minimumRule =>
+      _minimumRuleChoice ?? defaultMinimumRuleFor(_category);
+
+  bool get _isFixedMinimum => _minimumRule == CreditMinimumRule.fixedAmount;
 
   @override
   void initState() {
@@ -136,6 +154,16 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       }
       _statementDay = existing.statementDay;
       _paymentDueDay = existing.paymentDueDay;
+      _dueDaysAfterStatement = existing.dueDaysAfterStatement;
+      _dueAfterStatement = existing.dueDaysAfterStatement != null;
+      // A saved credit account keeps the rule it bills under; a non-credit
+      // account being re-categorised follows the new category's default.
+      _minimumRuleChoice =
+          existing.isLiability ? existing.effectiveMinimumRule : null;
+      if (existing.minimumFixedAmount != null) {
+        _minimumFixedController.text =
+            existing.minimumFixedAmount!.toStringAsFixed(2);
+      }
       _creditBrand = existing.creditBrand;
     }
   }
@@ -172,6 +200,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     _goalTargetController.dispose();
     _creditLimitController.dispose();
     _financeRateController.dispose();
+    _minimumFixedController.dispose();
     super.dispose();
   }
 
@@ -206,6 +235,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       final financeRatePercent = _isCredit
           ? double.tryParse(_financeRateController.text.replaceAll(',', ''))
           : null;
+      final minimumFixedAmount = _isCredit && _isFixedMinimum
+          ? double.tryParse(_minimumFixedController.text.replaceAll(',', ''))
+          : null;
 
       final account = FinancialAccount(
         id: id,
@@ -223,7 +255,14 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             _category == AccountCategory.custodian ? _linkedAccountId : null,
         creditLimit: creditLimit,
         statementDay: _isCredit ? _statementDay : null,
-        paymentDueDay: _isCredit ? _paymentDueDay : null,
+        // Exactly one due rule is stored: a fixed day OR an offset from close.
+        paymentDueDay: _isCredit && !_dueAfterStatement ? _paymentDueDay : null,
+        dueDaysAfterStatement:
+            _isCredit && _dueAfterStatement ? _dueDaysAfterStatement : null,
+        // Always saved explicitly for credit, so a later change to the
+        // category default never silently re-rules an existing account.
+        minimumRule: _isCredit ? _minimumRule : null,
+        minimumFixedAmount: minimumFixedAmount,
         // Stored as a fraction; entered as a percent.
         financeChargeRate:
             (financeRatePercent != null && financeRatePercent > 0)
@@ -355,6 +394,15 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             onStatementDayChanged: (d) => setState(() => _statementDay = d),
             paymentDueDay: _paymentDueDay,
             onPaymentDueDayChanged: (d) => setState(() => _paymentDueDay = d),
+            dueAfterStatement: _dueAfterStatement,
+            onDueModeChanged: (v) => setState(() => _dueAfterStatement = v),
+            dueDaysAfterStatement: _dueDaysAfterStatement,
+            onDueDaysAfterStatementChanged: (d) =>
+                setState(() => _dueDaysAfterStatement = d),
+            minimumRule: _minimumRule,
+            onMinimumRuleChanged: (r) => setState(() => _minimumRuleChoice = r),
+            isFixedMinimum: _isFixedMinimum,
+            minimumFixedController: _minimumFixedController,
             creditBrand: _creditBrand,
             onBrandChanged: _applyBrand,
             isGoal: _isGoal,
@@ -400,6 +448,14 @@ class _AccountSetupForm extends StatelessWidget {
   final ValueChanged<int?> onStatementDayChanged;
   final int? paymentDueDay;
   final ValueChanged<int?> onPaymentDueDayChanged;
+  final bool dueAfterStatement;
+  final ValueChanged<bool> onDueModeChanged;
+  final int? dueDaysAfterStatement;
+  final ValueChanged<int?> onDueDaysAfterStatementChanged;
+  final CreditMinimumRule minimumRule;
+  final ValueChanged<CreditMinimumRule> onMinimumRuleChanged;
+  final bool isFixedMinimum;
+  final TextEditingController minimumFixedController;
   final String? creditBrand;
   final ValueChanged<String?> onBrandChanged;
   final bool isGoal;
@@ -440,6 +496,14 @@ class _AccountSetupForm extends StatelessWidget {
     required this.onStatementDayChanged,
     required this.paymentDueDay,
     required this.onPaymentDueDayChanged,
+    required this.dueAfterStatement,
+    required this.onDueModeChanged,
+    required this.dueDaysAfterStatement,
+    required this.onDueDaysAfterStatementChanged,
+    required this.minimumRule,
+    required this.onMinimumRuleChanged,
+    required this.isFixedMinimum,
+    required this.minimumFixedController,
     required this.creditBrand,
     required this.onBrandChanged,
     required this.isGoal,
@@ -603,6 +667,14 @@ class _AccountSetupForm extends StatelessWidget {
                 onStatementDayChanged: onStatementDayChanged,
                 paymentDueDay: paymentDueDay,
                 onPaymentDueDayChanged: onPaymentDueDayChanged,
+                dueAfterStatement: dueAfterStatement,
+                onDueModeChanged: onDueModeChanged,
+                dueDaysAfterStatement: dueDaysAfterStatement,
+                onDueDaysAfterStatementChanged: onDueDaysAfterStatementChanged,
+                minimumRule: minimumRule,
+                onMinimumRuleChanged: onMinimumRuleChanged,
+                isFixedMinimum: isFixedMinimum,
+                minimumFixedController: minimumFixedController,
                 creditBrand: creditBrand,
                 onBrandChanged: onBrandChanged,
               ),
@@ -883,7 +955,8 @@ class _MaturityDateRow extends StatelessWidget {
   }
 }
 
-/// Credit-only details: limit, statement/due day, finance rate, brand preset.
+/// Credit-only details: brand preset, limit, statement/due rule, minimum
+/// payment rule, finance rate.
 class _CreditDetailsCard extends StatelessWidget {
   final TextEditingController creditLimitController;
   final TextEditingController financeRateController;
@@ -891,6 +964,14 @@ class _CreditDetailsCard extends StatelessWidget {
   final ValueChanged<int?> onStatementDayChanged;
   final int? paymentDueDay;
   final ValueChanged<int?> onPaymentDueDayChanged;
+  final bool dueAfterStatement;
+  final ValueChanged<bool> onDueModeChanged;
+  final int? dueDaysAfterStatement;
+  final ValueChanged<int?> onDueDaysAfterStatementChanged;
+  final CreditMinimumRule minimumRule;
+  final ValueChanged<CreditMinimumRule> onMinimumRuleChanged;
+  final bool isFixedMinimum;
+  final TextEditingController minimumFixedController;
   final String? creditBrand;
   final ValueChanged<String?> onBrandChanged;
 
@@ -901,6 +982,14 @@ class _CreditDetailsCard extends StatelessWidget {
     required this.onStatementDayChanged,
     required this.paymentDueDay,
     required this.onPaymentDueDayChanged,
+    required this.dueAfterStatement,
+    required this.onDueModeChanged,
+    required this.dueDaysAfterStatement,
+    required this.onDueDaysAfterStatementChanged,
+    required this.minimumRule,
+    required this.onMinimumRuleChanged,
+    required this.isFixedMinimum,
+    required this.minimumFixedController,
     required this.creditBrand,
     required this.onBrandChanged,
   });
@@ -957,10 +1046,20 @@ class _CreditDetailsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          SheetLabeledField(
+            label: 'Payment due',
+            child: _FullWidthSegments<bool>(
+              selected: dueAfterStatement,
+              onChanged: onDueModeChanged,
+              segments: _dueModeSegments,
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _DayOfMonthDropdown(
+                child: _DayNumberDropdown(
                   label: 'Statement day',
                   value: statementDay,
                   onChanged: onStatementDayChanged,
@@ -968,14 +1067,61 @@ class _CreditDetailsCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _DayOfMonthDropdown(
-                  label: 'Due day',
-                  value: paymentDueDay,
-                  onChanged: onPaymentDueDayChanged,
-                ),
+                // Keyed per mode: the two pickers hold different numbers, and
+                // a shared FormField state would carry one into the other.
+                child: dueAfterStatement
+                    ? _DayNumberDropdown(
+                        key: const ValueKey('due-days-after'),
+                        label: 'Due after',
+                        value: dueDaysAfterStatement,
+                        max: kMaxDueDaysAfterStatement,
+                        itemLabel: _daysAfterLabel,
+                        onChanged: onDueDaysAfterStatementChanged,
+                      )
+                    : _DayNumberDropdown(
+                        key: const ValueKey('due-day-of-month'),
+                        label: 'Due day',
+                        value: paymentDueDay,
+                        onChanged: onPaymentDueDayChanged,
+                      ),
               ),
             ],
           ),
+          if (dueAfterStatement) ...[
+            const SizedBox(height: 6),
+            Text(
+              _dueAfterStatementHelp,
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+          const SizedBox(height: 12),
+          SheetLabeledField(
+            label: 'Minimum payment',
+            child: _FullWidthSegments<CreditMinimumRule>(
+              selected: minimumRule,
+              onChanged: onMinimumRuleChanged,
+              segments: _minimumRuleSegments,
+            ),
+          ),
+          if (isFixedMinimum) ...[
+            const SizedBox(height: 12),
+            SheetLabeledField(
+              label: 'Minimum amount',
+              child: TextFormField(
+                controller: minimumFixedController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: amountInputFormatters,
+                decoration: sheetFieldDecoration(
+                  context,
+                  prefixText: '₱ ',
+                  helperText: 'e.g. a monthly installment',
+                ),
+                validator: _positiveAmountValidator,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           SheetLabeledField(
             label: 'Monthly finance rate',
@@ -997,16 +1143,79 @@ class _CreditDetailsCard extends StatelessWidget {
   }
 }
 
-/// Dropdown for choosing a day of month (1–28, to stay valid in February).
-class _DayOfMonthDropdown extends StatelessWidget {
+const _dueModeSegments = <({bool value, String label, IconData? icon})>[
+  (value: false, label: 'Day of month', icon: null),
+  (value: true, label: 'Days after statement', icon: null),
+];
+
+const _minimumRuleSegments =
+    <({CreditMinimumRule value, String label, IconData? icon})>[
+  (
+    value: CreditMinimumRule.percentOfBalance,
+    label: '% of balance',
+    icon: null
+  ),
+  (value: CreditMinimumRule.fixedAmount, label: 'Fixed amount', icon: null),
+  (value: CreditMinimumRule.payInFull, label: 'Pay in full', icon: null),
+];
+
+const _dueAfterStatementHelp =
+    'Some issuers count days from the statement, e.g. due 15 days after.';
+
+String _daysAfterLabel(int d) => d == 1 ? '1 day' : '$d days';
+
+/// Required, strictly positive peso amount (the fixed minimum payment).
+String? _positiveAmountValidator(String? v) {
+  final parsed = double.tryParse((v ?? '').replaceAll(',', '').trim());
+  if (parsed == null || parsed <= 0) return 'Enter an amount above ₱0';
+  return null;
+}
+
+/// [AppSegmentedControl] stretched to the field width, with tighter segment
+/// padding so three labels fit a phone-width sheet without truncating.
+class _FullWidthSegments<T> extends StatelessWidget {
+  final List<({T value, String label, IconData? icon})> segments;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  const _FullWidthSegments({
+    required this.segments,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: AppSegmentedControl<T>(
+        segments: segments,
+        selected: selected,
+        onChanged: onChanged,
+        style: const ButtonStyle(
+          padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dropdown for choosing a day number: a day of month (1–28 by default, to
+/// stay valid in February) or, with [max], a count of days.
+class _DayNumberDropdown extends StatelessWidget {
   final String label;
   final int? value;
+  final int max;
+  final String Function(int)? itemLabel;
   final ValueChanged<int?> onChanged;
 
-  const _DayOfMonthDropdown({
+  const _DayNumberDropdown({
+    super.key,
     required this.label,
     required this.value,
     required this.onChanged,
+    this.max = 28,
+    this.itemLabel,
   });
 
   @override
@@ -1024,8 +1233,9 @@ class _DayOfMonthDropdown extends StatelessWidget {
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
-          for (int d = 1; d <= 28; d++)
-            DropdownMenuItem<int?>(value: d, child: Text('$d')),
+          for (int d = 1; d <= max; d++)
+            DropdownMenuItem<int?>(
+                value: d, child: Text(itemLabel?.call(d) ?? '$d')),
         ],
         onChanged: onChanged,
       ),
