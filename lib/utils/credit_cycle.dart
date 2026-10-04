@@ -10,6 +10,8 @@
 // The bill generator, the dashboard due line and the "next statement" note all
 // read cycles from here so they cannot disagree about which cycle is which.
 
+import 'package:intl/intl.dart';
+
 import '../models/finance/bill.dart';
 import '../models/finance/credit_brand_presets.dart';
 import '../models/finance/financial_account.dart';
@@ -267,4 +269,55 @@ class CreditStatementProgress {
 
   /// True once anything has been paid toward it.
   bool get started => paid > 0.005;
+}
+
+// ─── Installment cycle calculation ──────────────────────────────────────────
+
+/// Computes the first payment month ('YYYY-MM') for an installment purchased on
+/// [purchaseDate] against [account].
+///
+/// If [account] has a billing cycle ([FinancialAccount.hasBillingCycle]):
+/// - Resolves the cycle containing [purchaseDate] via [account.cycleContaining].
+/// - If [purchaseDate] is on or before [account.statementDay], it is billed on
+///   the current cycle's statement and due on that cycle's `dueMonthKey`.
+/// - If [purchaseDate] is after [account.statementDay], it rolls over to the next
+///   month's statement and its `dueMonthKey`.
+///
+/// If [account] has no billing cycle (or is null), defaults to `toMonthKey(purchaseDate)`.
+String calculateInstallmentStartMonth(
+  FinancialAccount? account,
+  DateTime purchaseDate,
+) {
+  if (account != null && account.hasBillingCycle) {
+    final cycle = account.cycleContaining(purchaseDate);
+    if (cycle != null) {
+      return cycle.dueMonthKey;
+    }
+  }
+  return toMonthKey(purchaseDate);
+}
+
+/// A short descriptive note explaining which billing cycle statement an installment
+/// purchased on [purchaseDate] falls on and when its first payment is due.
+///
+/// Returns null if [account] is null or does not have a billing cycle.
+String? installmentCycleExplanation(
+  FinancialAccount? account,
+  DateTime purchaseDate,
+) {
+  if (account == null || !account.hasBillingCycle) return null;
+  final cycle = account.cycleContaining(purchaseDate);
+  if (cycle == null) return null;
+  final stmtDay = account.statementDay!;
+  final isAfterCutoff = purchaseDate.day > stmtDay;
+  final closeFmt = DateFormat('MMM d').format(cycle.close);
+  final dueFmt = DateFormat('MMM yyyy').format(cycle.due);
+  final cutoffFmt =
+      monthDayLabel(DateTime(purchaseDate.year, purchaseDate.month, stmtDay));
+
+  if (isAfterCutoff) {
+    return 'Purchased after $cutoffFmt cut-off → Charged on $closeFmt statement · Due in $dueFmt';
+  } else {
+    return 'Purchased before $cutoffFmt cut-off → Charged on $closeFmt statement · Due in $dueFmt';
+  }
 }

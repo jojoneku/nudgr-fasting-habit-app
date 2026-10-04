@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+import 'package:intl/intl.dart';
 
 class InstallmentListTile extends StatelessWidget {
   final Installment installment;
@@ -46,9 +47,15 @@ class InstallmentListTile extends StatelessWidget {
     final remainingAmt = presenter.remainingAmount(installment.id);
     final progress = presenter.paymentProgress(installment.id);
     final dueLabel = presenter.dueLabel(installment);
-    final subtitleText = account != null
-        ? (dueLabel != null ? '${account!.name} · $dueLabel' : account!.name)
-        : dueLabel;
+    final dateLabel = installment.purchaseDate != null
+        ? 'Bought ${DateFormat('MMM d').format(installment.purchaseDate!)}'
+        : null;
+    final details = [
+      if (account != null) account!.name,
+      if (dateLabel != null) dateLabel,
+      if (dueLabel != null) dueLabel,
+    ];
+    final subtitleText = details.isNotEmpty ? details.join(' · ') : null;
 
     return Semantics(
       label:

@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
@@ -3367,7 +3368,12 @@ class _InstallmentRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${formatPeso(remainingAmt)} left${accountName != null ? ' · $accountName' : ''}',
+                  [
+                    '${formatPeso(remainingAmt)} left',
+                    if (accountName != null) accountName,
+                    if (installment.purchaseDate != null)
+                      'Bought ${DateFormat('MMM d').format(installment.purchaseDate!)}',
+                  ].join(' · '),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),
@@ -3507,10 +3513,78 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   String? _accountId;
   int _totalMonths = 12;
   late String _startMonth;
+  late DateTime _purchaseDate;
   bool _monthlyManuallyEdited = false;
+  bool _startMonthManuallyEdited = false;
   bool _isSubmitting = false;
 
   static const _monthPresets = [3, 6, 12, 24];
+
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _accountId) return a;
+    }
+    return null;
+  }
+
+  void _recalculateStartMonth() {
+    if (_startMonthManuallyEdited) return;
+    final computed =
+        calculateInstallmentStartMonth(_selectedAccount, _purchaseDate);
+    setState(() => _startMonth = computed);
+  }
+
+  Future<void> _pickPurchaseDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _purchaseDate = picked;
+        _recalculateStartMonth();
+      });
+    }
+  }
+
+  Widget _buildCycleHint(ThemeData theme, ColorScheme cs) {
+    final account = _selectedAccount;
+    if (account == null || !account.hasBillingCycle) {
+      return const SizedBox.shrink();
+    }
+    final explanation = installmentCycleExplanation(account, _purchaseDate);
+    if (explanation == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppRadii.sm),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, size: 16, color: cs.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                explanation,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -3524,10 +3598,16 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _noteController.text = e.note ?? '';
       _accountId = e.accountId;
       _totalMonths = e.totalMonths;
+      _purchaseDate = e.purchaseDate ??
+          DateTime.tryParse('${e.startMonth}-01') ??
+          DateTime.now();
       _monthlyManuallyEdited = true;
+      _startMonthManuallyEdited = true;
     } else {
+      _purchaseDate = DateTime.now();
       final accounts = widget.presenter.creditAccounts;
       if (accounts.isNotEmpty) _accountId = accounts.first.id;
+      _recalculateStartMonth();
     }
     _totalController.addListener(_recomputeMonthly);
   }
@@ -3554,7 +3634,10 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   void _adjustStartMonth(int delta) {
     final date = DateTime.parse('$_startMonth-01');
     final next = DateTime(date.year, date.month + delta);
-    setState(() => _startMonth = toMonthKey(next));
+    setState(() {
+      _startMonth = toMonthKey(next);
+      _startMonthManuallyEdited = true;
+    });
   }
 
   @override
@@ -3584,6 +3667,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
         monthlyAmount: monthly,
         totalMonths: _totalMonths,
         startMonth: _startMonth,
+        purchaseDate: _purchaseDate,
         note: note.isEmpty ? null : note,
         isActive: existing?.isActive ?? true,
       );
@@ -3645,7 +3729,12 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                       for (final a in accounts)
                         DropdownMenuItem(value: a.id, child: Text(a.name)),
                     ],
-                    onChanged: (v) => setState(() => _accountId = v),
+                    onChanged: (v) {
+                      setState(() {
+                        _accountId = v;
+                        _recalculateStartMonth();
+                      });
+                    },
                     validator: (v) => v == null ? 'Select an account' : null,
                   )
                 else
@@ -3653,6 +3742,28 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                     'Add a credit card, credit line, or BNPL account before creating installments.',
                     style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
                   ),
+                const SizedBox(height: WebInsets.md),
+                Text(
+                  'Purchase date',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: WebInsets.sm),
+                InkWell(
+                  onTap: () => _pickPurchaseDate(context),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.calendar_today_outlined, size: 18),
+                      isDense: true,
+                    ),
+                    child: Text(
+                      DateFormat('MMMM d, yyyy').format(_purchaseDate),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
+                _buildCycleHint(theme, cs),
                 const SizedBox(height: WebInsets.md),
                 TextFormField(
                   controller: _totalController,

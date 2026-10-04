@@ -6,9 +6,11 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+import 'package:intl/intl.dart';
 
 class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
@@ -38,7 +40,9 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   String? _accountId;
   int _totalMonths = 12;
   String _startMonth = toMonthKey(DateTime.now());
+  DateTime _purchaseDate = DateTime.now();
   bool _monthlyManuallyEdited = false;
+  bool _startMonthManuallyEdited = false;
   bool _saving = false;
   bool _accountError = false;
 
@@ -60,6 +64,13 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     return null;
   }
 
+  void _recalculateStartMonth() {
+    if (_startMonthManuallyEdited) return;
+    final computed =
+        calculateInstallmentStartMonth(_selectedAccount, _purchaseDate);
+    setState(() => _startMonth = computed);
+  }
+
   Future<void> _pickAccount() async {
     final choice = await showAccountPicker(
       context,
@@ -70,6 +81,22 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       setState(() {
         _accountId = choice.id;
         _accountError = false;
+        _recalculateStartMonth();
+      });
+    }
+  }
+
+  Future<void> _pickPurchaseDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _purchaseDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _purchaseDate = picked;
+        _recalculateStartMonth();
       });
     }
   }
@@ -86,9 +113,17 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _accountId = e.accountId;
       _totalMonths = e.totalMonths;
       _startMonth = e.startMonth;
+      _purchaseDate = e.purchaseDate ??
+          DateTime.tryParse('${e.startMonth}-01') ??
+          DateTime.now();
       _monthlyManuallyEdited = true;
-    } else if (widget.presenter.creditAccounts.isNotEmpty) {
-      _accountId = widget.presenter.creditAccounts.first.id;
+      _startMonthManuallyEdited = true;
+    } else {
+      _purchaseDate = DateTime.now();
+      if (widget.presenter.creditAccounts.isNotEmpty) {
+        _accountId = widget.presenter.creditAccounts.first.id;
+      }
+      _recalculateStartMonth();
     }
     _totalCtrl.addListener(_onTotalChanged);
   }
@@ -139,6 +174,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       monthlyAmount: monthly,
       totalMonths: _totalMonths,
       startMonth: _startMonth,
+      purchaseDate: _purchaseDate,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       isActive: e?.isActive ?? true,
     );
@@ -154,7 +190,51 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   void _adjustStartMonth(int delta) {
     final date = DateTime.parse('$_startMonth-01');
     final next = DateTime(date.year, date.month + delta);
-    setState(() => _startMonth = toMonthKey(next));
+    setState(() {
+      _startMonth = toMonthKey(next);
+      _startMonthManuallyEdited = true;
+    });
+  }
+
+  Widget _buildCycleHint(BuildContext context) {
+    final account = _selectedAccount;
+    if (account == null || !account.hasBillingCycle) {
+      return const SizedBox.shrink();
+    }
+    final explanation = installmentCycleExplanation(account, _purchaseDate);
+    if (explanation == null) {
+      return const SizedBox.shrink();
+    }
+
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, size: 16, color: cs.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                explanation,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurfaceVariant,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildForm(BuildContext context) {
@@ -200,6 +280,22 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                     color: Theme.of(context).colorScheme.error, fontSize: 12),
               ),
             ),
+          const SizedBox(height: 16),
+
+          // Purchase Date
+          const _FieldLabel('Purchase Date'),
+          SheetPickerBox(
+            onTap: _pickPurchaseDate,
+            trailingIcon: Icons.calendar_today_outlined,
+            child: Text(
+              DateFormat('MMMM d, yyyy').format(_purchaseDate),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          _buildCycleHint(context),
           const SizedBox(height: 16),
 
           // Total Amount
