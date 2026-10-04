@@ -157,6 +157,7 @@ class _CustomizeHubSheetState extends State<CustomizeHubSheet> {
 
                 for (final type in cards) ...[
                   _CardConfigTile(
+                    key: ValueKey(type),
                     type: type,
                     label: _cardLabel(type),
                     icon: _cardIcon(type),
@@ -205,6 +206,7 @@ class _CardConfigTile extends StatelessWidget {
   final ValueChanged<HubCardVisibility> onChanged;
 
   const _CardConfigTile({
+    super.key,
     required this.type,
     required this.label,
     required this.icon,

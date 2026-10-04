@@ -70,6 +70,8 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
 
   final Map<HubCardType, HubCardConfig> _cardConfigs = {};
 
+  Map<HubCardType, bool> _lastCompactStates = {};
+
   List<HubCardType> get cardOrder => _cardOrder;
 
   /// All cards available for configuration (excluding body measurements which is nested).
@@ -81,16 +83,17 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
       _cardConfigs[type]?.visibility ?? HubCardVisibility.auto;
 
   void setCardVisibility(HubCardType type, HubCardVisibility visibility) {
+    if (visibilityOf(type) == visibility) return;
     _cardConfigs[type] = HubCardConfig(visibility: visibility);
     _persistConfigs();
-    _recompute();
+    _recompute(forceNotify: true);
   }
 
   void setSmartSortEnabled(bool enabled) {
     if (_isSmartSortEnabled == enabled) return;
     _isSmartSortEnabled = enabled;
     unawaited(_storage.saveHubSmartSort(enabled));
-    _recompute();
+    _recompute(forceNotify: true);
   }
 
   void resetToDefaultLayout() {
@@ -100,7 +103,7 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
     unawaited(_storage.saveHubCardOrder(const []));
     unawaited(_storage.saveHubSmartSort(true));
     unawaited(_storage.saveHubCardConfigs(const {}));
-    _recompute();
+    _recompute(forceNotify: true);
   }
 
   /// Whether a card should render in its compact (1-row glance) form.
@@ -206,7 +209,7 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
       }
     }
 
-    _recompute();
+    _recompute(forceNotify: true);
   }
 
   void _onSourceChanged() {
@@ -218,7 +221,7 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
     });
   }
 
-  void _recompute() {
+  void _recompute({bool forceNotify = false}) {
     final base = _manualOrder ??
         const [
           HubCardType.quests,
@@ -251,10 +254,27 @@ class HubPresenter extends ChangeNotifier with SafeNotifier {
         .where((t) => visibilityOf(t) != HubCardVisibility.hidden)
         .toList();
 
-    if (!_listEquals(newOrder, _cardOrder)) {
+    final currentCompactStates = {
+      for (final type in HubCardType.values) type: isCompact(type),
+    };
+
+    final orderChanged = !_listEquals(newOrder, _cardOrder);
+    final compactChanged =
+        !_mapEquals(_lastCompactStates, currentCompactStates);
+
+    if (forceNotify || orderChanged || compactChanged) {
       _cardOrder = newOrder;
+      _lastCompactStates = currentCompactStates;
       safeNotify();
     }
+  }
+
+  bool _mapEquals(Map<HubCardType, bool> a, Map<HubCardType, bool> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
   }
 
   bool _listEquals(List<HubCardType> a, List<HubCardType> b) {
