@@ -217,10 +217,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         ),
         child: TabBar(
           controller: _tabController,
-          isScrollable: _tabCount > TreasuryModuleView.tabCount,
-          tabAlignment: _tabCount > TreasuryModuleView.tabCount
-              ? TabAlignment.center
-              : null,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: colorScheme.primary,
           indicatorWeight: 3,
           indicatorSize: TabBarIndicatorSize.label,

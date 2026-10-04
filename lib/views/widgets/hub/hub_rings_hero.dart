@@ -5,6 +5,7 @@ import '../../../presenters/activity_presenter.dart';
 import '../../../presenters/fasting_presenter.dart';
 import '../../../presenters/nutrition_presenter.dart';
 import '../../../presenters/settings_presenter.dart';
+import '../../../presenters/treasury_dashboard_presenter.dart';
 import '../../../utils/hub_hero_slots.dart';
 import '../../../utils/hub_ring_data.dart';
 import '../system/indicators/app_ring_progress.dart';
@@ -21,6 +22,7 @@ class HubRingsHero extends StatelessWidget {
     required this.fasting,
     this.nutrition,
     this.activity,
+    this.treasury,
     this.settings,
     this.ringSize = 88,
     this.strokeWidth = 8,
@@ -29,6 +31,7 @@ class HubRingsHero extends StatelessWidget {
   final FastingPresenter fasting;
   final NutritionPresenter? nutrition;
   final ActivityPresenter? activity;
+  final TreasuryDashboardPresenter? treasury;
   final SettingsPresenter? settings;
   final double ringSize;
   final double strokeWidth;
@@ -39,6 +42,7 @@ class HubRingsHero extends StatelessWidget {
       fasting,
       if (nutrition != null) nutrition!,
       if (activity != null) activity!,
+      if (treasury != null) treasury!,
       if (settings != null) settings!,
     ];
     return ListenableBuilder(
@@ -51,6 +55,8 @@ class HubRingsHero extends StatelessWidget {
     final slots = resolveHeroSlots(
       configured: settings?.heroSlots,
       hasEverFasted: fasting.history.isNotEmpty,
+      hasFoodLogs: (nutrition?.todayCalories ?? 0) > 0,
+      hasTreasury: treasury != null && treasury!.accounts.isNotEmpty,
     );
 
     return Padding(
@@ -116,6 +122,22 @@ class HubRingsHero extends StatelessWidget {
           carbsColor: c.gold,
           fatColor: cs.error,
           trackColor: cs.surfaceContainerHighest,
+          size: ringSize,
+          strokeWidth: strokeWidth,
+        );
+      case HubHeroSlot.finance:
+        final t = treasury;
+        final spent = t?.monthTotalOutflow ?? 0.0;
+        final budget = (t?.totalExpenseBudgetAllocated ?? 0.0) > 0
+            ? t!.totalExpenseBudgetAllocated
+            : (t?.totalBudgetAllocated ?? 0.0);
+        final data = HubRings.finance(spent: spent, budget: budget);
+        return _HeroRing(
+          data: data,
+          arc: data.isOver ? cs.error : c.gold,
+          track: data.isOver
+              ? cs.error.withValues(alpha: 0.16)
+              : c.gold.withValues(alpha: 0.2),
           size: ringSize,
           strokeWidth: strokeWidth,
         );

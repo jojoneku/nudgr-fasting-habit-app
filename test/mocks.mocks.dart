@@ -22,7 +22,7 @@ import 'package:intermittent_fasting/models/ai_parsed_food.dart' as _i55;
 import 'package:intermittent_fasting/models/ai_tool.dart' as _i50;
 import 'package:intermittent_fasting/models/body_measurement_entry.dart'
     as _i38;
-import 'package:intermittent_fasting/models/chat_message.dart' as _i69;
+import 'package:intermittent_fasting/models/chat_message.dart' as _i70;
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart' as _i3;
 import 'package:intermittent_fasting/models/dashboard_status.dart' as _i11;
 import 'package:intermittent_fasting/models/extracted_food_item.dart' as _i9;
@@ -51,7 +51,7 @@ import 'package:intermittent_fasting/models/finance/receivable.dart' as _i31;
 import 'package:intermittent_fasting/models/finance/transaction_record.dart'
     as _i25;
 import 'package:intermittent_fasting/models/food_db_entry.dart' as _i58;
-import 'package:intermittent_fasting/models/food_entry.dart' as _i70;
+import 'package:intermittent_fasting/models/food_entry.dart' as _i71;
 import 'package:intermittent_fasting/models/food_feedback.dart' as _i36;
 import 'package:intermittent_fasting/models/food_parse_result.dart' as _i51;
 import 'package:intermittent_fasting/models/food_search_candidate.dart' as _i52;
@@ -61,8 +61,9 @@ import 'package:intermittent_fasting/models/grocery/remembered_price.dart'
     as _i40;
 import 'package:intermittent_fasting/models/grocery/saved_trip.dart' as _i41;
 import 'package:intermittent_fasting/models/habit_routine.dart' as _i17;
+import 'package:intermittent_fasting/models/hub_card_config.dart' as _i66;
 import 'package:intermittent_fasting/models/insight.dart' as _i42;
-import 'package:intermittent_fasting/models/meal_slot.dart' as _i71;
+import 'package:intermittent_fasting/models/meal_slot.dart' as _i72;
 import 'package:intermittent_fasting/models/notification_preferences.dart'
     as _i7;
 import 'package:intermittent_fasting/models/nutrition_goals.dart' as _i4;
@@ -75,28 +76,29 @@ import 'package:intermittent_fasting/models/weight_entry.dart' as _i37;
 import 'package:intermittent_fasting/presenters/activity_presenter.dart'
     as _i63;
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart'
-    as _i73;
+    as _i74;
 import 'package:intermittent_fasting/presenters/fasting_presenter.dart' as _i61;
 import 'package:intermittent_fasting/presenters/hub_presenter.dart' as _i65;
 import 'package:intermittent_fasting/presenters/installment_presenter.dart'
-    as _i74;
+    as _i75;
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart'
-    as _i68;
+    as _i69;
 import 'package:intermittent_fasting/presenters/quest_presenter.dart' as _i64;
 import 'package:intermittent_fasting/presenters/settings_presenter.dart'
-    as _i66;
+    as _i67;
 import 'package:intermittent_fasting/presenters/stats_presenter.dart' as _i59;
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart'
-    as _i72;
+    as _i73;
 import 'package:intermittent_fasting/services/ai_coach_service.dart' as _i47;
 import 'package:intermittent_fasting/services/food_db_service.dart' as _i12;
 import 'package:intermittent_fasting/services/health_service.dart' as _i44;
 import 'package:intermittent_fasting/services/notification_service.dart'
     as _i45;
 import 'package:intermittent_fasting/services/storage_service.dart' as _i13;
+import 'package:intermittent_fasting/utils/credit_cycle.dart' as _i76;
 import 'package:intermittent_fasting/utils/finance_entry_extraction.dart'
     as _i57;
-import 'package:intermittent_fasting/utils/hub_hero_slots.dart' as _i67;
+import 'package:intermittent_fasting/utils/hub_hero_slots.dart' as _i68;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i43;
 
@@ -1745,6 +1747,48 @@ class MockStorageService extends _i1.Mock implements _i13.StorageService {
       ) as _i14.Future<List<String>>);
 
   @override
+  _i14.Future<void> saveHubSmartSort(bool? enabled) => (super.noSuchMethod(
+        Invocation.method(
+          #saveHubSmartSort,
+          [enabled],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
+
+  @override
+  _i14.Future<bool> loadHubSmartSort() => (super.noSuchMethod(
+        Invocation.method(
+          #loadHubSmartSort,
+          [],
+        ),
+        returnValue: _i14.Future<bool>.value(false),
+        returnValueForMissingStub: _i14.Future<bool>.value(false),
+      ) as _i14.Future<bool>);
+
+  @override
+  _i14.Future<void> saveHubCardConfigs(Map<String, String>? configs) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveHubCardConfigs,
+          [configs],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
+
+  @override
+  _i14.Future<Map<String, String>> loadHubCardConfigs() => (super.noSuchMethod(
+        Invocation.method(
+          #loadHubCardConfigs,
+          [],
+        ),
+        returnValue: _i14.Future<Map<String, String>>.value(<String, String>{}),
+        returnValueForMissingStub:
+            _i14.Future<Map<String, String>>.value(<String, String>{}),
+      ) as _i14.Future<Map<String, String>>);
+
+  @override
   _i14.Future<void> saveOnboardingComplete(bool? value) => (super.noSuchMethod(
         Invocation.method(
           #saveOnboardingComplete,
@@ -2174,6 +2218,26 @@ class MockNotificationService extends _i1.Mock
         returnValue: _i14.Future<bool>.value(false),
         returnValueForMissingStub: _i14.Future<bool>.value(false),
       ) as _i14.Future<bool>);
+
+  @override
+  _i14.Future<bool> canUseFullScreenIntent() => (super.noSuchMethod(
+        Invocation.method(
+          #canUseFullScreenIntent,
+          [],
+        ),
+        returnValue: _i14.Future<bool>.value(false),
+        returnValueForMissingStub: _i14.Future<bool>.value(false),
+      ) as _i14.Future<bool>);
+
+  @override
+  _i14.Future<void> openFullScreenIntentSettings() => (super.noSuchMethod(
+        Invocation.method(
+          #openFullScreenIntentSettings,
+          [],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
 
   @override
   _i14.Future<void> openSystemNotificationSettings() => (super.noSuchMethod(
@@ -3468,6 +3532,13 @@ class MockFastingPresenter extends _i1.Mock implements _i61.FastingPresenter {
       ) as bool);
 
   @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   _i14.Future<void> loadState() => (super.noSuchMethod(
         Invocation.method(
           #loadState,
@@ -3714,6 +3785,15 @@ class MockFastingPresenter extends _i1.Mock implements _i61.FastingPresenter {
   void notifyListeners() => super.noSuchMethod(
         Invocation.method(
           #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
           [],
         ),
         returnValueForMissingStub: null,
@@ -4169,6 +4249,13 @@ class MockQuestPresenter extends _i1.Mock implements _i64.QuestPresenter {
       ) as bool);
 
   @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   List<_i16.Quest> questsForRoutine(_i17.HabitRoutine? routine) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -4208,15 +4295,6 @@ class MockQuestPresenter extends _i1.Mock implements _i64.QuestPresenter {
         returnValue: _i14.Future<void>.value(),
         returnValueForMissingStub: _i14.Future<void>.value(),
       ) as _i14.Future<void>);
-
-  @override
-  void dispose() => super.noSuchMethod(
-        Invocation.method(
-          #dispose,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
 
   @override
   _i14.Future<(int, bool)> completeQuest(
@@ -4394,9 +4472,27 @@ class MockQuestPresenter extends _i1.Mock implements _i64.QuestPresenter {
       );
 
   @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   void notifyListeners() => super.noSuchMethod(
         Invocation.method(
           #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
           [],
         ),
         returnValueForMissingStub: null,
@@ -4415,6 +4511,13 @@ class MockHubPresenter extends _i1.Mock implements _i65.HubPresenter {
       ) as _i14.Future<void>);
 
   @override
+  bool get isSmartSortEnabled => (super.noSuchMethod(
+        Invocation.getter(#isSmartSortEnabled),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   List<_i65.HubCardType> get cardOrder => (super.noSuchMethod(
         Invocation.getter(#cardOrder),
         returnValue: <_i65.HubCardType>[],
@@ -4422,8 +4525,77 @@ class MockHubPresenter extends _i1.Mock implements _i65.HubPresenter {
       ) as List<_i65.HubCardType>);
 
   @override
+  List<_i65.HubCardType> get allCards => (super.noSuchMethod(
+        Invocation.getter(#allCards),
+        returnValue: <_i65.HubCardType>[],
+        returnValueForMissingStub: <_i65.HubCardType>[],
+      ) as List<_i65.HubCardType>);
+
+  @override
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  _i66.HubCardVisibility visibilityOf(_i65.HubCardType? type) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #visibilityOf,
+          [type],
+        ),
+        returnValue: _i66.HubCardVisibility.auto,
+        returnValueForMissingStub: _i66.HubCardVisibility.auto,
+      ) as _i66.HubCardVisibility);
+
+  @override
+  void setCardVisibility(
+    _i65.HubCardType? type,
+    _i66.HubCardVisibility? visibility,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #setCardVisibility,
+          [
+            type,
+            visibility,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void setSmartSortEnabled(bool? enabled) => super.noSuchMethod(
+        Invocation.method(
+          #setSmartSortEnabled,
+          [enabled],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void resetToDefaultLayout() => super.noSuchMethod(
+        Invocation.method(
+          #resetToDefaultLayout,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  bool isCompact(_i65.HubCardType? type) => (super.noSuchMethod(
+        Invocation.method(
+          #isCompact,
+          [type],
+        ),
         returnValue: false,
         returnValueForMissingStub: false,
       ) as bool);
@@ -4479,12 +4651,21 @@ class MockHubPresenter extends _i1.Mock implements _i65.HubPresenter {
         ),
         returnValueForMissingStub: null,
       );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 }
 
 /// A class which mocks [SettingsPresenter].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSettingsPresenter extends _i1.Mock implements _i66.SettingsPresenter {
+class MockSettingsPresenter extends _i1.Mock implements _i67.SettingsPresenter {
   @override
   _i46.ThemeMode get themeMode => (super.noSuchMethod(
         Invocation.getter(#themeMode),
@@ -4537,7 +4718,7 @@ class MockSettingsPresenter extends _i1.Mock implements _i66.SettingsPresenter {
       ) as _i14.Future<void>);
 
   @override
-  _i14.Future<void> setHeroSlots(List<_i67.HubHeroSlot>? slots) =>
+  _i14.Future<void> setHeroSlots(List<_i68.HubHeroSlot>? slots) =>
       (super.noSuchMethod(
         Invocation.method(
           #setHeroSlots,
@@ -4588,7 +4769,7 @@ class MockSettingsPresenter extends _i1.Mock implements _i66.SettingsPresenter {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNutritionPresenter extends _i1.Mock
-    implements _i68.NutritionPresenter {
+    implements _i69.NutritionPresenter {
   @override
   _i3.DailyNutritionLog get todayLog => (super.noSuchMethod(
         Invocation.getter(#todayLog),
@@ -5088,18 +5269,18 @@ class MockNutritionPresenter extends _i1.Mock
       ) as bool);
 
   @override
-  List<_i69.ChatMessage> get chatMessages => (super.noSuchMethod(
+  List<_i70.ChatMessage> get chatMessages => (super.noSuchMethod(
         Invocation.getter(#chatMessages),
-        returnValue: <_i69.ChatMessage>[],
-        returnValueForMissingStub: <_i69.ChatMessage>[],
-      ) as List<_i69.ChatMessage>);
+        returnValue: <_i70.ChatMessage>[],
+        returnValueForMissingStub: <_i70.ChatMessage>[],
+      ) as List<_i70.ChatMessage>);
 
   @override
-  List<_i69.ChatMessage> get logEntriesNewestFirst => (super.noSuchMethod(
+  List<_i70.ChatMessage> get logEntriesNewestFirst => (super.noSuchMethod(
         Invocation.getter(#logEntriesNewestFirst),
-        returnValue: <_i69.ChatMessage>[],
-        returnValueForMissingStub: <_i69.ChatMessage>[],
-      ) as List<_i69.ChatMessage>);
+        returnValue: <_i70.ChatMessage>[],
+        returnValueForMissingStub: <_i70.ChatMessage>[],
+      ) as List<_i70.ChatMessage>);
 
   @override
   bool get isChatParsing => (super.noSuchMethod(
@@ -5137,19 +5318,19 @@ class MockNutritionPresenter extends _i1.Mock
       ) as bool);
 
   @override
-  List<_i70.FoodEntry> get pendingChatEntries => (super.noSuchMethod(
+  List<_i71.FoodEntry> get pendingChatEntries => (super.noSuchMethod(
         Invocation.getter(#pendingChatEntries),
-        returnValue: <_i70.FoodEntry>[],
-        returnValueForMissingStub: <_i70.FoodEntry>[],
-      ) as List<_i70.FoodEntry>);
+        returnValue: <_i71.FoodEntry>[],
+        returnValueForMissingStub: <_i71.FoodEntry>[],
+      ) as List<_i71.FoodEntry>);
 
   @override
-  List<List<_i69.ChatFoodAlternative>> get pendingChatAlternatives =>
+  List<List<_i70.ChatFoodAlternative>> get pendingChatAlternatives =>
       (super.noSuchMethod(
         Invocation.getter(#pendingChatAlternatives),
-        returnValue: <List<_i69.ChatFoodAlternative>>[],
-        returnValueForMissingStub: <List<_i69.ChatFoodAlternative>>[],
-      ) as List<List<_i69.ChatFoodAlternative>>);
+        returnValue: <List<_i70.ChatFoodAlternative>>[],
+        returnValueForMissingStub: <List<_i70.ChatFoodAlternative>>[],
+      ) as List<List<_i70.ChatFoodAlternative>>);
 
   @override
   int get pendingChatTotalCalories => (super.noSuchMethod(
@@ -5236,7 +5417,7 @@ class MockNutritionPresenter extends _i1.Mock
       ) as double);
 
   @override
-  int caloriesForSlot(_i71.MealSlot? slot) => (super.noSuchMethod(
+  int caloriesForSlot(_i72.MealSlot? slot) => (super.noSuchMethod(
         Invocation.method(
           #caloriesForSlot,
           [slot],
@@ -5392,8 +5573,8 @@ class MockNutritionPresenter extends _i1.Mock
 
   @override
   _i14.Future<void> addFoodEntry(
-    _i70.FoodEntry? entry,
-    _i71.MealSlot? slot,
+    _i71.FoodEntry? entry,
+    _i72.MealSlot? slot,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -5408,7 +5589,7 @@ class MockNutritionPresenter extends _i1.Mock
       ) as _i14.Future<void>);
 
   @override
-  _i14.Future<void> addManualFoodEntry(_i70.FoodEntry? entry) =>
+  _i14.Future<void> addManualFoodEntry(_i71.FoodEntry? entry) =>
       (super.noSuchMethod(
         Invocation.method(
           #addManualFoodEntry,
@@ -5421,7 +5602,7 @@ class MockNutritionPresenter extends _i1.Mock
   @override
   _i14.Future<void> removeFoodEntry(
     String? entryId,
-    _i71.MealSlot? slot,
+    _i72.MealSlot? slot,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -5438,7 +5619,7 @@ class MockNutritionPresenter extends _i1.Mock
   @override
   _i14.Future<void> addMealFromTemplate(
     _i20.FoodTemplate? meal,
-    _i71.MealSlot? slot,
+    _i72.MealSlot? slot,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -5502,17 +5683,17 @@ class MockNutritionPresenter extends _i1.Mock
       ) as _i14.Future<void>);
 
   @override
-  _i14.Future<List<_i70.FoodEntry>> parseFoodItemsForTemplate(String? text) =>
+  _i14.Future<List<_i71.FoodEntry>> parseFoodItemsForTemplate(String? text) =>
       (super.noSuchMethod(
         Invocation.method(
           #parseFoodItemsForTemplate,
           [text],
         ),
         returnValue:
-            _i14.Future<List<_i70.FoodEntry>>.value(<_i70.FoodEntry>[]),
+            _i14.Future<List<_i71.FoodEntry>>.value(<_i71.FoodEntry>[]),
         returnValueForMissingStub:
-            _i14.Future<List<_i70.FoodEntry>>.value(<_i70.FoodEntry>[]),
-      ) as _i14.Future<List<_i70.FoodEntry>>);
+            _i14.Future<List<_i71.FoodEntry>>.value(<_i71.FoodEntry>[]),
+      ) as _i14.Future<List<_i71.FoodEntry>>);
 
   @override
   _i14.Future<void> saveFoodTemplate(_i20.FoodTemplate? template) =>
@@ -5587,7 +5768,7 @@ class MockNutritionPresenter extends _i1.Mock
   @override
   _i14.Future<void> confirmAiEstimate(
     List<_i54.AiItemEstimate>? items,
-    _i71.MealSlot? slot,
+    _i72.MealSlot? slot,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -5622,8 +5803,8 @@ class MockNutritionPresenter extends _i1.Mock
 
   @override
   _i14.Future<void> confirmParsedMeal(
-    _i71.MealSlot? slot, {
-    Map<int, _i70.FoodEntry>? overrides = const {},
+    _i72.MealSlot? slot, {
+    Map<int, _i71.FoodEntry>? overrides = const {},
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -5889,7 +6070,7 @@ class MockNutritionPresenter extends _i1.Mock
       ) as _i14.Future<void>);
 
   @override
-  _i14.Future<void> restoreChatMessage(_i69.ChatMessage? msg) =>
+  _i14.Future<void> restoreChatMessage(_i70.ChatMessage? msg) =>
       (super.noSuchMethod(
         Invocation.method(
           #restoreChatMessage,
@@ -5986,7 +6167,7 @@ class MockNutritionPresenter extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockTreasuryDashboardPresenter extends _i1.Mock
-    implements _i72.TreasuryDashboardPresenter {
+    implements _i73.TreasuryDashboardPresenter {
   @override
   bool get isLoading => (super.noSuchMethod(
         Invocation.getter(#isLoading),
@@ -6013,6 +6194,13 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
         returnValue: false,
         returnValueForMissingStub: false,
       ) as bool);
+
+  @override
+  List<_i24.FinancialAccount> get accounts => (super.noSuchMethod(
+        Invocation.getter(#accounts),
+        returnValue: <_i24.FinancialAccount>[],
+        returnValueForMissingStub: <_i24.FinancialAccount>[],
+      ) as List<_i24.FinancialAccount>);
 
   @override
   List<_i24.FinancialAccount> get liquidAccounts => (super.noSuchMethod(
@@ -6092,11 +6280,11 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as List<_i24.FinancialAccount>);
 
   @override
-  List<_i72.AccountInventoryGroup> get accountInventory => (super.noSuchMethod(
+  List<_i73.AccountInventoryGroup> get accountInventory => (super.noSuchMethod(
         Invocation.getter(#accountInventory),
-        returnValue: <_i72.AccountInventoryGroup>[],
-        returnValueForMissingStub: <_i72.AccountInventoryGroup>[],
-      ) as List<_i72.AccountInventoryGroup>);
+        returnValue: <_i73.AccountInventoryGroup>[],
+        returnValueForMissingStub: <_i73.AccountInventoryGroup>[],
+      ) as List<_i73.AccountInventoryGroup>);
 
   @override
   int get accountInventoryCount => (super.noSuchMethod(
@@ -6239,12 +6427,12 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as double);
 
   @override
-  List<_i72.DashboardAccountRow> get dashboardAccountRows =>
+  List<_i73.DashboardAccountRow> get dashboardAccountRows =>
       (super.noSuchMethod(
         Invocation.getter(#dashboardAccountRows),
-        returnValue: <_i72.DashboardAccountRow>[],
-        returnValueForMissingStub: <_i72.DashboardAccountRow>[],
-      ) as List<_i72.DashboardAccountRow>);
+        returnValue: <_i73.DashboardAccountRow>[],
+        returnValueForMissingStub: <_i73.DashboardAccountRow>[],
+      ) as List<_i73.DashboardAccountRow>);
 
   @override
   List<_i24.FinancialAccount> get custodianAccounts => (super.noSuchMethod(
@@ -6498,11 +6686,11 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as bool);
 
   @override
-  List<_i72.DailySpend> get last7DaysSpending => (super.noSuchMethod(
+  List<_i73.DailySpend> get last7DaysSpending => (super.noSuchMethod(
         Invocation.getter(#last7DaysSpending),
-        returnValue: <_i72.DailySpend>[],
-        returnValueForMissingStub: <_i72.DailySpend>[],
-      ) as List<_i72.DailySpend>);
+        returnValue: <_i73.DailySpend>[],
+        returnValueForMissingStub: <_i73.DailySpend>[],
+      ) as List<_i73.DailySpend>);
 
   @override
   double get avgDailySpend7 => (super.noSuchMethod(
@@ -6528,6 +6716,13 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
   @override
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
         returnValue: false,
         returnValueForMissingStub: false,
       ) as bool);
@@ -6733,17 +6928,17 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
               })>);
 
   @override
-  List<_i72.DailySpend> lastNDaysSpending(int? n) => (super.noSuchMethod(
+  List<_i73.DailySpend> lastNDaysSpending(int? n) => (super.noSuchMethod(
         Invocation.method(
           #lastNDaysSpending,
           [n],
         ),
-        returnValue: <_i72.DailySpend>[],
-        returnValueForMissingStub: <_i72.DailySpend>[],
-      ) as List<_i72.DailySpend>);
+        returnValue: <_i73.DailySpend>[],
+        returnValueForMissingStub: <_i73.DailySpend>[],
+      ) as List<_i73.DailySpend>);
 
   @override
-  List<_i72.DailySpend> dailySpendForRange(
+  List<_i73.DailySpend> dailySpendForRange(
     DateTime? start,
     DateTime? end,
   ) =>
@@ -6755,9 +6950,9 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
             end,
           ],
         ),
-        returnValue: <_i72.DailySpend>[],
-        returnValueForMissingStub: <_i72.DailySpend>[],
-      ) as List<_i72.DailySpend>);
+        returnValue: <_i73.DailySpend>[],
+        returnValueForMissingStub: <_i73.DailySpend>[],
+      ) as List<_i73.DailySpend>);
 
   @override
   List<({String label, double value})> netWorthTrend({int? months = 6}) =>
@@ -6866,13 +7061,22 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
         ),
         returnValueForMissingStub: null,
       );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 }
 
 /// A class which mocks [BillsReceivablesPresenter].
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockBillsReceivablesPresenter extends _i1.Mock
-    implements _i73.BillsReceivablesPresenter {
+    implements _i74.BillsReceivablesPresenter {
   @override
   String get selectedMonth => (super.noSuchMethod(
         Invocation.getter(#selectedMonth),
@@ -7155,16 +7359,16 @@ class MockBillsReceivablesPresenter extends _i1.Mock
       ) as ({bool imminent, String label, bool overdue}));
 
   @override
-  List<_i73.ComingUpItem> comingUpItems(
-          _i74.InstallmentPresenter? installments) =>
+  List<_i74.ComingUpItem> comingUpItems(
+          _i75.InstallmentPresenter? installments) =>
       (super.noSuchMethod(
         Invocation.method(
           #comingUpItems,
           [installments],
         ),
-        returnValue: <_i73.ComingUpItem>[],
-        returnValueForMissingStub: <_i73.ComingUpItem>[],
-      ) as List<_i73.ComingUpItem>);
+        returnValue: <_i74.ComingUpItem>[],
+        returnValueForMissingStub: <_i74.ComingUpItem>[],
+      ) as List<_i74.ComingUpItem>);
 
   @override
   _i14.Future<void> reorderPendingReceivables(
@@ -7230,14 +7434,14 @@ class MockBillsReceivablesPresenter extends _i1.Mock
           })>);
 
   @override
-  _i73.BillStatus billStatus(_i30.Bill? bill) => (super.noSuchMethod(
+  _i74.BillStatus billStatus(_i30.Bill? bill) => (super.noSuchMethod(
         Invocation.method(
           #billStatus,
           [bill],
         ),
-        returnValue: _i73.BillStatus.paid,
-        returnValueForMissingStub: _i73.BillStatus.paid,
-      ) as _i73.BillStatus);
+        returnValue: _i74.BillStatus.paid,
+        returnValueForMissingStub: _i74.BillStatus.paid,
+      ) as _i74.BillStatus);
 
   @override
   _i14.Future<void> setMonth(String? month) => (super.noSuchMethod(
@@ -7335,6 +7539,54 @@ class MockBillsReceivablesPresenter extends _i1.Mock
         returnValue: _i14.Future<void>.value(),
         returnValueForMissingStub: _i14.Future<void>.value(),
       ) as _i14.Future<void>);
+
+  @override
+  _i76.CreditStatementProgress? statementProgress(_i30.Bill? b) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #statementProgress,
+          [b],
+        ),
+        returnValueForMissingStub: null,
+      ) as _i76.CreditStatementProgress?);
+
+  @override
+  String? statementProgressNote(_i30.Bill? b) => (super.noSuchMethod(
+        Invocation.method(
+          #statementProgressNote,
+          [b],
+        ),
+        returnValueForMissingStub: null,
+      ) as String?);
+
+  @override
+  double? statementProgressFraction(_i30.Bill? b) => (super.noSuchMethod(
+        Invocation.method(
+          #statementProgressFraction,
+          [b],
+        ),
+        returnValueForMissingStub: null,
+      ) as double?);
+
+  @override
+  double billAmountOwed(_i30.Bill? b) => (super.noSuchMethod(
+        Invocation.method(
+          #billAmountOwed,
+          [b],
+        ),
+        returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
+      ) as double);
+
+  @override
+  bool hasUndoablePayment(_i30.Bill? b) => (super.noSuchMethod(
+        Invocation.method(
+          #hasUndoablePayment,
+          [b],
+        ),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
 
   @override
   bool billHasLedgerEntry(_i30.Bill? bill) => (super.noSuchMethod(

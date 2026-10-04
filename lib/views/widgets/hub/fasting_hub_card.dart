@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/fasting_phase.dart';
 import '../../../presenters/fasting_presenter.dart';
 import '../system/system.dart';
+import '../../../app_colors.dart';
 import '../../../utils/app_spacing.dart';
 import '../../../utils/app_text_styles.dart';
 import 'hub_card_header.dart';
@@ -13,6 +14,7 @@ class FastingHubCard extends StatelessWidget {
     required this.onNavigate,
     required this.onStartFast,
     required this.onEndFast,
+    this.isCompact = false,
   });
 
   final FastingPresenter fasting;
@@ -21,6 +23,7 @@ class FastingHubCard extends StatelessWidget {
   // removed to keep the hub uniform across modules.
   final VoidCallback onStartFast;
   final VoidCallback onEndFast;
+  final bool isCompact;
 
   String _formatHM(int totalSeconds) {
     final abs = totalSeconds.abs();
@@ -36,6 +39,62 @@ class FastingHubCard extends StatelessWidget {
       builder: (context, _) {
         final isActive = fasting.isFasting;
         final theme = Theme.of(context);
+
+        if (isCompact) {
+          final subtitle = isActive
+              ? 'Elapsed ${_formatHM(fasting.elapsedSeconds)}'
+              : 'Tap to start fasting';
+          return AppCard(
+            onTap: onNavigate,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    isActive ? Icons.timer : Icons.timer_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Fasting',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  AppBadge(
+                    text: 'ACTIVE',
+                    color: context.appColors.success,
+                  ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right,
+                    size: 18, color: theme.colorScheme.onSurfaceVariant),
+              ],
+            ),
+          );
+        }
+
         return AppCard(
           onTap: onNavigate,
           padding: const EdgeInsets.symmetric(

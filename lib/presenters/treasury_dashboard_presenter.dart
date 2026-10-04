@@ -203,6 +203,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   bool get isLoading => _isLoading;
   String get currentMonth => _currentMonth;
   bool get hasAccounts => _accounts.any((a) => a.isActive);
+  List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
   // --- Account views ---
 

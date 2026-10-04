@@ -762,6 +762,29 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await refreshInstallmentHolds();
   }
 
+  /// Creates and saves a new account directly to storage, updating the in-memory
+  /// list and notifying listeners.
+  Future<FinancialAccount> createQuickAccount({
+    required String name,
+    AccountCategory category = AccountCategory.bank,
+    double balance = 0.0,
+    String? colorHex,
+  }) async {
+    final id = _generateId();
+    final account = FinancialAccount(
+      id: id,
+      name: name.trim(),
+      category: category,
+      balance: balance,
+      colorHex: colorHex ?? '#2563EB',
+      icon: 'account_balance',
+    );
+    _accounts = [..._accounts, account];
+    await _storage.saveAccounts(_accounts);
+    safeNotify();
+    return account;
+  }
+
   // --- Load ---
 
   bool _hasLoaded = false;

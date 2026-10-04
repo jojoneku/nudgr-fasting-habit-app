@@ -552,18 +552,29 @@ class _LedgerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canPop = Navigator.canPop(context);
     return Container(
       width: double.infinity,
       color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.fromLTRB(20, 13, 20, 0),
-      child: Text(
-        'Ledger',
-        style: theme.textTheme.headlineSmall?.copyWith(
-          fontSize: 23,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.5,
-          color: theme.colorScheme.onSurface,
-        ),
+      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 8, 20, 0),
+      child: Row(
+        children: [
+          if (canPop)
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Back',
+              onPressed: () => Navigator.maybePop(context),
+            ),
+          Text(
+            'Ledger',
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontSize: 23,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }

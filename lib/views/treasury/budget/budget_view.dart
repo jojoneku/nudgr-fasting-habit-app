@@ -225,13 +225,20 @@ class _BudgetHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canPop = Navigator.canPop(context);
     return Material(
       color: theme.scaffoldBackgroundColor,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+        padding: EdgeInsets.fromLTRB(canPop ? 4 : 16, 8, 12, 8),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (canPop)
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+                onPressed: () => Navigator.maybePop(context),
+              ),
             Expanded(
               child: Text(
                 'Budget',
