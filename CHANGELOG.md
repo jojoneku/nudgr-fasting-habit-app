@@ -13,6 +13,16 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.85] - 2026-10-04
+
+### Added
+- review transactions on demand with findTransactions
+- credit cycle calculator, due-offset and minimum-rule fields
+
+### Fixed
+- anchor dates to the user's real today
+- bill credit statements by cycle, track payment progress from the ledger
+
 ## [1.1.84] - 2026-09-15
 
 ### Added
@@ -810,7 +820,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.84...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.85...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -896,3 +906,4 @@ distributed via `manifest.json`.
 [1.1.82]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.82
 [1.1.83]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.83
 [1.1.84]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.84
+[1.1.85]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.85
