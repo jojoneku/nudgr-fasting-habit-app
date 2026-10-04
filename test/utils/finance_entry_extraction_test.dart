@@ -223,6 +223,12 @@ void main() {
       expect(e.txn.date, isNull);
     });
 
+    test('a year the model slipped back to is brought to this year', () {
+      // "Sept 24" resolved against the model's training year, not the user's.
+      final e = parse(wrap([entry(date: '"2024-08-24"')]))!.entries.single;
+      expect(e.txn.date, DateTime(2026, 8, 24));
+    });
+
     test('a future date is rejected rather than committed', () {
       // Almost always the model mis-resolving a relative phrase.
       final e = parse(wrap([entry(date: '"2027-01-05"')]))!.entries.single;

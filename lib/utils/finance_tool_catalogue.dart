@@ -89,6 +89,67 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  // On demand only. The snapshot already carries recent spending and each
+  // past month's biggest expenses; the full ledger is too big to send every
+  // turn, so it is fetched when the user actually asks to go through it.
+  AiTool(
+    name: 'findTransactions',
+    kind: AiToolKind.read,
+    description: 'Go through the user\'s ledger transactions, past or present: '
+        'spending, income and transfers, with date, account, category and '
+        'note. Call this ONLY when the user asks to review, audit, look up, '
+        'search or list their transactions, or asks about a specific '
+        'purchase or payment the snapshot does not show ("what did I spend '
+        'at Grab in March", "review my August transactions", "when did I '
+        'last pay Meralco"). Do NOT call it for general advice or a summary '
+        'question: the snapshot already lists recent spending and each past '
+        'month\'s biggest expenses, and an unrequested lookup makes the user '
+        'wait. The rows come straight from the ledger and are as quotable as '
+        'the snapshot.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'query': {
+          'type': 'string',
+          'description': 'Text to match against the description, note, '
+              'category, account or who owes it, e.g. "grab". With a query '
+              'and no dates, the whole history is searched.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. With no query and no dates, defaults to '
+              'the month being viewed.',
+        },
+        'from': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, inclusive. For a range that is not one '
+              'calendar month. Overrides month.',
+        },
+        'to': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, inclusive.',
+        },
+        'type': {
+          'type': 'string',
+          'enum': ['outflow', 'inflow', 'transfer'],
+          'description': 'Only this direction. Omit for all.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Category NAME or part of it.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME or part of it.',
+        },
+        'limit': {
+          'type': 'integer',
+          'description': 'Most rows to return, newest first. Default 50, '
+              'max 150. Totals always cover every match.',
+        },
+      },
+    },
+  ),
 
   // ── Creates ─────────────────────────────────────────────────────────────
   // Each returns a proposal the user confirms. None takes an id: a create has
