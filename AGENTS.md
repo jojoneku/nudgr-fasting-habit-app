@@ -37,14 +37,16 @@ This project uses **GitHub Flow** with specific automation cascades. Follow thes
 * Standard prefixes: `feat/`, `fix/`, `chore/`, `refactor/`.
 
 ### B. Pre-PR Validation
-Never push or open a PR without verifying locally:
-```bash
-flutter pub get
-dart analyze lib test
-flutter test
-```
-* `dart analyze lib` must report **0 errors**.
-* All relevant unit and widget tests must pass.
+* **For code changes (`feat:`, `fix:`, `refactor:`):**
+  Verify locally before pushing:
+  ```bash
+  flutter pub get
+  dart analyze lib
+  flutter test <relevant-tests>
+  ```
+  `dart analyze lib` must report **0 errors**, and relevant tests must pass.
+* **For doc-only changes (`docs:`, markdown, comments):**
+  Skip local test suites to save time—GitHub CI will run full checks on the PR anyway.
 
 ### C. Conventional Commits & Auto-Semver
 Commit messages govern the automated release version bumps:
