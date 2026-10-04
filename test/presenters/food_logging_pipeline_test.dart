@@ -192,7 +192,7 @@ void main() {
     });
 
     /// Stubs that every cloud test needs; call after _makePresenter.
-    void _baseCloudStubs() {
+    void baseCloudStubs() {
       when(cloudAi.isAvailable).thenReturn(true);
       when(cloudAi.tier).thenReturn(AiCoachTier.cloud);
       when(cloudAi.downloadProgress).thenReturn(null);
@@ -214,7 +214,7 @@ void main() {
           fat: 3.6);
 
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(db.search(any)).thenAnswer((_) async => [dbEntry]);
       when(db.getById(chickenId)).thenAnswer((_) async => dbEntry);
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
@@ -251,7 +251,7 @@ void main() {
           fat: 9.5);
 
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(db.search(any)).thenAnswer((_) async => [dbEntry]);
       when(db.getById(eggId)).thenAnswer((_) async => dbEntry);
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
@@ -289,7 +289,7 @@ void main() {
           fat: 11.0);
 
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(db.search(any)).thenAnswer((_) async => [dbEntry]);
       when(db.getById(fryId)).thenAnswer((_) async => dbEntry);
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
@@ -319,7 +319,7 @@ void main() {
         () async {
       // Banana muffin 52g — not in DB, cloud estimates ~150 kcal.
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -346,7 +346,7 @@ void main() {
       final storage = MockStorageService();
       final p = await _makePresenter(
           cloudAi: cloudAi, foodDb: db, injectedStorage: storage);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -392,7 +392,7 @@ void main() {
           foodDb: db,
           injectedStorage: storage,
           history: [prior]);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -420,7 +420,7 @@ void main() {
       // same-day repeats invisible and nothing was ever learned.
       final p = await _makePresenter(
           cloudAi: cloudAi, foodDb: db, injectedStorage: storage);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -449,7 +449,7 @@ void main() {
       // The Dart gram-reconciliation guard should clamp to 12g and
       // scale macros proportionally (160 × 12/40 = 48 kcal).
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -478,7 +478,7 @@ void main() {
       // single-item guard cannot fire here (two items, two gram mentions), so
       // nothing reconciles the model's guess against what the user stated.
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.itemsList,
@@ -513,7 +513,7 @@ void main() {
       // 27% of the meal — and the single-dish merge would have reported that
       // shortfall as the entire dish.
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.singleDish,
@@ -543,7 +543,7 @@ void main() {
       // "eggs with 100g sardines" weighs the sardines only. Treating it as a
       // total would shrink the eggs to make room, which is the opposite error.
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.itemsList,
@@ -573,7 +573,7 @@ void main() {
       // The Dart canonical-USDA guard collapses the response to one item
       // even if cloud incorrectly decomposes it.
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
           intent: ParseIntent.itemsList,
@@ -613,7 +613,7 @@ void main() {
           fat: 3.6);
 
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(db.getById(riceId)).thenAnswer((_) async => rice);
       when(db.getById(chickenId)).thenAnswer((_) async => chicken);
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
@@ -651,7 +651,7 @@ void main() {
 
     test('cloud returns null — falls to Path C keyword-density', () async {
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(cloudAi.parseFoodWithCandidates(any, any))
           .thenAnswer((_) async => null);
 
@@ -669,7 +669,7 @@ void main() {
           _dbEntry(id: foodId, name: 'Some Food', cal: 200, protein: 10);
 
       final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
-      _baseCloudStubs();
+      baseCloudStubs();
       when(db.getById(foodId)).thenAnswer((_) async => entry);
       when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
         (_) async => ParseFoodResult(
@@ -704,7 +704,7 @@ void main() {
       db = MockFoodDbService();
     });
 
-    void _baseLocalStubs() {
+    void baseLocalStubs() {
       when(localAi.isAvailable).thenReturn(true);
       when(localAi.tier).thenReturn(AiCoachTier.onDevice);
       when(localAi.downloadProgress).thenReturn(null);
@@ -724,7 +724,7 @@ void main() {
           fat: 11);
 
       final p = await _makePresenter(localAi: localAi, foodDb: db);
-      _baseLocalStubs();
+      baseLocalStubs();
       when(db.search(any)).thenAnswer((_) async => [dbEntry]);
       when(db.getById(eggId)).thenAnswer((_) async => dbEntry);
       when(localAi.parseFoodWithCandidates(any, any)).thenAnswer(
@@ -747,7 +747,7 @@ void main() {
 
     test('on-device returns null — falls to Path C', () async {
       final p = await _makePresenter(localAi: localAi, foodDb: db);
-      _baseLocalStubs();
+      baseLocalStubs();
       when(localAi.parseFoodWithCandidates(any, any))
           .thenAnswer((_) async => null);
 

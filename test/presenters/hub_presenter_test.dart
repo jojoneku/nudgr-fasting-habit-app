@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intermittent_fasting/models/hub_card_config.dart';
 import 'package:intermittent_fasting/presenters/hub_presenter.dart';
 import 'package:mockito/mockito.dart';
 
@@ -25,6 +26,8 @@ void main() {
     when(storage.saveHubCardOrder(any)).thenAnswer((inv) async {
       savedOrder = List.of(inv.positionalArguments[0] as List<String>);
     });
+    when(storage.loadHubCardConfigs()).thenAnswer((_) async => {});
+    when(storage.loadHubSmartSort()).thenAnswer((_) async => true);
   });
 
   HubPresenter build() => HubPresenter(
@@ -113,6 +116,41 @@ void main() {
     final p = build();
     await p.restored;
     expect(p.cardOrder, defaultOrder);
+    p.dispose();
+  });
+
+  test('hidden card is excluded from cardOrder', () async {
+    final p = build();
+    await p.restored;
+    expect(p.cardOrder.contains(HubCardType.stats), isTrue);
+
+    p.setCardVisibility(HubCardType.stats, HubCardVisibility.hidden);
+    expect(p.cardOrder.contains(HubCardType.stats), isFalse);
+    expect(p.cardOrder.length, defaultOrder.length - 1);
+    p.dispose();
+  });
+
+  test('smart sort disabled preserves manual order even when active', () async {
+    savedOrder = defaultOrder.map((t) => t.name).toList();
+    when(fasting.isFasting).thenReturn(true);
+    final p = build();
+    await p.restored;
+
+    p.setSmartSortEnabled(false);
+    expect(p.cardOrder.first, HubCardType.quests);
+    expect(p.cardOrder, defaultOrder);
+    p.dispose();
+  });
+
+  test('isCompact respects explicit compact and expanded settings', () async {
+    final p = build();
+    await p.restored;
+
+    p.setCardVisibility(HubCardType.quests, HubCardVisibility.compact);
+    expect(p.isCompact(HubCardType.quests), isTrue);
+
+    p.setCardVisibility(HubCardType.quests, HubCardVisibility.expanded);
+    expect(p.isCompact(HubCardType.quests), isFalse);
     p.dispose();
   });
 }

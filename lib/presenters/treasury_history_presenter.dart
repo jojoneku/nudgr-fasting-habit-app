@@ -9,8 +9,9 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
-class TreasuryHistoryPresenter extends ChangeNotifier {
+class TreasuryHistoryPresenter extends ChangeNotifier with SafeNotifier {
   TreasuryHistoryPresenter(StorageService storage, [LedgerPresenter? ledger])
       : _storage = storage,
         _ledger = ledger {
@@ -361,7 +362,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     _accounts = ledger.accounts;
     _allTransactions = ledger.allTransactions;
     _categories = ledger.categories;
-    notifyListeners();
+    safeNotify();
   }
 
   @override
@@ -374,7 +375,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   Future<void> load() async {
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
 
     _summaries = await _storage.loadMonthlySummaries();
     _allTransactions = await _storage.loadTransactions();
@@ -387,7 +388,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     await repairTransferPollutedSummariesOnce();
 
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Month close ──────────────────────────────────────────────────────────────

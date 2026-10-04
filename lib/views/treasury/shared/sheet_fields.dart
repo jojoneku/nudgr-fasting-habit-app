@@ -339,6 +339,7 @@ Future<AccountChoice?> showAccountPicker(
   String? selectedId,
   bool allowNone = false,
   String noneLabel = 'None',
+  VoidCallback? onAddAccount,
 }) {
   final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<AccountChoice>(
@@ -370,12 +371,65 @@ Future<AccountChoice?> showAccountPicker(
                   selected: selectedId == null,
                   onTap: () => Navigator.of(ctx).pop(const AccountChoice(null)),
                 ),
+              if (accounts.isEmpty && !allowNone)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined,
+                            size: 36,
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No accounts yet',
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (onAddAccount != null) ...[
+                          const SizedBox(height: 12),
+                          FilledButton.tonalIcon(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              onAddAccount();
+                            },
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Create Account'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
               for (final a in accounts)
                 _AccountPickerRow(
                   leading: AccountBadge.of(a, size: 28),
                   label: a.name,
                   selected: a.id == selectedId,
                   onTap: () => Navigator.of(ctx).pop(AccountChoice(a.id)),
+                ),
+              if (accounts.isNotEmpty && onAddAccount != null)
+                _AccountPickerRow(
+                  leading: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child:
+                        Icon(Icons.add, size: 18, color: cs.onPrimaryContainer),
+                  ),
+                  label: 'Add Account...',
+                  selected: false,
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    onAddAccount();
+                  },
                 ),
             ],
           ),

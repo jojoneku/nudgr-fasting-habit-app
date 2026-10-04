@@ -11,28 +11,89 @@ class NutritionHubCard extends StatelessWidget {
     required this.nutrition,
     required this.onNavigate,
     required this.onLogMeal,
+    this.isCompact = false,
   });
 
   final NutritionPresenter nutrition;
   final VoidCallback onNavigate;
   final VoidCallback onLogMeal;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: nutrition,
-      builder: (context, _) => AppCard(
-        onTap: onNavigate,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.lg,
-        ),
-        header: const HubCardHeader(
-          icon: Icons.restaurant_outlined,
-          title: 'Nutrition',
-        ),
-        child: _Snapshot(nutrition: nutrition),
-      ),
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
+        final cals = nutrition.todayCalories;
+        final goal = nutrition.effectiveGoal;
+
+        if (isCompact) {
+          final subtitle =
+              cals > 0 ? '$cals / $goal kcal' : 'No meals logged today';
+          return AppCard(
+            onTap: onNavigate,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.restaurant_outlined,
+                      size: 18, color: cs.primary),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Nutrition',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (cals > 0)
+                  Text(
+                    '${((cals / (goal > 0 ? goal : 1)) * 100).round()}%',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
+              ],
+            ),
+          );
+        }
+
+        return AppCard(
+          onTap: onNavigate,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
+          header: const HubCardHeader(
+            icon: Icons.restaurant_outlined,
+            title: 'Nutrition',
+          ),
+          child: _Snapshot(nutrition: nutrition),
+        );
+      },
     );
   }
 }

@@ -50,7 +50,7 @@ class CategoryPieChartCard extends StatelessWidget {
       child: AppCard(
         variant: AppCardVariant.elevated,
         child: slices.isEmpty
-            ? AppEmptyState(
+            ? const AppEmptyState(
                 icon: Icons.pie_chart_outline_rounded,
                 title: 'No expenses this month',
                 iconSize: 32,

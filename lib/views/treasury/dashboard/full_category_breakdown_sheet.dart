@@ -73,7 +73,7 @@ class _BreakdownBody extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         if (slices.isEmpty)
-          AppEmptyState(
+          const AppEmptyState(
             icon: Icons.pie_chart_outline_rounded,
             title: 'No expenses this month',
           )

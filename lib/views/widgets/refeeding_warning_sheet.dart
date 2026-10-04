@@ -19,9 +19,9 @@ class RefeedingWarningSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => RefeedingWarningSheet(
+      builder: (sheetContext) => RefeedingWarningSheet(
         elapsedSeconds: elapsedSeconds,
-        onConfirmEnd: () => Navigator.pop(context, true),
+        onConfirmEnd: () => Navigator.pop(sheetContext, true),
       ),
     );
     return result ?? false;

@@ -175,7 +175,7 @@ void main() {
     test('mirrors TdeeProfile getters exactly (no new math)', () {
       enterValidBody();
       final preview = p.previewProfile!;
-      final expected = const TdeeProfile(
+      const expected = TdeeProfile(
         weightKg: 74.6,
         heightCm: 176,
         ageYears: 29,

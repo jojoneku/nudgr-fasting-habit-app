@@ -16,6 +16,7 @@ import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/treasury_history_backfill.dart';
 
 class DailySpend {
@@ -70,7 +71,7 @@ class DashboardAccountRow {
   });
 }
 
-class TreasuryDashboardPresenter extends ChangeNotifier {
+class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   TreasuryDashboardPresenter(
     StorageService storage, [
     LedgerPresenter? ledger,
@@ -119,7 +120,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _accounts = ledger.accounts;
     _transactions = ledger.allTransactions;
     _categories = ledger.categories;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Mirror budgets and groups from their owner, [BudgetPresenter].
@@ -147,7 +148,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     }
     _budgets = budgets;
     _budgetGroups = groups;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Mirror bills, receivables and budgeted expenses from their owner,
@@ -174,7 +175,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _bills = bills;
     _receivables = receivables;
     _budgetedExpenses = expenses;
-    notifyListeners();
+    safeNotify();
   }
 
   @override
@@ -202,6 +203,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get currentMonth => _currentMonth;
   bool get hasAccounts => _accounts.any((a) => a.isActive);
+  List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
   // --- Account views ---
 
@@ -392,7 +394,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       for (final a in _accounts)
         if (a.id == accountId) redeemGoal(a, now, amount: amount) else a,
     ];
-    notifyListeners();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
@@ -424,7 +426,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         else
           a,
     ];
-    notifyListeners();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
@@ -1649,7 +1651,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final merged = [..._summaries, ...added];
     await _storage.saveMonthlySummaries(merged);
     _summaries = merged;
-    notifyListeners();
+    safeNotify();
   }
 
   // --- Account CRUD ---
@@ -1658,7 +1660,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     // A goal created with an opening balance already at its target is funded on
     // day one; nothing else would stamp it until the next transaction.
     _accounts = [..._accounts, stampIfFunded(account, DateTime.now())];
-    notifyListeners();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
@@ -1671,7 +1673,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final incoming =
         stampIfFunded(reconcileGoalStamps(account, previous, now), now);
     _accounts = [for (final a in _accounts) a.id == incoming.id ? incoming : a];
-    notifyListeners();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
@@ -1689,7 +1691,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final hasBills = _bills.any((b) => b.accountId == id);
     if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();
-    notifyListeners();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
   }
@@ -1706,7 +1708,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   Future<void> load() async {
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
 
     _accounts = await _storage.loadAccounts();
     _transactions = await _storage.loadTransactions();
@@ -1720,7 +1722,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _currentMonth = toMonthKey(_clock());
 
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
     // NOTE: the legacy backfill is NOT run here — load() runs concurrently with
     // TreasuryHistoryPresenter.load() (both persist monthly summaries), so the
     // composition root runs backfillHistoricalSummariesOnce() AFTER all

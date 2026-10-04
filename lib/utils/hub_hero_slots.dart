@@ -1,5 +1,5 @@
 /// Which metric a Hub hero ring slot displays.
-enum HubHeroSlot { fast, food, move, macros }
+enum HubHeroSlot { fast, food, move, macros, finance }
 
 /// Default hero configuration (fasting users).
 const List<HubHeroSlot> kDefaultHeroSlots = [
@@ -17,13 +17,20 @@ const List<HubHeroSlot> kNonFasterHeroSlots = [
 ];
 
 /// Resolves the three hero slots. An explicit user configuration wins;
-/// otherwise slot 1 defaults to the macro-split ring for non-fasters. Pure —
-/// kept out of `build()` per System Rule 1.
+/// otherwise slot 1 defaults to the macro-split ring for non-fasters,
+/// and food adapts to finance if food logging is inactive while treasury is used.
 List<HubHeroSlot> resolveHeroSlots({
   required List<HubHeroSlot>? configured,
   required bool hasEverFasted,
+  bool hasFoodLogs = true,
+  bool hasTreasury = false,
 }) {
   if (configured != null && configured.length == 3) return configured;
+  if (!hasFoodLogs && hasTreasury) {
+    return hasEverFasted
+        ? const [HubHeroSlot.fast, HubHeroSlot.finance, HubHeroSlot.move]
+        : const [HubHeroSlot.macros, HubHeroSlot.finance, HubHeroSlot.move];
+  }
   return hasEverFasted ? kDefaultHeroSlots : kNonFasterHeroSlots;
 }
 

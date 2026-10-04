@@ -43,11 +43,6 @@ void main() {
         service: service ?? cloud,
       );
 
-  Widget wrap(Widget child) => MaterialApp(
-        theme: buildWebDarkTheme(),
-        home: Scaffold(body: Row(children: [child])),
-      );
-
   /// Both halves, as the shell mounts them.
   Widget wrapDock(NudgyController c) => MaterialApp(
         theme: buildWebDarkTheme(),

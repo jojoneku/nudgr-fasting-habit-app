@@ -16,10 +16,12 @@ class TreasuryHubCard extends StatelessWidget {
     required this.treasury,
     required this.onNavigate,
     this.bills,
+    this.isCompact = false,
   });
 
   final TreasuryDashboardPresenter treasury;
   final VoidCallback onNavigate;
+  final bool isCompact;
 
   /// When provided, upcoming bills expose a Pay action (gated behind a confirm
   /// sheet — never a silent money mutation).
@@ -30,7 +32,64 @@ class TreasuryHubCard extends StatelessWidget {
     return ListenableBuilder(
       listenable: treasury,
       builder: (context, _) {
+        final theme = Theme.of(context);
         final isActive = treasury.hasBillImminent;
+
+        if (isCompact) {
+          final nw = treasury.netWorth;
+          final billsCount = treasury.upcomingBills.length;
+          final subtitle = billsCount > 0
+              ? '$billsCount upcoming'
+              : 'Net worth ${formatPeso(nw)}';
+          return AppCard(
+            onTap: onNavigate,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: context.appColors.gold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.account_balance_outlined,
+                      size: 18, color: context.appColors.gold),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Finance',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  formatPeso(treasury.forecastedNetBalance),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right,
+                    size: 18, color: theme.colorScheme.onSurfaceVariant),
+              ],
+            ),
+          );
+        }
+
         // The header + overview navigate into the module; the bill list (with
         // Pay actions) must NOT, so we wrap only the top region in the tap
         // target instead of the whole AppCard.

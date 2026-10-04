@@ -2,9 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/body_measurement_entry.dart';
 
 void main() {
-  final _loggedAt = DateTime(2026, 5, 1, 8, 0);
+  final loggedAt = DateTime(2026, 5, 1, 8, 0);
 
-  BodyMeasurementEntry _entry({
+  BodyMeasurementEntry entry0({
     String id = 'e1',
     double? waistCm = 85.0,
     double? neckCm = 38.0,
@@ -16,7 +16,7 @@ void main() {
   }) =>
       BodyMeasurementEntry(
         id: id,
-        loggedAt: _loggedAt,
+        loggedAt: loggedAt,
         waistCm: waistCm,
         neckCm: neckCm,
         hipsCm: hipsCm,
@@ -29,7 +29,7 @@ void main() {
   group('BodyMeasurementEntry', () {
     group('fromJson / toJson roundtrip', () {
       test('all fields present', () {
-        final entry = _entry(
+        final entry = entry0(
           waistCm: 85.5,
           neckCm: 38.2,
           hipsCm: 95.0,
@@ -51,7 +51,7 @@ void main() {
       });
 
       test('optional fields null survive roundtrip', () {
-        final entry = _entry(hipsCm: null, chestCm: null, notes: null);
+        final entry = entry0(hipsCm: null, chestCm: null, notes: null);
         final rt = BodyMeasurementEntry.fromJson(entry.toJson());
         expect(rt.hipsCm, isNull);
         expect(rt.chestCm, isNull);
@@ -59,14 +59,14 @@ void main() {
       });
 
       test('loggedAt is preserved as ISO 8601', () {
-        final json = _entry().toJson();
-        expect(json['loggedAt'], _loggedAt.toIso8601String());
+        final json = entry0().toJson();
+        expect(json['loggedAt'], loggedAt.toIso8601String());
       });
     });
 
     group('copyWith', () {
       test('overrides specified fields, keeps others', () {
-        final original = _entry(waistCm: 85.0, neckCm: 38.0);
+        final original = entry0(waistCm: 85.0, neckCm: 38.0);
         final updated = original.copyWith(waistCm: 84.5);
         expect(updated.waistCm, 84.5);
         expect(updated.neckCm, original.neckCm);

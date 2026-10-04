@@ -38,7 +38,7 @@ void main() {
     );
   });
 
-  HubScreen _buildHub({MockActivityPresenter? activityPresenter}) => HubScreen(
+  HubScreen buildHub({MockActivityPresenter? activityPresenter}) => HubScreen(
         hubPresenter: mockHub,
         settingsPresenter: mockSettings,
         fastingPresenter: mockFasting,
@@ -49,7 +49,7 @@ void main() {
 
   group('HubScreen — module cards', () {
     testWidgets('renders fasting and quests card titles', (tester) async {
-      await tester.pumpWidget(_wrap(_buildHub()));
+      await tester.pumpWidget(_wrap(buildHub()));
       await tester.pump();
 
       expect(find.text('Fasting'), findsOneWidget);
@@ -57,7 +57,7 @@ void main() {
     });
 
     testWidgets('null optional presenters render no content', (tester) async {
-      await tester.pumpWidget(_wrap(_buildHub(activityPresenter: null)));
+      await tester.pumpWidget(_wrap(buildHub(activityPresenter: null)));
       await tester.pump();
 
       // Locked cards have been replaced with SizedBox.shrink — no lock icons
@@ -69,7 +69,7 @@ void main() {
       // Inline "Start fast"/"End fast" footers were removed; the whole card
       // is now tappable to navigate to the fasting screen for the action.
       when(mockFasting.isFasting).thenReturn(true);
-      await tester.pumpWidget(_wrap(_buildHub()));
+      await tester.pumpWidget(_wrap(buildHub()));
       await tester.pump();
       expect(find.text('End fast'), findsNothing);
       expect(find.text('Start fast'), findsNothing);

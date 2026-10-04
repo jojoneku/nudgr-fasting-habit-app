@@ -48,6 +48,7 @@ import 'widgets/hub/nutrition_hub_card.dart';
 import 'widgets/hub/quests_hub_card.dart';
 import 'widgets/hub/stats_hub_card.dart';
 import 'widgets/hub/treasury_hub_card.dart';
+import 'widgets/hub/customize_hub_sheet.dart';
 import 'widgets/hub/weight_body_hub_card.dart';
 import 'nutrition/measurement_log_screen.dart';
 import 'nutrition/weight_log_screen.dart';
@@ -279,6 +280,11 @@ class _HubScreenState extends State<HubScreen> {
                 HubStreakPill(nutrition: widget.nutritionPresenter),
                 const SizedBox(width: AppSpacing.xs),
                 IconButton(
+                  tooltip: 'Customize Hub',
+                  icon: const Icon(Icons.tune_rounded),
+                  onPressed: () => _showCustomizeSheet(context),
+                ),
+                IconButton(
                   tooltip: 'Settings',
                   icon: const Icon(Icons.settings_outlined),
                   onPressed: () => _pushSettings(context),
@@ -305,6 +311,7 @@ class _HubScreenState extends State<HubScreen> {
                       fasting: widget.fastingPresenter,
                       nutrition: widget.nutritionPresenter,
                       activity: widget.activityPresenter,
+                      treasury: widget.treasuryPresenter,
                       settings: widget.settingsPresenter,
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -329,9 +336,10 @@ class _HubScreenState extends State<HubScreen> {
                 listenable: widget.hubPresenter,
                 builder: (ctx, _) => SliverReorderableList(
                   itemCount: widget.hubPresenter.cardOrder.length,
-                  onReorder: (old, neo) {
+                  onReorderItem: (old, neo) {
                     HapticFeedback.mediumImpact();
-                    widget.hubPresenter.reorderCards(old, neo);
+                    final target = neo > old ? neo + 1 : neo;
+                    widget.hubPresenter.reorderCards(old, target);
                   },
                   proxyDecorator: (child, index, animation) => Stack(
                     children: [
@@ -376,29 +384,34 @@ class _HubScreenState extends State<HubScreen> {
   }
 
   Widget _buildCard(HubCardType type, BuildContext context) {
+    final isCompact = widget.hubPresenter.isCompact(type);
     return switch (type) {
       HubCardType.fasting => FastingHubCard(
           fasting: widget.fastingPresenter,
           onNavigate: () => _pushTimerTab(context),
           onStartFast: widget.fastingPresenter.startFast,
           onEndFast: () => _endFast(context),
+          isCompact: isCompact,
         ),
       HubCardType.nutrition => widget.nutritionPresenter != null
           ? NutritionHubCard(
               nutrition: widget.nutritionPresenter!,
               onNavigate: () => _pushNutritionScreen(context),
               onLogMeal: () => _pushNutritionScreen(context),
+              isCompact: isCompact,
             )
           : const SizedBox.shrink(),
       HubCardType.quests => QuestsHubCard(
           quests: widget.questPresenter,
           onNavigate: () => _pushQuestsTab(context),
           onCompleteQuest: (quest) => _markQuestDone(context, quest),
+          isCompact: isCompact,
         ),
       HubCardType.activity => widget.activityPresenter != null
           ? ActivityHubCard(
               activity: widget.activityPresenter!,
               onNavigate: () => _pushActivityScreen(context),
+              isCompact: isCompact,
             )
           : const SizedBox.shrink(),
       HubCardType.treasury => widget.treasuryPresenter != null
@@ -406,12 +419,14 @@ class _HubScreenState extends State<HubScreen> {
               treasury: widget.treasuryPresenter!,
               bills: widget.billsPresenter,
               onNavigate: () => _pushTreasuryScreen(context),
+              isCompact: isCompact,
             )
           : const SizedBox.shrink(),
       HubCardType.stats => widget.authPresenter != null
           ? StatsHubCard(
               stats: widget.statsPresenter,
               onNavigate: () => _pushStatsScreen(context),
+              isCompact: isCompact,
             )
           : const SizedBox.shrink(),
       HubCardType.weightLog => widget.nutritionPresenter != null
@@ -424,6 +439,14 @@ class _HubScreenState extends State<HubScreen> {
       // Body is folded into the Weight slot (2-up tile); not a standalone card.
       HubCardType.bodyMeasurements => const SizedBox.shrink(),
     };
+  }
+
+  void _showCustomizeSheet(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Customize Hub',
+      body: CustomizeHubSheet(presenter: widget.hubPresenter),
+    );
   }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
@@ -505,7 +528,9 @@ class _HubScreenState extends State<HubScreen> {
         budget == null ||
         history == null ||
         installments == null ||
-        groceryCart == null) return;
+        groceryCart == null) {
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

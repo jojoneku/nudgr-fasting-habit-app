@@ -50,11 +50,22 @@ class _TreasuryHistoryViewState extends State<TreasuryHistoryView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Text(
-                    'History',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                  padding: EdgeInsets.fromLTRB(
+                      Navigator.canPop(context) ? 4 : 16, 8, 16, 8),
+                  child: Row(
+                    children: [
+                      if (Navigator.canPop(context))
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          tooltip: 'Back',
+                          onPressed: () => Navigator.maybePop(context),
+                        ),
+                      Text(
+                        'History',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(child: _content(context)),

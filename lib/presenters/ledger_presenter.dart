@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
@@ -761,6 +760,29 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> reloadAccounts() async {
     _accounts = await _storage.loadAccounts();
     await refreshInstallmentHolds();
+  }
+
+  /// Creates and saves a new account directly to storage, updating the in-memory
+  /// list and notifying listeners.
+  Future<FinancialAccount> createQuickAccount({
+    required String name,
+    AccountCategory category = AccountCategory.bank,
+    double balance = 0.0,
+    String? colorHex,
+  }) async {
+    final id = _generateId();
+    final account = FinancialAccount(
+      id: id,
+      name: name.trim(),
+      category: category,
+      balance: balance,
+      colorHex: colorHex ?? '#2563EB',
+      icon: 'account_balance',
+    );
+    _accounts = [..._accounts, account];
+    await _storage.saveAccounts(_accounts);
+    safeNotify();
+    return account;
   }
 
   // --- Load ---

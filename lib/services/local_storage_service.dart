@@ -1818,6 +1818,42 @@ class LocalStorageService extends StorageService {
     return prefs.getStringList(StorageService.kHubCardOrder) ?? const [];
   }
 
+  @override
+  Future<void> saveHubSmartSort(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(StorageService.kHubSmartSort, enabled);
+  }
+
+  @override
+  Future<bool> loadHubSmartSort() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(StorageService.kHubSmartSort) ?? true;
+  }
+
+  @override
+  Future<void> saveHubCardConfigs(Map<String, String> configs) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (configs.isEmpty) {
+      await prefs.remove(StorageService.kHubCardConfigs);
+    } else {
+      await prefs.setString(
+          StorageService.kHubCardConfigs, jsonEncode(configs));
+    }
+  }
+
+  @override
+  Future<Map<String, String>> loadHubCardConfigs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.kHubCardConfigs);
+    if (raw == null) return {};
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      return decoded.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return {};
+    }
+  }
+
   // ── Onboarding gate (device-level, unscoped, never synced) ───────────────────
   // Deliberately bypasses [_k] and is absent from [_kUserDataKeys], so it is
   // evaluable before sign-in and survives detachUser/clearUserData — a fresh

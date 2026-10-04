@@ -116,7 +116,7 @@ void main() {
       );
 
       // The dashboard position row: three tiles, four columns, no hole.
-      final expected = (width - spacing * 2) / 3;
+      const expected = (width - spacing * 2) / 3;
       for (var i = 0; i < 3; i++) {
         expect(rectOf(tester, i).width, closeTo(expected, 0.01));
       }

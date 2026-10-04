@@ -9,6 +9,7 @@
 ///   [estimateKcal]       — calories for a named food at a given gram weight
 ///   [bucketMacroRatios]  — (pR, cR, fR) energy fractions for a food name
 ///   [macrosFromCalories] — convert calorie + ratio triplet → (protein, carbs, fat)
+library;
 
 // ── Bucket table ──────────────────────────────────────────────────────────────
 // Order matters: first matching bucket wins. Specific dish keywords (sinigang,

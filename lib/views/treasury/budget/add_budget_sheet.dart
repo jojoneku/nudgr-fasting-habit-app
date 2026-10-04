@@ -355,7 +355,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
 
             // Budget amount (emphasized field)
-            SheetFieldLabel('Budget amount'),
+            const SheetFieldLabel('Budget amount'),
             TextFormField(
               controller: _amountController,
               keyboardType:
@@ -384,7 +384,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
 
             // Budget group
-            SheetFieldLabel('Budget group'),
+            const SheetFieldLabel('Budget group'),
             SheetSegmentedToggle<String>(
               value: _groupId,
               onChanged: (gId) {

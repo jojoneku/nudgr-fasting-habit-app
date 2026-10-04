@@ -186,14 +186,14 @@ void main() {
 
     test('preserves resolver metadata while rescaling', () {
       final out = reconcileExplicitGrams('166g rice', [
-        ExtractedFoodItem(
+        const ExtractedFoodItem(
           name: 'rice',
           grams: 120,
           hydeDescription: 'cooked white rice',
           rawText: '166g rice',
           resolvedFoodId: 'db-123',
           resolverConfidence: 0.91,
-          estimatedMacros: const EstimatedMacros(
+          estimatedMacros: EstimatedMacros(
               calories: 156, proteinG: 3, carbsG: 34, fatG: 0.4),
           macroFallback: true,
         ),
