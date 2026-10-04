@@ -41,6 +41,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   int _totalMonths = 12;
   String _startMonth = toMonthKey(DateTime.now());
   DateTime _purchaseDate = DateTime.now();
+  int _deferralMonths = 0;
   bool _monthlyManuallyEdited = false;
   bool _startMonthManuallyEdited = false;
   bool _saving = false;
@@ -66,8 +67,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
 
   void _recalculateStartMonth() {
     if (_startMonthManuallyEdited) return;
-    final computed =
-        calculateInstallmentStartMonth(_selectedAccount, _purchaseDate);
+    final computed = calculateInstallmentStartMonth(
+      _selectedAccount,
+      _purchaseDate,
+      deferralMonths: _deferralMonths,
+    );
     setState(() => _startMonth = computed);
   }
 
@@ -116,10 +120,12 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _purchaseDate = e.purchaseDate ??
           DateTime.tryParse('${e.startMonth}-01') ??
           DateTime.now();
+      _deferralMonths = e.deferralMonths;
       _monthlyManuallyEdited = true;
       _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
+      _deferralMonths = 0;
       if (widget.presenter.creditAccounts.isNotEmpty) {
         _accountId = widget.presenter.creditAccounts.first.id;
       }
@@ -175,6 +181,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       totalMonths: _totalMonths,
       startMonth: _startMonth,
       purchaseDate: _purchaseDate,
+      deferralMonths: _deferralMonths,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       isActive: e?.isActive ?? true,
     );
@@ -198,10 +205,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
 
   Widget _buildCycleHint(BuildContext context) {
     final account = _selectedAccount;
-    if (account == null || !account.hasBillingCycle) {
-      return const SizedBox.shrink();
-    }
-    final explanation = installmentCycleExplanation(account, _purchaseDate);
+    final explanation = installmentCycleExplanation(
+      account,
+      _purchaseDate,
+      deferralMonths: _deferralMonths,
+    );
     if (explanation == null) {
       return const SizedBox.shrink();
     }
@@ -296,6 +304,19 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             ),
           ),
           _buildCycleHint(context),
+          const SizedBox(height: 16),
+
+          // First payment deferral (optional)
+          const _FieldLabel('Deferred First Payment (optional)'),
+          _DeferralSelector(
+            selected: _deferralMonths,
+            onChanged: (val) {
+              setState(() {
+                _deferralMonths = val;
+                _recalculateStartMonth();
+              });
+            },
+          ),
           const SizedBox(height: 16),
 
           // Total Amount
@@ -647,6 +668,33 @@ class _StartMonthSelector extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DeferralSelector extends StatelessWidget {
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  static const _presets = [0, 1, 2, 3];
+
+  const _DeferralSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      children: [
+        for (final m in _presets)
+          _MonthChip(
+            label: m == 0 ? 'None' : '${m}mo',
+            selected: selected == m,
+            onTap: () => onChanged(m),
+          ),
+      ],
     );
   }
 }
