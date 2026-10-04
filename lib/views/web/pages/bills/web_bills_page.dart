@@ -3373,6 +3373,8 @@ class _InstallmentRow extends StatelessWidget {
                     if (accountName != null) accountName,
                     if (installment.purchaseDate != null)
                       'Bought ${DateFormat('MMM d').format(installment.purchaseDate!)}',
+                    if (installment.deferralMonths > 0)
+                      'Deferred ${installment.deferralMonths} ${installment.deferralMonths == 1 ? 'mo' : 'mos'}',
                   ].join(' · '),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
@@ -3514,6 +3516,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   int _totalMonths = 12;
   late String _startMonth;
   late DateTime _purchaseDate;
+  int _deferralMonths = 0;
   bool _monthlyManuallyEdited = false;
   bool _startMonthManuallyEdited = false;
   bool _isSubmitting = false;
@@ -3529,8 +3532,11 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
 
   void _recalculateStartMonth() {
     if (_startMonthManuallyEdited) return;
-    final computed =
-        calculateInstallmentStartMonth(_selectedAccount, _purchaseDate);
+    final computed = calculateInstallmentStartMonth(
+      _selectedAccount,
+      _purchaseDate,
+      deferralMonths: _deferralMonths,
+    );
     setState(() => _startMonth = computed);
   }
 
@@ -3551,10 +3557,11 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
 
   Widget _buildCycleHint(ThemeData theme, ColorScheme cs) {
     final account = _selectedAccount;
-    if (account == null || !account.hasBillingCycle) {
-      return const SizedBox.shrink();
-    }
-    final explanation = installmentCycleExplanation(account, _purchaseDate);
+    final explanation = installmentCycleExplanation(
+      account,
+      _purchaseDate,
+      deferralMonths: _deferralMonths,
+    );
     if (explanation == null) return const SizedBox.shrink();
 
     return Padding(
@@ -3601,10 +3608,12 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _purchaseDate = e.purchaseDate ??
           DateTime.tryParse('${e.startMonth}-01') ??
           DateTime.now();
+      _deferralMonths = e.deferralMonths;
       _monthlyManuallyEdited = true;
       _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
+      _deferralMonths = 0;
       final accounts = widget.presenter.creditAccounts;
       if (accounts.isNotEmpty) _accountId = accounts.first.id;
       _recalculateStartMonth();
@@ -3668,6 +3677,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
         totalMonths: _totalMonths,
         startMonth: _startMonth,
         purchaseDate: _purchaseDate,
+        deferralMonths: _deferralMonths,
         note: note.isEmpty ? null : note,
         isActive: existing?.isActive ?? true,
       );
@@ -3764,6 +3774,29 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                   ),
                 ),
                 _buildCycleHint(theme, cs),
+                const SizedBox(height: WebInsets.md),
+                Text(
+                  'Deferred first payment (optional)',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: WebInsets.sm),
+                Wrap(
+                  spacing: WebInsets.sm,
+                  children: [
+                    for (final d in [0, 1, 2, 3])
+                      ChoiceChip(
+                        label: Text(d == 0 ? 'None' : '${d}mo'),
+                        selected: _deferralMonths == d,
+                        onSelected: (_) {
+                          setState(() {
+                            _deferralMonths = d;
+                            _recalculateStartMonth();
+                          });
+                        },
+                      ),
+                  ],
+                ),
                 const SizedBox(height: WebInsets.md),
                 TextFormField(
                   controller: _totalController,
