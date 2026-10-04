@@ -579,7 +579,7 @@ void main() {
             _bill(id: 'b2', month: '2026-02'),
           ]);
       await presenter.load();
-      presenter..setMonth('2026-03');
+      presenter.setMonth('2026-03');
       // Use unawaited setMonth result; call getter synchronously
       final bills = presenter.bills;
       expect(bills.map((b) => b.id), contains('b1'));

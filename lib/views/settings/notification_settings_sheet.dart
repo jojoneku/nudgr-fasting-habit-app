@@ -59,11 +59,12 @@ class _NotificationSettingsSheetState
 
   Future<void> _loadPrefs() async {
     final prefs = await widget.storage.loadNotificationPreferences();
-    if (mounted)
+    if (mounted) {
       setState(() {
         _prefs = prefs;
         _loading = false;
       });
+    }
   }
 
   Future<void> _loadSystemStatus() async {

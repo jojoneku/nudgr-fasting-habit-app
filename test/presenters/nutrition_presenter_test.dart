@@ -148,7 +148,7 @@ void main() {
 
     test('awards +10 XP bonus when IF sync is enabled', () async {
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+          const NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -168,8 +168,8 @@ void main() {
 
   group('RPG — protein goal', () {
     setUp(() async {
-      when(mockStorage.loadNutritionGoals()).thenAnswer(
-          (_) async => NutritionGoals(dailyCalories: 2000, proteinGrams: 150));
+      when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
+          const NutritionGoals(dailyCalories: 2000, proteinGrams: 150));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -201,7 +201,8 @@ void main() {
   group('RPG — overshoot penalty', () {
     setUp(() async {
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, overshootPenaltyEnabled: true));
+          const NutritionGoals(
+              dailyCalories: 2000, overshootPenaltyEnabled: true));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -230,7 +231,7 @@ void main() {
     test('blocks entry during fast when ifSyncEnabled is true', () async {
       when(mockFasting.isFasting).thenReturn(true);
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+          const NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -246,7 +247,7 @@ void main() {
     test('allows entry when not fasting with ifSyncEnabled', () async {
       when(mockFasting.isFasting).thenReturn(false);
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+          const NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -309,7 +310,7 @@ void main() {
     test('past-day logging is allowed even while currently fasting', () async {
       when(mockFasting.isFasting).thenReturn(true);
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+          const NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
       presenter = build();
       await Future.delayed(Duration.zero);
 
@@ -325,7 +326,7 @@ void main() {
 
     test('past-day goal XP is awarded once, with no IF-sync bonus', () async {
       when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+          const NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
       presenter = build();
       await Future.delayed(Duration.zero);
 
@@ -363,7 +364,7 @@ void main() {
       when(mockNotifs.scheduleWeightReminder(any)).thenAnswer((_) async {});
       when(mockNotifs.cancelWeightReminder()).thenAnswer((_) async {});
       when(mockStorage.loadNutritionGoals())
-          .thenAnswer((_) async => NutritionGoals(dailyCalories: 2000));
+          .thenAnswer((_) async => const NutritionGoals(dailyCalories: 2000));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,

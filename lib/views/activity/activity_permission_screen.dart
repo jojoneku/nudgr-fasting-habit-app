@@ -53,7 +53,7 @@ class ActivityPermissionScreen extends StatelessWidget {
                 label: '+25 XP when you hit your daily step goal',
               ),
               const SizedBox(height: 12),
-              _BenefitRow(
+              const _BenefitRow(
                 icon: Icons.bolt,
                 label: '+1 AGI every 5 consecutive days goal met',
               ),

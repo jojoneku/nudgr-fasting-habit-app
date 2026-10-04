@@ -342,7 +342,7 @@ void main() {
 
   group('HabitRoutine', () {
     test('toJson / fromJson roundtrip', () {
-      final r = HabitRoutine(
+      const r = HabitRoutine(
         id: 'routine-1',
         name: 'Morning Ritual',
         icon: 'lightning-bolt',
@@ -375,7 +375,7 @@ void main() {
     });
 
     test('copyWith updates fields correctly', () {
-      final r = HabitRoutine(
+      const r = HabitRoutine(
         id: 'r1',
         name: 'Morning',
         icon: 'sun',

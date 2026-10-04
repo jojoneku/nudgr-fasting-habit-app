@@ -5,6 +5,7 @@ import '../models/quest.dart';
 import '../models/tdee_profile.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../utils/safe_notifier.dart';
 import 'auth_presenter.dart';
 import 'fasting_presenter.dart';
 import 'nutrition_presenter.dart';
@@ -16,7 +17,7 @@ import 'quest_presenter.dart';
 /// existing nutrition / fasting / quest presenters. Constructor injection only.
 ///
 /// Spec: openspec/changes/redesign-onboarding-awakening/specs/onboarding/spec.md
-class OnboardingPresenter extends ChangeNotifier {
+class OnboardingPresenter extends ChangeNotifier with SafeNotifier {
   OnboardingPresenter({
     required StorageService storage,
     required NutritionPresenter nutrition,
@@ -189,7 +190,7 @@ class OnboardingPresenter extends ChangeNotifier {
   /// overwriting the pulled profile and WITHOUT seeding the starter quest.
   Future<void> fastForwardFromCloud() async {
     await _storage.saveOnboardingComplete(true);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Notifications (non-blocking) ─────────────────────────────────────────────
@@ -242,14 +243,11 @@ class OnboardingPresenter extends ChangeNotifier {
       );
 
   void _onDependencyChanged() {
-    if (!_disposed) notifyListeners();
+    safeNotify();
   }
-
-  bool _disposed = false;
 
   @override
   void dispose() {
-    _disposed = true;
     _nutrition.removeListener(_onDependencyChanged);
     _auth.removeListener(_onDependencyChanged);
     super.dispose();

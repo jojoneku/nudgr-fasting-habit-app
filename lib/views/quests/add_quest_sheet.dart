@@ -189,7 +189,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Title ───────────────────────────────────────────
-                  _SectionLabel('Quest Title'),
+                  const _SectionLabel('Quest Title'),
                   const SizedBox(height: AppSpacing.xs),
                   AppTextField(
                     controller: _titleCtrl,
@@ -206,7 +206,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   const SizedBox(height: AppSpacing.mdGenerous),
 
                   // ── Schedule card ────────────────────────────────────
-                  _SectionLabel('Schedule'),
+                  const _SectionLabel('Schedule'),
                   const SizedBox(height: AppSpacing.xs),
                   _ScheduleCard(
                     time: _time,
@@ -227,7 +227,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   const SizedBox(height: AppSpacing.mdGenerous),
 
                   // ── Recurrence card ──────────────────────────────────
-                  _SectionLabel('Recurrence'),
+                  const _SectionLabel('Recurrence'),
                   const SizedBox(height: AppSpacing.xs),
                   Container(
                     decoration: BoxDecoration(
@@ -258,7 +258,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   const SizedBox(height: AppSpacing.mdGenerous),
 
                   // ── Group ────────────────────────────────────────────
-                  _SectionLabel('Group'),
+                  const _SectionLabel('Group'),
                   const SizedBox(height: AppSpacing.xs),
                   _GroupPicker(
                     groups: widget.presenter.routines,
@@ -275,7 +275,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   const SizedBox(height: AppSpacing.mdGenerous),
 
                   // ── Trains attribute ─────────────────────────────────
-                  _SectionLabel('Trains attribute'),
+                  const _SectionLabel('Trains attribute'),
                   const SizedBox(height: AppSpacing.xs),
                   _StatPicker(
                     selected: _linkedStat,

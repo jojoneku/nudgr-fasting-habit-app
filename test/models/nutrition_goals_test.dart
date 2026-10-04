@@ -9,7 +9,7 @@ void main() {
     });
 
     test('fromJson/toJson round-trip', () {
-      final goals = NutritionGoals(
+      const goals = NutritionGoals(
         mode: TrackingMode.standard,
         dailyCalories: 1800,
         proteinGrams: 150.0,

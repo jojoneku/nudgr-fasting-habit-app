@@ -1321,23 +1321,30 @@ class SyncService {
         await _storage.saveActivityGoals(ActivityGoals.fromJson(
             data['activityGoals'] as Map<String, dynamic>));
       }
-      if (data['nutritionStreak'] != null)
+      if (data['nutritionStreak'] != null) {
         await _storage.saveNutritionStreak(data['nutritionStreak'] as int);
-      if (data['nutritionGoalMetDate'] != null)
+      }
+      if (data['nutritionGoalMetDate'] != null) {
         await _storage
             .saveNutritionGoalMetDate(data['nutritionGoalMetDate'] as String);
-      if (data['logStreak'] != null)
+      }
+      if (data['logStreak'] != null) {
         await _storage.saveLogStreak(data['logStreak'] as int);
-      if (data['logStreakDate'] != null)
+      }
+      if (data['logStreakDate'] != null) {
         await _storage.saveLogStreakDate(data['logStreakDate'] as String);
-      if (data['activityStreak'] != null)
+      }
+      if (data['activityStreak'] != null) {
         await _storage.saveActivityStreak(data['activityStreak'] as int);
-      if (data['activityGoalMetDate'] != null)
+      }
+      if (data['activityGoalMetDate'] != null) {
         await _storage
             .saveActivityGoalMetDate(data['activityGoalMetDate'] as String);
-      if (data['preferredStepsSource'] != null)
+      }
+      if (data['preferredStepsSource'] != null) {
         await _storage
             .savePreferredStepsSource(data['preferredStepsSource'] as String?);
+      }
       if (data['weightLog'] != null) {
         await _storage.saveWeightLog([
           for (final e in data['weightLog'] as List)

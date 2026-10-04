@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:math' as math;
 
 double toLinear(int c8) {
@@ -28,7 +29,7 @@ void row(String label, int color) {
   final cbg = cr(color, bg);
   final cs = cr(color, surf);
   final csv = cr(color, surfV);
-  final pass = (r) => r >= 4.5 ? '✓' : '✗';
+  String pass(r) => r >= 4.5 ? '✓' : '✗';
   print(
       '  ${label.padRight(22)} bg:${cbg.toStringAsFixed(2).padLeft(5)} ${pass(cbg)}'
       '  surf:${cs.toStringAsFixed(2).padLeft(5)} ${pass(cs)}'

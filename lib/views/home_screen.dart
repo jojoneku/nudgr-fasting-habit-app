@@ -224,6 +224,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         // has one and must not be forced through onboarding). The flow owns the
         // sign-in step; onFirstSignIn handles sync init if the user signs in.
         final hasLocalProfile = (await _storage.loadTdeeProfile()) != null;
+        if (!mounted) return;
         if (!onboarded && !hasLocalProfile) {
           await OnboardingFlow.show(context, _onboardingPresenter);
         } else {

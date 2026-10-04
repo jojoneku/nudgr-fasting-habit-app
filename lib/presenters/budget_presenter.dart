@@ -19,8 +19,9 @@ import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
-class BudgetPresenter extends ChangeNotifier {
+class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   BudgetPresenter(
     StorageService storage,
     StatsPresenter stats, [
@@ -62,7 +63,7 @@ class BudgetPresenter extends ChangeNotifier {
     final bills = _bills;
     if (bills == null) return;
     _setAsides = bills.allBudgetedExpenses;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Seeds the mirrored set-asides directly, so a test can exercise the
@@ -70,7 +71,7 @@ class BudgetPresenter extends ChangeNotifier {
   @visibleForTesting
   void debugSetSetAsides(List<BudgetedExpense> setAsides) {
     _setAsides = setAsides;
-    notifyListeners();
+    safeNotify();
   }
 
   /// This month's recurring set-asides landing in [accountId], totalled — the
@@ -173,7 +174,7 @@ class BudgetPresenter extends ChangeNotifier {
     _allTransactions = ledger.allTransactions;
     _categories = ledger.categories;
     _accounts = ledger.accounts;
-    notifyListeners();
+    safeNotify();
     // Check budget warning thresholds asynchronously after sync.
     _checkBudgetWarnings(_cachedNotifPrefs);
   }
@@ -265,7 +266,7 @@ class BudgetPresenter extends ChangeNotifier {
     if (month != _selectedMonth) _carriedFrom = null;
     _selectedMonth = month;
     _monthScope?.setMonth(month); // keep Ledger/Bills/Installments in step
-    notifyListeners();
+    safeNotify();
     // Fire-and-forget: the month renders immediately from whatever it has and
     // repaints again if rows are carried in. Awaiting would stall the tab
     // switch on a disk write.
@@ -287,7 +288,7 @@ class BudgetPresenter extends ChangeNotifier {
   void clearCarriedNotice() {
     if (_carriedFrom == null) return;
     _carriedFrom = null;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Materialises [month] from the most recent earlier month that has rows
@@ -352,7 +353,7 @@ class BudgetPresenter extends ChangeNotifier {
       ...carried,
     ];
     _carriedFrom = source;
-    notifyListeners();
+    safeNotify();
     await _storage.saveBudgets(_allBudgets);
   }
 
@@ -857,7 +858,7 @@ class BudgetPresenter extends ChangeNotifier {
       _allBudgets = [..._allBudgets, newBudget];
     }
     // Optimistic: repaint before persisting.
-    notifyListeners();
+    safeNotify();
     await _storage.saveBudgets(_allBudgets);
     await _checkBudgetNotExceededXp();
   }
@@ -878,7 +879,7 @@ class BudgetPresenter extends ChangeNotifier {
         sortOrder: sortOrder,
       ),
     ];
-    notifyListeners();
+    safeNotify();
     await _saveGroups();
   }
 
@@ -886,7 +887,7 @@ class BudgetPresenter extends ChangeNotifier {
     _groups = [
       for (final g in _groups) g.id == id ? g.copyWith(name: name) : g,
     ];
-    notifyListeners();
+    safeNotify();
     await _saveGroups();
   }
 
@@ -900,7 +901,7 @@ class BudgetPresenter extends ChangeNotifier {
         b.group == id ? b.copyWith(group: fallback) : b,
     ];
     _groups = _groups.where((g) => g.id != id).toList();
-    notifyListeners();
+    safeNotify();
     await _storage.saveBudgets(_allBudgets);
     await _saveGroups();
   }
@@ -939,7 +940,7 @@ class BudgetPresenter extends ChangeNotifier {
             ? b.copyWith(isRecurring: false)
             : b)
         .toList();
-    notifyListeners();
+    safeNotify();
     await _storage.saveBudgets(_allBudgets);
   }
 
@@ -961,7 +962,7 @@ class BudgetPresenter extends ChangeNotifier {
               )
             : b,
     ];
-    notifyListeners();
+    safeNotify();
     await _storage.saveBudgets(_allBudgets);
   }
 
@@ -976,7 +977,7 @@ class BudgetPresenter extends ChangeNotifier {
       return;
     }
     _categories = [..._categories, category];
-    notifyListeners();
+    safeNotify();
     await _storage.saveFinanceCategories(_categories);
   }
 
@@ -1000,7 +1001,7 @@ class BudgetPresenter extends ChangeNotifier {
     // _syncFromLedger calls (which lost the startup race) were correctly skipped.
     _warnedKeysLoaded = true;
     _budgetsLoaded = true;
-    notifyListeners();
+    safeNotify();
     await _checkBudgetWarnings(_cachedNotifPrefs);
     // The month selected at boot deserves the same carry-forward a month the
     // user navigates to gets — otherwise opening the app on the 1st shows an

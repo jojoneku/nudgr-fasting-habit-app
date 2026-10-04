@@ -12,7 +12,7 @@ void main() {
     });
 
     test('fromJson/toJson round-trip', () {
-      final stats = UserStats(
+      const stats = UserStats(
         name: 'Shadow',
         level: 5,
         currentXp: 250,

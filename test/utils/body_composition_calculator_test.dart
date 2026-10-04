@@ -131,7 +131,7 @@ void main() {
   });
 
   group('proteinHitRate7d', () {
-    final goals = const NutritionGoals(dailyCalories: 2000, proteinGrams: 150);
+    const goals = NutritionGoals(dailyCalories: 2000, proteinGrams: 150);
 
     test('null when no protein goal', () {
       expect(
@@ -174,7 +174,7 @@ void main() {
   // ── Dashboard status ───────────────────────────────────────────────────────
 
   group('dashboardStatus', () {
-    final cutProfile = const TdeeProfile(
+    const cutProfile = TdeeProfile(
       weightKg: 80,
       heightCm: 178,
       ageYears: 30,
@@ -182,7 +182,7 @@ void main() {
       activityLevel: ActivityLevel.moderatelyActive,
       goal: 'cut',
     );
-    final standardGoals = const NutritionGoals(
+    const standardGoals = NutritionGoals(
       mode: TrackingMode.standard,
       dailyCalories: 2000,
       proteinGrams: 150,

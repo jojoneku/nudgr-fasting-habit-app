@@ -1158,11 +1158,6 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  @override
-  void dispose() {
-    super.dispose(); // SafeNotifier.dispose() → _disposed = true
-  }
-
   // ── Internals ─────────────────────────────────────────────────────────────
 
   Future<void> _initOnDevice() async {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/update_service.dart';
+import '../utils/safe_notifier.dart';
 
 /// OTA update flow (docs/ota_update_spec.md): check → available → in-app
 /// download with progress → ready-to-install → package installer.
@@ -14,7 +15,7 @@ enum UpdateFlowState {
   error,
 }
 
-class UpdatePresenter extends ChangeNotifier {
+class UpdatePresenter extends ChangeNotifier with SafeNotifier {
   final UpdateService updateService;
   final LocalStorageService storage;
   final NotificationService? notifications;
@@ -58,7 +59,7 @@ class UpdatePresenter extends ChangeNotifier {
       return;
     }
     _state = UpdateFlowState.checking;
-    notifyListeners();
+    safeNotify();
 
     try {
       final manifest = await updateService.fetchLatestManifest();
@@ -89,7 +90,7 @@ class UpdatePresenter extends ChangeNotifier {
       _state = UpdateFlowState.available;
     } finally {
       if (_state == UpdateFlowState.checking) _state = UpdateFlowState.idle;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -107,7 +108,7 @@ class UpdatePresenter extends ChangeNotifier {
     _downloadProgress = null;
     _errorMessage = null;
     _lastNotifiedPercent = -1;
-    notifyListeners();
+    safeNotify();
 
     try {
       final file = await updateService.downloadApk(
@@ -117,7 +118,7 @@ class UpdatePresenter extends ChangeNotifier {
       _apkPath = file.path;
       _downloadProgress = 1.0;
       _state = UpdateFlowState.readyToInstall;
-      notifyListeners();
+      safeNotify();
       await notifications?.showUpdateReadyNotification(
           manifest.version, file.path);
     } on ApkIntegrityException catch (e) {
@@ -129,12 +130,12 @@ class UpdatePresenter extends ChangeNotifier {
       _errorMessage = 'This update could not be verified and was discarded. '
           'Install it from the GitHub release page instead.';
       _state = UpdateFlowState.error;
-      notifyListeners();
+      safeNotify();
     } catch (e) {
       debugPrint('UpdatePresenter: download failed: $e');
       _errorMessage = 'Download failed. Check your connection and retry.';
       _state = UpdateFlowState.error;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -144,7 +145,7 @@ class UpdatePresenter extends ChangeNotifier {
     if (percent == _lastNotifiedPercent) return; // throttle to 1% steps
     _lastNotifiedPercent = percent;
     _downloadProgress = received / total;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Opens the Android package installer for the downloaded APK.
@@ -159,12 +160,12 @@ class UpdatePresenter extends ChangeNotifier {
   /// Mark the current update as dismissed (won't prompt again until app restart)
   void dismissUpdate() {
     _dismissed = true;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Reset dismissed state (useful for testing)
   void resetDismissed() {
     _dismissed = false;
-    notifyListeners();
+    safeNotify();
   }
 }
