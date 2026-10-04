@@ -4,10 +4,12 @@ import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/model_date_guard.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
@@ -91,6 +93,24 @@ void main() {
   });
 
   group('proposals', () {
+    test('a month the model slipped back to its training year is rebased',
+        () async {
+      final now = DateTime.now();
+      final mm = now.month.toString().padLeft(2, '0');
+
+      unawaited(executor.propose(call('addBill', {
+        'name': 'Internet',
+        'amount': 999,
+        'dueDay': 24,
+        'month': '${now.year - 2}-$mm',
+      })));
+      await Future<void>.delayed(Duration.zero);
+
+      final month =
+          executor.pending!.details.firstWhere((d) => d.label == 'Month').value;
+      expect(month, '${now.year}-$mm');
+    });
+
     test('proposing parks the action and writes nothing', () async {
       // Not awaited: the future only completes when the user answers.
       unawaited(executor.propose(call(
@@ -308,6 +328,193 @@ void main() {
       final result = await executor.propose(logCall([
         {'amount': 100, 'description': 'Gas', 'account': 'CASH'},
       ]));
+
+      expect(result.ok, isFalse);
+      expect(result.summary, contains('not available'));
+    });
+  });
+
+  group('findTransactions', () {
+    late MockStorageService storage;
+    late MockStatsPresenter stats;
+
+    TransactionRecord txn(
+      String id,
+      DateTime date,
+      double amount,
+      String description, {
+      TransactionType type = TransactionType.outflow,
+      String account = 'cash',
+      String category = 'transpo',
+      String? note,
+      String? transferTo,
+      String? group,
+      bool reimbursable = false,
+      String? owedBy,
+    }) =>
+        TransactionRecord(
+          id: id,
+          date: date,
+          accountId: account,
+          categoryId: category,
+          amount: amount,
+          type: type,
+          description: description,
+          note: note,
+          month: '${date.year}-${date.month.toString().padLeft(2, '0')}',
+          transferToAccountId: transferTo,
+          transferGroupId: group,
+          reimbursable: reimbursable,
+          owedBy: owedBy,
+        );
+
+    final history = [
+      txn('t1', DateTime(2026, 9, 14), 245, 'Grab ride', note: 'to office'),
+      txn('t2', DateTime(2026, 9, 2), 1200, 'Groceries', category: 'food'),
+      txn('t3', DateTime(2026, 3, 9), 180, 'Grab ride'),
+      txn('t4', DateTime(2026, 9, 1), 30000, 'Salary',
+          type: TransactionType.inflow, category: 'salary'),
+      // Both legs of one transfer: only the outflow leg is listed.
+      txn('t5', DateTime(2026, 9, 5), 5000, 'Move to savings',
+          account: 'cash', transferTo: 'bpi', group: 'g1'),
+      txn('t6', DateTime(2026, 9, 5), 5000, 'Move to savings',
+          type: TransactionType.inflow,
+          account: 'bpi',
+          transferTo: 'cash',
+          group: 'g1'),
+      txn('t7', DateTime(2026, 9, 10), 800, 'Client lunch',
+          category: 'food', reimbursable: true, owedBy: 'Acme'),
+    ];
+
+    setUp(() {
+      storage = MockStorageService();
+      stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer(
+          (_) async => [_acc('cash', 'CASH'), _acc('bpi', 'BPI Savings')]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => [
+            _cat('transpo', 'Transportation'),
+            _cat('food', 'Food'),
+            _cat('salary', 'Salary'),
+          ]);
+      when(storage.loadTransactions()).thenAnswer((_) async => history);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceCategories(any)).thenAnswer((_) async {});
+      when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(stats.addXp(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+    });
+
+    Future<FinanceActionsExecutor> withLedger() async {
+      final p = LedgerPresenter(storage, stats);
+      while (p.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      return FinanceActionsExecutor(bills: bills, ledger: p);
+    }
+
+    test('no filters reviews the month being viewed, newest first', () async {
+      final ex = await withLedger();
+
+      final result = await ex.runRead(call('findTransactions', {}));
+
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('in 2026-09'));
+      expect(result.summary, isNot(contains('2026-03-09')));
+      final lines = result.summary.split('\n');
+      expect(lines[1], startsWith('2026-09-14 "Grab ride"'));
+      expect(lines[1], contains('note: "to office"'));
+    });
+
+    test('a query with no dates searches the whole history', () async {
+      final ex = await withLedger();
+
+      final result =
+          await ex.runRead(call('findTransactions', {'query': 'grab'}));
+
+      expect(result.summary, contains('2 transactions in all history'));
+      expect(result.summary, contains('2026-03-09'));
+      expect(result.summary, contains('Spent ₱425'));
+    });
+
+    test('a transfer is listed once and is neither spent nor received',
+        () async {
+      final ex = await withLedger();
+
+      final result = await ex.runRead(
+          call('findTransactions', {'month': '2026-09', 'type': 'transfer'}));
+
+      expect(result.summary, contains('1 transactions'));
+      expect(result.summary, contains('transfer CASH → BPI Savings'));
+      expect(result.summary, contains('Spent ₱0, received ₱0'));
+    });
+
+    test('totals cover every match even when the list is capped', () async {
+      final ex = await withLedger();
+
+      final result = await ex.runRead(call('findTransactions',
+          {'month': '2026-09', 'type': 'outflow', 'limit': 1}));
+
+      // Grab 245 + Groceries 1200 + Client lunch 800.
+      expect(result.summary, contains('Spent ₱2245'));
+      expect(result.summary, contains('Showing the newest 1 of 3'));
+      expect(result.summary.split('\n').length, 2);
+    });
+
+    test('date range, category and account filters narrow the list', () async {
+      final ex = await withLedger();
+
+      final result = await ex.runRead(call('findTransactions', {
+        'from': '2026-09-01',
+        'to': '2026-09-10',
+        'category': 'foo',
+        'account': 'cash',
+      }));
+
+      expect(result.summary, contains('2026-09-01 to 2026-09-10'));
+      expect(result.summary, contains('Groceries'));
+      expect(result.summary, contains('[reimbursable, owed by Acme]'));
+      expect(result.summary, isNot(contains('Grab')));
+    });
+
+    test('a search before the ledger begins is read as a year slip', () async {
+      final ex = await withLedger();
+
+      // "Grab in March" with the model's year two years back.
+      final result = await ex.runRead(
+          call('findTransactions', {'month': '2024-03', 'query': 'grab'}));
+
+      final rebased = rebaseStaleMonthKey('2024-03', DateTime.now());
+      expect(rebased, isNot('2024-03'));
+      expect(result.summary, contains('searched $rebased instead'));
+    });
+
+    test('rows carry no ids, since nothing can edit a transaction', () async {
+      final ex = await withLedger();
+
+      final result =
+          await ex.runRead(call('findTransactions', {'query': 'grab'}));
+
+      expect(result.summary, isNot(contains('id=')));
+      expect(result.summary, isNot(contains('t1')));
+    });
+
+    test('nothing matched tells the model not to invent rows', () async {
+      final ex = await withLedger();
+
+      final result =
+          await ex.runRead(call('findTransactions', {'query': 'yacht'}));
+
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('No transactions matched'));
+      expect(result.summary, contains('Do not invent'));
+    });
+
+    test('a build with no ledger says so instead of pretending', () async {
+      final result = await executor.runRead(call('findTransactions', {}));
 
       expect(result.ok, isFalse);
       expect(result.summary, contains('not available'));

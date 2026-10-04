@@ -46,6 +46,22 @@ void main() {
       expect(s, contains('Dining: ₱3,200 spent (no budget set)'));
     });
 
+    test('today leads the snapshot with its year spelled out', () {
+      final ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        today: DateTime(2026, 9, 30),
+        totalLiquidCash: 1000,
+      );
+
+      final lines = ctx.financeSnapshotSummary().split('\n');
+
+      // First, so it is read before any bare "Sep 24" further down.
+      expect(lines.first,
+          startsWith('TODAY: Wednesday, 30 Sep 2026 (2026-09-30)'));
+      expect(lines.first, contains('"Sept 24" means 2026'));
+      expect(lines[1], contains('Total liquid cash'));
+    });
+
     test('empty snapshot yields a clear placeholder', () {
       const ctx = AiCoachContext(entryPoint: AiCoachEntryPoint.financeAdvisor);
       expect(ctx.financeSnapshotSummary(), '(no financial data available)');

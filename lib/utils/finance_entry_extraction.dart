@@ -19,6 +19,7 @@ import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/finance/transaction_record.dart';
+import 'model_date_guard.dart';
 
 /// Hard cap on entries from one message. A message describing more than this is
 /// far more likely to be a paragraph the model over-segmented than a genuine
@@ -326,11 +327,16 @@ FinanceCategory? _categoryByName(
 /// case); a future one is almost always the model mis-resolving a relative
 /// phrase, so it is rejected back to null unless the caller expects one — a
 /// payback date is legitimately in the future.
+///
+/// A date years in the past is the model resolving "Sept 24" against its own
+/// training year, so it is moved back to the user's year first
+/// ([rebaseStaleDate]); left alone it would save out of sight of every view.
 DateTime? _parseIsoDate(String? raw, DateTime now, {bool allowFuture = false}) {
   final s = raw?.trim();
   if (s == null || s.isEmpty) return null;
-  final parsed = DateTime.tryParse(s);
-  if (parsed == null) return null;
+  final given = DateTime.tryParse(s);
+  if (given == null) return null;
+  final parsed = rebaseStaleDate(given, now, allowFuture: allowFuture);
   final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
   if (!allowFuture && parsed.isAfter(endOfToday)) return null;
   return parsed;
