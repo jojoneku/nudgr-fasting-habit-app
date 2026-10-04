@@ -13,6 +13,7 @@ class Installment {
   final double monthlyAmount; // amount per payment
   final int totalMonths; // total number of payments
   final String startMonth; // 'YYYY-MM' — first payment month
+  final DateTime? purchaseDate; // date the installment purchase was made
   final String? note;
   final bool isActive; // false = cancelled early
   final DateTime updatedAt;
@@ -25,6 +26,7 @@ class Installment {
     required this.monthlyAmount,
     required this.totalMonths,
     required this.startMonth,
+    this.purchaseDate,
     this.note,
     this.isActive = true,
     DateTime? updatedAt,
@@ -83,6 +85,9 @@ class Installment {
       monthlyAmount: (json['monthlyAmount'] as num).toDouble(),
       totalMonths: json['totalMonths'] as int,
       startMonth: json['startMonth'] as String,
+      purchaseDate: json['purchaseDate'] != null
+          ? DateTime.tryParse(json['purchaseDate'] as String)
+          : null,
       note: json['note'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
@@ -98,6 +103,8 @@ class Installment {
         'monthlyAmount': monthlyAmount,
         'totalMonths': totalMonths,
         'startMonth': startMonth,
+        if (purchaseDate != null)
+          'purchaseDate': purchaseDate!.toIso8601String(),
         'note': note,
         'isActive': isActive,
         'updatedAt': updatedAt.toIso8601String(),
@@ -110,6 +117,7 @@ class Installment {
     double? monthlyAmount,
     int? totalMonths,
     String? startMonth,
+    DateTime? purchaseDate,
     String? note,
     bool? isActive,
     DateTime? updatedAt,
@@ -122,6 +130,7 @@ class Installment {
       monthlyAmount: monthlyAmount ?? this.monthlyAmount,
       totalMonths: totalMonths ?? this.totalMonths,
       startMonth: startMonth ?? this.startMonth,
+      purchaseDate: purchaseDate ?? this.purchaseDate,
       note: note ?? this.note,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,
