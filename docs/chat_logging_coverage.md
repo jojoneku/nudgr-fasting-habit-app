@@ -103,6 +103,11 @@ Nudgy still cannot edit or delete a transaction, or touch accounts — see §3.
   the fuzzy-matching pool would make `spotted jana 800` resolve *jana* to an
   account instead of a debtor. Use the form for money you hold for someone.
 - **Reach sub-accounts** (savings pockets) — excluded from both surfaces.
+- **Create or edit accounts at all**, including credit billing terms. Chat
+  cannot set a card's statement day, payment-due rule ("day of month" or "N
+  days after statement") or minimum-payment rule (% of balance / fixed amount /
+  pay in full). Those live only on the account form. See
+  `docs/credit_accounts_spec.md` §12.
 
 ---
 

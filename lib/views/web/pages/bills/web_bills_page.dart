@@ -1888,6 +1888,7 @@ class _BillRow extends StatelessWidget {
     final cs = theme.colorScheme;
     final paid = bill.isPaid;
     final accountName = _accountName(bill.accountId);
+    final progressNote = presenter.statementProgressNote(bill);
 
     final nameStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w600,
@@ -1948,7 +1949,8 @@ class _BillRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Due ${_ordinal(bill.dueDay)}${accountName != null ? ' · $accountName' : ''}',
+                  'Due ${_ordinal(bill.dueDay)}${accountName != null ? ' · $accountName' : ''}'
+                  '${progressNote != null ? ' · $progressNote' : ''}',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),
@@ -1961,7 +1963,9 @@ class _BillRow extends StatelessWidget {
             _RowActions(
               onEdit: () => _edit(context),
               onDelete: () => _delete(context),
-              onUndo: paid ? () => _undoPaid(context) : null,
+              onUndo: presenter.hasUndoablePayment(bill)
+                  ? () => _undoPaid(context)
+                  : null,
               undoLabel: 'Mark unpaid',
             ),
         ],
@@ -2093,7 +2097,8 @@ Future<void> _markBillPaidFlow(
     summary: 'Records the payment and debits the funding account. '
         'Adjust the amount for a partial payment or an overpayment.',
     confirmLabel: 'Mark paid',
-    initialAmount: bill.amount,
+    // A part-paid credit statement prefills what is left, not the full bill.
+    initialAmount: presenter.billAmountOwed(bill),
     amountLabel: 'Amount paid',
     dateLabel: 'Payment date',
     accounts: payers,

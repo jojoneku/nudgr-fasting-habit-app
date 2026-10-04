@@ -126,6 +126,20 @@ abstract final class PreviewSeed {
       colorHex: '#dc2626',
       icon: 'credit-card',
     ),
+    // Exercises the days-after-statement due rule: its cycle note reads
+    // "Statement closes … · due …" 15 days after close. Nothing owed, so the
+    // reference figures above are unchanged and the card shows "No payment due".
+    FinancialAccount(
+      id: 'a_line',
+      name: 'GCredit',
+      category: AccountCategory.creditLine,
+      balance: 0,
+      creditLimit: 10000,
+      statementDay: 20,
+      dueDaysAfterStatement: 15,
+      colorHex: '#0284c7',
+      icon: 'credit-card',
+    ),
   ];
 
   static FinancialAccount _acc(String id, String name, AccountCategory cat,

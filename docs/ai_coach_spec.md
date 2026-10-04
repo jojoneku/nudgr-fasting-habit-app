@@ -303,7 +303,7 @@ The controls, in the order that actually matters.
 
 **1. The model cannot write. This is the one that carries the weight.**
 `FinanceActionsExecutor` separates `runRead()` (findBills, findReceivables,
-findSetAsides, findBudgets) from `propose()`. Every mutator builds a
+findSetAsides, findBudgets, findTransactions) from `propose()`. Every mutator builds a
 `PendingFinanceAction`; `_write()` runs only from `confirm()`, which is a human
 tap on a confirm card. A fully hijacked model produces a confirmation dialog,
 not a transaction. Keep it that way: any future tool that writes without a
@@ -370,3 +370,21 @@ from the user is what to watch:
 - [ ] `AiEstimationService` (Gemma 1B) is fully removed after Phase 2 is stable
 - [ ] All new models have `fromJson`/`toJson`
 - [ ] Touch targets ≥ 44×44px; input field in bottom 30% of sheet
+
+## Transaction Review (on demand)
+
+The snapshot carries only recent spending (60 rows) and each past month's six
+biggest expenses. The full ledger is reached through the `findTransactions`
+read tool, which Nudgy calls only when the user asks to review, audit, search or
+list transactions, or asks about a purchase the snapshot does not show. Nothing
+extra is sent on an ordinary turn.
+
+- Filters: `query` (description, note, category, account, owedBy), `month`,
+  `from`/`to` dates, `type` (outflow / inflow / transfer), `category`,
+  `account`, `limit` (default 50, max 150).
+- Default scope: with no query and no dates, the month being viewed; with a
+  query and no dates, all history.
+- Result: newest first, with spent and received totals over every match even
+  when the list is capped, plus how many were left out. Transfers are listed
+  once ("from → to") and count toward neither total.
+- No transaction ids are returned: Nudgy cannot edit or delete ledger rows.

@@ -67,6 +67,33 @@ enum GoalStage {
 /// `budgeted_expense.dart`.
 const Object _kUnset = Object();
 
+/// Upper bound for [FinancialAccount.dueDaysAfterStatement]. PH issuers sit at
+/// 15–25 days; the headroom covers slower ones without admitting nonsense.
+const int kMaxDueDaysAfterStatement = 45;
+
+/// How a credit account's minimum amount due is derived from its statement.
+enum CreditMinimumRule {
+  /// A share of the statement with a floor (the card preset's rate/floor, BSP
+  /// defaults otherwise). Revolving credit cards.
+  percentOfBalance,
+
+  /// A flat amount, e.g. a monthly installment, never above the statement.
+  fixedAmount,
+
+  /// No minimum: the whole statement is due. Credit lines and BNPL plans.
+  payInFull,
+}
+
+/// The minimum rule a [category] gets when none is chosen: a credit card
+/// revolves (percent of balance with a floor); a credit line or BNPL plan
+/// bills its statement to be settled in full. Shared by
+/// [FinancialAccount.effectiveMinimumRule] and the account forms, which preset
+/// a new account's rule from its category.
+CreditMinimumRule defaultMinimumRuleFor(AccountCategory category) =>
+    category == AccountCategory.creditCard
+        ? CreditMinimumRule.percentOfBalance
+        : CreditMinimumRule.payInFull;
+
 // Supports both main accounts and sub-accounts (savings pots, goals, time deposits).
 //
 // Main account:  parentAccountId == null, category ∈ {bank, ewallet, cash, ...}
@@ -114,6 +141,20 @@ class FinancialAccount {
   final double? creditLimit; // total approved limit
   final int? statementDay; // 1–28, day of month the statement closes
   final int? paymentDueDay; // 1–28, day of month payment is due
+
+  /// Due date as a fixed number of days after the statement closes (e.g. 15
+  /// for "due 15 days after statement"). When set it wins over
+  /// [paymentDueDay]: issuers that count days drift a day against any fixed
+  /// day-of-month whenever a cycle has 31 days. 1–[kMaxDueDaysAfterStatement].
+  final int? dueDaysAfterStatement;
+
+  /// How the minimum amount due is worked out. Null means the category
+  /// default — see [effectiveMinimumRule].
+  final CreditMinimumRule? minimumRule;
+
+  /// The flat minimum for [CreditMinimumRule.fixedAmount] (e.g. a monthly
+  /// installment). Ignored under the other rules.
+  final double? minimumFixedAmount;
   final double? financeChargeRate; // monthly NOMINAL rate, e.g. 0.03 = 3%
   final String? creditBrand; // preset key, e.g. 'bpi_rewards'; null = manual
   final DateTime updatedAt;
@@ -137,6 +178,9 @@ class FinancialAccount {
     this.creditLimit,
     this.statementDay,
     this.paymentDueDay,
+    this.dueDaysAfterStatement,
+    this.minimumRule,
+    this.minimumFixedAmount,
     this.financeChargeRate,
     this.creditBrand,
     DateTime? updatedAt,
@@ -167,6 +211,20 @@ class FinancialAccount {
       category == AccountCategory.creditCard ||
       category == AccountCategory.creditLine ||
       category == AccountCategory.bnpl;
+
+  /// True when the account can be billed: it knows when the statement closes
+  /// and when payment falls due (a fixed day or a days-after-close offset).
+  bool get hasBillingCycle =>
+      isLiability &&
+      statementDay != null &&
+      (paymentDueDay != null || dueDaysAfterStatement != null);
+
+  /// [minimumRule], or the category default when unset. A credit card revolves
+  /// (percent of balance with a floor); a credit line or BNPL plan bills its
+  /// statement to be settled in full.
+  CreditMinimumRule get effectiveMinimumRule =>
+      minimumRule ?? defaultMinimumRuleFor(category);
+
   // balance = funds held for others — excluded from net worth and liquid cash
   bool get isCustodian => category == AccountCategory.custodian;
 
@@ -245,6 +303,11 @@ class FinancialAccount {
       creditLimit: (json['creditLimit'] as num?)?.toDouble(),
       statementDay: (json['statementDay'] as num?)?.toInt(),
       paymentDueDay: (json['paymentDueDay'] as num?)?.toInt(),
+      dueDaysAfterStatement: (json['dueDaysAfterStatement'] as num?)?.toInt(),
+      minimumRule: CreditMinimumRule.values
+          .where((r) => r.name == json['minimumRule'])
+          .firstOrNull,
+      minimumFixedAmount: (json['minimumFixedAmount'] as num?)?.toDouble(),
       financeChargeRate: (json['financeChargeRate'] as num?)?.toDouble(),
       creditBrand: json['creditBrand'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
@@ -271,6 +334,9 @@ class FinancialAccount {
         'creditLimit': creditLimit,
         'statementDay': statementDay,
         'paymentDueDay': paymentDueDay,
+        'dueDaysAfterStatement': dueDaysAfterStatement,
+        'minimumRule': minimumRule?.name,
+        'minimumFixedAmount': minimumFixedAmount,
         'financeChargeRate': financeChargeRate,
         'creditBrand': creditBrand,
         'updatedAt': updatedAt.toIso8601String(),
@@ -296,6 +362,11 @@ class FinancialAccount {
     double? creditLimit,
     int? statementDay,
     int? paymentDueDay,
+    // Sentinel-guarded: switching the due rule back to a fixed day, or the
+    // minimum rule away from a fixed amount, has to be able to clear these.
+    Object? dueDaysAfterStatement = _kUnset,
+    Object? minimumRule = _kUnset,
+    Object? minimumFixedAmount = _kUnset,
     double? financeChargeRate,
     String? creditBrand,
     DateTime? updatedAt,
@@ -325,6 +396,15 @@ class FinancialAccount {
       creditLimit: creditLimit ?? this.creditLimit,
       statementDay: statementDay ?? this.statementDay,
       paymentDueDay: paymentDueDay ?? this.paymentDueDay,
+      dueDaysAfterStatement: identical(dueDaysAfterStatement, _kUnset)
+          ? this.dueDaysAfterStatement
+          : dueDaysAfterStatement as int?,
+      minimumRule: identical(minimumRule, _kUnset)
+          ? this.minimumRule
+          : minimumRule as CreditMinimumRule?,
+      minimumFixedAmount: identical(minimumFixedAmount, _kUnset)
+          ? this.minimumFixedAmount
+          : minimumFixedAmount as double?,
       financeChargeRate: financeChargeRate ?? this.financeChargeRate,
       creditBrand: creditBrand ?? this.creditBrand,
       updatedAt: updatedAt ?? this.updatedAt,

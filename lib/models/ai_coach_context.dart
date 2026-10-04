@@ -355,6 +355,13 @@ class AdvisorInstallmentLine {
 class AiCoachContext {
   final AiCoachEntryPoint entryPoint;
 
+  /// The user's local date, stated at the top of the finance snapshot.
+  ///
+  /// Without it the model resolves "Sept 24" against its own training year:
+  /// every date in the snapshot is a bare "Sep 24", so nothing it reads names
+  /// the year. Null leaves the line out (tests, and the RPG coach).
+  final DateTime? today;
+
   // ── Attached image (advisor photo upload) ───────────────────────────────────
   /// Compressed JPEG bytes the user attached this turn (a bill, receipt, credit
   /// offer…), sent to the vision model once. Transient — never serialized.
@@ -508,6 +515,7 @@ class AiCoachContext {
 
   const AiCoachContext({
     required this.entryPoint,
+    this.today,
     this.imageBytes,
     this.imageMimeType,
     this.todayCalories,
@@ -610,6 +618,7 @@ class AiCoachContext {
   /// Treasury presenters so the model reproduces rather than derives them.
   String financeSnapshotSummary() {
     final buf = StringBuffer();
+    final dateLine = _todayLine();
 
     if (totalLiquidCash != null) {
       buf.writeln('Total liquid cash: ${_peso(totalLiquidCash!)}');
@@ -862,7 +871,48 @@ class AiCoachContext {
     }
 
     final s = buf.toString().trim();
-    return s.isEmpty ? '(no financial data available)' : s;
+    final body = s.isEmpty ? '(no financial data available)' : s;
+    return dateLine == null ? body : '$dateLine\n$body';
+  }
+
+  /// "TODAY: Sunday, 4 Oct 2026 (2026-10-04)", plus the rule that comes with
+  /// it. First in the snapshot so it is read before any bare "Sep 24" below.
+  String? _todayLine() {
+    final d = today;
+    if (d == null) return null;
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final iso = '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    return 'TODAY: ${weekdays[d.weekday - 1]}, ${d.day} ${months[d.month - 1]} '
+        '${d.year} ($iso). This is the real current date; trust it over your '
+        'own sense of the year. A date or month the user gives without a year '
+        'is the most recent one on or before today (or the coming one for a '
+        'bill or receivable due ahead), so "Sept 24" means ${d.year} unless '
+        'that would be in the future. Every date and month you pass to a tool '
+        'uses this year unless the user names another.';
   }
 
   /// Prior-period benchmark for year-over-year / trend context. Kept separate

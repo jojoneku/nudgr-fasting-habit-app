@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -7,6 +8,7 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../mocks.mocks.dart';
 
 FinancialAccount _card({
@@ -235,11 +237,36 @@ void main() {
       expect(presenter.totalCreditAvailable, 45000); // 38000 + 7000
     });
 
-    test('creditMinimumDue uses the floor for a small balance', () async {
+    test('creditMinimumDue uses the floor for a small statement', () async {
+      // The minimum is worked out on the open STATEMENT, not the live balance
+      // (a balance on a cycle that has not closed yet has no minimum), so the
+      // card needs a statement bill for there to be one.
+      final now = DateTime.now();
+      when(storage.loadBills()).thenAnswer((_) async => [
+            Bill(
+              id: 's2',
+              name: 'cc2 statement',
+              billType: BillType.creditCard,
+              amount: 3000,
+              dueDay: 28,
+              month: toMonthKey(DateTime(now.year, now.month + 1)),
+              categoryId: '',
+              accountId: 'cc2',
+              paymentNote: Bill.autoStatementNote,
+            ),
+          ]);
       await presenter.load();
       final cc2 = presenter.creditAccounts.firstWhere((a) => a.id == 'cc2');
       // 3000 * 3.57% = 107.1 → below the 850 floor.
       expect(presenter.creditMinimumDue(cc2), 850);
+    });
+
+    test('creditMinimumDue is null with a balance but no statement', () async {
+      await presenter.load();
+      final cc1 = presenter.creditAccounts.firstWhere((a) => a.id == 'cc1');
+      expect(cc1.currentPayable, 12000);
+      expect(presenter.creditMinimumDue(cc1), isNull,
+          reason: 'nothing has been billed, so there is no minimum to pay');
     });
 
     test('creditMinimumDue is null when nothing is owed', () async {
@@ -261,7 +288,7 @@ void main() {
       );
     });
 
-    test('creditCycleNote names the close date while the cycle is open',
+    test('creditCycleNote names the close and due date of the running cycle',
         () async {
       // A close day that cannot have passed yet, whatever day it runs on.
       final openCycle = _card(
@@ -271,21 +298,27 @@ void main() {
         balance: 1011.31,
       );
       final note = presenter.creditCycleNote(openCycle);
-      if (DateTime.now().day < 28) {
-        expect(note, isNotNull);
-        expect(note!.warning, isFalse);
-        expect(note.label, startsWith('Statement closes '));
-      } else {
-        // Run on the 28th or later, that cycle has closed.
-        expect(note, isNull);
-      }
+      expect(note, isNotNull);
+      expect(note!.warning, isFalse);
+      expect(note.label, startsWith('Statement closes '));
+      expect(note.label, contains(' · due '));
     });
 
-    test('creditCycleNote is silent once the cycle has closed', () async {
-      // statementDay 1 has always closed — the statement is a bill by now, so
-      // the card has nothing left to explain.
+    test('creditCycleNote still speaks once this month\'s close has passed',
+        () async {
+      // statementDay 1 has always closed this month. The note used to go
+      // silent here on the assumption that the statement was a bill by now —
+      // but a statement that closed at ₱0 is no bill, and the balance then had
+      // no visible home. It now names the NEXT close instead.
+      final now = DateTime.now();
       final closed = _card(id: 'w', statementDay: 1, paymentDueDay: 15);
-      expect(presenter.creditCycleNote(closed), isNull);
+      final note = presenter.creditCycleNote(closed);
+      expect(note, isNotNull);
+      expect(note!.warning, isFalse);
+      final nextClose =
+          DateTime(now.year, now.month + (now.day > 1 ? 1 : 0), 1);
+      expect(note.label,
+          startsWith('Statement closes ${monthDayLabel(nextClose)}'));
     });
 
     test('creditCycleNote ignores non-liability accounts', () async {

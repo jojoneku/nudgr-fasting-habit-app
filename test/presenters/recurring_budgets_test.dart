@@ -321,14 +321,17 @@ void main() {
     });
 
     test('a one-off does not carry forward', () async {
-      stub(budgets: [_budget('food', '2026-09', 8000)]);
-      final p = await presenterOn('2026-09');
+      // Months after "now" on purpose: load() carries recurring rows into the
+      // real current month before the test can turn recurrence off, so a
+      // fixture month that is, or precedes, today's month gets copied at boot.
+      stub(budgets: [_budget('food', '2099-09', 8000)]);
+      final p = await presenterOn('2099-09');
       await p.setBudgetRecurring('food', false);
 
-      p.setMonth('2026-10');
+      p.setMonth('2099-10');
       await Future.delayed(const Duration(milliseconds: 20));
 
-      expect(monthRows(p, '2026-10'), isEmpty);
+      expect(monthRows(p, '2099-10'), isEmpty);
     });
 
     test('switching back on restores a series', () async {

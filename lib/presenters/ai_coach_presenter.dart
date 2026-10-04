@@ -594,6 +594,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         return 'Checking your set-asides…';
       case 'findBudgets':
         return 'Checking your budgets…';
+      case 'findTransactions':
+        return 'Going through your transactions…';
     }
     return 'Looking that up…';
   }
@@ -1233,12 +1235,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       creditLines = t.creditAccounts.map((a) {
-        final due = t.creditDueInfo(a);
         return AdvisorCreditLine(
           name: a.name,
           owed: a.currentPayable,
           available: a.availableCredit,
-          dueLabel: due?.label,
+          // The when alone: the minimum is its own field, and the dashboard's
+          // due line already carries it.
+          dueLabel: t.creditDueWhenLabel(a),
           minimumDue: t.creditMinimumDue(a),
           aprMonthly: a.financeChargeRate,
           utilization: a.utilization,
@@ -1424,6 +1427,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
     return AiCoachContext(
       entryPoint: _entryPoint,
+      today: isAdvisor ? DateTime.now() : null,
       imageBytes: isAdvisor ? image : null,
       imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
       // Absent on finance-only surfaces (web): report "not fasting" rather than
