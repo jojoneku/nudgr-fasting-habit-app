@@ -1,3 +1,5 @@
+import 'transaction_record.dart';
+
 // Represents a purchase split into equal monthly payments.
 // Each month the installment is "due", and paying it creates a
 // TransactionRecord with installmentId linking back to this installment.
@@ -39,6 +41,32 @@ class Installment {
 
   // The 'YYYY-MM' key for payment index [i] (0-based).
   String monthForIndex(int i) => _offsetMonth(startMonth, i);
+
+  /// How many payments have been recorded for this installment in [transactions].
+  int paidCount(Iterable<TransactionRecord> transactions) =>
+      transactions.where((t) => t.installmentId == id).length;
+
+  /// Remaining unpaid/unbilled payment periods.
+  int remainingMonths(Iterable<TransactionRecord> transactions) =>
+      (totalMonths - paidCount(transactions)).clamp(0, totalMonths);
+
+  /// Total unbilled principal remaining to be charged.
+  double remainingAmount(Iterable<TransactionRecord> transactions) =>
+      remainingMonths(transactions) * monthlyAmount;
+
+  /// Total unbilled installment debt across all active installments for [accountId].
+  static double totalUnbilledForAccount(
+    String accountId,
+    Iterable<Installment> installments,
+    Iterable<TransactionRecord> transactions,
+  ) {
+    var total = 0.0;
+    for (final inst in installments) {
+      if (!inst.isActive || inst.accountId != accountId) continue;
+      total += inst.remainingAmount(transactions);
+    }
+    return total;
+  }
 
   static String _offsetMonth(String monthKey, int months) {
     final date = DateTime.parse('$monthKey-01');

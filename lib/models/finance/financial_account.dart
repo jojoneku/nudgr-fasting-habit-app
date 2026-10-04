@@ -157,6 +157,7 @@ class FinancialAccount {
   final double? minimumFixedAmount;
   final double? financeChargeRate; // monthly NOMINAL rate, e.g. 0.03 = 3%
   final String? creditBrand; // preset key, e.g. 'bpi_rewards'; null = manual
+  final double unbilledInstallments;
   final DateTime updatedAt;
 
   FinancialAccount({
@@ -183,6 +184,7 @@ class FinancialAccount {
     this.minimumFixedAmount,
     this.financeChargeRate,
     this.creditBrand,
+    this.unbilledInstallments = 0.0,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -266,18 +268,22 @@ class FinancialAccount {
   /// a credit balance, not extra debt, so it floors at zero here.
   double get currentPayable => isLiability && balance > 0 ? balance : 0;
 
+  /// Total debt on this credit account, combining already-billed balance
+  /// ([currentPayable]) and remaining principal held for [unbilledInstallments].
+  double get totalDebt =>
+      isLiability ? currentPayable + unbilledInstallments : 0;
+
   /// Limit minus what's owed. Null when no limit is set or not a liability.
-  /// Uses [currentPayable] so an overpaid card can't show MORE than the limit
-  /// as available (e.g. limit 50k, balance −2k must read 50k available, not 52k).
-  double? get availableCredit => (isLiability && creditLimit != null)
-      ? creditLimit! - currentPayable
-      : null;
+  /// Uses [totalDebt] so unbilled installments hold credit limit immediately,
+  /// while an overpaid card can't show MORE than the limit as available.
+  double? get availableCredit =>
+      (isLiability && creditLimit != null) ? creditLimit! - totalDebt : null;
 
   /// Owed / limit as a 0..1 ratio for the utilization meter. Null when no limit.
-  /// Floors at 0 via [currentPayable] so an overpaid card isn't negative.
+  /// Floors at 0 via [totalDebt] so an overpaid card isn't negative.
   double? get utilization =>
       (isLiability && creditLimit != null && creditLimit! > 0)
-          ? currentPayable / creditLimit!
+          ? totalDebt / creditLimit!
           : null;
 
   factory FinancialAccount.fromJson(Map<String, dynamic> json) {
@@ -310,6 +316,8 @@ class FinancialAccount {
       minimumFixedAmount: (json['minimumFixedAmount'] as num?)?.toDouble(),
       financeChargeRate: (json['financeChargeRate'] as num?)?.toDouble(),
       creditBrand: json['creditBrand'] as String?,
+      unbilledInstallments:
+          (json['unbilledInstallments'] as num?)?.toDouble() ?? 0.0,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -339,6 +347,7 @@ class FinancialAccount {
         'minimumFixedAmount': minimumFixedAmount,
         'financeChargeRate': financeChargeRate,
         'creditBrand': creditBrand,
+        'unbilledInstallments': unbilledInstallments,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -369,6 +378,7 @@ class FinancialAccount {
     Object? minimumFixedAmount = _kUnset,
     double? financeChargeRate,
     String? creditBrand,
+    double? unbilledInstallments,
     DateTime? updatedAt,
   }) {
     return FinancialAccount(
@@ -407,6 +417,7 @@ class FinancialAccount {
           : minimumFixedAmount as double?,
       financeChargeRate: financeChargeRate ?? this.financeChargeRate,
       creditBrand: creditBrand ?? this.creditBrand,
+      unbilledInstallments: unbilledInstallments ?? this.unbilledInstallments,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

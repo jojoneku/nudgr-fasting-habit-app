@@ -217,9 +217,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// remaining limit + current payable per row.
   List<FinancialAccount> get creditAccounts => liabilityAccounts;
 
-  /// Total owed across all credit accounts (sum of current payables).
+  /// Total owed across all credit accounts (sum of total debt, including unbilled installments).
   double get totalCreditOwed =>
-      creditAccounts.fold(0.0, (sum, a) => sum + a.currentPayable);
+      creditAccounts.fold(0.0, (sum, a) => sum + a.totalDebt);
 
   /// Total remaining credit across accounts that have a limit set.
   double get totalCreditAvailable =>
@@ -578,8 +578,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get totalHeldForOthers =>
       custodianAccounts.fold(0.0, (sum, a) => sum + a.balance);
 
-  double get totalLiabilities =>
-      liabilityAccounts.fold(0.0, (sum, a) => sum + a.balance);
+  double get totalLiabilities => liabilityAccounts.fold(
+      0.0, (sum, a) => sum + a.balance + a.unbilledInstallments);
 
   double get pendingReceivables => _receivables
       .where((r) => r.month == _currentMonth && !r.isReceived)

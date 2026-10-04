@@ -547,7 +547,7 @@ class _CreditAccountCard extends StatelessWidget {
                     ),
                   ),
                   AppNumberDisplay(
-                    value: formatPeso(account.currentPayable),
+                    value: formatPeso(account.totalDebt),
                     size: AppNumberSize.body,
                     color: cs.error,
                   ),
