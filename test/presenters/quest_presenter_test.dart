@@ -852,7 +852,7 @@ void main() {
           stats: mockStats,
           notifications: mockNotifications);
 
-      await presenter.addRoutine(HabitRoutine(
+      await presenter.addRoutine(const HabitRoutine(
         id: 'r1',
         name: 'Morning Ritual',
         icon: 'flash',
@@ -871,7 +871,7 @@ void main() {
             _quest(id: 1, routineId: 'r1'),
           ]);
       when(mockStorage.loadRoutines()).thenAnswer((_) async => [
-            HabitRoutine(
+            const HabitRoutine(
               id: 'r1',
               name: 'Morning',
               icon: 'flash',

@@ -34,8 +34,11 @@ class AppSelectableTile extends StatelessWidget {
         );
       case AppSelectableMode.radio:
         selectionWidget = IgnorePointer(
-          child:
-              Radio<bool>(value: true, groupValue: selected, onChanged: (_) {}),
+          child: RadioGroup<bool>(
+            groupValue: selected,
+            onChanged: (_) {},
+            child: const Radio<bool>(value: true),
+          ),
         );
       case AppSelectableMode.none:
         selectionWidget = leading;

@@ -329,9 +329,10 @@ class _HubScreenState extends State<HubScreen> {
                 listenable: widget.hubPresenter,
                 builder: (ctx, _) => SliverReorderableList(
                   itemCount: widget.hubPresenter.cardOrder.length,
-                  onReorder: (old, neo) {
+                  onReorderItem: (old, neo) {
                     HapticFeedback.mediumImpact();
-                    widget.hubPresenter.reorderCards(old, neo);
+                    final target = neo > old ? neo + 1 : neo;
+                    widget.hubPresenter.reorderCards(old, target);
                   },
                   proxyDecorator: (child, index, animation) => Stack(
                     children: [
@@ -505,7 +506,9 @@ class _HubScreenState extends State<HubScreen> {
         budget == null ||
         history == null ||
         installments == null ||
-        groceryCart == null) return;
+        groceryCart == null) {
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(

@@ -5,9 +5,10 @@ import '../models/fasting_phase.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/local_storage_service.dart';
+import '../utils/safe_notifier.dart';
 import 'stats_presenter.dart';
 
-class FastingPresenter extends ChangeNotifier {
+class FastingPresenter extends ChangeNotifier with SafeNotifier {
   final NotificationService _notificationService;
   final StorageService _storageService;
   final StatsPresenter? statsPresenter;
@@ -19,7 +20,6 @@ class FastingPresenter extends ChangeNotifier {
   int fastingGoalHours = 16;
   List<FastingLog> history = [];
   Timer? _ticker;
-  bool _disposed = false;
 
   FastingPresenter({
     this.statsPresenter,
@@ -129,8 +129,7 @@ class FastingPresenter extends ChangeNotifier {
         } catch (_) {}
       }
     }
-    if (_disposed) return;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Rebases an active fast onto [start] — e.g. honoring the moment the user
@@ -184,7 +183,7 @@ class FastingPresenter extends ChangeNotifier {
         elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
       }
     }
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Computed getters ────────────────────────────────────────────────────────
@@ -428,7 +427,7 @@ class FastingPresenter extends ChangeNotifier {
       final endTime = startTime!.add(Duration(hours: fastingGoalHours));
       await _notificationService.showFastingTimerNotification(endTime);
     }
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> clearAllData() async {
@@ -440,7 +439,7 @@ class FastingPresenter extends ChangeNotifier {
     elapsedSeconds = 0;
     _ticker?.cancel();
 
-    notifyListeners();
+    safeNotify();
     await _notificationService.cancelAll();
     await saveState();
   }
@@ -608,7 +607,7 @@ class FastingPresenter extends ChangeNotifier {
       debugPrint('Error rescheduling eating notifications: $e');
     }
 
-    notifyListeners();
+    safeNotify();
     await saveState();
   }
 
@@ -628,7 +627,7 @@ class FastingPresenter extends ChangeNotifier {
       await _notificationService.cancelAll();
       await _rescheduleActiveAlarms();
 
-      notifyListeners();
+      safeNotify();
     } catch (e) {
       debugPrint('FastingPresenter: Import failed: $e');
       rethrow;
@@ -637,7 +636,6 @@ class FastingPresenter extends ChangeNotifier {
 
   @override
   void dispose() {
-    _disposed = true;
     _ticker?.cancel();
     super.dispose();
   }

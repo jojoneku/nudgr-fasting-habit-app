@@ -57,7 +57,7 @@ class AuthService {
       // an all-defaults FlutterAuthClientOptions is what `initialize` uses
       // when the argument is omitted.
       authOptions: kIsWeb
-          ? FlutterAuthClientOptions()
+          ? const FlutterAuthClientOptions()
           : FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
     );
     _initialized = true;

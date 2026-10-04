@@ -7,6 +7,7 @@ import '../models/quest_achievement.dart';
 import '../models/notification_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../utils/safe_notifier.dart';
 import 'stats_presenter.dart';
 
 /// Streak milestones that trigger badge unlocks and freeze awards.
@@ -21,7 +22,7 @@ const int _maxFreezes = 3;
 /// Probability of a critical completion (2× XP).
 const double _critChance = 0.15;
 
-class QuestPresenter extends ChangeNotifier {
+class QuestPresenter extends ChangeNotifier with SafeNotifier {
   final StorageService _storage;
   final StatsPresenter _stats;
   final NotificationService _notifications;
@@ -30,7 +31,6 @@ class QuestPresenter extends ChangeNotifier {
   List<HabitRoutine> _routines = [];
   List<QuestAchievement> _achievements = [];
   DateTime? _lastPenaltyCheckDate;
-  bool _disposed = false;
   NotificationPreferences _notifPrefs = NotificationPreferences.defaults();
 
   final _random = Random();
@@ -155,7 +155,7 @@ class QuestPresenter extends ChangeNotifier {
     _routines = await _storage.loadRoutines();
     _achievements = await _storage.loadAchievements();
     _lastPenaltyCheckDate = await _storage.loadQuestPenaltyCheckDate();
-    notifyListeners();
+    safeNotify();
 
     _notifPrefs = await _storage.loadNotificationPreferences();
     await _notifications.init();
@@ -172,14 +172,7 @@ class QuestPresenter extends ChangeNotifier {
 
   Future<void> reload() async {
     _quests = (await _storage.loadQuests()).map(_backfillStreak).toList();
-    if (_disposed) return;
-    notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
+    safeNotify();
   }
 
   // ─── Completion ──────────────────────────────────────────────────────────────

@@ -124,8 +124,9 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Subtitle shown on the Hub card.
   String get hubSubtitle {
-    if (todaySteps == 0 && !_hasHealthPermission)
+    if (todaySteps == 0 && !_hasHealthPermission) {
       return 'Tap to connect Health';
+    }
     if (isGoalMet) {
       return '${NumberFormat('#,###').format(todaySteps)} steps ✓';
     }
@@ -323,7 +324,9 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
         if (data.steps == 0 &&
             data.activeCalories == null &&
             data.totalCalories == null &&
-            data.distance == null) continue;
+            data.distance == null) {
+          continue;
+        }
 
         newLogs.add(ActivityLog(
           date: dateKey,

@@ -690,12 +690,15 @@ class _OtherSitesSummary extends StatelessWidget {
     final sites = <({String label, double cm})>[];
     if (latest.neckCm != null) sites.add((label: 'Neck', cm: latest.neckCm!));
     if (latest.hipsCm != null) sites.add((label: 'Hips', cm: latest.hipsCm!));
-    if (latest.chestCm != null)
+    if (latest.chestCm != null) {
       sites.add((label: 'Chest', cm: latest.chestCm!));
-    if (latest.bicepCm != null)
+    }
+    if (latest.bicepCm != null) {
       sites.add((label: 'Bicep', cm: latest.bicepCm!));
-    if (latest.thighCm != null)
+    }
+    if (latest.thighCm != null) {
       sites.add((label: 'Thigh', cm: latest.thighCm!));
+    }
     if (sites.isEmpty) return const SizedBox.shrink();
 
     return AppCard(
@@ -860,16 +863,21 @@ class _EntryRow extends StatelessWidget {
     final isDown = delta != null && delta < 0;
 
     final extraSites = <({String label, double cm})>[];
-    if (entry.neckCm != null)
+    if (entry.neckCm != null) {
       extraSites.add((label: 'Neck', cm: entry.neckCm!));
-    if (entry.hipsCm != null)
+    }
+    if (entry.hipsCm != null) {
       extraSites.add((label: 'Hips', cm: entry.hipsCm!));
-    if (entry.chestCm != null)
+    }
+    if (entry.chestCm != null) {
       extraSites.add((label: 'Chest', cm: entry.chestCm!));
-    if (entry.bicepCm != null)
+    }
+    if (entry.bicepCm != null) {
       extraSites.add((label: 'Bicep', cm: entry.bicepCm!));
-    if (entry.thighCm != null)
+    }
+    if (entry.thighCm != null) {
       extraSites.add((label: 'Thigh', cm: entry.thighCm!));
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

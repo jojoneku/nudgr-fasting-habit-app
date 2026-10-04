@@ -12,7 +12,7 @@ void main() {
     });
 
     test('fromJson/toJson round-trip', () {
-      final log = ActivityLog(
+      const log = ActivityLog(
         date: '2026-03-25',
         steps: 6240,
         activeCalories: 340.5,
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('copyWith preserves unchanged fields', () {
-      final log =
+      const log =
           ActivityLog(date: '2026-03-25', steps: 100, isManualEntry: false);
       final updated = log.copyWith(steps: 5000, isManualEntry: true);
       expect(updated.steps, 5000);
@@ -50,7 +50,7 @@ void main() {
     });
 
     test('fromJson/toJson round-trip', () {
-      final goals = ActivityGoals(dailyStepGoal: 10000);
+      const goals = ActivityGoals(dailyStepGoal: 10000);
       final restored = ActivityGoals.fromJson(goals.toJson());
       expect(restored.dailyStepGoal, 10000);
     });
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('copyWith updates goal', () {
-      final goals = ActivityGoals(dailyStepGoal: 8000);
+      const goals = ActivityGoals(dailyStepGoal: 8000);
       expect(goals.copyWith(dailyStepGoal: 12000).dailyStepGoal, 12000);
     });
   });

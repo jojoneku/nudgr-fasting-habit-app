@@ -684,12 +684,13 @@ class _HistoryListState extends State<HistoryList> {
 
   Future<void> _editHistoryNote(int index) async {
     final currentNote = presenter.history[index].note ?? '';
+    final controller = TextEditingController(text: currentNote);
 
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        final controller = TextEditingController(text: currentNote);
-        return AlertDialog(
+    final String? result;
+    try {
+      result = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
           title: const Text('Add Note'),
           content: TextField(
             controller: controller,
@@ -702,17 +703,19 @@ class _HistoryListState extends State<HistoryList> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, controller.text),
+              onPressed: () => Navigator.pop(ctx, controller.text),
               child: const Text('Save'),
             ),
           ],
-        );
-      },
-    );
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
 
     if (result != null) {
       final log = presenter.history[index];

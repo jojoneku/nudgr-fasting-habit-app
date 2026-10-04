@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/storage_service.dart';
+import '../utils/safe_notifier.dart';
 import 'fasting_presenter.dart';
 import 'quest_presenter.dart';
 import 'treasury_dashboard_presenter.dart';
@@ -16,7 +17,7 @@ enum HubCardType {
   bodyMeasurements,
 }
 
-class HubPresenter extends ChangeNotifier {
+class HubPresenter extends ChangeNotifier with SafeNotifier {
   HubPresenter({
     required StorageService storage,
     required FastingPresenter fasting,
@@ -65,7 +66,7 @@ class HubPresenter extends ChangeNotifier {
     _cardOrder = list;
     _manualOrder = list;
     unawaited(_storage.saveHubCardOrder(list.map((t) => t.name).toList()));
-    notifyListeners();
+    safeNotify();
   }
 
   /// Load the order saved by [reorderCards] and use it as the manual base.
@@ -103,11 +104,11 @@ class HubPresenter extends ChangeNotifier {
   }
 
   void _onSourceChanged() {
-    if (_pendingRecompute) return;
+    if (_pendingRecompute || isDisposed) return;
     _pendingRecompute = true;
     Future.microtask(() {
       _pendingRecompute = false;
-      _recompute();
+      if (!isDisposed) _recompute();
     });
   }
 
@@ -139,7 +140,7 @@ class HubPresenter extends ChangeNotifier {
 
     if (!_listEquals(newOrder, _cardOrder)) {
       _cardOrder = newOrder;
-      notifyListeners();
+      safeNotify();
     }
   }
 

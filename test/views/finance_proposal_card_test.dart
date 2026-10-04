@@ -74,10 +74,10 @@ class SwappingHost extends ChangeNotifier implements FinanceProposalHost {
   void decline() {}
 }
 
-PendingFinanceAction secondAction() => PendingFinanceAction(
-      call: const AiToolCall(id: 'tu_2', name: 'addBill', input: {}),
+PendingFinanceAction secondAction() => const PendingFinanceAction(
+      call: AiToolCall(id: 'tu_2', name: 'addBill', input: {}),
       title: 'Add bill: Internet, ₱999',
-      details: const [(label: 'Amount', value: '₱999')],
+      details: [(label: 'Amount', value: '₱999')],
       isRecurring: true,
     );
 

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intermittent_fasting/presenters/auth_presenter.dart';
 import 'package:intermittent_fasting/services/auth_service.dart';
@@ -47,7 +46,7 @@ class _FakeAuthService extends Fake implements AuthService {
     if (_signInError != null) throw _signInError;
     _isSignedIn = true;
     _userId = _userId ?? 'test-uid';
-    _authController.add(AuthState(AuthChangeEvent.signedIn, null));
+    _authController.add(const AuthState(AuthChangeEvent.signedIn, null));
   }
 
   @override
@@ -55,7 +54,7 @@ class _FakeAuthService extends Fake implements AuthService {
     signOutCalled = true;
     _isSignedIn = false;
     _userId = null;
-    _authController.add(AuthState(AuthChangeEvent.signedOut, null));
+    _authController.add(const AuthState(AuthChangeEvent.signedOut, null));
   }
 
   void close() => _authController.close();

@@ -317,12 +317,12 @@ void main() {
   group('AI dialog — Clarify', () {
     test('Clarify enters clarifying state with question + chips', () async {
       final ai = FakeAiCoachService([
-        StepClarify(
+        const StepClarify(
           question: 'Did you mean BPI or BDO?',
-          quickReplies: const [
+          quickReplies: [
             QuickReply(label: 'BPI', replyText: 'BPI'),
           ],
-          partialDraft: const ParsedTransaction(),
+          partialDraft: ParsedTransaction(),
         ),
       ]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);
@@ -337,9 +337,9 @@ void main() {
 
     test('reply advances turnCount and runs another classifier step', () async {
       final ai = FakeAiCoachService([
-        StepClarify(
+        const StepClarify(
           question: 'Which account?',
-          partialDraft: const ParsedTransaction(),
+          partialDraft: ParsedTransaction(),
         ),
         StepResolved(
           transaction: ParsedTransaction(
@@ -388,9 +388,9 @@ void main() {
   group('user actions', () {
     test('cancelChat clears state and prefill without committing', () async {
       final ai = FakeAiCoachService([
-        StepClarify(
+        const StepClarify(
           question: 'Which account?',
-          partialDraft: const ParsedTransaction(),
+          partialDraft: ParsedTransaction(),
         ),
       ]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);
@@ -435,9 +435,9 @@ void main() {
   group('lifecycle', () {
     test('app backgrounded >5 min resets chat state on resume', () async {
       final ai = FakeAiCoachService([
-        StepClarify(
+        const StepClarify(
           question: 'Which?',
-          partialDraft: const ParsedTransaction(),
+          partialDraft: ParsedTransaction(),
         ),
       ]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);
@@ -1722,9 +1722,9 @@ void main() {
     test('a multi-entry message always goes to the model', () async {
       final cloud = FakeAiCoachService([])
         ..extractionScript = [
-          ExtractionResult(entries: [
+          const ExtractionResult(entries: [
             ExtractedEntry(
-              txn: const ParsedTransaction(
+              txn: ParsedTransaction(
                 amount: 500,
                 type: TransactionType.outflow,
                 accountId: 'gcash',
@@ -1787,9 +1787,9 @@ void main() {
 
     test('a reply inside a clarify conversation never takes it', () async {
       final ai = FakeAiCoachService([
-        StepClarify(
+        const StepClarify(
           question: 'Which account?',
-          partialDraft: const ParsedTransaction(amount: 500),
+          partialDraft: ParsedTransaction(amount: 500),
         ),
       ]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);

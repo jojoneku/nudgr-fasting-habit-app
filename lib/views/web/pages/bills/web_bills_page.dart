@@ -961,8 +961,9 @@ class _AddBillDialogState extends State<_AddBillDialog> {
   String? _resolvePaymentNote() {
     final typed = _paymentNoteController.text.trim();
     if (typed.isNotEmpty) return typed;
-    if (widget.existing?.isAutoStatement ?? false)
+    if (widget.existing?.isAutoStatement ?? false) {
       return Bill.autoStatementNote;
+    }
     return widget.existing == null ? null : '';
   }
 

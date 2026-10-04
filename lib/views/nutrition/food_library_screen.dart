@@ -986,29 +986,33 @@ class _TemplateRow extends StatelessWidget {
     });
   }
 
-  void _showRenameDialog(BuildContext context) {
+  Future<void> _showRenameDialog(BuildContext context) async {
     final ctrl = TextEditingController(text: template.name);
-    AppDialog.show<void>(
-      context: context,
-      title: 'Rename',
-      body: AppTextField(
-        controller: ctrl,
-        autofocus: true,
-        hint: 'Template name',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+    try {
+      await AppDialog.show<void>(
+        context: context,
+        title: 'Rename',
+        body: AppTextField(
+          controller: ctrl,
+          autofocus: true,
+          hint: 'Template name',
         ),
-        TextButton(
-          onPressed: () {
-            presenter.renameTemplate(template.id, ctrl.text);
-            Navigator.of(context).pop();
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              presenter.renameTemplate(template.id, ctrl.text);
+              Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      );
+    } finally {
+      ctrl.dispose();
+    }
   }
 }
