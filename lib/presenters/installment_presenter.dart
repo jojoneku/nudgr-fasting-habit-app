@@ -9,8 +9,10 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:intl/intl.dart';
 
 // Auto-created system category for installment payments.
 const _installmentCategoryId = '__installment__';
@@ -68,6 +70,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   String get selectedMonth => _selectedMonth;
   List<FinancialAccount> get accounts => _ledger.accounts;
 
+  /// Credit accounts (credit cards, credit lines, BNPL) eligible to hold
+  /// installments. Non-liability accounts (savings, bank, cash) cannot hold
+  /// borrowed installment debt.
+  List<FinancialAccount> get creditAccounts =>
+      _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
+
   void setMonth(String month) {
     _selectedMonth = month;
     _monthScope?.setMonth(month); // keep Ledger/Bills/Budget in step
@@ -87,20 +95,14 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
         (t) => t.installmentId == installmentId && t.month == _selectedMonth,
       );
 
-  int paidCount(String installmentId) => _ledger.allTransactions
-      .where((t) => t.installmentId == installmentId)
-      .length;
+  int paidCount(String installmentId) =>
+      _findById(installmentId).paidCount(_ledger.allTransactions);
 
-  int remainingMonths(String installmentId) {
-    final inst = _findById(installmentId);
-    return (inst.totalMonths - paidCount(installmentId))
-        .clamp(0, inst.totalMonths);
-  }
+  int remainingMonths(String installmentId) =>
+      _findById(installmentId).remainingMonths(_ledger.allTransactions);
 
-  double remainingAmount(String installmentId) {
-    final inst = _findById(installmentId);
-    return remainingMonths(installmentId) * inst.monthlyAmount;
-  }
+  double remainingAmount(String installmentId) =>
+      _findById(installmentId).remainingAmount(_ledger.allTransactions);
 
   /// Fraction of payments made (0–1) for [installmentId], for progress bars.
   /// Kept here so views never compute it in `build`.
@@ -131,6 +133,34 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     return match?.name;
   }
 
+  /// Formatted due date label (e.g. "Due Oct 5") when [inst] is linked
+  /// to an account with a payment due date or cycle. Null when undated.
+  String? dueLabel(Installment inst) {
+    final due = dueDate(inst);
+    if (due == null) return null;
+    return 'Due ${DateFormat('MMM d').format(due)}';
+  }
+
+  /// The concrete due date of [inst] in the current [selectedMonth], or null
+  /// if the linked account has no configured cycle or payment due day.
+  DateTime? dueDate(Installment inst) {
+    final account = accounts.where((a) => a.id == inst.accountId).firstOrNull;
+    if (account == null) return null;
+    final parts = _selectedMonth.split('-');
+    if (parts.length != 2) return null;
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (y == null || m == null) return null;
+
+    if (account.paymentDueDay != null) {
+      final lastDay = DateTime(y, m + 1, 0).day;
+      return DateTime(y, m, account.paymentDueDay!.clamp(1, lastDay));
+    } else if (account.hasBillingCycle) {
+      return account.cycleClosingIn(y, m)?.due;
+    }
+    return null;
+  }
+
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
   Future<void> load() async {
@@ -143,6 +173,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _awardedXpLoaded = true;
     _isLoading = false;
     safeNotify();
+    await _ledger.refreshInstallmentHolds();
   }
 
   /// Grants [xp] for [key] at most once (persisted), so unpay/re-pay cycles
@@ -161,6 +192,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _installments = [..._installments, i];
     safeNotify();
     await _storage.saveInstallments(_installments);
+    await _ledger.refreshInstallmentHolds();
   }
 
   Future<void> updateInstallment(Installment i) async {
@@ -169,6 +201,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     ];
     safeNotify();
     await _storage.saveInstallments(_installments);
+    await _ledger.refreshInstallmentHolds();
   }
 
   Future<void> deleteInstallment(String id) async {
@@ -180,6 +213,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _installments = _installments.where((i) => i.id != id).toList();
     safeNotify();
     await _storage.saveInstallments(_installments);
+    await _ledger.refreshInstallmentHolds();
   }
 
   // ─── Mark paid / unpaid ───────────────────────────────────────────────────────
@@ -219,6 +253,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     safeNotify();
+    await _ledger.refreshInstallmentHolds();
   }
 
   /// Reverses this month's payment by deleting the transaction that records it
@@ -233,6 +268,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     if (txn == null) return;
     await _ledger.deleteTransaction(txn.id);
     safeNotify();
+    await _ledger.refreshInstallmentHolds();
   }
 
   // ─── Batch actions ────────────────────────────────────────────────────────────

@@ -44,9 +44,11 @@ class InstallmentListTile extends StatelessWidget {
     final count = presenter.paidCount(installment.id);
     final remaining = presenter.remainingMonths(installment.id);
     final remainingAmt = presenter.remainingAmount(installment.id);
-    final progress = installment.totalMonths > 0
-        ? (count / installment.totalMonths).clamp(0.0, 1.0)
-        : 0.0;
+    final progress = presenter.paymentProgress(installment.id);
+    final dueLabel = presenter.dueLabel(installment);
+    final subtitleText = account != null
+        ? (dueLabel != null ? '${account!.name} · $dueLabel' : account!.name)
+        : dueLabel;
 
     return Semantics(
       label:
@@ -75,9 +77,9 @@ class InstallmentListTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: account != null
+                subtitle: subtitleText != null
                     ? Text(
-                        account!.name,
+                        subtitleText,
                         style: TextStyle(
                           color: colorScheme.onSurfaceVariant,
                           fontSize: 12,

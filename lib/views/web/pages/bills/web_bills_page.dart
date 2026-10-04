@@ -3525,7 +3525,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _totalMonths = e.totalMonths;
       _monthlyManuallyEdited = true;
     } else {
-      final accounts = widget.presenter.accounts;
+      final accounts = widget.presenter.creditAccounts;
       if (accounts.isNotEmpty) _accountId = accounts.first.id;
     }
     _totalController.addListener(_recomputeMonthly);
@@ -3603,7 +3603,12 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final accounts = widget.presenter.accounts;
+    final creditAccounts = widget.presenter.creditAccounts;
+    final accounts = [
+      ...creditAccounts,
+      if (_accountId != null && !creditAccounts.any((a) => a.id == _accountId))
+        ...widget.presenter.accounts.where((a) => a.id == _accountId),
+    ];
     final isEdit = widget.existing != null;
     final isCustomMonths = !_monthPresets.contains(_totalMonths);
 
@@ -3644,7 +3649,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                   )
                 else
                   Text(
-                    'Add an account in the app before creating installments.',
+                    'Add a credit card, credit line, or BNPL account before creating installments.',
                     style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
                   ),
                 const SizedBox(height: WebInsets.md),

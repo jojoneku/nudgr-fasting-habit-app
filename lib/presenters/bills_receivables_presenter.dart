@@ -390,13 +390,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     }
     for (final i in installments.dueThisMonth
         .where((i) => !installments.isPaidForMonth(i.id))) {
+      final due = installments.dueDate(i);
       items.add(ComingUpItem(
         kind: ComingUpKind.installment,
         name: i.name,
         amount: i.monthlyAmount,
         isInflow: false,
-        date: null,
-        dateLabel: 'This month',
+        date: due,
+        dateLabel: due != null
+            ? _comingUpBillLabel(due.difference(today).inDays, due)
+            : 'This month',
         source: i,
       ));
     }

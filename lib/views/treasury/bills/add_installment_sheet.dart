@@ -42,8 +42,19 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   bool _saving = false;
   bool _accountError = false;
 
+  List<FinancialAccount> get _availableAccounts {
+    final credit = widget.presenter.creditAccounts;
+    if (_accountId != null && !credit.any((a) => a.id == _accountId)) {
+      final fallback = widget.presenter.accounts
+          .where((a) => a.id == _accountId)
+          .firstOrNull;
+      if (fallback != null) return [fallback, ...credit];
+    }
+    return credit;
+  }
+
   FinancialAccount? get _selectedAccount {
-    for (final a in widget.presenter.accounts) {
+    for (final a in _availableAccounts) {
       if (a.id == _accountId) return a;
     }
     return null;
@@ -52,7 +63,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   Future<void> _pickAccount() async {
     final choice = await showAccountPicker(
       context,
-      accounts: widget.presenter.accounts,
+      accounts: _availableAccounts,
       selectedId: _accountId,
     );
     if (choice != null) {
@@ -76,8 +87,8 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _totalMonths = e.totalMonths;
       _startMonth = e.startMonth;
       _monthlyManuallyEdited = true;
-    } else if (widget.presenter.accounts.isNotEmpty) {
-      _accountId = widget.presenter.accounts.first.id;
+    } else if (widget.presenter.creditAccounts.isNotEmpty) {
+      _accountId = widget.presenter.creditAccounts.first.id;
     }
     _totalCtrl.addListener(_onTotalChanged);
   }
@@ -179,6 +190,15 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                       fontSize: 12)),
+            )
+          else if (_availableAccounts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 2),
+              child: Text(
+                'No credit accounts found. Add a credit card, credit line, or BNPL account first.',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.error, fontSize: 12),
+              ),
             ),
           const SizedBox(height: 16),
 
