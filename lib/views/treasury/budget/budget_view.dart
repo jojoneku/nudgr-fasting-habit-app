@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/budget/add_budget_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/budget/budget_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/budget/manage_groups_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -47,32 +48,9 @@ class _BudgetViewState extends State<BudgetView> {
   }
 
   Future<void> _pickMonth() async {
-    final selected = widget.presenter.selectedMonth;
-    final now = DateTime.now();
-    // A window around today (12 back → 3 ahead) unioned with every month that
-    // has budget data and the current selection, so no month is unreachable
-    // (the old prev/next stepping had no bound). Newest first.
-    final months = <String>{};
-    for (var i = 3; i >= -12; i--) {
-      months.add(toMonthKey(DateTime(now.year, now.month + i)));
-    }
-    months.addAll(widget.presenter.monthsWithBudgets);
-    months.add(selected);
-    final sorted = months.toList()..sort((a, b) => b.compareTo(a));
-    final options = [
-      for (final key in sorted)
-        AppActionSheetItem<String>(
-          label: monthLabel(key),
-          value: key,
-          isPrimary: key == selected,
-        ),
-    ];
-    final picked = await AppActionSheet.show<String>(
-      context: context,
-      title: 'Jump to month',
-      actions: options,
-    );
-    if (picked != null) widget.presenter.setMonth(picked);
+    final current = widget.presenter.selectedMonth;
+    final picked = await showMonthYearPicker(context, monthKey: current);
+    if (picked != null && picked != current) widget.presenter.setMonth(picked);
   }
 
   @override

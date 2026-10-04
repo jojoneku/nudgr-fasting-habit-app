@@ -13,6 +13,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.dart';
 import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
@@ -1258,6 +1259,11 @@ class _BillsHeader extends StatelessWidget {
 
   const _BillsHeader({required this.monthKey, required this.onMonthChanged});
 
+  Future<void> _openPicker(BuildContext context) async {
+    final selected = await showMonthYearPicker(context, monthKey: monthKey);
+    if (selected != null && selected != monthKey) onMonthChanged(selected);
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -1283,7 +1289,11 @@ class _BillsHeader extends StatelessWidget {
               ),
             ),
           ),
-          MonthYearPill(monthKey: monthKey, onChanged: onMonthChanged),
+          MonthStepperPill(
+            month: monthKey,
+            onTap: () => _openPicker(context),
+            onMonthChanged: onMonthChanged,
+          ),
         ],
       ),
     );
