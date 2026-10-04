@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.88] - 2026-10-04
+
+### Added
+- add purchase date and credit cycle auto-calculation to installments
+
 ## [1.1.87] - 2026-10-04
 
 ### Added
@@ -830,7 +835,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.87...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.88...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -919,3 +924,4 @@ distributed via `manifest.json`.
 [1.1.85]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.85
 [1.1.86]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.86
 [1.1.87]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.87
+[1.1.88]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.88
