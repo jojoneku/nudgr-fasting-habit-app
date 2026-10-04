@@ -15,6 +15,8 @@ import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/spending_calendar.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/transaction_list_tile.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/photo_log_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -609,7 +611,19 @@ class _LedgerControlsRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          _MonthPill(presenter: presenter),
+          MonthStepperPill(
+            month: presenter.selectedMonth,
+            onTap: () async {
+              final picked = await showMonthYearPicker(
+                context,
+                monthKey: presenter.selectedMonth,
+              );
+              if (picked != null && picked != presenter.selectedMonth) {
+                presenter.setMonth(picked);
+              }
+            },
+            onMonthChanged: presenter.setMonth,
+          ),
         ],
       ),
     );
@@ -756,17 +770,13 @@ Future<void> _pickLedgerDay(
 /// Opens the month grid to change the selected month from inside the sheet.
 Future<void> _pickLedgerMonth(
     BuildContext context, LedgerPresenter presenter) async {
-  await showDialog<void>(
-    context: context,
-    builder: (ctx) => Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-      child: _MonthGridPicker(
-        presenter: presenter,
-        onPicked: () => Navigator.of(ctx).pop(),
-      ),
-    ),
+  final picked = await showMonthYearPicker(
+    context,
+    monthKey: presenter.selectedMonth,
   );
+  if (picked != null && picked != presenter.selectedMonth) {
+    presenter.setMonth(picked);
+  }
 }
 
 class _FilterSortSheet extends StatelessWidget {
@@ -1021,254 +1031,6 @@ class _SelectChip extends StatelessWidget {
               Icon(Icons.check_rounded, size: 14, color: cs.primary),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Month / Year Switcher ────────────────────────────────────────────────────
-
-/// A tappable month/year pill (reference, top-right) that opens a month-grid
-/// popover with year navigation — pick any month the way you'd pick a day on the
-/// calendar. Lives on the right of [_LedgerControlsRow], in line with the filter
-/// pill.
-class _MonthPill extends StatefulWidget {
-  final LedgerPresenter presenter;
-
-  const _MonthPill({required this.presenter});
-
-  @override
-  State<_MonthPill> createState() => _MonthPillState();
-}
-
-class _MonthPillState extends State<_MonthPill> {
-  final _pillKey = GlobalKey();
-
-  Future<void> _openPicker() async {
-    HapticFeedback.selectionClick();
-    final box = _pillKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final topOffset = offset.dy + box.size.height + 8;
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.25),
-      builder: (ctx) => _MonthPickerPopover(
-        presenter: widget.presenter,
-        topOffset: topOffset,
-        onDismiss: () => Navigator.of(ctx).pop(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      key: _pillKey,
-      onTap: _openPicker,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.6),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              monthLabel(widget.presenter.selectedMonth),
-              style: TextStyle(
-                color: cs.onSurface,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                color: cs.onSurfaceVariant, size: 16),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Anchored popover: a year header (‹ 2026 ›) + a 3-column grid of the twelve
-/// months. Selecting a month sets it and closes.
-class _MonthPickerPopover extends StatelessWidget {
-  final LedgerPresenter presenter;
-  final double topOffset;
-  final VoidCallback onDismiss;
-
-  const _MonthPickerPopover({
-    required this.presenter,
-    required this.topOffset,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onDismiss,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: GestureDetector(
-          onTap: () {},
-          child: Container(
-            width: 300,
-            margin: EdgeInsets.only(top: topOffset, left: 12, right: 12),
-            child: _MonthGridPicker(presenter: presenter, onPicked: onDismiss),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Year header (‹ 2026 ›) + a 3-column grid of the twelve months. Selecting a
-/// month sets it on the presenter and calls [onPicked]. Reused by the header
-/// popover and the Filter & sort sheet's Month control.
-class _MonthGridPicker extends StatefulWidget {
-  final LedgerPresenter presenter;
-  final VoidCallback onPicked;
-
-  const _MonthGridPicker({required this.presenter, required this.onPicked});
-
-  @override
-  State<_MonthGridPicker> createState() => _MonthGridPickerState();
-}
-
-class _MonthGridPickerState extends State<_MonthGridPicker> {
-  late int _year;
-  late final int _selYear;
-  late final int _selMonth;
-
-  @override
-  void initState() {
-    super.initState();
-    final parts = widget.presenter.selectedMonth.split('-');
-    _selYear = int.parse(parts[0]);
-    _selMonth = int.parse(parts[1]);
-    _year = _selYear;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final now = DateTime.now();
-    return AppCard(
-      variant: AppCardVariant.elevated,
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: IconButton(
-                  icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
-                  tooltip: 'Previous year',
-                  onPressed: () => setState(() => _year--),
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: Text('$_year',
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800)),
-                ),
-              ),
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: IconButton(
-                  icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-                  tooltip: 'Next year',
-                  onPressed: () => setState(() => _year++),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 3,
-            childAspectRatio: 2.2,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            children: [
-              for (var m = 1; m <= 12; m++)
-                _MonthCell(
-                  label: DateFormat('MMM').format(DateTime(_year, m)),
-                  selected: _year == _selYear && m == _selMonth,
-                  isCurrent: _year == now.year && m == now.month,
-                  onTap: () {
-                    widget.presenter
-                        .setMonth('$_year-${m.toString().padLeft(2, '0')}');
-                    widget.onPicked();
-                  },
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MonthCell extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final bool isCurrent;
-  final VoidCallback onTap;
-
-  const _MonthCell({
-    required this.label,
-    required this.selected,
-    required this.isCurrent,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.15)
-              : cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected
-                ? cs.primary
-                : (isCurrent
-                    ? cs.primary.withValues(alpha: 0.5)
-                    : cs.outlineVariant.withValues(alpha: 0.5)),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            color: selected ? cs.primary : cs.onSurface,
-          ),
         ),
       ),
     );
