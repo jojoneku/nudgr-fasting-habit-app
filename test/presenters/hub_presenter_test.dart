@@ -153,4 +153,57 @@ void main() {
     expect(p.isCompact(HubCardType.quests), isFalse);
     p.dispose();
   });
+
+  test('setCardVisibility notifies listeners even when card order is unchanged',
+      () async {
+    final p = build();
+    await p.restored;
+
+    var notifiedCount = 0;
+    p.addListener(() => notifiedCount++);
+
+    // Setting to compact keeps the same card order but changes density
+    p.setCardVisibility(HubCardType.fasting, HubCardVisibility.compact);
+    expect(notifiedCount, 1);
+    expect(p.visibilityOf(HubCardType.fasting), HubCardVisibility.compact);
+
+    // Setting to expanded keeps the same card order but changes density
+    p.setCardVisibility(HubCardType.fasting, HubCardVisibility.expanded);
+    expect(notifiedCount, 2);
+    expect(p.visibilityOf(HubCardType.fasting), HubCardVisibility.expanded);
+
+    // Setting to the same visibility does not trigger unnecessary notification
+    p.setCardVisibility(HubCardType.fasting, HubCardVisibility.expanded);
+    expect(notifiedCount, 2);
+
+    // Setting back to auto notifies
+    p.setCardVisibility(HubCardType.fasting, HubCardVisibility.auto);
+    expect(notifiedCount, 3);
+    expect(p.visibilityOf(HubCardType.fasting), HubCardVisibility.auto);
+
+    p.dispose();
+  });
+
+  test('setSmartSortEnabled and resetToDefaultLayout notify listeners',
+      () async {
+    final p = build();
+    await p.restored;
+
+    var notifiedCount = 0;
+    p.addListener(() => notifiedCount++);
+
+    p.setSmartSortEnabled(false);
+    expect(notifiedCount, 1);
+    expect(p.isSmartSortEnabled, isFalse);
+
+    // Same value is no-op
+    p.setSmartSortEnabled(false);
+    expect(notifiedCount, 1);
+
+    p.resetToDefaultLayout();
+    expect(notifiedCount, 2);
+    expect(p.isSmartSortEnabled, isTrue);
+
+    p.dispose();
+  });
 }
