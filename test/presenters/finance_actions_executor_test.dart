@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/model_date_guard.dart';
 import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
@@ -92,6 +93,24 @@ void main() {
   });
 
   group('proposals', () {
+    test('a month the model slipped back to its training year is rebased',
+        () async {
+      final now = DateTime.now();
+      final mm = now.month.toString().padLeft(2, '0');
+
+      unawaited(executor.propose(call('addBill', {
+        'name': 'Internet',
+        'amount': 999,
+        'dueDay': 24,
+        'month': '${now.year - 2}-$mm',
+      })));
+      await Future<void>.delayed(Duration.zero);
+
+      final month =
+          executor.pending!.details.firstWhere((d) => d.label == 'Month').value;
+      expect(month, '${now.year}-$mm');
+    });
+
     test('proposing parks the action and writes nothing', () async {
       // Not awaited: the future only completes when the user answers.
       unawaited(executor.propose(call(
@@ -459,6 +478,18 @@ void main() {
       expect(result.summary, contains('Groceries'));
       expect(result.summary, contains('[reimbursable, owed by Acme]'));
       expect(result.summary, isNot(contains('Grab')));
+    });
+
+    test('a search before the ledger begins is read as a year slip', () async {
+      final ex = await withLedger();
+
+      // "Grab in March" with the model's year two years back.
+      final result = await ex.runRead(
+          call('findTransactions', {'month': '2024-03', 'query': 'grab'}));
+
+      final rebased = rebaseStaleMonthKey('2024-03', DateTime.now());
+      expect(rebased, isNot('2024-03'));
+      expect(result.summary, contains('searched $rebased instead'));
     });
 
     test('rows carry no ids, since nothing can edit a transaction', () async {

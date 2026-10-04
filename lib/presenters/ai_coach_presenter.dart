@@ -1426,6 +1426,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
     return AiCoachContext(
       entryPoint: _entryPoint,
+      today: isAdvisor ? DateTime.now() : null,
       imageBytes: isAdvisor ? image : null,
       imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
       // Absent on finance-only surfaces (web): report "not fasting" rather than

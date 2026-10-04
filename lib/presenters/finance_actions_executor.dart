@@ -11,6 +11,7 @@ import '../models/finance/extracted_entry.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
 import '../utils/finance_entry_extraction.dart';
+import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
 import 'finance_tool_executor.dart';
@@ -137,13 +138,54 @@ class FinanceActionsExecutor extends ChangeNotifier
     final categoryQuery = _str(i['category']).toLowerCase();
     final accountQuery = _str(i['account']).toLowerCase();
     final type = _str(i['type']);
-    final from = DateTime.tryParse(_str(i['from']));
-    final to = DateTime.tryParse(_str(i['to']));
+    var from = DateTime.tryParse(_str(i['from']));
+    var to = DateTime.tryParse(_str(i['to']));
+    var askedMonth = _str(i['month']);
+
+    // A period that ends before the first transaction ever logged can only be
+    // the model's year slipping ("2024-09" for this September), so rebase it
+    // rather than report an empty month the user knows is full. A period that
+    // overlaps real history is a genuine look back and is left alone.
+    final now = DateTime.now();
+    String? rebasedNote;
+    final earliest = ledger.allTransactions.isEmpty
+        ? null
+        : ledger.allTransactions
+            .map((t) => DateTime(t.date.year, t.date.month, t.date.day))
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+    if (earliest != null) {
+      final earliestMonth = _day(earliest).substring(0, 7);
+      if (askedMonth.isNotEmpty && askedMonth.compareTo(earliestMonth) < 0) {
+        final rebased = rebaseStaleMonthKey(askedMonth, now);
+        if (rebased != askedMonth) {
+          rebasedNote = 'Asked for $askedMonth, before the ledger begins; '
+              'searched $rebased instead.';
+          askedMonth = rebased;
+        }
+      }
+      final end = to ?? from;
+      if (end != null && end.isBefore(earliest)) {
+        final f = from == null ? null : rebaseStaleDate(from, now);
+        final t = to == null ? null : rebaseStaleDate(to, now);
+        if (f != from || t != to) {
+          rebasedNote = 'Asked for dates before the ledger begins; searched '
+              '${f == null ? 'the start' : _day(f)} to '
+              '${t == null ? 'today' : _day(t)} instead.';
+          from = f;
+          to = t;
+        }
+      }
+    }
+
+    // Final copies: the filter closure below cannot promote a captured var.
+    final rangeFrom = from;
+    final rangeTo = to;
+
     // A query with no dates means "find it wherever it is"; nothing at all
     // means "this month", the same default every other find tool uses.
-    final month = _str(i['month']).isNotEmpty
-        ? _str(i['month'])
-        : (query.isEmpty && from == null && to == null)
+    final month = askedMonth.isNotEmpty
+        ? askedMonth
+        : (query.isEmpty && rangeFrom == null && rangeTo == null)
             ? _bills.selectedMonth
             : null;
     // Not [_int]: that falls back to 1, and a missing limit means the default.
@@ -162,9 +204,9 @@ class FinanceActionsExecutor extends ChangeNotifier
     final matched = ledger.allTransactions.where((t) {
       if (isTransfer(t) && t.type == TransactionType.inflow) return false;
       final day = DateTime(t.date.year, t.date.month, t.date.day);
-      if (from != null || to != null) {
-        if (from != null && day.isBefore(from)) return false;
-        if (to != null && day.isAfter(to)) return false;
+      if (rangeFrom != null || rangeTo != null) {
+        if (rangeFrom != null && day.isBefore(rangeFrom)) return false;
+        if (rangeTo != null && day.isAfter(rangeTo)) return false;
       } else if (month != null && t.month != month) {
         return false;
       }
@@ -197,15 +239,16 @@ class FinanceActionsExecutor extends ChangeNotifier
     }).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
-    final scope = from != null || to != null
-        ? '${from == null ? 'the start' : _day(from)} to '
-            '${to == null ? 'today' : _day(to)}'
+    final scope = rangeFrom != null || rangeTo != null
+        ? '${rangeFrom == null ? 'the start' : _day(rangeFrom)} to '
+            '${rangeTo == null ? 'today' : _day(rangeTo)}'
         : month ?? 'all history';
     if (matched.isEmpty) {
       return AiToolResult(
         toolUseId: call.id,
         ok: true,
-        summary: 'No transactions matched in $scope. Do not invent any — say '
+        summary: '${rebasedNote == null ? '' : '$rebasedNote '}'
+            'No transactions matched in $scope. Do not invent any — say '
             'you could not find them, and offer a wider search.',
       );
     }
@@ -248,7 +291,8 @@ class FinanceActionsExecutor extends ChangeNotifier
     return AiToolResult(
       toolUseId: call.id,
       ok: true,
-      summary: '${matched.length} transactions in $scope. '
+      summary: '${rebasedNote == null ? '' : '$rebasedNote '}'
+          '${matched.length} transactions in $scope. '
           'Spent ${_peso(spent)}, received ${_peso(received)} '
           '(transfers between the user\'s own accounts excluded from both). '
           '$shown\n${rows.join('\n')}',
@@ -390,8 +434,11 @@ class FinanceActionsExecutor extends ChangeNotifier
     final lines = <String>[];
     for (final e in entries) {
       final gaps = e.missing.map((f) => f.label.toLowerCase()).join(', ');
+      // The date is echoed so the model reports the day the card actually
+      // holds, not the one it asked for.
       lines.add('- ${e.txn.description.isEmpty ? "entry" : e.txn.description} '
           '${_peso(e.txn.amount ?? 0)}'
+          '${e.txn.date == null ? ' (today)' : ' (${_day(e.txn.date!)})'}'
           '${gaps.isEmpty ? "" : " — still needs: $gaps"}');
     }
     final needsInput = entries.any((e) => e.missing.isNotEmpty);
@@ -547,10 +594,13 @@ class FinanceActionsExecutor extends ChangeNotifier
     return '';
   }
 
+  /// The month a proposal lands in. A year the model slipped back to its own
+  /// training year ("2024-09" for this September) is rebased, or the bill
+  /// would be created in a month nobody will ever scroll back to.
   String _month(Map<String, Object?> input) {
     final given = _str(input['month']);
     return RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
-        ? given
+        ? rebaseStaleMonthKey(given, DateTime.now())
         : _bills.selectedMonth;
   }
 
