@@ -53,10 +53,12 @@ class InstallmentListTile extends StatelessWidget {
     final deferralLabel = installment.deferralMonths > 0
         ? 'Deferred ${installment.deferralMonths} ${installment.deferralMonths == 1 ? 'mo' : 'mos'}'
         : null;
+    final interestLabel = presenter.interestLabel(installment);
     final details = [
       if (account != null) account!.name,
       if (dateLabel != null) dateLabel,
       if (deferralLabel != null) deferralLabel,
+      if (interestLabel != null) interestLabel,
       if (dueLabel != null) dueLabel,
     ];
     final subtitleText = details.isNotEmpty ? details.join(' · ') : null;

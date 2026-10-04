@@ -42,6 +42,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   String _startMonth = toMonthKey(DateTime.now());
   DateTime _purchaseDate = DateTime.now();
   int _deferralMonths = 0;
+  double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
   bool _startMonthManuallyEdited = false;
   bool _saving = false;
@@ -121,11 +122,13 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           DateTime.tryParse('${e.startMonth}-01') ??
           DateTime.now();
       _deferralMonths = e.deferralMonths;
+      _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
       _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
+      _interestRate = 0.0;
       if (widget.presenter.creditAccounts.isNotEmpty) {
         _accountId = widget.presenter.creditAccounts.first.id;
       }
@@ -138,13 +141,26 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     if (_monthlyManuallyEdited) return;
     final total = double.tryParse(_totalCtrl.text);
     if (total != null && _totalMonths > 0) {
-      _monthlyCtrl.text = (total / _totalMonths).toStringAsFixed(2);
+      final monthly = Installment.computeMonthlyAmount(
+        principal: total,
+        months: _totalMonths,
+        monthlyRate: _interestRate,
+      );
+      _monthlyCtrl.text = monthly.toStringAsFixed(2);
     }
   }
 
   void _onMonthsChanged(int months) {
     setState(() {
       _totalMonths = months;
+      _monthlyManuallyEdited = false;
+    });
+    _onTotalChanged();
+  }
+
+  void _onInterestRateChanged(double rate) {
+    setState(() {
+      _interestRate = rate;
       _monthlyManuallyEdited = false;
     });
     _onTotalChanged();
@@ -182,6 +198,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       startMonth: _startMonth,
       purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
+      interestRate: _interestRate,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       isActive: e?.isActive ?? true,
     );
@@ -241,6 +258,44 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInterestSummary(BuildContext context) {
+    final total = double.tryParse(_totalCtrl.text) ?? 0.0;
+    final monthlyInterest = total * (_interestRate / 100.0);
+    final totalInterest = monthlyInterest * _totalMonths;
+    final totalPayable = total + totalInterest;
+    final cs = Theme.of(context).colorScheme;
+
+    final rateLabel = _interestRate == _interestRate.roundToDouble()
+        ? '${_interestRate.round()}%'
+        : '${_interestRate.toStringAsFixed(2)}%';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.percent, size: 16, color: cs.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Interest: ${formatPeso(totalInterest)} ($rateLabel/mo) · Total payable: ${formatPeso(totalPayable)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurfaceVariant,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -342,6 +397,18 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             selected: _totalMonths,
             onChanged: _onMonthsChanged,
           ),
+          const SizedBox(height: 16),
+
+          // Monthly Interest Rate (optional)
+          const _FieldLabel('Monthly Interest Rate (optional)'),
+          _InterestRateSelector(
+            selected: _interestRate,
+            onChanged: _onInterestRateChanged,
+          ),
+          if (_interestRate > 0) ...[
+            const SizedBox(height: 8),
+            _buildInterestSummary(context),
+          ],
           const SizedBox(height: 16),
 
           // Monthly payment (auto-computed, editable) + start month, side by side.
@@ -695,6 +762,119 @@ class _DeferralSelector extends StatelessWidget {
             onTap: () => onChanged(m),
           ),
       ],
+    );
+  }
+}
+
+class _InterestRateSelector extends StatelessWidget {
+  final double selected;
+  final ValueChanged<double> onChanged;
+
+  static const _presets = [0.0, 0.5, 1.0, 1.5, 2.0];
+
+  const _InterestRateSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isCustom = !_presets.contains(selected);
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final r in _presets) ...[
+            _MonthChip(
+              label: r == 0
+                  ? '0% (Promo)'
+                  : '${r == r.roundToDouble() ? r.round() : r}%',
+              selected: selected == r,
+              onTap: () => onChanged(r),
+            ),
+            const SizedBox(width: 8),
+          ],
+          _CustomRateField(
+            selected: isCustom ? selected : null,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomRateField extends StatefulWidget {
+  final double? selected;
+  final ValueChanged<double> onChanged;
+
+  const _CustomRateField({this.selected, required this.onChanged});
+
+  @override
+  State<_CustomRateField> createState() => _CustomRateFieldState();
+}
+
+class _CustomRateFieldState extends State<_CustomRateField> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selected != null) {
+      final s = widget.selected!;
+      _ctrl.text = s == s.roundToDouble() ? '${s.round()}' : '$s';
+    }
+  }
+
+  @override
+  void didUpdateWidget(_CustomRateField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selected == null && oldWidget.selected != null) {
+      _ctrl.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final active = widget.selected != null;
+    return Container(
+      width: 88,
+      decoration: BoxDecoration(
+        color: active
+            ? cs.primary.withValues(alpha: 0.15)
+            : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? cs.primary : cs.outlineVariant),
+      ),
+      child: TextField(
+        controller: _ctrl,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: active ? cs.primary : cs.onSurface,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          fontSize: 13,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          border: InputBorder.none,
+          hintText: 'Custom %',
+          hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+        ),
+        onChanged: (v) {
+          final parsed = double.tryParse(v);
+          if (parsed != null && parsed >= 0) widget.onChanged(parsed);
+        },
+      ),
     );
   }
 }
