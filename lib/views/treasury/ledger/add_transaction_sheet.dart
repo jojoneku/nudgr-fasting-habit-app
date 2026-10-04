@@ -345,6 +345,81 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     });
   }
 
+  Future<void> _quickAddAccount([ValueChanged<String?>? onCreated]) async {
+    final nameCtrl = TextEditingController();
+    var category = AccountCategory.bank;
+    final created = await showDialog<FinancialAccount>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Add Account'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Account Name',
+                  hintText: 'e.g. BDO Savings, Cash, Maya',
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<AccountCategory>(
+                initialValue: category,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: const [
+                  DropdownMenuItem(
+                      value: AccountCategory.bank, child: Text('Bank')),
+                  DropdownMenuItem(
+                      value: AccountCategory.ewallet, child: Text('E-Wallet')),
+                  DropdownMenuItem(
+                      value: AccountCategory.cash, child: Text('Cash')),
+                  DropdownMenuItem(
+                      value: AccountCategory.creditCard,
+                      child: Text('Credit Card')),
+                  DropdownMenuItem(
+                      value: AccountCategory.savings, child: Text('Savings')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setDialogState(() => category = v);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                final acc = await widget.presenter.createQuickAccount(
+                  name: name,
+                  category: category,
+                );
+                if (ctx.mounted) Navigator.pop(ctx, acc);
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (created != null && mounted) {
+      setState(() {
+        _syncFromPresenter();
+        if (onCreated != null) {
+          onCreated(created.id);
+        } else {
+          _selectedAccountId = created.id;
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
@@ -382,6 +457,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       label: 'From Account',
                       value: _selectedAccountId,
                       onChanged: (v) => setState(() => _selectedAccountId = v),
+                      onAddAccount: () => _quickAddAccount(
+                          (id) => setState(() => _selectedAccountId = id)),
                     ),
                     const SizedBox(height: 12),
                     _AccountDropdown(
@@ -390,6 +467,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       value: _transferToAccountId,
                       onChanged: (v) =>
                           setState(() => _transferToAccountId = v),
+                      onAddAccount: () => _quickAddAccount(
+                          (id) => setState(() => _transferToAccountId = id)),
                     ),
                     const SizedBox(height: 12),
                     _PaidForSomeoneHint(
@@ -419,6 +498,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             value: _selectedAccountId,
                             onChanged: (v) =>
                                 setState(() => _selectedAccountId = v),
+                            onAddAccount: () => _quickAddAccount((id) =>
+                                setState(() => _selectedAccountId = id)),
                           ),
                         ),
                       ],
@@ -752,12 +833,14 @@ class _AccountDropdown extends StatelessWidget {
   final String label;
   final String? value;
   final ValueChanged<String?> onChanged;
+  final VoidCallback? onAddAccount;
 
   const _AccountDropdown({
     required this.accounts,
     required this.label,
     required this.value,
     required this.onChanged,
+    this.onAddAccount,
   });
 
   @override
@@ -781,6 +864,7 @@ class _AccountDropdown extends StatelessWidget {
               context,
               accounts: accounts,
               selectedId: value,
+              onAddAccount: onAddAccount,
             );
             if (choice != null) onChanged(choice.id);
           },

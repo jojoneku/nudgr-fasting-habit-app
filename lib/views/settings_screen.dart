@@ -332,6 +332,7 @@ class SettingsScreen extends StatelessWidget {
         HubHeroSlot.food => Icons.restaurant,
         HubHeroSlot.move => Icons.directions_run,
         HubHeroSlot.macros => Icons.egg_alt_outlined,
+        HubHeroSlot.finance => Icons.account_balance_wallet_outlined,
       };
 
   static String _heroSlotLabel(HubHeroSlot slot) => switch (slot) {
@@ -339,6 +340,7 @@ class SettingsScreen extends StatelessWidget {
         HubHeroSlot.food => 'Food',
         HubHeroSlot.move => 'Move',
         HubHeroSlot.macros => 'Macros',
+        HubHeroSlot.finance => 'Budget',
       };
 
   AppGroupedListSection _cloudAiSection(BuildContext context) {

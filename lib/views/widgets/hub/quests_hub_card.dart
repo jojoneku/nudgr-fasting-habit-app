@@ -13,6 +13,7 @@ class QuestsHubCard extends StatelessWidget {
     required this.quests,
     required this.onNavigate,
     required this.onCompleteQuest,
+    this.isCompact = false,
   });
 
   final QuestPresenter quests;
@@ -20,13 +21,75 @@ class QuestsHubCard extends StatelessWidget {
 
   /// Completes a specific surfaced quest (per-row check action).
   final void Function(Quest quest) onCompleteQuest;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: quests,
       builder: (context, _) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
         final isActive = quests.hasUrgentQuest;
+
+        if (isCompact) {
+          final total = quests.todayActiveQuests.length;
+          final completed = quests.todayCompletedQuests.length;
+          final subtitle = total > 0
+              ? '$completed of ${completed + total} completed'
+              : 'All daily quests done';
+          return AppCard(
+            onTap: onNavigate,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: cs.secondary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    isActive
+                        ? Icons.assignment_late
+                        : Icons.assignment_outlined,
+                    size: 18,
+                    color: cs.secondary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Quests',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  AppBadge(
+                    text: 'URGENT',
+                    color: context.appColors.orange,
+                  ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
+              ],
+            ),
+          );
+        }
+
         return AppCard(
           onTap: onNavigate,
           padding: const EdgeInsets.symmetric(

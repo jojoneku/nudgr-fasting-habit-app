@@ -190,6 +190,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       fasting: _fastingPresenter,
       quests: _questPresenter,
       treasury: _treasuryPresenter,
+      nutrition: _nutritionPresenter,
+      activity: _activityPresenter,
     );
     _onboardingPresenter = OnboardingPresenter(
       storage: _storage,

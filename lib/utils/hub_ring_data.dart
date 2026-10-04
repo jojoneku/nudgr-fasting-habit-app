@@ -160,4 +160,39 @@ class HubRings {
       glyph: Icons.directions_run,
     );
   }
+
+  /// Finance ring — monthly spending against the monthly budget.
+  static HubRingData finance({
+    required double spent,
+    required double budget,
+  }) {
+    if (budget <= 0) {
+      return const HubRingData(
+        value: 0,
+        state: HubRingState.idle,
+        caption: 'Budget',
+        glyph: Icons.account_balance_wallet_outlined,
+      );
+    }
+    final remaining = budget - spent;
+    if (remaining < 0) {
+      return HubRingData(
+        value: 1,
+        state: HubRingState.over,
+        caption: 'Over budget',
+        centerValue: '+${_grouped.format((-remaining).round())}',
+        centerLabel: 'OVER',
+        glyph: Icons.account_balance_wallet_outlined,
+      );
+    }
+    final progress = spent / budget;
+    return HubRingData(
+      value: progress.clamp(0.0, 1.0),
+      state: HubRingState.active,
+      caption: '${_pct(progress)} used',
+      centerValue: _grouped.format(remaining.round()),
+      centerLabel: 'LEFT',
+      glyph: Icons.account_balance_wallet_outlined,
+    );
+  }
 }

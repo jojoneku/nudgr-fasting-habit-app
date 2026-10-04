@@ -12,27 +12,89 @@ class ActivityHubCard extends StatelessWidget {
     super.key,
     required this.activity,
     required this.onNavigate,
+    this.isCompact = false,
   });
 
   final ActivityPresenter activity;
   final VoidCallback onNavigate;
+  final bool isCompact;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: activity,
-      builder: (context, _) => AppCard(
-        onTap: onNavigate,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.lg,
-        ),
-        header: const HubCardHeader(
-          icon: Icons.directions_run_outlined,
-          title: 'Activity',
-        ),
-        child: _Snapshot(activity: activity),
-      ),
+      builder: (context, _) {
+        final theme = Theme.of(context);
+        final cs = theme.colorScheme;
+        final steps = activity.todaySteps;
+        final goal = activity.goals.dailyStepGoal;
+
+        if (isCompact) {
+          final subtitle = steps > 0
+              ? '${NumberFormat('#,###').format(steps)} / ${NumberFormat('#,###').format(goal)} steps'
+              : 'No steps recorded today';
+          return AppCard(
+            onTap: onNavigate,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: context.appColors.move.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.directions_run_outlined,
+                      size: 18, color: context.appColors.move),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Activity',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (steps > 0)
+                  Text(
+                    '${((steps / (goal > 0 ? goal : 1)) * 100).round()}%',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Icon(Icons.chevron_right, size: 18, color: cs.onSurfaceVariant),
+              ],
+            ),
+          );
+        }
+
+        return AppCard(
+          onTap: onNavigate,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
+          header: const HubCardHeader(
+            icon: Icons.directions_run_outlined,
+            title: 'Activity',
+          ),
+          child: _Snapshot(activity: activity),
+        );
+      },
     );
   }
 }

@@ -1261,10 +1261,17 @@ class _BillsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final canPop = Navigator.canPop(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 8, 12, 4),
       child: Row(
         children: [
+          if (canPop)
+            IconButton(
+              icon: const Icon(Icons.arrow_back),
+              tooltip: 'Back',
+              onPressed: () => Navigator.maybePop(context),
+            ),
           Expanded(
             child: Text(
               'Bills',
