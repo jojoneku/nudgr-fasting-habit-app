@@ -14,6 +14,7 @@ class Installment {
   final int totalMonths; // total number of payments
   final String startMonth; // 'YYYY-MM' — first payment month
   final DateTime? purchaseDate; // date the installment purchase was made
+  final int deferralMonths; // months first payment is deferred (0 = none)
   final String? note;
   final bool isActive; // false = cancelled early
   final DateTime updatedAt;
@@ -27,6 +28,7 @@ class Installment {
     required this.totalMonths,
     required this.startMonth,
     this.purchaseDate,
+    this.deferralMonths = 0,
     this.note,
     this.isActive = true,
     DateTime? updatedAt,
@@ -88,6 +90,7 @@ class Installment {
       purchaseDate: json['purchaseDate'] != null
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
+      deferralMonths: json['deferralMonths'] as int? ?? 0,
       note: json['note'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
@@ -105,6 +108,7 @@ class Installment {
         'startMonth': startMonth,
         if (purchaseDate != null)
           'purchaseDate': purchaseDate!.toIso8601String(),
+        if (deferralMonths > 0) 'deferralMonths': deferralMonths,
         'note': note,
         'isActive': isActive,
         'updatedAt': updatedAt.toIso8601String(),
@@ -118,6 +122,7 @@ class Installment {
     int? totalMonths,
     String? startMonth,
     DateTime? purchaseDate,
+    int? deferralMonths,
     String? note,
     bool? isActive,
     DateTime? updatedAt,
@@ -131,6 +136,7 @@ class Installment {
       totalMonths: totalMonths ?? this.totalMonths,
       startMonth: startMonth ?? this.startMonth,
       purchaseDate: purchaseDate ?? this.purchaseDate,
+      deferralMonths: deferralMonths ?? this.deferralMonths,
       note: note ?? this.note,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,

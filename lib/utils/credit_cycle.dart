@@ -274,7 +274,7 @@ class CreditStatementProgress {
 // ─── Installment cycle calculation ──────────────────────────────────────────
 
 /// Computes the first payment month ('YYYY-MM') for an installment purchased on
-/// [purchaseDate] against [account].
+/// [purchaseDate] against [account], optionally deferred by [deferralMonths].
 ///
 /// If [account] has a billing cycle ([FinancialAccount.hasBillingCycle]):
 /// - Resolves the cycle containing [purchaseDate] via [account.cycleContaining].
@@ -283,41 +283,70 @@ class CreditStatementProgress {
 /// - If [purchaseDate] is after [account.statementDay], it rolls over to the next
 ///   month's statement and its `dueMonthKey`.
 ///
-/// If [account] has no billing cycle (or is null), defaults to `toMonthKey(purchaseDate)`.
+/// If [deferralMonths] > 0, the first payment month is shifted forward by that
+/// many months from the statement due month.
+///
+/// If [account] has no billing cycle (or is null), defaults to `toMonthKey(purchaseDate)`,
+/// shifted forward by [deferralMonths].
 String calculateInstallmentStartMonth(
   FinancialAccount? account,
-  DateTime purchaseDate,
-) {
+  DateTime purchaseDate, {
+  int deferralMonths = 0,
+}) {
+  String baseMonth = toMonthKey(purchaseDate);
   if (account != null && account.hasBillingCycle) {
     final cycle = account.cycleContaining(purchaseDate);
     if (cycle != null) {
-      return cycle.dueMonthKey;
+      baseMonth = cycle.dueMonthKey;
     }
   }
-  return toMonthKey(purchaseDate);
+  if (deferralMonths > 0) {
+    final date = DateTime.parse('$baseMonth-01');
+    final shifted = DateTime(date.year, date.month + deferralMonths);
+    return '${shifted.year}-${shifted.month.toString().padLeft(2, '0')}';
+  }
+  return baseMonth;
 }
 
 /// A short descriptive note explaining which billing cycle statement an installment
 /// purchased on [purchaseDate] falls on and when its first payment is due.
+/// If [deferralMonths] > 0, notes the deferral period.
 ///
-/// Returns null if [account] is null or does not have a billing cycle.
+/// Returns null if [account] is null or does not have a billing cycle (unless [deferralMonths] > 0).
 String? installmentCycleExplanation(
   FinancialAccount? account,
-  DateTime purchaseDate,
-) {
-  if (account == null || !account.hasBillingCycle) return null;
+  DateTime purchaseDate, {
+  int deferralMonths = 0,
+}) {
+  if (account == null || !account.hasBillingCycle) {
+    if (deferralMonths > 0) {
+      final baseDate =
+          DateTime(purchaseDate.year, purchaseDate.month + deferralMonths);
+      final dueFmt = DateFormat('MMM yyyy').format(baseDate);
+      return 'First payment deferred by $deferralMonths ${deferralMonths == 1 ? 'month' : 'months'} · Due in $dueFmt';
+    }
+    return null;
+  }
   final cycle = account.cycleContaining(purchaseDate);
   if (cycle == null) return null;
   final stmtDay = account.statementDay!;
   final isAfterCutoff = purchaseDate.day > stmtDay;
   final closeFmt = DateFormat('MMM d').format(cycle.close);
-  final dueFmt = DateFormat('MMM yyyy').format(cycle.due);
   final cutoffFmt =
       monthDayLabel(DateTime(purchaseDate.year, purchaseDate.month, stmtDay));
 
-  if (isAfterCutoff) {
-    return 'Purchased after $cutoffFmt cut-off → Charged on $closeFmt statement · Due in $dueFmt';
-  } else {
-    return 'Purchased before $cutoffFmt cut-off → Charged on $closeFmt statement · Due in $dueFmt';
+  final effectiveDue = deferralMonths > 0
+      ? DateTime(
+          cycle.due.year, cycle.due.month + deferralMonths, cycle.due.day)
+      : cycle.due;
+  final dueFmt = DateFormat('MMM yyyy').format(effectiveDue);
+
+  final cutoffPhrase = isAfterCutoff
+      ? 'Purchased after $cutoffFmt cut-off → Charged on $closeFmt statement'
+      : 'Purchased before $cutoffFmt cut-off → Charged on $closeFmt statement';
+
+  if (deferralMonths > 0) {
+    return '$cutoffPhrase · Deferred $deferralMonths ${deferralMonths == 1 ? 'mo' : 'mos'} · Due in $dueFmt';
   }
+  return '$cutoffPhrase · Due in $dueFmt';
 }

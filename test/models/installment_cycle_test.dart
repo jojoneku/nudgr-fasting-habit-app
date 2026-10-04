@@ -4,8 +4,10 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 
 void main() {
-  group('Installment model purchaseDate', () {
-    test('serializes and deserializes purchaseDate correctly', () {
+  group('Installment model purchaseDate and deferralMonths', () {
+    test(
+        'serializes and deserializes purchaseDate and deferralMonths correctly',
+        () {
       final purchaseDate = DateTime(2026, 10, 25);
       final installment = Installment(
         id: 'inst-101',
@@ -14,21 +16,25 @@ void main() {
         totalAmount: 72000,
         monthlyAmount: 3000,
         totalMonths: 24,
-        startMonth: '2026-12',
+        startMonth: '2027-02',
         purchaseDate: purchaseDate,
-        note: '24 months 0% interest',
+        deferralMonths: 2,
+        note: '24 months 0% interest, deferred 2 months',
       );
 
       final json = installment.toJson();
       expect(json['purchaseDate'], purchaseDate.toIso8601String());
+      expect(json['deferralMonths'], 2);
 
       final roundTrip = Installment.fromJson(json);
       expect(roundTrip.purchaseDate, purchaseDate);
+      expect(roundTrip.deferralMonths, 2);
       expect(roundTrip.name, 'iPhone 18 Pro');
-      expect(roundTrip.startMonth, '2026-12');
+      expect(roundTrip.startMonth, '2027-02');
     });
 
-    test('backward compatibility: legacy JSON without purchaseDate is null',
+    test(
+        'backward compatibility: legacy JSON without purchaseDate is null and deferralMonths is 0',
         () {
       final legacyJson = {
         'id': 'legacy-1',
@@ -43,10 +49,11 @@ void main() {
 
       final parsed = Installment.fromJson(legacyJson);
       expect(parsed.purchaseDate, isNull);
+      expect(parsed.deferralMonths, 0);
       expect(parsed.name, 'MacBook Pro');
     });
 
-    test('copyWith preserves and updates purchaseDate', () {
+    test('copyWith preserves and updates deferralMonths', () {
       final original = Installment(
         id: 'inst-1',
         name: 'Desk',
@@ -56,15 +63,15 @@ void main() {
         totalMonths: 12,
         startMonth: '2026-02',
         purchaseDate: DateTime(2026, 1, 15),
+        deferralMonths: 1,
       );
 
-      final updatedDate = DateTime(2026, 1, 28);
-      final modified = original.copyWith(purchaseDate: updatedDate);
-      expect(modified.purchaseDate, updatedDate);
-      expect(modified.id, original.id);
+      final modified = original.copyWith(deferralMonths: 3);
+      expect(modified.deferralMonths, 3);
+      expect(modified.purchaseDate, DateTime(2026, 1, 15));
 
       final preserved = original.copyWith(name: 'Standing Desk');
-      expect(preserved.purchaseDate, DateTime(2026, 1, 15));
+      expect(preserved.deferralMonths, 1);
       expect(preserved.name, 'Standing Desk');
     });
   });
@@ -153,17 +160,71 @@ void main() {
           '2026-12');
     });
 
-    test('account without billing cycle falls back to purchase month', () {
-      final purchaseDate = DateTime(2026, 10, 25);
-      final startMonth =
-          calculateInstallmentStartMonth(cashAccount, purchaseDate);
-      expect(startMonth, '2026-10');
+    test('deferred payment shifts start month by 1, 2, or 3 months', () {
+      // Oct 21 purchase on BPI Visa: normally due Dec 2026 ('2026-12').
+      final purchaseDate = DateTime(2026, 10, 21);
+
+      // Deferral 1 month -> due Jan 2027 ('2027-01')
+      expect(
+        calculateInstallmentStartMonth(bpiCard, purchaseDate,
+            deferralMonths: 1),
+        '2027-01',
+      );
+
+      // Deferral 2 months -> due Feb 2027 ('2027-02')
+      expect(
+        calculateInstallmentStartMonth(bpiCard, purchaseDate,
+            deferralMonths: 2),
+        '2027-02',
+      );
+
+      // Deferral 3 months -> due Mar 2027 ('2027-03')
+      expect(
+        calculateInstallmentStartMonth(bpiCard, purchaseDate,
+            deferralMonths: 3),
+        '2027-03',
+      );
     });
 
-    test('null account falls back to purchase month', () {
+    test('deferred payment across year boundaries computes correct start month',
+        () {
+      // Purchase Oct 15: normally due Nov 2026 ('2026-11').
+      final purchaseDate = DateTime(2026, 10, 15);
+
+      // Deferral 2 months -> Jan 2027
+      expect(
+        calculateInstallmentStartMonth(bpiCard, purchaseDate,
+            deferralMonths: 2),
+        '2027-01',
+      );
+
+      // Deferral 3 months -> Feb 2027
+      expect(
+        calculateInstallmentStartMonth(bpiCard, purchaseDate,
+            deferralMonths: 3),
+        '2027-02',
+      );
+    });
+
+    test('account without billing cycle shifts from purchase month', () {
+      final purchaseDate = DateTime(2026, 10, 25);
+      expect(
+        calculateInstallmentStartMonth(cashAccount, purchaseDate),
+        '2026-10',
+      );
+      expect(
+        calculateInstallmentStartMonth(cashAccount, purchaseDate,
+            deferralMonths: 2),
+        '2026-12',
+      );
+    });
+
+    test('null account with deferral shifts from purchase month', () {
       final purchaseDate = DateTime(2026, 11, 5);
-      final startMonth = calculateInstallmentStartMonth(null, purchaseDate);
-      expect(startMonth, '2026-11');
+      expect(
+        calculateInstallmentStartMonth(null, purchaseDate, deferralMonths: 1),
+        '2026-12',
+      );
     });
   });
 
@@ -179,7 +240,9 @@ void main() {
       paymentDueDay: 15,
     );
 
-    test('returns null for non-billing accounts or null account', () {
+    test(
+        'returns null for non-billing accounts or null account without deferral',
+        () {
       expect(installmentCycleExplanation(null, DateTime(2026, 10, 25)), isNull);
 
       final noCycle = FinancialAccount(
@@ -210,6 +273,24 @@ void main() {
       expect(text, contains('cut-off'));
       expect(text, contains('Charged on'));
       expect(text, contains('Due'));
+    });
+
+    test('includes deferral information when deferralMonths > 0 on credit card',
+        () {
+      final text = installmentCycleExplanation(card, DateTime(2026, 10, 25),
+          deferralMonths: 2);
+      expect(text, isNotNull);
+      expect(text, contains('Deferred 2 mos'));
+      expect(text, contains('Charged on'));
+      expect(text, contains('Due in Feb 2027'));
+    });
+
+    test('explains deferred payment on non-billing account', () {
+      final text = installmentCycleExplanation(null, DateTime(2026, 10, 25),
+          deferralMonths: 2);
+      expect(text, isNotNull);
+      expect(text, contains('deferred by 2 months'));
+      expect(text, contains('Due in Dec 2026'));
     });
   });
 }
