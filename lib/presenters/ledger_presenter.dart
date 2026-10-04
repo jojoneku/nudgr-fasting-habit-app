@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
@@ -735,12 +736,31 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   bool get hasOutstandingOwed => outstandingOwedTotal > 0;
 
+  /// Recalculates unbilled installment principal holds across liability accounts
+  /// and updates in-memory accounts.
+  Future<void> refreshInstallmentHolds() async {
+    final installments = await _storage.loadInstallments();
+    _accounts = [
+      for (final a in _accounts)
+        a.isLiability
+            ? a.copyWith(
+                unbilledInstallments: Installment.totalUnbilledForAccount(
+                  a.id,
+                  installments,
+                  _allTransactions,
+                ),
+              )
+            : a
+    ];
+    safeNotify();
+  }
+
   /// Refreshes the account list from storage. Call this before showing any
   /// sheet that needs accounts — TreasuryDashboardPresenter may have added
   /// or removed accounts since LedgerPresenter last loaded.
   Future<void> reloadAccounts() async {
     _accounts = await _storage.loadAccounts();
-    safeNotify();
+    await refreshInstallmentHolds();
   }
 
   // --- Load ---
@@ -757,7 +777,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _accounts = await _storage.loadAccounts();
       _categories = await _storage.loadFinanceCategories();
       _allTransactions = await _storage.loadTransactions();
-      safeNotify();
+      await refreshInstallmentHolds();
       return;
     }
 
@@ -768,6 +788,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     await _financeDict.init();
+    await refreshInstallmentHolds();
 
     // One-time migration: reassign any category that still has the old
     // white default (#FFFFFF / near-white luminance > 0.65) to a palette color.
@@ -873,6 +894,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
     if (isFirstEver) await _stats.addXp(25);
     if (isFirstToday) await _stats.addXp(10);
+    if (txn.installmentId != null) {
+      await refreshInstallmentHolds();
+    }
   }
 
   /// Re-adds a [txn] that was just removed via [deleteTransaction] (an Undo),
@@ -891,6 +915,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // expected date didn't survive the delete); the id is reused, keeping
       // the expense↔receivable link intact.
       await spawnReimbursementReceivable(txn, null);
+    }
+    if (txn.installmentId != null) {
+      await refreshInstallmentHolds();
     }
   }
 
@@ -913,6 +940,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
           txn.reimbursementReceivableId != null) {
         await spawnReimbursementReceivable(txn, null);
       }
+    }
+    if (txns.any((t) => t.installmentId != null)) {
+      await refreshInstallmentHolds();
     }
   }
 
@@ -1054,6 +1084,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     } else if (old.reimbursable && old.reimbursementReceivableId != null) {
       await deleteReimbursementReceivable(old.reimbursementReceivableId!);
     }
+    if (old.installmentId != null || txn.installmentId != null) {
+      await refreshInstallmentHolds();
+    }
   }
 
   Future<void> deleteTransaction(String id) async {
@@ -1068,6 +1101,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final receivableId = txn.reimbursementReceivableId;
     if (receivableId != null) {
       await deleteReimbursementReceivable(receivableId);
+    }
+    if (txn.installmentId != null) {
+      await refreshInstallmentHolds();
     }
   }
 
@@ -1127,19 +1163,30 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
     safeNotify();
     await _saveAll();
+    if (toRemove.any((t) => t.installmentId != null)) {
+      await refreshInstallmentHolds();
+    }
     return toRemove;
   }
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
     final previous = _accounts.where((a) => a.id == account.id).firstOrNull;
-    final incoming = reconcileGoalStamps(account, previous, DateTime.now());
+    final incoming = reconcileGoalStamps(
+      account.copyWith(
+        unbilledInstallments: account.unbilledInstallments != 0.0
+            ? account.unbilledInstallments
+            : previous?.unbilledInstallments,
+      ),
+      previous,
+      DateTime.now(),
+    );
     final exists = _accounts.any((a) => a.id == incoming.id);
     _accounts = exists
         ? [for (final a in _accounts) a.id == incoming.id ? incoming : a]
         : [..._accounts, incoming];
     _stampFundedGoals();
-    safeNotify();
+    await refreshInstallmentHolds();
     await _storage.saveAccounts(_accounts);
   }
 
