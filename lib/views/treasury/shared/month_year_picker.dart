@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+/// Opens the unified month·year picker bottom sheet for any `YYYY-MM` month key.
+/// Returns the chosen `YYYY-MM` key, or `null` if dismissed without selection.
+Future<String?> showMonthYearPicker(
+  BuildContext context, {
+  required String monthKey,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _MonthYearPickerSheet(monthKey: monthKey),
+  );
+}
+
 /// Compact pill showing the selected month + year (e.g. "Jun 2026") with a
 /// caret, opening a month·year picker sheet on tap. Sits in the Bills app-bar
 /// actions. Theme-token colors only, so it reads in dark and light.
+@Deprecated('Use MonthStepperPill for unified chevrons + month picker')
 class MonthYearPill extends StatelessWidget {
   /// 'YYYY-MM' key of the currently selected month.
   final String monthKey;
