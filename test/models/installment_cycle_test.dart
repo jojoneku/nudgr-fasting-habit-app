@@ -50,10 +50,12 @@ void main() {
       final parsed = Installment.fromJson(legacyJson);
       expect(parsed.purchaseDate, isNull);
       expect(parsed.deferralMonths, 0);
+      expect(parsed.interestRate, 0.0);
+      expect(parsed.hasInterest, isFalse);
       expect(parsed.name, 'MacBook Pro');
     });
 
-    test('copyWith preserves and updates deferralMonths', () {
+    test('copyWith preserves and updates deferralMonths and interestRate', () {
       final original = Installment(
         id: 'inst-1',
         name: 'Desk',
@@ -64,15 +66,137 @@ void main() {
         startMonth: '2026-02',
         purchaseDate: DateTime(2026, 1, 15),
         deferralMonths: 1,
+        interestRate: 0.5,
       );
 
-      final modified = original.copyWith(deferralMonths: 3);
+      final modified = original.copyWith(deferralMonths: 3, interestRate: 1.5);
       expect(modified.deferralMonths, 3);
+      expect(modified.interestRate, 1.5);
       expect(modified.purchaseDate, DateTime(2026, 1, 15));
 
       final preserved = original.copyWith(name: 'Standing Desk');
       expect(preserved.deferralMonths, 1);
+      expect(preserved.interestRate, 0.5);
       expect(preserved.name, 'Standing Desk');
+    });
+  });
+
+  group('Installment interest calculation logic', () {
+    test(
+        '0% promo defaults: hasInterest is false, totalPayable equals totalAmount',
+        () {
+      final promo = Installment(
+        id: 'p1',
+        name: '0% Promo Phone',
+        accountId: 'card-1',
+        totalAmount: 24000,
+        monthlyAmount: 2000,
+        totalMonths: 12,
+        startMonth: '2026-01',
+      );
+
+      expect(promo.hasInterest, isFalse);
+      expect(promo.monthlyInterest, 0.0);
+      expect(promo.totalInterest, 0.0);
+      expect(promo.totalPayable, 24000.0);
+      expect(
+        Installment.computeMonthlyAmount(
+          principal: 24000,
+          months: 12,
+          monthlyRate: 0.0,
+        ),
+        2000.0,
+      );
+    });
+
+    test(
+        'monthly add-on rate computes monthly payment, total interest, and total payable',
+        () {
+      // ₱12,000 across 12 months at 1.0%/mo:
+      // Monthly principal: ₱1,000
+      // Monthly interest: ₱12,000 * 0.01 = ₱120
+      // Monthly payment: ₱1,120
+      // Total interest: ₱1,440
+      // Total payable: ₱13,440
+      final inst = Installment(
+        id: 'i1',
+        name: 'Computer',
+        accountId: 'card-1',
+        totalAmount: 12000,
+        monthlyAmount: 1120,
+        totalMonths: 12,
+        startMonth: '2026-01',
+        interestRate: 1.0,
+      );
+
+      expect(inst.hasInterest, isTrue);
+      expect(inst.monthlyInterest, 120.0);
+      expect(inst.totalInterest, 1440.0);
+      expect(inst.totalPayable, 13440.0);
+      expect(
+        Installment.computeMonthlyAmount(
+          principal: 12000,
+          months: 12,
+          monthlyRate: 1.0,
+        ),
+        1120.0,
+      );
+    });
+
+    test('fractional interest rates compute correctly', () {
+      // ₱20,000 across 10 months at 1.5%/mo:
+      // Monthly principal: ₱2,000
+      // Monthly interest: ₱20,000 * 0.015 = ₱300
+      // Monthly payment: ₱2,300
+      final inst = Installment(
+        id: 'i2',
+        name: 'Appliance',
+        accountId: 'bnpl-1',
+        totalAmount: 20000,
+        monthlyAmount: 2300,
+        totalMonths: 10,
+        startMonth: '2026-01',
+        interestRate: 1.5,
+      );
+
+      expect(inst.hasInterest, isTrue);
+      expect(inst.monthlyInterest, 300.0);
+      expect(inst.totalInterest, 3000.0);
+      expect(inst.totalPayable, 23000.0);
+      expect(
+        Installment.computeMonthlyAmount(
+          principal: 20000,
+          months: 10,
+          monthlyRate: 1.5,
+        ),
+        2300.0,
+      );
+    });
+
+    test('toJson omits interestRate if 0, includes if > 0', () {
+      final zero = Installment(
+        id: 'z',
+        name: 'Zero',
+        accountId: 'c',
+        totalAmount: 1000,
+        monthlyAmount: 100,
+        totalMonths: 10,
+        startMonth: '2026-01',
+        interestRate: 0.0,
+      );
+      expect(zero.toJson().containsKey('interestRate'), isFalse);
+
+      final withInt = Installment(
+        id: 'w',
+        name: 'With Interest',
+        accountId: 'c',
+        totalAmount: 1000,
+        monthlyAmount: 110,
+        totalMonths: 10,
+        startMonth: '2026-01',
+        interestRate: 1.0,
+      );
+      expect(withInt.toJson()['interestRate'], 1.0);
     });
   });
 

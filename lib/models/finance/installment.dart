@@ -15,6 +15,8 @@ class Installment {
   final String startMonth; // 'YYYY-MM' — first payment month
   final DateTime? purchaseDate; // date the installment purchase was made
   final int deferralMonths; // months first payment is deferred (0 = none)
+  final double
+      interestRate; // monthly add-on interest rate in percent (0.0 = 0% promo)
   final String? note;
   final bool isActive; // false = cancelled early
   final DateTime updatedAt;
@@ -29,10 +31,37 @@ class Installment {
     required this.startMonth,
     this.purchaseDate,
     this.deferralMonths = 0,
+    this.interestRate = 0.0,
     this.note,
     this.isActive = true,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Whether this installment incurs interest.
+  bool get hasInterest => interestRate > 0;
+
+  /// Monthly interest amount charged per payment period.
+  double get monthlyInterest =>
+      hasInterest ? (totalAmount * (interestRate / 100.0)) : 0.0;
+
+  /// Total interest charged over the lifetime of the installment.
+  double get totalInterest => monthlyInterest * totalMonths;
+
+  /// Total payable amount (original purchase price / principal + total interest).
+  double get totalPayable => totalAmount + totalInterest;
+
+  /// Computes the suggested monthly payment for a [principal] amount split across [months]
+  /// at a monthly add-on [monthlyRate] in percent.
+  static double computeMonthlyAmount({
+    required double principal,
+    required int months,
+    double monthlyRate = 0.0,
+  }) {
+    if (months <= 0) return principal;
+    final monthlyPrincipal = principal / months;
+    final monthlyInterest = principal * (monthlyRate / 100.0);
+    return monthlyPrincipal + monthlyInterest;
+  }
 
   // The 'YYYY-MM' key of the final payment month.
   String get endMonth => _offsetMonth(startMonth, totalMonths - 1);
@@ -91,6 +120,7 @@ class Installment {
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
       deferralMonths: json['deferralMonths'] as int? ?? 0,
+      interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
@@ -109,6 +139,7 @@ class Installment {
         if (purchaseDate != null)
           'purchaseDate': purchaseDate!.toIso8601String(),
         if (deferralMonths > 0) 'deferralMonths': deferralMonths,
+        if (interestRate > 0) 'interestRate': interestRate,
         'note': note,
         'isActive': isActive,
         'updatedAt': updatedAt.toIso8601String(),
@@ -123,6 +154,7 @@ class Installment {
     String? startMonth,
     DateTime? purchaseDate,
     int? deferralMonths,
+    double? interestRate,
     String? note,
     bool? isActive,
     DateTime? updatedAt,
@@ -137,6 +169,7 @@ class Installment {
       startMonth: startMonth ?? this.startMonth,
       purchaseDate: purchaseDate ?? this.purchaseDate,
       deferralMonths: deferralMonths ?? this.deferralMonths,
+      interestRate: interestRate ?? this.interestRate,
       note: note ?? this.note,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,
