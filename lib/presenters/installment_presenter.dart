@@ -141,6 +141,20 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     return 'Due ${DateFormat('MMM d').format(due)}';
   }
 
+  /// Formatted interest rate badge label (e.g. "1%/mo int").
+  /// Returns null when interestRate is 0 or not set.
+  String? interestLabel(Installment inst) {
+    if (!inst.hasInterest) return null;
+    final r = inst.interestRate;
+    final rateStr = r == r.roundToDouble()
+        ? r.round().toString()
+        : r
+            .toString()
+            .replaceAll(RegExp(r'0+$'), '')
+            .replaceAll(RegExp(r'\.$'), '');
+    return '$rateStr%/mo int';
+  }
+
   /// The concrete due date of [inst] in the current [selectedMonth], or null
   /// if the linked account has no configured cycle or payment due day.
   DateTime? dueDate(Installment inst) {

@@ -291,5 +291,42 @@ void main() {
       expect(card.totalDebt, 9000.0);
       expect(card.availableCredit, 41000.0);
     });
+
+    test('interestLabel formats integer and fractional rates, null for 0%', () {
+      final zero = Installment(
+        id: 'z',
+        name: 'Promo',
+        accountId: 'cc',
+        totalAmount: 10000,
+        monthlyAmount: 1000,
+        totalMonths: 10,
+        startMonth: '2026-10',
+        interestRate: 0.0,
+      );
+      final intRate = Installment(
+        id: 'r1',
+        name: 'Card Loan',
+        accountId: 'cc',
+        totalAmount: 10000,
+        monthlyAmount: 1100,
+        totalMonths: 10,
+        startMonth: '2026-10',
+        interestRate: 1.0,
+      );
+      final fracRate = Installment(
+        id: 'r2',
+        name: 'BNPL',
+        accountId: 'cc',
+        totalAmount: 10000,
+        monthlyAmount: 1150,
+        totalMonths: 10,
+        startMonth: '2026-10',
+        interestRate: 1.5,
+      );
+
+      expect(presenter.interestLabel(zero), isNull);
+      expect(presenter.interestLabel(intRate), '1%/mo int');
+      expect(presenter.interestLabel(fracRate), '1.5%/mo int');
+    });
   });
 }

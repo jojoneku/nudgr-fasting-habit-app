@@ -3375,6 +3375,8 @@ class _InstallmentRow extends StatelessWidget {
                       'Bought ${DateFormat('MMM d').format(installment.purchaseDate!)}',
                     if (installment.deferralMonths > 0)
                       'Deferred ${installment.deferralMonths} ${installment.deferralMonths == 1 ? 'mo' : 'mos'}',
+                    if (presenter.interestLabel(installment) != null)
+                      presenter.interestLabel(installment)!,
                   ].join(' · '),
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
@@ -3517,6 +3519,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   late String _startMonth;
   late DateTime _purchaseDate;
   int _deferralMonths = 0;
+  double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
   bool _startMonthManuallyEdited = false;
   bool _isSubmitting = false;
@@ -3593,6 +3596,42 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     );
   }
 
+  Widget _buildInterestSummary(ThemeData theme, ColorScheme cs) {
+    final total =
+        double.tryParse(_totalController.text.replaceAll(',', '')) ?? 0.0;
+    final monthlyInterest = total * (_interestRate / 100.0);
+    final totalInterest = monthlyInterest * _totalMonths;
+    final totalPayable = total + totalInterest;
+    final rateLabel = _interestRate == _interestRate.roundToDouble()
+        ? '${_interestRate.round()}%'
+        : '${_interestRate.toStringAsFixed(2)}%';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.percent, size: 16, color: cs.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Interest: ${formatPeso(totalInterest)} ($rateLabel/mo) · Total payable: ${formatPeso(totalPayable)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -3609,11 +3648,13 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
           DateTime.tryParse('${e.startMonth}-01') ??
           DateTime.now();
       _deferralMonths = e.deferralMonths;
+      _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
       _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
+      _interestRate = 0.0;
       final accounts = widget.presenter.creditAccounts;
       if (accounts.isNotEmpty) _accountId = accounts.first.id;
       _recalculateStartMonth();
@@ -3628,13 +3669,26 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     if (_monthlyManuallyEdited) return;
     final total = double.tryParse(_totalController.text.replaceAll(',', ''));
     if (total != null && _totalMonths > 0) {
-      _monthlyController.text = (total / _totalMonths).toStringAsFixed(2);
+      final monthly = Installment.computeMonthlyAmount(
+        principal: total,
+        months: _totalMonths,
+        monthlyRate: _interestRate,
+      );
+      _monthlyController.text = _trim(monthly);
     }
   }
 
   void _onMonthsChanged(int months) {
     setState(() {
       _totalMonths = months;
+      _monthlyManuallyEdited = false;
+    });
+    _recomputeMonthly();
+  }
+
+  void _onInterestRateChanged(double rate) {
+    setState(() {
+      _interestRate = rate;
       _monthlyManuallyEdited = false;
     });
     _recomputeMonthly();
@@ -3678,6 +3732,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
         startMonth: _startMonth,
         purchaseDate: _purchaseDate,
         deferralMonths: _deferralMonths,
+        interestRate: _interestRate,
         note: note.isEmpty ? null : note,
         isActive: existing?.isActive ?? true,
       );
@@ -3844,6 +3899,48 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                     ),
                   ],
                 ),
+                const SizedBox(height: WebInsets.md),
+                Text('Monthly interest rate (optional)',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant)),
+                const SizedBox(height: WebInsets.sm),
+                Wrap(
+                  spacing: WebInsets.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    for (final r in [0.0, 0.5, 1.0, 1.5, 2.0])
+                      ChoiceChip(
+                        label: Text(r == 0
+                            ? '0% (Promo)'
+                            : '${r == r.roundToDouble() ? r.round() : r}%'),
+                        selected: _interestRate == r,
+                        onSelected: (_) => _onInterestRateChanged(r),
+                      ),
+                    SizedBox(
+                      width: 88,
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Custom %',
+                          isDense: true,
+                          filled: ![0.0, 0.5, 1.0, 1.5, 2.0]
+                              .contains(_interestRate),
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        onChanged: (v) {
+                          final parsed = double.tryParse(v);
+                          if (parsed != null && parsed >= 0) {
+                            _onInterestRateChanged(parsed);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (_interestRate > 0) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  _buildInterestSummary(theme, cs),
+                ],
                 const SizedBox(height: WebInsets.md),
                 TextFormField(
                   controller: _monthlyController,
