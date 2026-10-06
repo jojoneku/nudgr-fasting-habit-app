@@ -80,9 +80,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
     DateTime Function()? clock,
+    InstallmentPresenter? installments,
   })  : _storage = storage,
         _ledger = ledger,
         _stats = stats,
+        _installments = installments,
         _monthScope = monthScope,
         _clock = clock ?? DateTime.now,
         _notifications = notifications ?? NotificationService() {
@@ -107,6 +109,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
   final NotificationService _notifications;
+  final InstallmentPresenter? _installments;
 
   /// "Now" for the credit-statement paths (generation, reconciliation, due
   /// reminders). Injected so tests can pin a date; [DateTime.now] otherwise.
@@ -184,6 +187,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// (or by adding one more bill and paying it).
   final Set<String> _awardedXpKeys = {};
   bool _awardedXpLoaded = false;
+
+  /// Persisted dismissed auto-statement keys ("accountId|dueMonth").
+  /// Prevents deleted auto-statements from regenerating on page reload.
+  final Set<String> _dismissedAutoStatementKeys = {};
 
   /// Cached global bills-reminder preference (see load) — gates whether a bill's
   /// per-bill reminder is actually scheduled.
@@ -647,6 +654,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       ..clear()
       ..addAll(await _storage.loadAwardedXpKeys());
     _awardedXpLoaded = true;
+    _dismissedAutoStatementKeys
+      ..clear()
+      ..addAll(await _storage.loadDismissedStatementKeys());
 
     // Join pre-existing recurring rows into series before anything reads them,
     // so a long-standing user's months can be propagated across too.
@@ -878,6 +888,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // "I have to delete it again every month" loop. Clearing the flag on what
     // survives is what actually stops it.
     final endedSeries = applyToFuture ? target?.seriesId : null;
+    if (target != null &&
+        _isAutoStatement(target) &&
+        target.accountId != null) {
+      _dismissedAutoStatementKeys.add('${target.accountId}|${target.month}');
+      await _storage.saveDismissedStatementKeys(_dismissedAutoStatementKeys);
+    }
     _allBills = _allBills
         .where((b) => b.id != id && !alsoRemove.contains(b.id))
         .map((b) => endedSeries != null && b.seriesId == endedSeries
@@ -985,16 +1001,49 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       if (liability != null &&
           liability.isLiability &&
           acct != bill.accountId) {
-        await _ledger.addTransfer(
-          fromAccountId: acct,
-          toAccountId: bill.accountId!,
-          amount: paidAmount,
-          description: bill.name,
-          date: date,
-          // Stamp the legs with the bill so undoing the payment can find and
-          // unwind them — a transfer leaves no id on the bill itself.
-          billId: bill.id,
-        );
+        final allInst =
+            _installments?.installments ?? (await _storage.loadInstallments());
+        final dueInst = allInst
+            .where((i) =>
+                i.isActive &&
+                i.accountId == bill.accountId &&
+                i.isDueIn(bill.month) &&
+                !_ledger.allTransactions.any(
+                    (t) => t.installmentId == i.id && t.month == bill.month))
+            .toList();
+
+        var instPaidSum = 0.0;
+        for (final inst in dueInst) {
+          final instCat =
+              inst.categoryId ?? _defaultCreditCategoryId() ?? bill.categoryId;
+          final count = inst.paidCount(_ledger.allTransactions) + 1;
+          final instTxn = _buildOutflowTxn(
+            id: _generateId(),
+            amount: inst.monthlyAmount,
+            accountId: acct,
+            categoryId: instCat,
+            description: '${inst.name} — Payment $count/${inst.totalMonths}',
+            date: date,
+            billId: bill.id,
+            installmentId: inst.id,
+          );
+          await _ledger.addTransaction(instTxn);
+          instPaidSum += inst.monthlyAmount;
+        }
+
+        final remainingRevolving = paidAmount - instPaidSum;
+        if (remainingRevolving > 0.005) {
+          await _ledger.addTransfer(
+            fromAccountId: acct,
+            toAccountId: bill.accountId!,
+            amount: remainingRevolving,
+            description: bill.name,
+            date: date,
+            // Stamp the legs with the bill so undoing the payment can find and
+            // unwind them — a transfer leaves no id on the bill itself.
+            billId: bill.id,
+          );
+        }
       } else {
         final txn = _buildOutflowTxn(
           id: _generateId(),
@@ -1072,8 +1121,13 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (b.isPaid || b.amount <= 0) return b;
     final a = _statementAccount(b);
     final cycle = a == null ? null : cycleForStatement(a, b);
-    if (a == null || cycle == null) return b;
-    final raw = _ledger.paymentsToLiabilitySince(a.id, cycle.close);
+    final instPayments = _ledger.allTransactions
+        .where((t) => t.billId == b.id && t.installmentId != null)
+        .fold(0.0, (sum, t) => sum + t.amount);
+    final revolving = (a != null && cycle != null)
+        ? _ledger.paymentsToLiabilitySince(a.id, cycle.close)
+        : 0.0;
+    final raw = revolving + instPayments;
     final paid = raw < b.amount ? raw : b.amount;
     if (paid >= b.amount - 0.005) {
       return b.copyWith(
@@ -1822,6 +1876,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       applyToFuture: applyToFuture,
     );
     final doomed = _allBills.where((b) => reach.ids.contains(b.id)).toList();
+    var dismissedChanged = false;
+    for (final b in doomed) {
+      if (_isAutoStatement(b) && b.accountId != null) {
+        _dismissedAutoStatementKeys.add('${b.accountId}|${b.month}');
+        dismissedChanged = true;
+      }
+    }
+    if (dismissedChanged) {
+      await _storage.saveDismissedStatementKeys(_dismissedAutoStatementKeys);
+    }
     _allBills = _allBills
         .where((b) => !reach.ids.contains(b.id))
         .map((b) => reach.endedSeries.contains(b.seriesId)
@@ -2674,6 +2738,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     required String description,
     required DateTime date,
     String? billId,
+    String? installmentId,
   }) {
     return TransactionRecord(
       id: id,
@@ -2685,6 +2750,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       description: description,
       month: toMonthKey(date),
       billId: billId,
+      installmentId: installmentId,
     );
   }
 
@@ -2872,16 +2938,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         final cycle = a.cycleClosingIn(monthStart.year, monthStart.month)!;
         final dueMonth = cycle.dueMonthKey;
 
-        final existing = _allBills
-            .where((b) =>
-                _isAutoStatement(b) &&
-                b.accountId == a.id &&
-                b.month == dueMonth)
-            .firstOrNull;
-
-        // Already billed. Whether it is paid is read off the ledger below
-        // ([_refreshStatementProgress]), not off the card hitting ₱0.
-        if (existing != null) continue;
+        // If the user deleted/dismissed this statement, do not regenerate it.
+        if (_dismissedAutoStatementKeys.contains('${a.id}|$dueMonth')) continue;
 
         // Legacy guard (pre due-month fix): a shifted card's past cycle may
         // still carry its settled statement under the cycle month itself.
@@ -2922,11 +2980,44 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // it left unpaid rides on the newer statement.
         if (!isCurrentMonth && cycle.due.isBefore(today)) continue;
 
-        // Bill the balance as of the cycle's CLOSE date, not today's. A
-        // cycle that closed owing nothing is no bill: everything on the card
-        // was charged after the close and belongs to the next statement.
-        final amount = _ledger.payableAsOf(a.id, cycle.close);
+        // Bill the balance as of the cycle's CLOSE date, plus active installments
+        // due in this billing cycle/month for this account.
+        final revolvingAmount = _ledger.payableAsOf(a.id, cycle.close);
+        final allInst =
+            _installments?.installments ?? (await _storage.loadInstallments());
+        final dueInst = allInst
+            .where((i) =>
+                i.isActive &&
+                i.accountId == a.id &&
+                i.isDueIn(dueMonth) &&
+                !_ledger.allTransactions
+                    .any((t) => t.installmentId == i.id && t.month == dueMonth))
+            .toList();
+        final installmentDueSum =
+            dueInst.fold(0.0, (s, i) => s + i.monthlyAmount);
+        final amount = revolvingAmount + installmentDueSum;
+
         if (amount <= 0) continue;
+
+        final existing = _allBills
+            .where((b) =>
+                _isAutoStatement(b) &&
+                b.accountId == a.id &&
+                b.month == dueMonth)
+            .firstOrNull;
+
+        if (existing != null) {
+          if (!existing.isPaid &&
+              existing.transactionId == null &&
+              (existing.amount - amount).abs() > 0.005) {
+            _allBills = [
+              for (final b in _allBills)
+                b.id == existing.id ? b.copyWith(amount: amount) : b
+            ];
+            changed = true;
+          }
+          continue;
+        }
 
         _allBills = [
           ..._allBills,

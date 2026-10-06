@@ -31,6 +31,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       _selectedMonth = monthScope.month;
       monthScope.addListener(_adoptScopeMonth);
     }
+    _ledger.onSpawnInstallment = addInstallment;
     load();
   }
 
@@ -51,6 +52,9 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   @override
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
+    if (_ledger.onSpawnInstallment == addInstallment) {
+      _ledger.onSpawnInstallment = null;
+    }
     super.dispose();
   }
 
@@ -69,6 +73,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   bool get isLoading => _isLoading;
   String get selectedMonth => _selectedMonth;
   List<FinancialAccount> get accounts => _ledger.accounts;
+  List<FinanceCategory> get categories => _ledger.categories;
 
   /// Credit accounts (credit cards, credit lines, BNPL) eligible to hold
   /// installments. Non-liability accounts (savings, bank, cash) cannot hold
@@ -236,17 +241,21 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     String installmentId, {
     double? overrideAmount,
     DateTime? date,
+    String? fundingAccountId,
   }) async {
     if (isPaidForMonth(installmentId)) return;
     final inst = _findById(installmentId);
-    await _ensureInstallmentCategory();
+    final categoryId = inst.categoryId ?? _installmentCategoryId;
+    if (inst.categoryId == null) {
+      await _ensureInstallmentCategory();
+    }
 
     final count = paidCount(installmentId) + 1;
     final txn = TransactionRecord(
       id: _generateId(),
       date: date ?? DateTime.now(),
-      accountId: inst.accountId,
-      categoryId: _installmentCategoryId,
+      accountId: fundingAccountId ?? inst.accountId,
+      categoryId: categoryId,
       amount: overrideAmount ?? inst.monthlyAmount,
       type: TransactionType.outflow,
       description: '${inst.name} — Payment $count/${inst.totalMonths}',
