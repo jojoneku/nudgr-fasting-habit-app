@@ -3134,6 +3134,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   // Installment purchase state (outflow on liability account only):
   bool _splitInstallments = false;
   int _installmentMonths = 3;
+  double _interestRate = 0.0;
 
   FinancialAccount? get _selectedAccount =>
       _accounts.where((a) => a.id == _accountId).firstOrNull;
@@ -3218,6 +3219,16 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         _expectedReimbursementDate =
             _p.reimbursementReceivableExpectedDate(receivableId);
       }
+      if (t.isInstallment) {
+        _splitInstallments = true;
+        if (t.installmentId != null) {
+          final inst = _p.findInstallmentById(t.installmentId!);
+          if (inst != null) {
+            _installmentMonths = inst.totalMonths;
+            _interestRate = inst.interestRate;
+          }
+        }
+      }
     }
   }
 
@@ -3301,16 +3312,25 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
-          (existing == null || existing.installmentId == null) &&
+          (existing == null ||
+              existing.isInstallment ||
+              existing.installmentId == null) &&
           _selectedAccount?.isLiability == true) {
         final startMonth = calculateInstallmentStartMonth(
           _selectedAccount,
           _date,
           deferralMonths: 0,
         );
-        final monthlyAmount = amount / _installmentMonths;
+        final monthlyAmount = Installment.computeMonthlyAmount(
+          principal: amount,
+          months: _installmentMonths,
+          monthlyRate: _interestRate,
+        );
+        final instId = (existing != null && existing.installmentId != null)
+            ? existing.installmentId!
+            : _genId();
         final inst = Installment(
-          id: _genId(),
+          id: instId,
           name: description.isEmpty ? 'Installment purchase' : description,
           accountId: _accountId!,
           totalAmount: amount,
@@ -3319,7 +3339,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           startMonth: startMonth,
           purchaseDate: _date,
           deferralMonths: 0,
-          interestRate: 0.0,
+          interestRate: _interestRate,
           note: note.isEmpty ? null : note,
           categoryId: _categoryId,
           isActive: true,
@@ -3335,7 +3355,23 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
             await _p.deleteTransaction(existing.id);
           }
         }
-        await _p.addInstallmentPurchase(inst);
+        await _p.addInstallmentPurchase(
+          inst,
+          transaction: TransactionRecord(
+            id: existing?.id ?? _genId(),
+            date: _date,
+            accountId: _accountId!,
+            categoryId: _categoryId ?? '',
+            amount: amount,
+            type: TransactionType.outflow,
+            description:
+                description.isEmpty ? 'Installment purchase' : description,
+            note: note.isEmpty ? null : note,
+            month: toMonthKey(_date),
+            installmentId: inst.id,
+            isInstallment: true,
+          ),
+        );
       } else {
         // Reimbursable only applies to outflows. Reuse the existing linked
         // receivable id when editing so the link survives; mint one otherwise.
@@ -3612,8 +3648,14 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     final amount =
         double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
     final monthly = _installmentMonths > 0 && amount > 0
-        ? (amount / _installmentMonths)
+        ? Installment.computeMonthlyAmount(
+            principal: amount,
+            months: _installmentMonths,
+            monthlyRate: _interestRate,
+          )
         : 0.0;
+    final totalPayable = monthly * _installmentMonths;
+    final totalInterest = (totalPayable - amount).clamp(0.0, double.infinity);
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: cs.outlineVariant),
@@ -3701,14 +3743,86 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                 ),
               ],
             ),
+            const SizedBox(height: WebInsets.md),
+            Row(
+              children: [
+                Text(
+                  'Interest / mo',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 6,
+                  children: [0.0, 1.0, 1.5, 2.0, 3.0].map((r) {
+                    final selected = _interestRate == r;
+                    final label = r == 0
+                        ? '0%'
+                        : '${r == r.roundToDouble() ? r.round() : r}%';
+                    return InkWell(
+                      onTap: () => setState(() => _interestRate = r),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primary.withValues(alpha: 0.15)
+                              : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: selected ? cs.primary : cs.outlineVariant,
+                          ),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? cs.primary : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
             if (amount > 0) ...[
               const SizedBox(height: WebInsets.sm),
-              Text(
-                '≈ ${formatPeso(monthly)} / month for $_installmentMonths months',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '≈ ${formatPeso(monthly)} / month for $_installmentMonths months',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                      ),
+                    ),
+                    if (_interestRate > 0) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Total interest: ${formatPeso(totalInterest)} · Total payable: ${formatPeso(totalPayable)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

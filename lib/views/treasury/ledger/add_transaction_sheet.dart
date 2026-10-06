@@ -62,6 +62,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   // Installment purchase state (outflow on liability account only):
   bool _splitInstallments = false;
   int _installmentMonths = 3;
+  double _interestRate = 0.0;
 
   FinancialAccount? get _selectedAccount {
     final id = _selectedAccountId;
@@ -95,6 +96,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _noteController.text = existing.note ?? '';
       _selectedCategoryId = existing.categoryId;
       _date = existing.date;
+      if (existing.isInstallment) {
+        _splitInstallments = true;
+        final inst =
+            widget.presenter.findInstallmentById(existing.installmentId);
+        if (inst != null) {
+          _installmentMonths = inst.totalMonths;
+          _interestRate = inst.interestRate;
+        }
+      }
       if (existing.transferGroupId != null) {
         // A transfer is stored as two legs (outflow on the source, inflow on
         // the destination) that share a groupId — NEITHER leg's `type` is
@@ -245,16 +255,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
-          (existing == null || existing.installmentId == null) &&
+          (existing == null ||
+              existing.isInstallment ||
+              existing.installmentId == null) &&
           _selectedAccount?.isLiability == true) {
         final startMonth = calculateInstallmentStartMonth(
           _selectedAccount,
           _date,
           deferralMonths: 0,
         );
-        final monthlyAmount = amount / _installmentMonths;
+        final monthlyAmount = Installment.computeMonthlyAmount(
+          principal: amount,
+          months: _installmentMonths,
+          monthlyRate: _interestRate,
+        );
+        final instId = existing?.installmentId ?? _generateId();
         final inst = Installment(
-          id: _generateId(),
+          id: instId,
           name: description.isEmpty ? 'Installment purchase' : description,
           accountId: _selectedAccountId!,
           totalAmount: amount,
@@ -263,7 +280,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           startMonth: startMonth,
           purchaseDate: _date,
           deferralMonths: 0,
-          interestRate: 0.0,
+          interestRate: _interestRate,
           note: note.isEmpty ? null : note,
           categoryId: categoryId.isEmpty ? null : categoryId,
           isActive: true,
@@ -280,7 +297,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             await widget.presenter.deleteTransaction(existing.id);
           }
         }
-        await widget.presenter.addInstallmentPurchase(inst);
+        await widget.presenter.addInstallmentPurchase(
+          inst,
+          transaction: TransactionRecord(
+            id: existing?.id ?? _generateId(),
+            date: _date,
+            accountId: _selectedAccountId!,
+            categoryId: categoryId.isEmpty ? '' : categoryId,
+            amount: amount,
+            type: TransactionType.outflow,
+            description:
+                description.isEmpty ? 'Installment purchase' : description,
+            note: note.isEmpty ? null : note,
+            month: toMonthKey(_date),
+            installmentId: inst.id,
+            isInstallment: true,
+          ),
+        );
       } else {
         final id = existing?.id ?? _generateId();
         // Reimbursable only applies to outflows. Reuse the existing linked
@@ -561,12 +594,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     _DatePickerRow(date: _date, onTap: _pickDate),
                   ],
                   if (_type == TransactionType.outflow) ...[
-                    if ((!isEdit || widget.existing?.installmentId == null) &&
+                    if ((!isEdit ||
+                            widget.existing?.isInstallment == true ||
+                            widget.existing?.installmentId == null) &&
                         _selectedAccount?.isLiability == true) ...[
                       const SizedBox(height: 12),
                       _InstallmentField(
                         value: _splitInstallments,
                         months: _installmentMonths,
+                        interestRate: _interestRate,
                         isEdit: isEdit,
                         amount:
                             evalAmountExpression(_amountController.text) ?? 0.0,
@@ -578,6 +614,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         },
                         onMonthsChanged: (m) =>
                             setState(() => _installmentMonths = m),
+                        onInterestRateChanged: (r) =>
+                            setState(() => _interestRate = r),
                       ),
                     ],
                     if (!_splitInstallments) ...[
@@ -1031,24 +1069,37 @@ class _NoteField extends StatelessWidget {
 class _InstallmentField extends StatelessWidget {
   final bool value;
   final int months;
+  final double interestRate;
   final double amount;
   final bool isEdit;
   final ValueChanged<bool> onChanged;
   final ValueChanged<int> onMonthsChanged;
+  final ValueChanged<double> onInterestRateChanged;
 
   const _InstallmentField({
     required this.value,
     required this.months,
+    this.interestRate = 0.0,
     required this.amount,
     this.isEdit = false,
     required this.onChanged,
     required this.onMonthsChanged,
+    required this.onInterestRateChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final monthly = months > 0 && amount > 0 ? (amount / months) : 0.0;
+    final monthly = months > 0 && amount > 0
+        ? Installment.computeMonthlyAmount(
+            principal: amount,
+            months: months,
+            monthlyRate: interestRate,
+          )
+        : 0.0;
+    final totalPayable = monthly * months;
+    final totalInterest = (totalPayable - amount).clamp(0.0, double.infinity);
+
     return AppCard(
       variant: AppCardVariant.outlined,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1132,14 +1183,89 @@ class _InstallmentField extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  'Interest / mo',
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 6,
+                  children: [0.0, 1.0, 1.5, 2.0, 3.0].map((r) {
+                    final selected = (interestRate == r);
+                    final label = r == 0
+                        ? '0%'
+                        : '${r == r.roundToDouble() ? r.round() : r}%';
+                    return InkWell(
+                      onTap: () => onInterestRateChanged(r),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primary.withValues(alpha: 0.15)
+                              : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: selected ? cs.primary : cs.outlineVariant,
+                          ),
+                        ),
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? cs.primary : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
             if (amount > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                '≈ ${formatPeso(monthly)} / month for $months months',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '≈ ${formatPeso(monthly)} / month for $months months',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                      ),
+                    ),
+                    if (interestRate > 0) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Total interest: ${formatPeso(totalInterest)} · Total payable: ${formatPeso(totalPayable)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
