@@ -18,6 +18,8 @@ class Installment {
   final double
       interestRate; // monthly add-on interest rate in percent (0.0 = 0% promo)
   final String? note;
+  final String?
+      categoryId; // category of the original purchase (e.g. tech, food)
   final bool isActive; // false = cancelled early
   final DateTime updatedAt;
 
@@ -33,6 +35,7 @@ class Installment {
     this.deferralMonths = 0,
     this.interestRate = 0.0,
     this.note,
+    this.categoryId,
     this.isActive = true,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -122,6 +125,7 @@ class Installment {
       deferralMonths: json['deferralMonths'] as int? ?? 0,
       interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
+      categoryId: json['categoryId'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -141,6 +145,7 @@ class Installment {
         if (deferralMonths > 0) 'deferralMonths': deferralMonths,
         if (interestRate > 0) 'interestRate': interestRate,
         'note': note,
+        if (categoryId != null) 'categoryId': categoryId,
         'isActive': isActive,
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -156,6 +161,7 @@ class Installment {
     int? deferralMonths,
     double? interestRate,
     String? note,
+    String? categoryId,
     bool? isActive,
     DateTime? updatedAt,
   }) {
@@ -171,6 +177,7 @@ class Installment {
       deferralMonths: deferralMonths ?? this.deferralMonths,
       interestRate: interestRate ?? this.interestRate,
       note: note ?? this.note,
+      categoryId: categoryId ?? this.categoryId,
       isActive: isActive ?? this.isActive,
       updatedAt: updatedAt ?? this.updatedAt,
     );

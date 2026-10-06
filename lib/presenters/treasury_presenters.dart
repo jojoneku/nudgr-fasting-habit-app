@@ -112,6 +112,13 @@ class TreasuryPresenters {
     // Owners first, reporters last: the dashboard subscribes to all three, so
     // each has to exist before it does.
     //
+    final installments = InstallmentPresenter(
+      storage,
+      ledger,
+      stats,
+      monthScope: scope,
+    );
+
     // Bills is built before budget because budget now reads set-asides from it
     // (Plan 060) — a savings row's target is the recurring set-aside that funds
     // it. Safe in this order: bills holds no reference to budget, so there is
@@ -122,6 +129,7 @@ class TreasuryPresenters {
       stats,
       notifications: notifications,
       monthScope: scope,
+      installments: installments,
     );
 
     final budget = BudgetPresenter(
@@ -143,12 +151,7 @@ class TreasuryPresenters {
       dashboard: dashboard,
       bills: bills,
       history: TreasuryHistoryPresenter(storage, ledger),
-      installments: InstallmentPresenter(
-        storage,
-        ledger,
-        stats,
-        monthScope: scope,
-      ),
+      installments: installments,
       groceryCart: GroceryCartPresenter(storage, ledger: ledger),
       financeActions: FinanceActionsExecutor(
         bills: bills,

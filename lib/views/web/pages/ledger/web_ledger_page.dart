@@ -8,10 +8,12 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_receipt_drop.dart';
@@ -3129,6 +3131,13 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   bool _reimbursable = false;
   DateTime? _expectedReimbursementDate;
 
+  // Installment purchase state (outflow on liability account only):
+  bool _splitInstallments = false;
+  int _installmentMonths = 3;
+
+  FinancialAccount? get _selectedAccount =>
+      _accounts.where((a) => a.id == _accountId).firstOrNull;
+
   bool _isSubmitting = false;
   bool _showFieldErrors = false;
 
@@ -3290,6 +3299,32 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           date: _date,
           note: note.isEmpty ? null : note,
         );
+      } else if (existing == null &&
+          _type == TransactionType.outflow &&
+          _splitInstallments &&
+          _selectedAccount?.isLiability == true) {
+        final startMonth = calculateInstallmentStartMonth(
+          _selectedAccount,
+          _date,
+          deferralMonths: 0,
+        );
+        final monthlyAmount = amount / _installmentMonths;
+        final inst = Installment(
+          id: _genId(),
+          name: description.isEmpty ? 'Installment purchase' : description,
+          accountId: _accountId!,
+          totalAmount: amount,
+          monthlyAmount: double.parse(monthlyAmount.toStringAsFixed(2)),
+          totalMonths: _installmentMonths,
+          startMonth: startMonth,
+          purchaseDate: _date,
+          deferralMonths: 0,
+          interestRate: 0.0,
+          note: note.isEmpty ? null : note,
+          categoryId: _categoryId,
+          isActive: true,
+        );
+        await _p.addInstallmentPurchase(inst);
       } else {
         // Reimbursable only applies to outflows. Reuse the existing linked
         // receivable id when editing so the link survives; mint one otherwise.
@@ -3482,8 +3517,15 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                         ),
                       ),
                       if (_type == TransactionType.outflow) ...[
-                        const SizedBox(height: WebInsets.lg),
-                        _reimbursableSection(theme),
+                        if (!isEdit &&
+                            _selectedAccount?.isLiability == true) ...[
+                          const SizedBox(height: WebInsets.lg),
+                          _installmentSection(theme),
+                        ],
+                        if (!_splitInstallments) ...[
+                          const SizedBox(height: WebInsets.lg),
+                          _reimbursableSection(theme),
+                        ],
                       ],
                     ],
                   ),
@@ -3541,6 +3583,116 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         const SizedBox(height: WebInsets.sm),
         field,
       ],
+    );
+  }
+
+  /// "Split into installments" — logs a purchase on a credit / BNPL liability
+  /// account as an installment plan. Holds credit limit now without inflating
+  /// the current month's cash expenses.
+  Widget _installmentSection(ThemeData theme) {
+    final cs = theme.colorScheme;
+    final amount =
+        double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
+    final monthly = _installmentMonths > 0 && amount > 0
+        ? (amount / _installmentMonths)
+        : 0.0;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          WebInsets.md, WebInsets.sm, WebInsets.md, WebInsets.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Split into installments',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Holds credit limit now, but monthly dues are billed per cycle under this category.',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _splitInstallments,
+                onChanged: (v) => setState(() {
+                  _splitInstallments = v;
+                  if (v) _reimbursable = false;
+                }),
+              ),
+            ],
+          ),
+          if (_splitInstallments) ...[
+            Divider(height: WebInsets.md, color: cs.outlineVariant),
+            Row(
+              children: [
+                Text(
+                  'Duration',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 6,
+                  children: [3, 6, 12, 24].map((m) {
+                    final selected = _installmentMonths == m;
+                    return InkWell(
+                      onTap: () => setState(() => _installmentMonths = m),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primary.withValues(alpha: 0.15)
+                              : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: selected ? cs.primary : cs.outlineVariant,
+                          ),
+                        ),
+                        child: Text(
+                          '${m}mo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? cs.primary : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            if (amount > 0) ...[
+              const SizedBox(height: WebInsets.sm),
+              Text(
+                '≈ ${formatPeso(monthly)} / month for $_installmentMonths months',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 

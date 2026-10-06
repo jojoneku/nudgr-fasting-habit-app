@@ -69,6 +69,10 @@ abstract class StorageService {
   // XP via unpay/re-pay cycles. Local-only — device bookkeeping, like
   // [keyWarnedBudgetKeys]; the stats XP total itself is what syncs.
   static const String keyAwardedXpKeys = 'rpg.awardedXpKeys';
+  // Dismissed auto-statement keys, keyed "accountId|YYYY-MM" so a deleted
+  // statement is not auto-regenerated every time the page loads.
+  static const String keyDismissedStatementKeys =
+      'finance.dismissedStatementKeys';
   static const String keyActivityLogs = 'activityLogs';
   static const String keyActivityGoals = 'activityGoals';
   static const String keyActivityGoalMetDate = 'activityGoalMetDate';
@@ -185,6 +189,8 @@ abstract class StorageService {
 
   Future<Set<String>> loadAwardedXpKeys();
   Future<void> saveAwardedXpKeys(Set<String> keys);
+  Future<Set<String>> loadDismissedStatementKeys() async => {};
+  Future<void> saveDismissedStatementKeys(Set<String> keys) async {}
   Future<int> loadStreakMilestonePaid();
   Future<void> saveStreakMilestonePaid(int milestone);
 

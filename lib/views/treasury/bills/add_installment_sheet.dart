@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
@@ -38,6 +39,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   final _noteCtrl = TextEditingController();
 
   String? _accountId;
+  String? _categoryId;
   int _totalMonths = 12;
   String _startMonth = toMonthKey(DateTime.now());
   DateTime _purchaseDate = DateTime.now();
@@ -116,6 +118,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _monthlyCtrl.text = e.monthlyAmount.toStringAsFixed(2);
       _noteCtrl.text = e.note ?? '';
       _accountId = e.accountId;
+      _categoryId = e.categoryId;
       _totalMonths = e.totalMonths;
       _startMonth = e.startMonth;
       _purchaseDate = e.purchaseDate ??
@@ -200,6 +203,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       deferralMonths: _deferralMonths,
       interestRate: _interestRate,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      categoryId: _categoryId,
       isActive: e?.isActive ?? true,
     );
 
@@ -343,6 +347,15 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                     color: Theme.of(context).colorScheme.error, fontSize: 12),
               ),
             ),
+          const SizedBox(height: 16),
+
+          // Category (optional)
+          const _FieldLabel('Category (optional)'),
+          CategoryPickerField(
+            categories: widget.presenter.categories,
+            selectedId: _categoryId,
+            onChanged: (val) => setState(() => _categoryId = val),
+          ),
           const SizedBox(height: 16),
 
           // Purchase Date

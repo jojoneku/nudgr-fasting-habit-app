@@ -812,6 +812,21 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<Set<String>> loadDismissedStatementKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_k(StorageService.keyDismissedStatementKeys)) ??
+            const [])
+        .toSet();
+  }
+
+  @override
+  Future<void> saveDismissedStatementKeys(Set<String> keys) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _k(StorageService.keyDismissedStatementKeys), keys.toList());
+  }
+
+  @override
   Future<Set<String>> loadProteinGoalCreditedDates() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getStringList(
