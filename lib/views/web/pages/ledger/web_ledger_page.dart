@@ -3299,9 +3299,9 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           date: _date,
           note: note.isEmpty ? null : note,
         );
-      } else if (existing == null &&
-          _type == TransactionType.outflow &&
+      } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
+          (existing == null || existing.installmentId == null) &&
           _selectedAccount?.isLiability == true) {
         final startMonth = calculateInstallmentStartMonth(
           _selectedAccount,
@@ -3324,6 +3324,17 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           categoryId: _categoryId,
           isActive: true,
         );
+        if (existing != null) {
+          final oldReceivableId = existing.reimbursementReceivableId;
+          if (oldReceivableId != null) {
+            await _p.deleteReimbursementReceivable(oldReceivableId);
+          }
+          if (existing.transferGroupId != null) {
+            await _p.deleteTransactionOrGroup(existing.id);
+          } else {
+            await _p.deleteTransaction(existing.id);
+          }
+        }
         await _p.addInstallmentPurchase(inst);
       } else {
         // Reimbursable only applies to outflows. Reuse the existing linked
@@ -3517,10 +3528,11 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                         ),
                       ),
                       if (_type == TransactionType.outflow) ...[
-                        if (!isEdit &&
+                        if ((!isEdit ||
+                                widget.existing?.installmentId == null) &&
                             _selectedAccount?.isLiability == true) ...[
                           const SizedBox(height: WebInsets.lg),
-                          _installmentSection(theme),
+                          _installmentSection(theme, isEdit: isEdit),
                         ],
                         if (!_splitInstallments) ...[
                           const SizedBox(height: WebInsets.lg),
@@ -3555,7 +3567,13 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                           )
                         : Icon(isEdit ? Icons.check_rounded : Icons.add_rounded,
                             size: 18),
-                    label: Text(isEdit ? 'Save Changes' : 'Add Transaction'),
+                    label: Text(isEdit
+                        ? (_splitInstallments
+                            ? 'Convert to Installments'
+                            : 'Save Changes')
+                        : (_splitInstallments
+                            ? 'Add Installment'
+                            : 'Add Transaction')),
                   ),
                 ],
               ),
@@ -3589,7 +3607,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   /// "Split into installments" — logs a purchase on a credit / BNPL liability
   /// account as an installment plan. Holds credit limit now without inflating
   /// the current month's cash expenses.
-  Widget _installmentSection(ThemeData theme) {
+  Widget _installmentSection(ThemeData theme, {bool isEdit = false}) {
     final cs = theme.colorScheme;
     final amount =
         double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0.0;
@@ -3613,13 +3631,17 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Split into installments',
+                      isEdit
+                          ? 'Convert to installments'
+                          : 'Split into installments',
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Holds credit limit now, but monthly dues are billed per cycle under this category.',
+                      isEdit
+                          ? 'Converts this entry into an installment plan: removes immediate lump-sum spending and bills it cycle-by-cycle.'
+                          : 'Holds credit limit now, but monthly dues are billed per cycle under this category.',
                       style: theme.textTheme.bodySmall
                           ?.copyWith(color: cs.onSurfaceVariant),
                     ),

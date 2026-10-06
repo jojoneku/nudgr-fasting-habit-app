@@ -251,5 +251,73 @@ void main() {
           bills.bills.where((b) => b.billType == BillType.creditCard).isEmpty,
           isTrue);
     });
+
+    test(
+        'converting an existing regular outflow transaction to installment reverses revolving debt and holds installment credit',
+        () async {
+      await ledger.load();
+      await installments.load();
+      await bills.load();
+
+      // 1. Initial state: regular transaction logged on ShopeePay
+      final initialTxn = TransactionRecord(
+        id: 'txn-existing',
+        date: DateTime(2026, 10, 2),
+        accountId: 'shopeepay',
+        categoryId: 'cat-tech',
+        amount: 6000.0,
+        type: TransactionType.outflow,
+        description: 'New Monitor',
+        month: '2026-10',
+      );
+      await ledger.addTransaction(initialTxn);
+
+      // Verify regular transaction impacts
+      expect(ledger.allTransactions.length, 1);
+      expect(ledger.filteredMonthOutflow, 6000.0);
+      var acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
+      expect(acct.balance, 6000.0);
+      expect(acct.unbilledInstallments, 0.0);
+      expect(acct.availableCredit, 14000.0);
+
+      // 2. User edits and converts to 3-month installment
+      // The conversion workflow reverses the existing transaction & logs installment
+      await ledger.deleteTransaction(initialTxn.id);
+
+      final convertedInst = Installment(
+        id: 'inst-converted',
+        name: initialTxn.description,
+        accountId: initialTxn.accountId,
+        totalAmount: initialTxn.amount,
+        monthlyAmount: 2000.0,
+        totalMonths: 3,
+        startMonth: '2026-10',
+        purchaseDate: initialTxn.date,
+        categoryId: initialTxn.categoryId,
+      );
+      await ledger.addInstallmentPurchase(convertedInst);
+
+      // Verify transaction removed from ledger & monthly outflow
+      expect(ledger.allTransactions.isEmpty, isTrue);
+      expect(ledger.filteredMonthOutflow, 0.0);
+
+      // Verify liability account debt moved from revolving balance to unbilled installments
+      acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
+      expect(acct.balance, 0.0); // revolving balance reversed
+      expect(acct.unbilledInstallments,
+          6000.0); // credit limit held by installment
+      expect(acct.availableCredit, 14000.0); // 20k - 6k installment hold
+
+      // Verify installment retained category
+      expect(installments.installments.length, 1);
+      expect(installments.installments.first.categoryId, 'cat-tech');
+
+      // 3. Generating statement bill for 2026-10 bills only 2000.0 (first installment) instead of full 6000.0
+      await bills.setMonth('2026-10');
+      final statement = bills.bills.firstWhere(
+        (b) => b.billType == BillType.creditCard && b.accountId == 'shopeepay',
+      );
+      expect(statement.amount, 2000.0);
+    });
   });
 }
