@@ -243,9 +243,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           date: _date,
           note: note.isEmpty ? null : note,
         );
-      } else if (existing == null &&
-          _type == TransactionType.outflow &&
+      } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
+          (existing == null || existing.installmentId == null) &&
           _selectedAccount?.isLiability == true) {
         final startMonth = calculateInstallmentStartMonth(
           _selectedAccount,
@@ -268,6 +268,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           categoryId: categoryId.isEmpty ? null : categoryId,
           isActive: true,
         );
+        if (existing != null) {
+          final oldReceivableId = existing.reimbursementReceivableId;
+          if (oldReceivableId != null) {
+            await widget.presenter
+                .deleteReimbursementReceivable(oldReceivableId);
+          }
+          if (existing.transferGroupId != null) {
+            await widget.presenter.deleteTransactionOrGroup(existing.id);
+          } else {
+            await widget.presenter.deleteTransaction(existing.id);
+          }
+        }
         await widget.presenter.addInstallmentPurchase(inst);
       } else {
         final id = existing?.id ?? _generateId();
@@ -549,11 +561,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     _DatePickerRow(date: _date, onTap: _pickDate),
                   ],
                   if (_type == TransactionType.outflow) ...[
-                    if (!isEdit && _selectedAccount?.isLiability == true) ...[
+                    if ((!isEdit || widget.existing?.installmentId == null) &&
+                        _selectedAccount?.isLiability == true) ...[
                       const SizedBox(height: 12),
                       _InstallmentField(
                         value: _splitInstallments,
                         months: _installmentMonths,
+                        isEdit: isEdit,
                         amount:
                             evalAmountExpression(_amountController.text) ?? 0.0,
                         onChanged: (v) {
@@ -583,7 +597,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   _NoteField(controller: _noteController),
                   const SizedBox(height: 20),
                   AppPrimaryButton(
-                    label: isEdit ? 'Save' : 'Log Transaction',
+                    label: isEdit
+                        ? (_splitInstallments
+                            ? 'Convert to Installments'
+                            : 'Save')
+                        : (_splitInstallments
+                            ? 'Log Installment'
+                            : 'Log Transaction'),
                     isLoading: _isSubmitting,
                     onPressed: _isSubmitting ? null : _submit,
                   ),
@@ -1012,6 +1032,7 @@ class _InstallmentField extends StatelessWidget {
   final bool value;
   final int months;
   final double amount;
+  final bool isEdit;
   final ValueChanged<bool> onChanged;
   final ValueChanged<int> onMonthsChanged;
 
@@ -1019,6 +1040,7 @@ class _InstallmentField extends StatelessWidget {
     required this.value,
     required this.months,
     required this.amount,
+    this.isEdit = false,
     required this.onChanged,
     required this.onMonthsChanged,
   });
@@ -1040,7 +1062,9 @@ class _InstallmentField extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Split into installments',
+                      isEdit
+                          ? 'Convert to installments'
+                          : 'Split into installments',
                       style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 14,
@@ -1049,7 +1073,9 @@ class _InstallmentField extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Holds credit limit now, but monthly dues are billed per cycle under this category.',
+                      isEdit
+                          ? 'Converts this entry into an installment plan: removes immediate lump-sum spending and bills it cycle-by-cycle.'
+                          : 'Holds credit limit now, but monthly dues are billed per cycle under this category.',
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                     ),
