@@ -6,8 +6,10 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
@@ -56,6 +58,19 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   // Reimbursable-expense state (outflow only): money spent now, recovered later.
   bool _reimbursable = false;
   DateTime? _expectedReimbursementDate;
+
+  // Installment purchase state (outflow on liability account only):
+  bool _splitInstallments = false;
+  int _installmentMonths = 3;
+
+  FinancialAccount? get _selectedAccount {
+    final id = _selectedAccountId;
+    if (id == null) return null;
+    for (final a in _accounts) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
 
   bool _isSubmitting = false;
 
@@ -228,6 +243,32 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           date: _date,
           note: note.isEmpty ? null : note,
         );
+      } else if (existing == null &&
+          _type == TransactionType.outflow &&
+          _splitInstallments &&
+          _selectedAccount?.isLiability == true) {
+        final startMonth = calculateInstallmentStartMonth(
+          _selectedAccount,
+          _date,
+          deferralMonths: 0,
+        );
+        final monthlyAmount = amount / _installmentMonths;
+        final inst = Installment(
+          id: _generateId(),
+          name: description.isEmpty ? 'Installment purchase' : description,
+          accountId: _selectedAccountId!,
+          totalAmount: amount,
+          monthlyAmount: double.parse(monthlyAmount.toStringAsFixed(2)),
+          totalMonths: _installmentMonths,
+          startMonth: startMonth,
+          purchaseDate: _date,
+          deferralMonths: 0,
+          interestRate: 0.0,
+          note: note.isEmpty ? null : note,
+          categoryId: categoryId.isEmpty ? null : categoryId,
+          isActive: true,
+        );
+        await widget.presenter.addInstallmentPurchase(inst);
       } else {
         final id = existing?.id ?? _generateId();
         // Reimbursable only applies to outflows. Reuse the existing linked
@@ -508,16 +549,35 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     _DatePickerRow(date: _date, onTap: _pickDate),
                   ],
                   if (_type == TransactionType.outflow) ...[
-                    const SizedBox(height: 12),
-                    _ReimbursableField(
-                      value: _reimbursable,
-                      expectedDate: _expectedReimbursementDate,
-                      owedByController: _owedByController,
-                      onChanged: (v) => setState(() => _reimbursable = v),
-                      onPickDate: _pickExpectedReimbursementDate,
-                      onClearDate: () =>
-                          setState(() => _expectedReimbursementDate = null),
-                    ),
+                    if (!isEdit && _selectedAccount?.isLiability == true) ...[
+                      const SizedBox(height: 12),
+                      _InstallmentField(
+                        value: _splitInstallments,
+                        months: _installmentMonths,
+                        amount:
+                            evalAmountExpression(_amountController.text) ?? 0.0,
+                        onChanged: (v) {
+                          setState(() {
+                            _splitInstallments = v;
+                            if (v) _reimbursable = false;
+                          });
+                        },
+                        onMonthsChanged: (m) =>
+                            setState(() => _installmentMonths = m),
+                      ),
+                    ],
+                    if (!_splitInstallments) ...[
+                      const SizedBox(height: 12),
+                      _ReimbursableField(
+                        value: _reimbursable,
+                        expectedDate: _expectedReimbursementDate,
+                        owedByController: _owedByController,
+                        onChanged: (v) => setState(() => _reimbursable = v),
+                        onPickDate: _pickExpectedReimbursementDate,
+                        onClearDate: () =>
+                            setState(() => _expectedReimbursementDate = null),
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 12),
                   _NoteField(controller: _noteController),
@@ -941,6 +1001,124 @@ class _NoteField extends StatelessWidget {
         controller: controller,
         maxLines: 2,
         decoration: sheetFieldDecoration(context),
+      ),
+    );
+  }
+}
+
+// ── Installment Field ─────────────────────────────────────────────────────────
+
+class _InstallmentField extends StatelessWidget {
+  final bool value;
+  final int months;
+  final double amount;
+  final ValueChanged<bool> onChanged;
+  final ValueChanged<int> onMonthsChanged;
+
+  const _InstallmentField({
+    required this.value,
+    required this.months,
+    required this.amount,
+    required this.onChanged,
+    required this.onMonthsChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final monthly = months > 0 && amount > 0 ? (amount / months) : 0.0;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Split into installments',
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Holds credit limit now, but monthly dues are billed per cycle under this category.',
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
+          ),
+          if (value) ...[
+            Divider(height: 16, color: cs.outlineVariant),
+            Row(
+              children: [
+                Text(
+                  'Duration',
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Wrap(
+                  spacing: 6,
+                  children: [3, 6, 12, 24].map((m) {
+                    final selected = months == m;
+                    return InkWell(
+                      onTap: () => onMonthsChanged(m),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primary.withValues(alpha: 0.15)
+                              : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: selected ? cs.primary : cs.outlineVariant,
+                          ),
+                        ),
+                        child: Text(
+                          '${m}mo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? cs.primary : cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+            if (amount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '≈ ${formatPeso(monthly)} / month for $months months',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }

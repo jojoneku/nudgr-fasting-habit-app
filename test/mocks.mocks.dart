@@ -1922,6 +1922,27 @@ class MockStorageService extends _i1.Mock implements _i13.StorageService {
         returnValue: _i14.Future<void>.value(),
         returnValueForMissingStub: _i14.Future<void>.value(),
       ) as _i14.Future<void>);
+
+  @override
+  _i14.Future<Set<String>> loadDismissedStatementKeys() => (super.noSuchMethod(
+        Invocation.method(
+          #loadDismissedStatementKeys,
+          [],
+        ),
+        returnValue: _i14.Future<Set<String>>.value(<String>{}),
+        returnValueForMissingStub: _i14.Future<Set<String>>.value(<String>{}),
+      ) as _i14.Future<Set<String>>);
+
+  @override
+  _i14.Future<void> saveDismissedStatementKeys(Set<String>? keys) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveDismissedStatementKeys,
+          [keys],
+        ),
+        returnValue: _i14.Future<void>.value(),
+        returnValueForMissingStub: _i14.Future<void>.value(),
+      ) as _i14.Future<void>);
 }
 
 /// A class which mocks [HealthService].

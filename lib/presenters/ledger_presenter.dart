@@ -104,6 +104,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     DateTime? expectedDate,
   })? onUpdateReimbursementReceivable;
 
+  /// Spawns an installment when a purchase is split into installments from the ledger.
+  Future<void> Function(Installment installment)? onSpawnInstallment;
+
   /// Resolves the expected payback date of the receivable linked to a
   /// reimbursable expense — the date lives on the receivable, not the txn, so
   /// the edit form reads it back through here to pre-fill the picker.
@@ -980,6 +983,21 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }) async {
     await addTransaction(outflow);
     await spawnReimbursementReceivable(outflow, expectedReimbursementDate);
+  }
+
+  /// Logs a purchase split into installments from the ledger. Creates the
+  /// installment plan, preserves the item's original category, and updates the
+  /// account's installment credit hold immediately without inflating the current
+  /// month's cash expenses.
+  Future<void> addInstallmentPurchase(Installment installment) async {
+    final spawn = onSpawnInstallment;
+    if (spawn != null) {
+      await spawn(installment);
+    } else {
+      final current = await _storage.loadInstallments();
+      await _storage.saveInstallments([...current, installment]);
+    }
+    await refreshInstallmentHolds();
   }
 
   /// Spawns the reimbursement receivable for an already-persisted [outflow].
