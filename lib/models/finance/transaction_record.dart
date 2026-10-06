@@ -18,6 +18,11 @@ class TransactionRecord {
   final String? transferToAccountId;
   final String? transferGroupId; // shared by both legs of a transfer pair
   final String? installmentId; // links to Installment
+  /// Whether this record represents the original purchase of an item split
+  /// into installments. Unlike regular expenses, an installment purchase holds
+  /// credit limit upfront on a liability account, but is excluded from immediate
+  /// headline cash expenses (which are only incurred when monthly installments are billed/paid).
+  final bool isInstallment;
   // Money you spent but expect to recover (e.g. a work expense to be
   // reimbursed). STILL counts in headline Expenses (real cash left your pocket)
   // but is excluded from per-category budget spend. Only ever set on outflows.
@@ -45,6 +50,7 @@ class TransactionRecord {
     this.transferToAccountId,
     this.transferGroupId,
     this.installmentId,
+    this.isInstallment = false,
     this.reimbursable = false,
     this.reimbursementReceivableId,
     this.owedBy,
@@ -67,6 +73,7 @@ class TransactionRecord {
       transferToAccountId: json['transferToAccountId'] as String?,
       transferGroupId: json['transferGroupId'] as String?,
       installmentId: json['installmentId'] as String?,
+      isInstallment: json['isInstallment'] as bool? ?? false,
       reimbursable: json['reimbursable'] as bool? ?? false,
       reimbursementReceivableId: json['reimbursementReceivableId'] as String?,
       owedBy: json['owedBy'] as String?,
@@ -90,6 +97,7 @@ class TransactionRecord {
         'transferToAccountId': transferToAccountId,
         'transferGroupId': transferGroupId,
         'installmentId': installmentId,
+        'isInstallment': isInstallment,
         'reimbursable': reimbursable,
         'reimbursementReceivableId': reimbursementReceivableId,
         'owedBy': owedBy,
@@ -110,6 +118,7 @@ class TransactionRecord {
     String? transferToAccountId,
     String? transferGroupId,
     String? installmentId,
+    bool? isInstallment,
     bool? reimbursable,
     String? reimbursementReceivableId,
     String? owedBy,
@@ -130,6 +139,7 @@ class TransactionRecord {
       transferToAccountId: transferToAccountId ?? this.transferToAccountId,
       transferGroupId: transferGroupId ?? this.transferGroupId,
       installmentId: installmentId ?? this.installmentId,
+      isInstallment: isInstallment ?? this.isInstallment,
       reimbursable: reimbursable ?? this.reimbursable,
       reimbursementReceivableId:
           reimbursementReceivableId ?? this.reimbursementReceivableId,

@@ -1008,8 +1008,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
                 i.isActive &&
                 i.accountId == bill.accountId &&
                 i.isDueIn(bill.month) &&
-                !_ledger.allTransactions.any(
-                    (t) => t.installmentId == i.id && t.month == bill.month))
+                !_ledger.allTransactions.any((t) =>
+                    t.installmentId == i.id &&
+                    t.month == bill.month &&
+                    !t.isInstallment))
             .toList();
 
         var instPaidSum = 0.0;
@@ -1122,7 +1124,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final a = _statementAccount(b);
     final cycle = a == null ? null : cycleForStatement(a, b);
     final instPayments = _ledger.allTransactions
-        .where((t) => t.billId == b.id && t.installmentId != null)
+        .where((t) =>
+            t.billId == b.id && t.installmentId != null && !t.isInstallment)
         .fold(0.0, (sum, t) => sum + t.amount);
     final revolving = (a != null && cycle != null)
         ? _ledger.paymentsToLiabilitySince(a.id, cycle.close)
@@ -2990,8 +2993,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
                 i.isActive &&
                 i.accountId == a.id &&
                 i.isDueIn(dueMonth) &&
-                !_ledger.allTransactions
-                    .any((t) => t.installmentId == i.id && t.month == dueMonth))
+                !_ledger.allTransactions.any((t) =>
+                    t.installmentId == i.id &&
+                    t.month == dueMonth &&
+                    !t.isInstallment))
             .toList();
         final installmentDueSum =
             dueInst.fold(0.0, (s, i) => s + i.monthlyAmount);

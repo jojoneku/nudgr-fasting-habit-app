@@ -32,6 +32,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       monthScope.addListener(_adoptScopeMonth);
     }
     _ledger.onSpawnInstallment = addInstallment;
+    _ledger.onDeleteInstallment = deleteInstallment;
+    _ledger.installmentResolver = findById;
     load();
   }
 
@@ -54,6 +56,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _monthScope?.removeListener(_adoptScopeMonth);
     if (_ledger.onSpawnInstallment == addInstallment) {
       _ledger.onSpawnInstallment = null;
+    }
+    if (_ledger.onDeleteInstallment == deleteInstallment) {
+      _ledger.onDeleteInstallment = null;
+    }
+    if (_ledger.installmentResolver == findById) {
+      _ledger.installmentResolver = null;
     }
     super.dispose();
   }
@@ -92,12 +100,21 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   List<Installment> get installments =>
       _installments.where((i) => i.isActive).toList();
 
+  List<Installment> get allInstallments => List.unmodifiable(_installments);
+
   List<Installment> get dueThisMonth => _installments
       .where((i) => i.isActive && i.isDueIn(_selectedMonth))
       .toList();
 
+  /// Looks up an installment by id, or null when not found.
+  Installment? findById(String id) =>
+      _installments.where((i) => i.id == id).firstOrNull;
+
   bool isPaidForMonth(String installmentId) => _ledger.allTransactions.any(
-        (t) => t.installmentId == installmentId && t.month == _selectedMonth,
+        (t) =>
+            t.installmentId == installmentId &&
+            t.month == _selectedMonth &&
+            !t.isInstallment,
       );
 
   int paidCount(String installmentId) =>
@@ -224,12 +241,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> deleteInstallment(String id) async {
+    _installments = _installments.where((i) => i.id != id).toList();
     final linked =
         _ledger.allTransactions.where((t) => t.installmentId == id).toList();
     for (final txn in linked) {
       await _ledger.deleteTransaction(txn.id);
     }
-    _installments = _installments.where((i) => i.id != id).toList();
     safeNotify();
     await _storage.saveInstallments(_installments);
     await _ledger.refreshInstallmentHolds();
@@ -286,7 +303,9 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> markUnpaid(String installmentId) async {
     final txn = _ledger.allTransactions
         .where((t) =>
-            t.installmentId == installmentId && t.month == _selectedMonth)
+            t.installmentId == installmentId &&
+            t.month == _selectedMonth &&
+            !t.isInstallment)
         .firstOrNull;
     if (txn == null) return;
     await _ledger.deleteTransaction(txn.id);

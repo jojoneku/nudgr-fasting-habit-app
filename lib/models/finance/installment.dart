@@ -79,8 +79,9 @@ class Installment {
   String monthForIndex(int i) => _offsetMonth(startMonth, i);
 
   /// How many payments have been recorded for this installment in [transactions].
-  int paidCount(Iterable<TransactionRecord> transactions) =>
-      transactions.where((t) => t.installmentId == id).length;
+  int paidCount(Iterable<TransactionRecord> transactions) => transactions
+      .where((t) => t.installmentId == id && !t.isInstallment)
+      .length;
 
   /// Remaining unpaid/unbilled payment periods.
   int remainingMonths(Iterable<TransactionRecord> transactions) =>

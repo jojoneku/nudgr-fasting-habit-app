@@ -122,6 +122,13 @@ class TransactionListTile extends StatelessWidget {
                 style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
               ),
             ),
+            if (txn.isInstallment) ...[
+              const SizedBox(width: 6),
+              const AppBadge(
+                text: 'Installment',
+                size: AppBadgeSize.small,
+              ),
+            ],
           ],
         ),
         trailing: AppNumberDisplay(

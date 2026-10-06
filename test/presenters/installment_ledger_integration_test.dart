@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/ai_tool.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -8,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import '../mocks.mocks.dart';
@@ -164,8 +166,13 @@ void main() {
       expect(acct.unbilledInstallments, 12000.0);
       expect(acct.availableCredit, 8000.0); // 20k - 12k
 
-      // Verify no instant cash expense in ledger
-      expect(ledger.allTransactions.isEmpty, isTrue);
+      // Verify installment purchase transaction in ledger with isInstallment: true
+      expect(ledger.allTransactions.length, 1);
+      final txn = ledger.allTransactions.first;
+      expect(txn.isInstallment, isTrue);
+      expect(txn.installmentId, 'inst-phone');
+      expect(txn.amount, 12000.0);
+      // But no instant cash outflow in monthly expenses
       expect(ledger.filteredMonthOutflow, 0.0);
     });
 
@@ -192,12 +199,13 @@ void main() {
       await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
 
       // Verify transaction inherits category 'cat-tech' and funding account deducted
-      expect(ledger.allTransactions.length, 1);
-      final txn = ledger.allTransactions.first;
-      expect(txn.categoryId, 'cat-tech');
-      expect(txn.amount, 2000.0);
-      expect(txn.accountId, 'maribank');
-      expect(txn.installmentId, 'inst-phone');
+      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 payment
+      final paymentTxn =
+          ledger.allTransactions.firstWhere((t) => !t.isInstallment);
+      expect(paymentTxn.categoryId, 'cat-tech');
+      expect(paymentTxn.amount, 2000.0);
+      expect(paymentTxn.accountId, 'maribank');
+      expect(paymentTxn.installmentId, 'inst-phone');
 
       // Verify unbilled installments decreased
       final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
@@ -297,8 +305,9 @@ void main() {
       );
       await ledger.addInstallmentPurchase(convertedInst);
 
-      // Verify transaction removed from ledger & monthly outflow
-      expect(ledger.allTransactions.isEmpty, isTrue);
+      // Verify purchase transaction is recorded with isInstallment: true
+      expect(ledger.allTransactions.length, 1);
+      expect(ledger.allTransactions.first.isInstallment, isTrue);
       expect(ledger.filteredMonthOutflow, 0.0);
 
       // Verify liability account debt moved from revolving balance to unbilled installments
@@ -318,6 +327,115 @@ void main() {
         (b) => b.billType == BillType.creditCard && b.accountId == 'shopeepay',
       );
       expect(statement.amount, 2000.0);
+    });
+
+    test('installment with interest calculates monthly payment and totals', () {
+      final monthly = Installment.computeMonthlyAmount(
+        principal: 10000.0,
+        months: 10,
+        monthlyRate: 1.5,
+      );
+      expect(monthly, 1150.0); // 1000 principal + 150 interest per month
+
+      final inst = Installment(
+        id: 'inst-interest',
+        name: 'Laptop with Interest',
+        accountId: 'shopeepay',
+        totalAmount: 10000.0,
+        monthlyAmount: monthly,
+        totalMonths: 10,
+        startMonth: '2026-10',
+        interestRate: 1.5,
+      );
+
+      expect(inst.hasInterest, isTrue);
+      expect(inst.monthlyInterest, 150.0);
+      expect(inst.totalInterest, 1500.0);
+      expect(inst.totalPayable, 11500.0);
+    });
+
+    test(
+        'FinanceActionsExecutor (Nudgy chat) proposes, executes addInstallment and queries findInstallments',
+        () async {
+      await ledger.load();
+      await installments.load();
+      await bills.load();
+
+      final executor = FinanceActionsExecutor(
+        bills: bills,
+        ledger: ledger,
+        installments: installments,
+      );
+
+      // 1. Querying findInstallments before adding returns empty
+      final emptyRead = await executor.runRead(const AiToolCall(
+        id: 'read-1',
+        name: 'findInstallments',
+        input: {'query': 'laptop'},
+      ));
+      expect(emptyRead.ok, isTrue);
+      expect(emptyRead.summary.contains('No installments matched'), isTrue);
+
+      // 2. Propose addInstallment via chat
+      final proposeFuture = executor.propose(const AiToolCall(
+        id: 'call-1',
+        name: 'addInstallment',
+        input: {
+          'name': 'Gaming Laptop',
+          'amount': 30000.0,
+          'months': 6,
+          'account': 'ShopeePay',
+          'interestRate': 1.5,
+          'category': 'Technology',
+          'date': '2026-10-05',
+          'note': 'Work & gaming laptop',
+        },
+      ));
+
+      // Verify pending proposal card
+      expect(executor.pending, isNotNull);
+      final pending = executor.pending!;
+      expect(pending.title, contains('Gaming Laptop'));
+      expect(pending.details.any((d) => d.label == 'Monthly payment'), isTrue);
+      expect(pending.details.any((d) => d.label == 'Interest rate'), isTrue);
+
+      // 3. User confirms proposal card
+      await executor.confirm();
+      final result = await proposeFuture;
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('Added installment purchase'));
+
+      // 4. Verify installment created
+      expect(installments.installments.length, 1);
+      final inst = installments.installments.first;
+      expect(inst.name, 'Gaming Laptop');
+      expect(inst.totalAmount, 30000.0);
+      expect(inst.totalMonths, 6);
+      expect(inst.interestRate, 1.5);
+      expect(inst.monthlyAmount, 5450.0); // 5000 + 450/mo interest
+
+      // 5. Verify ledger transaction stamped
+      expect(ledger.allTransactions.length, 1);
+      final txn = ledger.allTransactions.first;
+      expect(txn.description, 'Gaming Laptop');
+      expect(txn.amount, 30000.0);
+      expect(txn.isInstallment, isTrue);
+      expect(txn.installmentId, inst.id);
+      expect(ledger.filteredMonthOutflow, 0.0); // no instant cash drain
+
+      // 6. Verify credit limit held
+      final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
+      expect(acct.unbilledInstallments, 32700.0); // 6 * 5450
+
+      // 7. Querying findInstallments after adding returns the row
+      final foundRead = await executor.runRead(const AiToolCall(
+        id: 'read-2',
+        name: 'findInstallments',
+        input: {'query': 'laptop'},
+      ));
+      expect(foundRead.ok, isTrue);
+      expect(foundRead.summary, contains('Gaming Laptop'));
+      expect(foundRead.summary, contains('5450/mo'));
     });
   });
 }

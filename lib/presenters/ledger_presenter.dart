@@ -107,6 +107,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Spawns an installment when a purchase is split into installments from the ledger.
   Future<void> Function(Installment installment)? onSpawnInstallment;
 
+  /// Deletes an installment when an installment purchase is removed from the ledger.
+  Future<void> Function(String installmentId)? onDeleteInstallment;
+
+  /// Resolves an installment by id when editing an installment transaction.
+  Installment? Function(String installmentId)? installmentResolver;
+
+  Installment? findInstallmentById(String? id) =>
+      id == null ? null : installmentResolver?.call(id);
+
   /// Resolves the expected payback date of the receivable linked to a
   /// reimbursable expense — the date lives on the receivable, not the txn, so
   /// the edit form reads it back through here to pre-fill the picker.
@@ -440,7 +449,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final rows = <({TransactionRecord txn, double runningBalance})>[];
     var balance = 0.0;
     for (final t in chronological) {
-      balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      if (!t.isInstallment) {
+        balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      }
       rows.add((txn: t, runningBalance: balance));
     }
 
@@ -490,7 +501,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final cutoff = DateTime(asOf.year, asOf.month, asOf.day + 1);
     var owed = account.balance;
     for (final t in _allTransactions) {
-      if (t.accountId != accountId || t.date.isBefore(cutoff)) continue;
+      if (t.accountId != accountId ||
+          t.date.isBefore(cutoff) ||
+          t.isInstallment) {
+        continue;
+      }
       final base = t.type == TransactionType.inflow ? t.amount : -t.amount;
       final delta = -base; // liability: spending raises what is owed
       owed -= delta; // unwind → the balance before this transaction
@@ -521,7 +536,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         until == null ? null : DateTime(until.year, until.month, until.day + 1);
     var paid = 0.0;
     for (final t in _allTransactions) {
-      if (t.accountId != accountId || t.date.isBefore(from)) continue;
+      if (t.accountId != accountId ||
+          t.date.isBefore(from) ||
+          t.isInstallment) {
+        continue;
+      }
       if (to != null && !t.date.isBefore(to)) continue;
       if (t.type == TransactionType.inflow) paid += t.amount;
     }
@@ -554,9 +573,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       var running = account?.balance ?? 0.0;
       for (final t in txns) {
         map[t.id] = running; // balance AFTER this transaction
-        final base = t.type == TransactionType.inflow ? t.amount : -t.amount;
-        final delta = isLiability ? -base : base;
-        running -= delta; // unwind → balance before, for the next older txn
+        if (!t.isInstallment) {
+          final base = t.type == TransactionType.inflow ? t.amount : -t.amount;
+          final delta = isLiability ? -base : base;
+          running -= delta; // unwind → balance before, for the next older txn
+        }
       }
     }
     return map;
@@ -615,7 +636,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     })>[];
     var balance = 0.0;
     for (final t in chronological) {
-      balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      if (!t.isInstallment) {
+        balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      }
       rows.add((
         txn: t,
         runningBalance: balance,
@@ -912,7 +935,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final isFirstToday = !_hasTransactionToday();
 
     _allTransactions = [..._allTransactions, txn];
-    _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+        isInstallment: txn.isInstallment);
     // Optimistic: repaint with the new transaction before the encode+write.
     safeNotify();
     await _saveAll();
@@ -930,7 +954,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// "owed to you" tracking. Awards no XP: restoring isn't a fresh log.
   Future<void> restoreTransaction(TransactionRecord txn) async {
     _allTransactions = [..._allTransactions, txn];
-    _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+        isInstallment: txn.isInstallment);
     safeNotify();
     await _saveAll();
     if (txn.reimbursable &&
@@ -955,7 +980,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (txns.length == 1) return restoreTransaction(txns.first);
     _allTransactions = [..._allTransactions, ...txns];
     for (final txn in txns) {
-      _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+      _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+          isInstallment: txn.isInstallment);
     }
     safeNotify();
     await _saveAll();
@@ -986,10 +1012,14 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Logs a purchase split into installments from the ledger. Creates the
-  /// installment plan, preserves the item's original category, and updates the
-  /// account's installment credit hold immediately without inflating the current
-  /// month's cash expenses.
-  Future<void> addInstallmentPurchase(Installment installment) async {
+  /// installment plan, preserves the item's original category, records the
+  /// installment transaction in the ledger (with isInstallment: true), and
+  /// updates the account's installment credit hold immediately without
+  /// inflating the current month's cash expenses.
+  Future<void> addInstallmentPurchase(
+    Installment installment, {
+    TransactionRecord? transaction,
+  }) async {
     final spawn = onSpawnInstallment;
     if (spawn != null) {
       await spawn(installment);
@@ -997,6 +1027,34 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       final current = await _storage.loadInstallments();
       await _storage.saveInstallments([...current, installment]);
     }
+
+    final txn = transaction ??
+        TransactionRecord(
+          id: _generateId(),
+          date: installment.purchaseDate ?? DateTime.now(),
+          accountId: installment.accountId,
+          categoryId: installment.categoryId ?? '',
+          amount: installment.totalAmount,
+          type: TransactionType.outflow,
+          description: installment.name,
+          note: installment.note,
+          month: toMonthKey(installment.purchaseDate ?? DateTime.now()),
+          installmentId: installment.id,
+          isInstallment: true,
+        );
+
+    final existingIndex = _allTransactions.indexWhere((t) => t.id == txn.id);
+    if (existingIndex >= 0) {
+      _allTransactions = [
+        for (var i = 0; i < _allTransactions.length; i++)
+          if (i == existingIndex) txn else _allTransactions[i],
+      ];
+    } else {
+      _allTransactions = [..._allTransactions, txn];
+    }
+
+    safeNotify();
+    await _saveAll();
     await refreshInstallmentHolds();
   }
 
@@ -1103,8 +1161,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // or an interleaved delete) — `firstWhere` would otherwise throw. (C9)
     final old = _allTransactions.where((t) => t.id == txn.id).firstOrNull;
     if (old == null) return;
-    _reverseBalanceDelta(old.accountId, old.amount, old.type);
-    _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    _reverseBalanceDelta(old.accountId, old.amount, old.type,
+        isInstallment: old.isInstallment);
+    _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+        isInstallment: txn.isInstallment);
     _allTransactions = [
       for (final t in _allTransactions) t.id == txn.id ? txn : t,
     ];
@@ -1132,7 +1192,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> deleteTransaction(String id) async {
     final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
     if (txn == null) return; // already gone — no-op (C9)
-    _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
+    _reverseBalanceDelta(txn.accountId, txn.amount, txn.type,
+        isInstallment: txn.isInstallment);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     safeNotify();
     await _saveAll();
@@ -1141,6 +1202,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final receivableId = txn.reimbursementReceivableId;
     if (receivableId != null) {
       await deleteReimbursementReceivable(receivableId);
+    }
+    if (txn.isInstallment && txn.installmentId != null) {
+      final deleteInst = onDeleteInstallment;
+      if (deleteInst != null) {
+        await deleteInst(txn.installmentId!);
+      } else {
+        final current = await _storage.loadInstallments();
+        await _storage.saveInstallments(
+            current.where((i) => i.id != txn.installmentId).toList());
+      }
     }
     if (txn.installmentId != null) {
       await refreshInstallmentHolds();
@@ -1165,7 +1236,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         .where((t) => t.transferGroupId == groupId)
         .toList(growable: false);
     for (final leg in legs) {
-      _reverseBalanceDelta(leg.accountId, leg.amount, leg.type);
+      _reverseBalanceDelta(leg.accountId, leg.amount, leg.type,
+          isInstallment: leg.isInstallment);
     }
     _allTransactions =
         _allTransactions.where((t) => t.transferGroupId != groupId).toList();
@@ -1196,7 +1268,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         .toList();
     if (toRemove.isEmpty) return const [];
     for (final t in toRemove) {
-      _reverseBalanceDelta(t.accountId, t.amount, t.type);
+      _reverseBalanceDelta(t.accountId, t.amount, t.type,
+          isInstallment: t.isInstallment);
     }
     final removeIds = toRemove.map((t) => t.id).toSet();
     _allTransactions =
@@ -2551,8 +2624,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         t.date.day == today.day);
   }
 
-  void _applyBalanceDelta(
-      String accountId, double amount, TransactionType type) {
+  void _applyBalanceDelta(String accountId, double amount, TransactionType type,
+      {bool isInstallment = false}) {
+    if (isInstallment) return;
     // Sub-accounts share the same real-world money as their parent, so any
     // transaction-driven delta on a sub also moves the parent. Transfers
     // between a parent and its own sub net to zero on the parent (re-tagging),
@@ -2613,7 +2687,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   void _reverseBalanceDelta(
-      String accountId, double amount, TransactionType type) {
+      String accountId, double amount, TransactionType type,
+      {bool isInstallment = false}) {
+    if (isInstallment) return;
     _applyBalanceDelta(
       accountId,
       amount,

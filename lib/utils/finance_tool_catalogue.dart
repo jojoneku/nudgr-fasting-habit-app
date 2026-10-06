@@ -89,6 +89,29 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  AiTool(
+    name: 'findInstallments',
+    kind: AiToolKind.read,
+    description:
+        'Find installment plans (e.g. credit card 0% plans, SPayLater, BNPL), '
+        'with their monthly payment, total months, remaining unbilled balance, '
+        'and account. Call this when the user asks about their installments or '
+        'BNPL purchases.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'query': {
+          'type': 'string',
+          'description':
+              'Name or partial name of the installment item, e.g. "phone".',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Credit card or BNPL account NAME or part of it.',
+        },
+      },
+    },
+  ),
   // On demand only. The snapshot already carries recent spending and each
   // past month's biggest expenses; the full ledger is too big to send every
   // turn, so it is fetched when the user actually asks to go through it.
@@ -327,6 +350,58 @@ const List<AiTool> kFinanceTools = [
               },
             },
           },
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'addInstallment',
+    kind: AiToolKind.create,
+    description:
+        'Propose a new installment purchase on a credit card or BNPL account '
+        '(e.g. SPayLater, ShopeePay, credit card installment). This logs the '
+        'purchase, holds credit limit, and schedules monthly dues across the '
+        'given duration. Call as soon as you have a name, total amount, account, '
+        'and number of months.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['name', 'amount', 'months'],
+      'properties': {
+        'name': {
+          'type': 'string',
+          'description':
+              'Item or purchase description, e.g. "MacBook Pro", "Phone".',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Total purchase amount in pesos.',
+        },
+        'months': {
+          'type': 'integer',
+          'description': 'Number of monthly installments, e.g. 3, 6, 12, 24.',
+        },
+        'account': {
+          'type': 'string',
+          'description':
+              'Credit card or BNPL account NAME, e.g. "ShopeePay", "BDO Card".',
+        },
+        'interestRate': {
+          'type': 'number',
+          'description':
+              'Monthly add-on interest rate in percent (e.g. 0 for 0% promo, 1.5 for 1.5%/mo). Default 0.',
+        },
+        'category': {
+          'type': 'string',
+          'description':
+              'Expense category NAME, e.g. "Electronics", "Shopping".',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD purchase date. Defaults to today.',
+        },
+        'note': {
+          'type': 'string',
+          'description': 'Optional note or remarks.',
         },
       },
     },

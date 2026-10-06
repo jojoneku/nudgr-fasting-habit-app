@@ -42,14 +42,16 @@ Set<String> reimbursementReceivableIds(Iterable<TransactionRecord> all) {
 }
 
 /// True for an outflow that is real spending — excludes internal transfer legs,
-/// reimbursable/loan outflows (money you'll get back isn't an expense), and any
-/// outflow in an [excludeFromTotals] category. [excludedCategoryIds] comes from
+/// reimbursable/loan outflows (money you'll get back isn't an expense),
+/// installment purchases (financed purchases billed monthly; spending occurs as installments are paid),
+/// and any outflow in an [excludeFromTotals] category. [excludedCategoryIds] comes from
 /// [excludedCashFlowCategoryIds].
 bool isSpendingOutflow(TransactionRecord t,
         [Set<String> excludedCategoryIds = const {}]) =>
     t.type == TransactionType.outflow &&
     t.transferGroupId == null &&
     !t.reimbursable &&
+    !t.isInstallment &&
     !excludedCategoryIds.contains(t.categoryId);
 
 /// True for an inflow that is real income — excludes internal transfer legs,
