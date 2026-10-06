@@ -159,6 +159,7 @@ class TreasuryPresenters {
         // Transactions are the ledger's to own; the executor only hands
         // Nudgy's rows to its review card.
         ledger: ledger,
+        installments: installments,
       ),
     );
   }

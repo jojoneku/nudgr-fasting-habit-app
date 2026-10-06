@@ -8,13 +8,18 @@ import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
+import '../models/finance/financial_account.dart';
+import '../models/finance/installment.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../utils/credit_cycle.dart';
 import '../utils/finance_entry_extraction.dart';
+import '../utils/finance_format.dart';
 import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
 import 'finance_tool_executor.dart';
+import 'installment_presenter.dart';
 import 'ledger_presenter.dart';
 
 /// Runs Nudgy's finance tools against the presenters that own the data.
@@ -38,9 +43,11 @@ class FinanceActionsExecutor extends ChangeNotifier
     required BillsReceivablesPresenter bills,
     BudgetPresenter? budget,
     LedgerPresenter? ledger,
+    InstallmentPresenter? installments,
   })  : _bills = bills,
         _budget = budget,
-        _ledger = ledger;
+        _ledger = ledger,
+        _installments = installments;
 
   final BillsReceivablesPresenter _bills;
   final BudgetPresenter? _budget;
@@ -48,6 +55,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// Owner of transactions. Nullable for the same reason [_budget] is: a build
   /// that cannot log must fail the call plainly rather than pretend.
   final LedgerPresenter? _ledger;
+  final InstallmentPresenter? _installments;
 
   PendingFinanceAction? _pending;
   Completer<AiToolResult>? _decision;
@@ -108,6 +116,37 @@ class FinanceActionsExecutor extends ChangeNotifier
             .map((b) => 'id=${b.id} "${names[b.categoryId] ?? b.categoryId}" '
                 'limit ${_peso(b.allocatedAmount)}');
         return _rows(call, rows, 'budgets', month);
+
+      case 'findInstallments':
+        final installments = _installments;
+        if (installments == null) {
+          return AiToolResult.failed(
+              call.id, 'Installments are not available here.');
+        }
+        final accountQuery = _str(call.input['account']).toLowerCase();
+        final accounts = {
+          for (final a in _ledger?.accounts ?? const <FinancialAccount>[])
+            a.id: a.name
+        };
+        final txns = _ledger?.allTransactions ?? const <TransactionRecord>[];
+        final rows = installments.allInstallments.where((inst) {
+          if (!matches(inst.name)) return false;
+          if (accountQuery.isNotEmpty) {
+            final accName = (accounts[inst.accountId] ?? '').toLowerCase();
+            if (!accName.contains(accountQuery)) return false;
+          }
+          return true;
+        }).map((inst) {
+          final accName = accounts[inst.accountId] ?? inst.accountId;
+          final unbilled = inst.remainingAmount(txns);
+          final paid = inst.paidCount(txns);
+          final interest =
+              inst.hasInterest ? ' (+${inst.interestRate}%/mo int)' : '';
+          return 'id=${inst.id} "${inst.name}" on $accName: '
+              '${_peso(inst.monthlyAmount)}/mo ($paid/${inst.totalMonths} paid)$interest, '
+              'unbilled ${_peso(unbilled)}, original ${_peso(inst.totalAmount)}';
+        });
+        return _rows(call, rows, 'installments', month);
 
       case 'findTransactions':
         return _findTransactions(call);
@@ -505,6 +544,41 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
           ],
         );
+      case 'addInstallment':
+        final months = _int(i['months']).clamp(1, 120);
+        final rate = _num(i['interestRate']);
+        final monthly = Installment.computeMonthlyAmount(
+          principal: amount,
+          months: months,
+          monthlyRate: rate,
+        );
+        final totalPayable = monthly * months;
+        final totalInterest =
+            (totalPayable - amount).clamp(0.0, double.infinity);
+        final rateLabel = rate == rate.roundToDouble()
+            ? '${rate.round()}%'
+            : '${rate.toStringAsFixed(2)}%';
+        return PendingFinanceAction(
+          call: call,
+          title: 'Add installment: $name, ${_peso(amount)} ($months mo)',
+          isRecurring: false,
+          details: [
+            (label: 'Total amount', value: _peso(amount)),
+            (label: 'Duration', value: '$months months'),
+            (label: 'Monthly payment', value: _peso(monthly)),
+            if (rate > 0) ...[
+              (label: 'Interest rate', value: '$rateLabel / mo'),
+              (label: 'Total interest', value: _peso(totalInterest)),
+              (label: 'Total payable', value: _peso(totalPayable)),
+            ],
+            if (_str(i['account']).isNotEmpty)
+              (label: 'Account', value: _str(i['account'])),
+            if (_str(i['category']).isNotEmpty)
+              (label: 'Category', value: _str(i['category'])),
+            if (_str(i['date']).isNotEmpty)
+              (label: 'Date', value: _str(i['date'])),
+          ],
+        );
     }
     return null;
   }
@@ -572,11 +646,90 @@ class FinanceActionsExecutor extends ChangeNotifier
           applyToFuture: applyToFuture,
         );
         return 'Set aside ${_peso(amount)} for "$name" in $month$scope.';
+
+      case 'addInstallment':
+        final ledger = _ledger;
+        if (ledger == null) {
+          throw StateError(
+              'Ledger is not available to log installment purchase');
+        }
+        final months = _int(i['months']).clamp(1, 120);
+        final rate = _num(i['interestRate']);
+        final accountName = _str(i['account']);
+        final acc = _accountFor(accountName);
+        if (acc == null) {
+          throw StateError('Could not find account "$accountName"');
+        }
+        final categoryName = _str(i['category']);
+        final categoryId = _categoryIdFor(categoryName);
+        final dateStr = _str(i['date']);
+        final date = (dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null) ??
+            DateTime.now();
+        final startMonth = calculateInstallmentStartMonth(
+          acc,
+          date,
+          deferralMonths: 0,
+        );
+        final monthly = Installment.computeMonthlyAmount(
+          principal: amount,
+          months: months,
+          monthlyRate: rate,
+        );
+        final inst = Installment(
+          id: _id(),
+          name: name,
+          accountId: acc.id,
+          totalAmount: amount,
+          monthlyAmount: double.parse(monthly.toStringAsFixed(2)),
+          totalMonths: months,
+          startMonth: startMonth,
+          purchaseDate: date,
+          deferralMonths: 0,
+          interestRate: rate,
+          note: _str(i['note']).isEmpty ? null : _str(i['note']),
+          categoryId: categoryId.isEmpty ? null : categoryId,
+          isActive: true,
+        );
+        final txn = TransactionRecord(
+          id: _id(),
+          date: date,
+          accountId: acc.id,
+          categoryId: categoryId,
+          amount: amount,
+          type: TransactionType.outflow,
+          description: name,
+          note: _str(i['note']).isEmpty ? null : _str(i['note']),
+          month: toMonthKey(date),
+          installmentId: inst.id,
+          isInstallment: true,
+        );
+        await ledger.addInstallmentPurchase(inst, transaction: txn);
+        return 'Added installment purchase "$name" for ${_peso(amount)} ($months months at ${_peso(monthly)}/mo) on ${acc.name}.';
     }
     throw StateError('no writer for ${call.name}');
   }
 
   // ── Small helpers ─────────────────────────────────────────────────────────
+
+  /// Resolve an account NAME or partial name to a FinancialAccount.
+  /// Falls back to the first liability account if not matched or empty.
+  FinancialAccount? _accountFor(String name) {
+    final accounts = _ledger?.accounts ?? const [];
+    if (accounts.isEmpty) return null;
+    if (name.isEmpty) {
+      return accounts.where((a) => a.isLiability).firstOrNull ??
+          accounts.firstOrNull;
+    }
+    final lower = name.toLowerCase();
+    for (final a in accounts) {
+      if (a.name.toLowerCase() == lower) return a;
+    }
+    for (final a in accounts) {
+      if (a.name.toLowerCase().contains(lower)) return a;
+    }
+    return accounts.where((a) => a.isLiability).firstOrNull ??
+        accounts.firstOrNull;
+  }
 
   /// Resolve a category NAME to its id. The model never sees ids, so it sends
   /// names and the client binds them — the same contract the expense extractor
