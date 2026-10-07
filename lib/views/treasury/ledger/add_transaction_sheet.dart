@@ -9,7 +9,6 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
-import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
@@ -255,64 +254,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
-          (existing == null ||
-              existing.isInstallment ||
-              existing.installmentId == null) &&
+          widget.presenter.canSplitIntoInstallments(existing) &&
           _selectedAccount?.isLiability == true) {
-        final startMonth = calculateInstallmentStartMonth(
-          _selectedAccount,
-          _date,
-          deferralMonths: 0,
-        );
-        final monthlyAmount = Installment.computeMonthlyAmount(
-          principal: amount,
-          months: _installmentMonths,
-          monthlyRate: _interestRate,
-        );
-        final instId = existing?.installmentId ?? _generateId();
-        final inst = Installment(
-          id: instId,
-          name: description.isEmpty ? 'Installment purchase' : description,
+        // New purchase, in-place edit of an existing one, or conversion of a
+        // regular record: the presenter owns all three.
+        await widget.presenter.saveInstallmentPurchase(
+          existing: existing,
           accountId: _selectedAccountId!,
-          totalAmount: amount,
-          monthlyAmount: double.parse(monthlyAmount.toStringAsFixed(2)),
-          totalMonths: _installmentMonths,
-          startMonth: startMonth,
-          purchaseDate: _date,
-          deferralMonths: 0,
+          amount: amount,
+          months: _installmentMonths,
           interestRate: _interestRate,
-          note: note.isEmpty ? null : note,
-          categoryId: categoryId.isEmpty ? null : categoryId,
-          isActive: true,
-        );
-        if (existing != null) {
-          final oldReceivableId = existing.reimbursementReceivableId;
-          if (oldReceivableId != null) {
-            await widget.presenter
-                .deleteReimbursementReceivable(oldReceivableId);
-          }
-          if (existing.transferGroupId != null) {
-            await widget.presenter.deleteTransactionOrGroup(existing.id);
-          } else {
-            await widget.presenter.deleteTransaction(existing.id);
-          }
-        }
-        await widget.presenter.addInstallmentPurchase(
-          inst,
-          transaction: TransactionRecord(
-            id: existing?.id ?? _generateId(),
-            date: _date,
-            accountId: _selectedAccountId!,
-            categoryId: categoryId.isEmpty ? '' : categoryId,
-            amount: amount,
-            type: TransactionType.outflow,
-            description:
-                description.isEmpty ? 'Installment purchase' : description,
-            note: note.isEmpty ? null : note,
-            month: toMonthKey(_date),
-            installmentId: inst.id,
-            isInstallment: true,
-          ),
+          date: _date,
+          description: description,
+          note: note,
+          categoryId: categoryId,
         );
       } else {
         final id = existing?.id ?? _generateId();
@@ -341,18 +296,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         // Null = "ASAP / no set date" — surfaces in the current month.
         final expectedDate = _expectedReimbursementDate;
         if (existing != null) {
-          // Drop a stale linked receivable when the expense is no longer
-          // reimbursable (toggled off, or type changed away from outflow).
+          // A stale linked receivable (no longer reimbursable) is retired by
+          // updateTransaction itself.
           final oldReceivableId = existing.reimbursementReceivableId;
-          if (oldReceivableId != null && !isReimbursable) {
-            await widget.presenter
-                .deleteReimbursementReceivable(oldReceivableId);
-          }
           if (existing.transferGroupId != null) {
             // Converting a transfer into a normal income/expense: remove the
             // whole transfer group, then add the single replacement record.
             await widget.presenter.deleteTransactionOrGroup(existing.id);
             await widget.presenter.addTransaction(txn);
+          } else if (existing.isInstallment) {
+            // Split turned off, or moved off a credit account: the plan goes
+            // and the record takes its full balance effect, exactly once.
+            await widget.presenter.convertInstallmentPurchaseToRegular(txn);
           } else {
             await widget.presenter.updateTransaction(txn);
           }
@@ -594,9 +549,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     _DatePickerRow(date: _date, onTap: _pickDate),
                   ],
                   if (_type == TransactionType.outflow) ...[
-                    if ((!isEdit ||
-                            widget.existing?.isInstallment == true ||
-                            widget.existing?.installmentId == null) &&
+                    if (widget.presenter
+                            .canSplitIntoInstallments(widget.existing) &&
                         _selectedAccount?.isLiability == true) ...[
                       const SizedBox(height: 12),
                       _InstallmentField(

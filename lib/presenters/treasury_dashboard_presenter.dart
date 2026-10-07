@@ -755,7 +755,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       for (final a in creditAccounts)
         DashboardAccountRow(
           name: a.name,
-          balance: a.currentPayable,
+          balance: a.totalDebt,
           held: 0.0,
           yours: a.availableCredit ?? 0.0,
           isCredit: true,
@@ -1656,6 +1656,71 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
 
   // --- Account CRUD ---
 
+  static bool _isCreditCategory(AccountCategory c) =>
+      c == AccountCategory.creditCard ||
+      c == AccountCategory.creditLine ||
+      c == AccountCategory.bnpl;
+
+  /// The live installment hold on [accountId], or zero for a new account.
+  double _installmentHoldOf(String? accountId) =>
+      _accounts
+          .where((a) => a.id == accountId)
+          .firstOrNull
+          ?.unbilledInstallments ??
+      0;
+
+  // A credit account keeps its installments apart from its balance:
+  // [FinancialAccount.balance] is what is already billed, and
+  // [FinancialAccount.unbilledInstallments] is what the installments still
+  // have to bill. The dashboard card's "Owe" adds the two. The account form
+  // used to show the balance alone under "Current Balance Owed" — ₱397 on a
+  // card that owed ₱5,730 — and anyone who typed the issuer's total into it
+  // counted every installment twice. So the form shows and takes the same
+  // total as the card, and the installment part comes off when it is saved.
+
+  /// Label for the account form's balance field.
+  String accountBalanceLabel(AccountCategory category) =>
+      _isCreditCategory(category) ? 'Current Balance Owed' : 'Opening Balance';
+
+  /// What the balance field starts at for [existing]: for a credit account,
+  /// everything owed — the dashboard card's "Owe" figure.
+  double accountBalanceFieldValue(FinancialAccount existing) {
+    final live =
+        _accounts.where((a) => a.id == existing.id).firstOrNull ?? existing;
+    return live.isLiability
+        ? live.balance + live.unbilledInstallments
+        : live.balance;
+  }
+
+  /// The balance to store for [entered] in the balance field: for a credit
+  /// account, the total owed minus the installments not billed yet.
+  double balanceFromField(AccountCategory category, double entered,
+          {String? accountId}) =>
+      _isCreditCategory(category)
+          ? entered - _installmentHoldOf(accountId)
+          : entered;
+
+  /// Helper under the balance field of a credit account with installments,
+  /// saying what the total includes. Null when there are none.
+  String? accountBalanceHint(AccountCategory category, {String? accountId}) {
+    if (!_isCreditCategory(category)) return null;
+    final hold = _installmentHoldOf(accountId);
+    if (hold <= 0) return null;
+    return 'Includes ${formatPeso(hold)} in installments not billed yet. '
+        'Same total as the card.';
+  }
+
+  /// Validation for the balance field: a credit account cannot owe less than
+  /// its installments still have to bill. Null when [text] is fine.
+  String? accountBalanceError(AccountCategory category, String? text,
+      {String? accountId}) {
+    if (!_isCreditCategory(category)) return null;
+    final hold = _installmentHoldOf(accountId);
+    final entered = double.tryParse((text ?? '').replaceAll(',', '').trim());
+    if (hold <= 0 || entered == null || entered >= hold - 0.005) return null;
+    return 'At least ${formatPeso(hold)} — the installments not billed yet';
+  }
+
   Future<void> addAccount(FinancialAccount account) async {
     // A goal created with an opening balance already at its target is funded on
     // day one; nothing else would stamp it until the next transaction.
@@ -1720,6 +1785,18 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _summaries = await _storage.loadMonthlySummaries();
     _currentMonth = toMonthKey(_clock());
+    // The ledger's slices win over the storage copies read above. Storage has
+    // no installment holds (they are derived from the live plans), and this
+    // load runs concurrently with the ledger's: had the ledger finished first,
+    // the storage copy would overwrite its live accounts until its next
+    // notify, so cards would show their limit with no installments held. If
+    // the ledger is still loading, its notify on finishing mirrors them in.
+    final ledger = _ledger;
+    if (ledger != null && !ledger.isLoading) {
+      _accounts = ledger.accounts;
+      _transactions = ledger.allTransactions;
+      _categories = ledger.categories;
+    }
 
     _isLoading = false;
     safeNotify();

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
+import 'package:intl/intl.dart';
 
 void main() {
   group('Installment model purchaseDate and deferralMonths', () {
@@ -415,6 +416,100 @@ void main() {
       expect(text, isNotNull);
       expect(text, contains('deferred by 2 months'));
       expect(text, contains('Due in Dec 2026'));
+    });
+
+    // Closes the 15th, due 15 days later: the Jan 15 statement is due Jan 30.
+    final monthEnd = FinancialAccount(
+      id: 'month-end',
+      name: 'Month-end due',
+      category: AccountCategory.creditCard,
+      balance: 0,
+      colorHex: '#000000',
+      icon: 'card',
+      statementDay: 15,
+      dueDaysAfterStatement: 15,
+    );
+
+    test('deferral from a 30th due date does not overflow into a later month',
+        () {
+      final bought = DateTime(2026, 1, 10);
+      for (final n in [1, 2, 3]) {
+        final start =
+            calculateInstallmentStartMonth(monthEnd, bought, deferralMonths: n);
+        final text =
+            installmentCycleExplanation(monthEnd, bought, deferralMonths: n)!;
+        final expected = DateFormat('MMM yyyy')
+            .format(DateTime.parse('$start-01')); // the month that is saved
+        expect(text, contains('Due in $expected'), reason: '$n mo deferral');
+      }
+      // Jan 30 + 1 month used to read "Mar 2026" while 2026-02 was saved.
+      expect(installmentCycleExplanation(monthEnd, bought, deferralMonths: 1),
+          contains('Due in Feb 2026'));
+      expect(
+          calculateInstallmentStartMonth(monthEnd, bought, deferralMonths: 1),
+          '2026-02');
+    });
+
+    test('deferral from a 31st due date (Jan 31 + 1 month) stays in Feb', () {
+      // Closes the 16th, due 15 days later → Jan 31.
+      final jan31 = FinancialAccount(
+        id: 'jan31',
+        name: 'Jan 31 due',
+        category: AccountCategory.creditCard,
+        balance: 0,
+        colorHex: '#000000',
+        icon: 'card',
+        statementDay: 16,
+        dueDaysAfterStatement: 15,
+      );
+      final bought = DateTime(2026, 1, 5);
+      expect(jan31.cycleContaining(bought)!.due, DateTime(2026, 1, 31));
+      expect(installmentCycleExplanation(jan31, bought, deferralMonths: 1),
+          contains('Due in Feb 2026'));
+    });
+
+    test('a purchase on the cut-off day is labelled "on", not "before"', () {
+      final text = installmentCycleExplanation(card, DateTime(2026, 10, 20))!;
+      expect(text, contains('Purchased on the Oct 20 cut-off'));
+      expect(text, contains('Charged on Oct 20 statement'));
+    });
+
+    test('an unclamped statement day agrees with the clamped cycle math', () {
+      // Day 31 is stored but cycles close on the 28th — a purchase on the 29th
+      // rides the NEXT statement, so it is "after" the cut-off.
+      final legacy = FinancialAccount(
+        id: 'legacy',
+        name: 'Legacy',
+        category: AccountCategory.creditCard,
+        balance: 0,
+        colorHex: '#000000',
+        icon: 'card',
+        statementDay: 31,
+        paymentDueDay: 10,
+      );
+      final text = installmentCycleExplanation(legacy, DateTime(2026, 10, 29))!;
+      expect(text, contains('Purchased after Oct 28 cut-off'));
+      expect(text, contains('Charged on Nov 28 statement'));
+    });
+  });
+
+  group('Installment.fromJson numeric tolerance', () {
+    test('accepts doubles for totalMonths and deferralMonths', () {
+      final parsed = Installment.fromJson({
+        'id': 'cloud-1',
+        'name': 'Phone',
+        'accountId': 'card-1',
+        'totalAmount': 12000,
+        'monthlyAmount': 1000,
+        'totalMonths': 12.0,
+        'startMonth': '2026-11',
+        'deferralMonths': 2.0,
+        'interestRate': 1,
+      });
+      expect(parsed.totalMonths, 12);
+      expect(parsed.deferralMonths, 2);
+      expect(parsed.interestRate, 1.0);
+      expect(parsed.endMonth, '2027-10');
     });
   });
 }

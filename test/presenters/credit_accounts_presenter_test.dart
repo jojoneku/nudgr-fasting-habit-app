@@ -421,4 +421,80 @@ void main() {
       expect(ledger.payableAsOf('nope', DateTime(2026, 8, 5)), 0);
     });
   });
+
+  group('TreasuryDashboardPresenter — account form balance field', () {
+    late MockStorageService storage;
+    late TreasuryDashboardPresenter presenter;
+    final shopee = FinancialAccount(
+      id: 'spay',
+      name: 'ShopeePay',
+      category: AccountCategory.bnpl,
+      balance: 845.69,
+      unbilledInstallments: 4736.13,
+      creditLimit: 75000,
+      colorHex: '#FFFFFF',
+      icon: 'bag',
+    );
+
+    setUp(() {
+      storage = MockStorageService();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts())
+          .thenAnswer((_) async => [shopee, _bank('bpi', 8000)]);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadBills()).thenAnswer((_) async => []);
+      when(storage.loadReceivables()).thenAnswer((_) async => []);
+      when(storage.loadBudgets()).thenAnswer((_) async => []);
+      when(storage.loadBudgetedExpenses()).thenAnswer((_) async => []);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadMonthlySummaries()).thenAnswer((_) async => []);
+      when(storage.saveMonthlySummaries(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      presenter = TreasuryDashboardPresenter(storage);
+    });
+
+    test('shows the same total as the card, installments included', () async {
+      await presenter.load();
+      final field = presenter.accountBalanceFieldValue(shopee);
+      expect(field, closeTo(5581.82, 0.001));
+      expect(field, closeTo(shopee.totalDebt, 0.001));
+      expect(presenter.accountBalanceLabel(AccountCategory.bnpl),
+          'Current Balance Owed');
+      expect(
+          presenter.accountBalanceHint(AccountCategory.bnpl, accountId: 'spay'),
+          contains('4,736.13'));
+    });
+
+    test('saving the total keeps the installments apart', () async {
+      await presenter.load();
+      expect(
+          presenter.balanceFromField(AccountCategory.bnpl, 5581.82,
+              accountId: 'spay'),
+          closeTo(845.69, 0.001));
+      // A new credit account has no installments yet.
+      expect(presenter.balanceFromField(AccountCategory.bnpl, 1000), 1000);
+      // Non-credit balances pass through unchanged.
+      expect(
+          presenter.balanceFromField(AccountCategory.bank, 8000,
+              accountId: 'bpi'),
+          8000);
+    });
+
+    test('rejects a total below the installments still to bill', () async {
+      await presenter.load();
+      expect(
+          presenter.accountBalanceError(AccountCategory.bnpl, '1000',
+              accountId: 'spay'),
+          isNotNull);
+      expect(
+          presenter.accountBalanceError(AccountCategory.bnpl, '4736.13',
+              accountId: 'spay'),
+          isNull);
+      expect(
+          presenter.accountBalanceError(AccountCategory.bank, '0',
+              accountId: 'bpi'),
+          isNull);
+    });
+  });
 }
