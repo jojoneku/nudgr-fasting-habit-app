@@ -382,6 +382,12 @@ class TreasuryHistoryPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = await _storage.loadBills();
     _allReceivables = await _storage.loadReceivables();
     _accounts = await _storage.loadAccounts();
+    // A loaded ledger's accounts win: they carry the live installment holds,
+    // which storage does not keep. Still loading, its notify mirrors them in.
+    final ledgerNow = _ledger;
+    if (ledgerNow != null && !ledgerNow.isLoading) {
+      _accounts = ledgerNow.accounts;
+    }
     _categories = await _storage.loadFinanceCategories();
 
     await closePreviousMonthIfNeeded();
