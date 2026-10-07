@@ -32,7 +32,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       monthScope.addListener(_adoptScopeMonth);
     }
     _ledger.onSpawnInstallment = addInstallment;
-    _ledger.onDeleteInstallment = deleteInstallment;
+    _ledger.onUpdateInstallment = updateInstallment;
+    _ledger.onDeleteInstallment = _removePlan;
     _ledger.installmentResolver = findById;
     load();
   }
@@ -57,7 +58,10 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     if (_ledger.onSpawnInstallment == addInstallment) {
       _ledger.onSpawnInstallment = null;
     }
-    if (_ledger.onDeleteInstallment == deleteInstallment) {
+    if (_ledger.onUpdateInstallment == updateInstallment) {
+      _ledger.onUpdateInstallment = null;
+    }
+    if (_ledger.onDeleteInstallment == _removePlan) {
       _ledger.onDeleteInstallment = null;
     }
     if (_ledger.installmentResolver == findById) {
@@ -240,16 +244,32 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     await _ledger.refreshInstallmentHolds();
   }
 
+  /// Deletes the plan and every ledger record linked to it (its purchase and
+  /// its payments). Single pass: one plan save, then one ledger mutation +
+  /// persist — the ledger does not call back here.
   Future<void> deleteInstallment(String id) async {
     _installments = _installments.where((i) => i.id != id).toList();
-    final linked =
-        _ledger.allTransactions.where((t) => t.installmentId == id).toList();
-    for (final txn in linked) {
-      await _ledger.deleteTransaction(txn.id);
-    }
     safeNotify();
     await _storage.saveInstallments(_installments);
-    await _ledger.refreshInstallmentHolds();
+    await _ledger.removeInstallmentRecords(id);
+  }
+
+  /// Ledger hook ([LedgerPresenter.onDeleteInstallment]): the ledger already
+  /// removed the plan's records, so only the plan itself goes.
+  Future<void> _removePlan(String id) async {
+    if (!_installments.any((i) => i.id == id)) {
+      // Not loaded into memory yet — remove it from storage directly rather
+      // than saving a partial in-memory list over it.
+      final stored = await _storage.loadInstallments();
+      if (stored.any((i) => i.id == id)) {
+        await _storage
+            .saveInstallments(stored.where((i) => i.id != id).toList());
+      }
+      return;
+    }
+    _installments = _installments.where((i) => i.id != id).toList();
+    safeNotify();
+    await _storage.saveInstallments(_installments);
   }
 
   // ─── Mark paid / unpaid ───────────────────────────────────────────────────────
