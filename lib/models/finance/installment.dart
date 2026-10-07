@@ -1,4 +1,18 @@
+import 'finance_category.dart';
 import 'transaction_record.dart';
+
+/// System category an installment charge falls back to when its plan has no
+/// category of its own.
+const String kInstallmentCategoryId = '__installment__';
+
+/// The [kInstallmentCategoryId] category, created on first use.
+FinanceCategory installmentFallbackCategory() => FinanceCategory(
+      id: kInstallmentCategoryId,
+      name: 'Installment',
+      type: CategoryType.expense,
+      icon: 'credit_card',
+      colorHex: '#9C27B0',
+    );
 
 // Represents a purchase split into equal monthly payments.
 // Each month the installment is "due", and paying it creates a
@@ -78,6 +92,45 @@ class Installment {
   // The 'YYYY-MM' key for payment index [i] (0-based).
   String monthForIndex(int i) => _offsetMonth(startMonth, i);
 
+  /// How many of this plan's monthly charges fall in or before [month] — the
+  /// number a statement due in [month] should have billed by now. Zero before
+  /// the first month, [totalMonths] from the last month on.
+  int chargesDueBy(String month) {
+    var n = 0;
+    while (n < totalMonths && monthForIndex(n).compareTo(month) <= 0) {
+      n++;
+    }
+    return n;
+  }
+
+  /// Deterministic id for this plan's [number]th charge (1-based), so two
+  /// devices billing the same statement write the same ledger row.
+  String chargeId(int number) => 'instchg_${id}_$number';
+
+  /// The ledger record for one month of this plan billed onto its card: an
+  /// outflow on [accountId] in the plan's category, which raises the card's
+  /// balance and — being a non-purchase record linked by [installmentId] —
+  /// counts toward [paidCount], releasing that month from the hold.
+  TransactionRecord chargeRecord({
+    required String recordId,
+    required int number,
+    required DateTime date,
+    required String month,
+    required String categoryId,
+    double? amount,
+  }) =>
+      TransactionRecord(
+        id: recordId,
+        date: date,
+        accountId: accountId,
+        categoryId: categoryId,
+        amount: amount ?? monthlyAmount,
+        type: TransactionType.outflow,
+        description: '$name — Installment $number/$totalMonths',
+        month: month,
+        installmentId: id,
+      );
+
   /// How many payments have been recorded for this installment in [transactions].
   int paidCount(Iterable<TransactionRecord> transactions) => transactions
       .where((t) => t.installmentId == id && !t.isInstallment)
@@ -87,22 +140,57 @@ class Installment {
   int remainingMonths(Iterable<TransactionRecord> transactions) =>
       (totalMonths - paidCount(transactions)).clamp(0, totalMonths);
 
-  /// Total unbilled principal remaining to be charged.
+  /// What this plan will still bill: [remainingMonths] × [monthlyAmount].
+  ///
+  /// Not remaining principal — [monthlyAmount] carries the add-on interest
+  /// ([monthlyInterest]), so an interest-bearing plan holds principal AND the
+  /// interest still to come. That is deliberate: it is what the issuer holds
+  /// against the credit limit, and what the card's "owe" figure should show.
   double remainingAmount(Iterable<TransactionRecord> transactions) =>
       remainingMonths(transactions) * monthlyAmount;
 
-  /// Total unbilled installment debt across all active installments for [accountId].
+  /// What the active plans on [accountId] will still bill, interest included
+  /// (see [remainingAmount]).
   static double totalUnbilledForAccount(
     String accountId,
     Iterable<Installment> installments,
     Iterable<TransactionRecord> transactions,
+  ) =>
+      holdsByAccount(
+        installments.where((i) => i.accountId == accountId),
+        transactions,
+      )[accountId] ??
+      0.0;
+
+  /// The credit hold of every account with an active plan: account id → what
+  /// its plans will still bill, interest included (see [remainingAmount]).
+  /// Accounts with no active plan are absent.
+  ///
+  /// [remainingAmount] stays the single source of the per-plan figure. Only
+  /// the scan is indexed: transactions are grouped by `installmentId` once, so
+  /// each plan reads its own records instead of every plan rescanning the
+  /// whole ledger. That relies on [paidCount] counting only records linked to
+  /// the plan by `installmentId` — which is what links a payment to a plan.
+  static Map<String, double> holdsByAccount(
+    Iterable<Installment> installments,
+    Iterable<TransactionRecord> transactions,
   ) {
-    var total = 0.0;
-    for (final inst in installments) {
-      if (!inst.isActive || inst.accountId != accountId) continue;
-      total += inst.remainingAmount(transactions);
+    final active = installments.where((i) => i.isActive).toList();
+    if (active.isEmpty) return const {};
+    final planIds = {for (final i in active) i.id};
+    final byPlan = <String, List<TransactionRecord>>{};
+    for (final t in transactions) {
+      final id = t.installmentId;
+      if (id != null && planIds.contains(id)) {
+        (byPlan[id] ??= []).add(t);
+      }
     }
-    return total;
+    final holds = <String, double>{};
+    for (final plan in active) {
+      final remaining = plan.remainingAmount(byPlan[plan.id] ?? const []);
+      holds[plan.accountId] = (holds[plan.accountId] ?? 0.0) + remaining;
+    }
+    return holds;
   }
 
   static String _offsetMonth(String monthKey, int months) {
@@ -118,12 +206,13 @@ class Installment {
       accountId: json['accountId'] as String,
       totalAmount: (json['totalAmount'] as num).toDouble(),
       monthlyAmount: (json['monthlyAmount'] as num).toDouble(),
-      totalMonths: json['totalMonths'] as int,
+      // num, not int: a cloud round-trip can hand back 12.0.
+      totalMonths: (json['totalMonths'] as num).toInt(),
       startMonth: json['startMonth'] as String,
       purchaseDate: json['purchaseDate'] != null
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
-      deferralMonths: json['deferralMonths'] as int? ?? 0,
+      deferralMonths: (json['deferralMonths'] as num?)?.toInt() ?? 0,
       interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
       categoryId: json['categoryId'] as String?,

@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -15,6 +16,7 @@ import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
+import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
@@ -143,7 +145,17 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// something actually moved.
   void _onLedgerChanged() {
     if (!_billsLoaded || _ledger.isLoading) return;
-    if (!_refreshStatementProgress()) return;
+    if (_installmentChargesPending) {
+      // A statement run skipped billing installments while the ledger loaded;
+      // now that it has, finish the job (it re-derives progress itself).
+      _installmentChargesPending = false;
+      unawaited(_autoGenerateCreditStatements().then((_) => safeNotify()));
+      return;
+    }
+    // An edit to a line inside an open statement's cycle moves its amount
+    // (the card's balance at close), so the amount follows before progress.
+    final amountsMoved = _refreshStatementAmounts();
+    if (!_refreshStatementProgress() && !amountsMoved) return;
     safeNotify();
     unawaited(_storage.saveBills(_allBills));
     unawaited(_syncCreditDueReminders());
@@ -353,6 +365,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// (set-asides, installments) last, capped at five. Installments live in a
   /// separate presenter, so it is passed in rather than injected. The whole
   /// merge/sort/slice lives here so the view never computes it in `build`.
+  ///
+  /// An installment on a card with a billing cycle gets no row of its own: its
+  /// month is billed onto the card when the statement closes, so it is already
+  /// inside that statement's row — listing it again showed the same money
+  /// twice. Only a plan on a card without statements is listed separately.
   List<ComingUpItem> comingUpItems(InstallmentPresenter installments) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -396,7 +413,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       ));
     }
     for (final i in installments.dueThisMonth
-        .where((i) => !installments.isPaidForMonth(i.id))) {
+        .where((i) => installments.canMarkPaid(i))) {
       final due = installments.dueDate(i);
       items.add(ComingUpItem(
         kind: ComingUpKind.installment,
@@ -1001,51 +1018,23 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       if (liability != null &&
           liability.isLiability &&
           acct != bill.accountId) {
-        final allInst =
-            _installments?.installments ?? (await _storage.loadInstallments());
-        final dueInst = allInst
-            .where((i) =>
-                i.isActive &&
-                i.accountId == bill.accountId &&
-                i.isDueIn(bill.month) &&
-                !_ledger.allTransactions.any((t) =>
-                    t.installmentId == i.id &&
-                    t.month == bill.month &&
-                    !t.isInstallment))
-            .toList();
-
-        var instPaidSum = 0.0;
-        for (final inst in dueInst) {
-          final instCat =
-              inst.categoryId ?? _defaultCreditCategoryId() ?? bill.categoryId;
-          final count = inst.paidCount(_ledger.allTransactions) + 1;
-          final instTxn = _buildOutflowTxn(
-            id: _generateId(),
-            amount: inst.monthlyAmount,
-            accountId: acct,
-            categoryId: instCat,
-            description: '${inst.name} — Payment $count/${inst.totalMonths}',
-            date: date,
-            billId: bill.id,
-            installmentId: inst.id,
-          );
-          await _ledger.addTransaction(instTxn);
-          instPaidSum += inst.monthlyAmount;
-        }
-
-        final remainingRevolving = paidAmount - instPaidSum;
-        if (remainingRevolving > 0.005) {
-          await _ledger.addTransfer(
-            fromAccountId: acct,
-            toAccountId: bill.accountId!,
-            amount: remainingRevolving,
-            description: bill.name,
-            date: date,
-            // Stamp the legs with the bill so undoing the payment can find and
-            // unwind them — a transfer leaves no id on the bill itself.
-            billId: bill.id,
-          );
-        }
+        // The whole amount paid moves to the card, nothing more. Installment
+        // months are not booked here: each was already charged onto the card
+        // when its statement closed (see [_billInstallmentCharges]), so the
+        // statement is just the card's balance and paying it is a transfer.
+        // This used to book every due installment IN FULL as spending from
+        // the funding account and transfer only what was left — ₱850 toward a
+        // statement holding a ₱2,000 installment took ₱2,000 out of the bank.
+        await _ledger.addTransfer(
+          fromAccountId: acct,
+          toAccountId: bill.accountId!,
+          amount: paidAmount,
+          description: bill.name,
+          date: date,
+          // Stamp the legs with the bill so undoing the payment can find and
+          // unwind them — a transfer leaves no id on the bill itself.
+          billId: bill.id,
+        );
       } else {
         final txn = _buildOutflowTxn(
           id: _generateId(),
@@ -1123,14 +1112,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (b.isPaid || b.amount <= 0) return b;
     final a = _statementAccount(b);
     final cycle = a == null ? null : cycleForStatement(a, b);
-    final instPayments = _ledger.allTransactions
-        .where((t) =>
-            t.billId == b.id && t.installmentId != null && !t.isInstallment)
-        .fold(0.0, (sum, t) => sum + t.amount);
-    final revolving = (a != null && cycle != null)
+    // Installment months are charges on the card, inside the statement's
+    // amount, so paying them is paying the card like any other payment.
+    final raw = (a != null && cycle != null)
         ? _ledger.paymentsToLiabilitySince(a.id, cycle.close)
         : 0.0;
-    final raw = revolving + instPayments;
     final paid = raw < b.amount ? raw : b.amount;
     if (paid >= b.amount - 0.005) {
       return b.copyWith(
@@ -1146,6 +1132,37 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       paidAmount: paidAmount,
       paidDate: started ? (paidOn ?? b.paidDate ?? _clock()) : null,
     );
+  }
+
+  /// Keeps every open generated statement's amount equal to its card's
+  /// balance at the close ([LedgerPresenter.payableAsOf]) — the figure the
+  /// generator billed — so editing or deleting a charge inside the cycle
+  /// (e.g. from the statement's item list) updates the statement right away
+  /// rather than on the next generator run. Same scope as the generator's own
+  /// refresh: unpaid, untransacted auto-statements whose cycle is not yet past
+  /// due, and never down to ₱0 (the generator's sweep owns that). True when
+  /// any changed.
+  bool _refreshStatementAmounts() {
+    final now = _clock();
+    final today = DateTime(now.year, now.month, now.day);
+    var changed = false;
+    final next = <Bill>[];
+    for (final b in _allBills) {
+      next.add(b);
+      if (!_isAutoStatement(b) || b.isPaid || b.transactionId != null) {
+        continue;
+      }
+      final a = _statementAccount(b);
+      final cycle = a == null ? null : cycleForStatement(a, b);
+      if (a == null || cycle == null || cycle.due.isBefore(today)) continue;
+      if (today.isBefore(cycle.close)) continue;
+      final amount = _ledger.payableAsOf(a.id, cycle.close);
+      if (amount <= 0 || (amount - b.amount).abs() <= 0.005) continue;
+      next[next.length - 1] = b.copyWith(amount: amount);
+      changed = true;
+    }
+    if (changed) _allBills = next;
+    return changed;
   }
 
   /// Re-derives every open credit statement in memory. True when any changed.
@@ -1192,6 +1209,40 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final p = _partialProgress(b);
     return p == null || p.amount <= 0 ? null : p.paid / p.amount;
   }
+
+  /// What is on credit statement [b] — its cycle, the card's purchases,
+  /// installment months, refunds and the payments since the close — with
+  /// totals that add up to the bill amount and to [statementProgress]. Null
+  /// when [b] is not a credit statement with a billing cycle behind it.
+  ///
+  /// Read straight off the ledger on every call, never cached, so an edit made
+  /// from the item list (or anywhere else) shows on the next rebuild.
+  StatementBreakdown? statementBreakdown(Bill b) {
+    final current = _allBills.where((x) => x.id == b.id).firstOrNull ?? b;
+    final a = _statementAccount(current);
+    final cycle = a == null ? null : cycleForStatement(a, current);
+    if (a == null || cycle == null) return null;
+    return buildStatementBreakdown(
+      account: a,
+      bill: current,
+      cycle: cycle,
+      transactions: _ledger.allTransactions,
+      paid: CreditStatementProgress.ofBill(current, a).paid,
+    );
+  }
+
+  /// "View items · 10" for a credit statement whose items can be listed,
+  /// "View items" when its cycle is empty; null for any other bill.
+  String? statementItemsLabel(Bill b) {
+    final breakdown = statementBreakdown(b);
+    if (breakdown == null) return null;
+    final n = breakdown.itemCount;
+    return n == 0 ? 'View items' : 'View items · $n';
+  }
+
+  /// The ledger the statement items live in — what a bills surface hands the
+  /// transaction edit form when one of those items is tapped.
+  LedgerPresenter get ledger => _ledger;
 
   /// What is still owed on [b]: the unpaid remainder of a credit statement, or
   /// the full amount of any other bill.
@@ -2847,12 +2898,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .toList();
     if (_allBills.length != beforeSweep) changed = true;
 
+    // Null when the user has no categories yet: statements cannot be filed
+    // without one, but installment charges (which bring their own) still post.
     final categoryId = _defaultCreditCategoryId();
-    if (categoryId == null) {
-      if (_refreshStatementProgress()) changed = true;
-      if (changed) await _storage.saveBills(_allBills);
-      return;
-    }
 
     // ── De-duplicate GENERATED statement bills. A card carries at most one
     // auto-statement per month; a stray second one is an internal duplicate, so
@@ -2941,6 +2989,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         final cycle = a.cycleClosingIn(monthStart.year, monthStart.month)!;
         final dueMonth = cycle.dueMonthKey;
 
+        // Bill this cycle's installment months onto the card first, so the
+        // statement amount below — the card's balance at close — includes
+        // them. Only for a cycle that has closed and is not yet past due:
+        // older cycles are never revisited, and a statement already settled
+        // is left exactly as the user paid it.
+        final closed = !(isCurrentMonth && today.isBefore(cycle.close));
+        final pastDue = !isCurrentMonth && cycle.due.isBefore(today);
+        if (closed &&
+            !pastDue &&
+            !_cycleSettled(a.id, dueMonth,
+                legacyMonth:
+                    !isCurrentMonth && dueMonth != month ? month : null)) {
+          await _billInstallmentCharges(a, cycle);
+        }
+
         // If the user deleted/dismissed this statement, do not regenerate it.
         if (_dismissedAutoStatementKeys.contains('${a.id}|$dueMonth')) continue;
 
@@ -2983,24 +3046,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // it left unpaid rides on the newer statement.
         if (!isCurrentMonth && cycle.due.isBefore(today)) continue;
 
-        // Bill the balance as of the cycle's CLOSE date, plus active installments
-        // due in this billing cycle/month for this account.
-        final revolvingAmount = _ledger.payableAsOf(a.id, cycle.close);
-        final allInst =
-            _installments?.installments ?? (await _storage.loadInstallments());
-        final dueInst = allInst
-            .where((i) =>
-                i.isActive &&
-                i.accountId == a.id &&
-                i.isDueIn(dueMonth) &&
-                !_ledger.allTransactions.any((t) =>
-                    t.installmentId == i.id &&
-                    t.month == dueMonth &&
-                    !t.isInstallment))
-            .toList();
-        final installmentDueSum =
-            dueInst.fold(0.0, (s, i) => s + i.monthlyAmount);
-        final amount = revolvingAmount + installmentDueSum;
+        // Bill the balance as of the cycle's CLOSE date. Installment months
+        // due this cycle are already in it — charged onto the card above —
+        // so there is no separate installment sum to add, and no "paid this
+        // month" exclusion to shrink the statement after a part payment.
+        final amount = _ledger.payableAsOf(a.id, cycle.close);
 
         if (amount <= 0) continue;
 
@@ -3023,6 +3073,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           }
           continue;
         }
+        if (categoryId == null) continue;
 
         _allBills = [
           ..._allBills,
@@ -3049,9 +3100,103 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (changed) await _storage.saveBills(_allBills);
   }
 
+  /// True when the statement for [accountId]'s cycle due in [dueMonth] was
+  /// already settled — paid, or paid through a linked entry — by an
+  /// auto-statement or a hand-keyed credit-card bill, or (for a past shifted
+  /// cycle, as in the generator's legacy guard) by an auto-statement filed
+  /// under the cycle's own [legacyMonth]. Such a cycle gets no installment
+  /// charges posted after the fact: the user paid it as it stood.
+  bool _cycleSettled(String accountId, String dueMonth,
+          {String? legacyMonth}) =>
+      _allBills.any((b) =>
+          b.accountId == accountId &&
+          (b.isPaid || b.transactionId != null) &&
+          ((b.billType == BillType.creditCard && b.month == dueMonth) ||
+              (legacyMonth != null &&
+                  _isAutoStatement(b) &&
+                  b.month == legacyMonth)));
+
+  /// Set when a generator run had to skip installment charges because the
+  /// ledger was still loading; the ledger's next notify re-runs it.
+  bool _installmentChargesPending = false;
+
+  /// Bills every active installment month due on [account]'s statement
+  /// [cycle] onto the card: one outflow per missing month, in the plan's
+  /// category, dated the close (so [LedgerPresenter.payableAsOf] at the close
+  /// includes it). Each raises the card balance and, counting toward
+  /// [Installment.paidCount], releases that month from the hold — total owed
+  /// is unchanged, the month just moves from unbilled to billed.
+  ///
+  /// Idempotent by COUNT, not month key: a plan should have
+  /// [installmentChargesDueAt] charges by this statement; only the
+  /// shortfall below [Installment.paidCount] is posted. Payment records booked
+  /// under the old model (and manual "Mark paid" charges) count too, so they
+  /// are never billed again. Ids are deterministic per plan and number, so a
+  /// second device billing the same cycle writes the same rows.
+  Future<void> _billInstallmentCharges(
+    FinancialAccount account,
+    CreditCycle cycle,
+  ) async {
+    // Counting against a half-loaded ledger would bill everything again.
+    if (_ledger.isLoading) {
+      _installmentChargesPending = true;
+      return;
+    }
+    final source = _installments;
+    final plans = (source == null || source.isLoading)
+        ? await _storage.loadInstallments()
+        : source.installments;
+    final onCard = plans
+        .where((i) =>
+            i.isActive &&
+            i.accountId == account.id &&
+            installmentChargesDueAt(account, i, cycle) > 0)
+        .toList();
+    if (onCard.isEmpty) return;
+    if (onCard.any((i) => i.categoryId == null) &&
+        !_ledger.categories.any((c) => c.id == kInstallmentCategoryId)) {
+      await _ledger.addCategory(installmentFallbackCategory());
+    }
+
+    // From here to the post there is no `await`, so the shortfall is computed
+    // and appended to the ledger in one synchronous step — a concurrent run
+    // (load and a month change) sees these charges and posts nothing.
+    final txns = _ledger.allTransactions;
+    final ids = {for (final t in txns) t.id};
+    final close =
+        DateTime(cycle.close.year, cycle.close.month, cycle.close.day);
+    final charges = <TransactionRecord>[];
+    for (final plan in onCard) {
+      final due = installmentChargesDueAt(account, plan, cycle);
+      var number = plan.paidCount(txns);
+      while (number < due) {
+        number++;
+        var n = number;
+        while (ids.contains(plan.chargeId(n))) {
+          n++;
+        }
+        final id = plan.chargeId(n);
+        ids.add(id);
+        charges.add(plan.chargeRecord(
+          recordId: id,
+          number: number,
+          date: close,
+          month: toMonthKey(close),
+          categoryId: plan.categoryId ?? kInstallmentCategoryId,
+        ));
+      }
+    }
+    await _ledger.postSystemTransactions(charges);
+  }
+
   // ─── Credit account helpers ───────────────────────────────────────────────────
 
   /// All active liability accounts (credit card, credit line, BNPL).
+  /// What [cards] owe in total, installments included — the dashboard's
+  /// "Owe" figure, so the two pages agree.
+  double totalCreditOwed(Iterable<FinancialAccount> cards) =>
+      cards.fold(0.0, (s, c) => s + c.totalDebt);
+
   List<FinancialAccount> get creditAccounts =>
       _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
 

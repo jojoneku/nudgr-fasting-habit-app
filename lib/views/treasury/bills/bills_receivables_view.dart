@@ -27,6 +27,7 @@ import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dar
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/new_entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
+import 'package:intermittent_fasting/views/treasury/bills/statement_breakdown_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -304,7 +305,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     } else if (s is BudgetedExpense) {
       if (!s.isPaid) _showMarkExpensePaidSheet(s);
     } else if (s is Installment) {
-      if (!widget.installmentPresenter.isPaidForMonth(s.id)) {
+      if (widget.installmentPresenter.canMarkPaid(s)) {
         _showMarkInstallmentPaidSheet(s);
       }
     }
@@ -572,13 +573,12 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
         );
       case _BatchSection.installments:
         final picked = _selectedInstallments;
-        final paid = picked
-            .where((i) => widget.installmentPresenter.isPaidForMonth(i.id))
-            .length;
         return (
           total: widget.installmentPresenter.dueThisMonth.length,
-          settleable: picked.length - paid,
-          undoable: paid,
+          settleable:
+              picked.where(widget.installmentPresenter.canMarkPaid).length,
+          undoable:
+              picked.where(widget.installmentPresenter.canMarkUnpaid).length,
           verb: 'Pay',
         );
     }
@@ -702,7 +702,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
 
   Future<void> _batchPayInstallments() async {
     final targets = _selectedInstallments
-        .where((i) => !widget.installmentPresenter.isPaidForMonth(i.id))
+        .where(widget.installmentPresenter.canMarkPaid)
         .toList();
     if (targets.isEmpty) return;
     final choice = await showBatchSettleSheet(
@@ -783,7 +783,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
             'Marked ${result.applied} ${_plural(result.applied, 'set-aside')} unfunded.');
       case _BatchSection.installments:
         final targets = _selectedInstallments
-            .where((i) => widget.installmentPresenter.isPaidForMonth(i.id))
+            .where(widget.installmentPresenter.canMarkUnpaid)
             .toList();
         if (targets.isEmpty) return;
         final choice = await showUndoSettlementDialog(
@@ -931,6 +931,16 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       selectionMode: sel.mode,
       selected: sel.selected,
       onSelectionToggle: sel.onToggle,
+      // Credit statements list what is on them: purchases, installment
+      // months, refunds and repayments, each opening its transaction form.
+      detailLabel: widget.presenter.statementItemsLabel(b),
+      onDetail: locked
+          ? null
+          : () => StatementBreakdownSheet.show(
+                context,
+                presenter: widget.presenter,
+                bill: b,
+              ),
     );
   }
 
@@ -1111,10 +1121,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final sel = _selectionFor(_BatchSection.installments, inst.id);
     final locked = _locked(_BatchSection.installments);
     final paidThisMonth = widget.installmentPresenter.isPaidForMonth(inst.id);
-    final count = widget.installmentPresenter.paidCount(inst.id);
-    final dateLabel = paidThisMonth
-        ? 'paid · $count/${inst.totalMonths}'
-        : 'payment ${count + 1}/${inst.totalMonths}';
+    final canPay = widget.installmentPresenter.canMarkPaid(inst);
+    final canUndo = widget.installmentPresenter.canMarkUnpaid(inst);
     final account = widget.installmentPresenter.accounts
         .where((a) => a.id == inst.accountId)
         .firstOrNull;
@@ -1126,14 +1134,14 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       note: account?.name,
       progress: widget.installmentPresenter.paymentProgress(inst.id),
       amount: inst.monthlyAmount,
-      dateLabel: dateLabel,
+      dateLabel: widget.installmentPresenter.statusLabel(inst),
       actionLabel: 'Pay',
       done: paidThisMonth,
-      onAction: paidThisMonth || locked
-          ? null
-          : () => _showMarkInstallmentPaidSheet(inst),
-      onUndo:
-          paidThisMonth && !locked ? () => _undoInstallmentPayment(inst) : null,
+      // A plan on a card with statements is billed at close and paid with the
+      // statement, so its row offers neither Pay nor Undo.
+      onAction:
+          canPay && !locked ? () => _showMarkInstallmentPaidSheet(inst) : null,
+      onUndo: canUndo && !locked ? () => _undoInstallmentPayment(inst) : null,
       undoLabel: 'Mark unpaid this month',
       onEdit: locked ? null : () => _showAddInstallmentSheet(inst),
       onDelete: locked

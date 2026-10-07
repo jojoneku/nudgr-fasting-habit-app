@@ -9,10 +9,40 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../mocks.mocks.dart';
+
+/// Records month [n] (1 = October 2026) of plan [planId] directly. From a bank
+/// it is a payment booked under the old model; on the card it is a statement
+/// charge. On a card with a billing cycle "Mark paid" does nothing — the
+/// statement generator bills each month — so tests that need a recorded month
+/// write it here.
+Future<void> recordPlanMonth(
+  LedgerPresenter ledger,
+  String planId, {
+  required double amount,
+  required String description,
+  String accountId = 'maribank',
+  int n = 1,
+}) {
+  final month = DateTime(2026, 9 + n);
+  return ledger.addTransaction(TransactionRecord(
+    id: 'month-$planId-$accountId-$n',
+    date: DateTime(month.year, month.month, 10),
+    accountId: accountId,
+    categoryId: 'cat-tech',
+    amount: amount,
+    type: TransactionType.outflow,
+    description: description,
+    month: toMonthKey(month),
+    installmentId: planId,
+  ));
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -176,7 +206,7 @@ void main() {
       expect(ledger.filteredMonthOutflow, 0.0);
     });
 
-    test('marking installment paid inherits categoryId and tags installmentId',
+    test('statement close bills the month onto the card in the plan category',
         () async {
       await ledger.load();
       await installments.load();
@@ -195,21 +225,26 @@ void main() {
       );
       await ledger.addInstallmentPurchase(inst);
 
-      // Mark the current month installment paid from MariBank
-      await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
+      // ShopeePay has a billing cycle, so its rows offer no "Mark paid": the
+      // month is billed onto the card when the statement closes (Oct 1).
+      installments.setMonth('2026-10');
+      expect(installments.canMarkPaid(inst), isFalse);
+      await bills.setMonth('2026-10');
 
-      // Verify transaction inherits category 'cat-tech' and funding account deducted
-      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 payment
-      final paymentTxn =
-          ledger.allTransactions.firstWhere((t) => !t.isInstallment);
-      expect(paymentTxn.categoryId, 'cat-tech');
-      expect(paymentTxn.amount, 2000.0);
-      expect(paymentTxn.accountId, 'maribank');
-      expect(paymentTxn.installmentId, 'inst-phone');
+      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 charge
+      final charge = ledger.allTransactions.firstWhere((t) => !t.isInstallment);
+      expect(charge.categoryId, 'cat-tech');
+      expect(charge.amount, 2000.0);
+      expect(charge.accountId, 'shopeepay');
+      expect(charge.installmentId, 'inst-phone');
+      // The bank is untouched until the statement is paid.
+      expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+          50000.0);
 
-      // Verify unbilled installments decreased
+      // The month moved from the hold to the billed balance.
       final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
       expect(acct.unbilledInstallments, 10000.0);
+      expect(acct.balance, 2000.0);
     });
 
     test(
@@ -360,12 +395,23 @@ void main() {
       await ledger.load();
       await installments.load();
       await bills.load();
+      // Built the way TreasuryPresenters builds it. Without a budget presenter
+      // the executor has no categories to bind "Technology" against, and the
+      // plan would silently land uncategorised.
+      final budget = BudgetPresenter(
+          mockStorage, mockStats, ledger, mockNotifications, null, bills);
+      await budget.load();
 
       final executor = FinanceActionsExecutor(
         bills: bills,
+        budget: budget,
         ledger: ledger,
         installments: installments,
       );
+      final purchased = DateTime.now().subtract(const Duration(days: 2));
+      final purchasedIso = '${purchased.year}-'
+          '${purchased.month.toString().padLeft(2, '0')}-'
+          '${purchased.day.toString().padLeft(2, '0')}';
 
       // 1. Querying findInstallments before adding returns empty
       final emptyRead = await executor.runRead(const AiToolCall(
@@ -377,7 +423,7 @@ void main() {
       expect(emptyRead.summary.contains('No installments matched'), isTrue);
 
       // 2. Propose addInstallment via chat
-      final proposeFuture = executor.propose(const AiToolCall(
+      final proposeFuture = executor.propose(AiToolCall(
         id: 'call-1',
         name: 'addInstallment',
         input: {
@@ -387,7 +433,7 @@ void main() {
           'account': 'ShopeePay',
           'interestRate': 1.5,
           'category': 'Technology',
-          'date': '2026-10-05',
+          'date': purchasedIso,
           'note': 'Work & gaming laptop',
         },
       ));
@@ -395,9 +441,15 @@ void main() {
       // Verify pending proposal card
       expect(executor.pending, isNotNull);
       final pending = executor.pending!;
+      String detail(String label) =>
+          pending.details.firstWhere((d) => d.label == label).value;
       expect(pending.title, contains('Gaming Laptop'));
       expect(pending.details.any((d) => d.label == 'Monthly payment'), isTrue);
       expect(pending.details.any((d) => d.label == 'Interest rate'), isTrue);
+      // The card names what will be saved, not what the model typed.
+      expect(detail('Account'), 'ShopeePay BNPL');
+      expect(detail('Category'), 'Technology');
+      expect(detail('Purchase date'), purchasedIso);
 
       // 3. User confirms proposal card
       await executor.confirm();
@@ -413,6 +465,9 @@ void main() {
       expect(inst.totalMonths, 6);
       expect(inst.interestRate, 1.5);
       expect(inst.monthlyAmount, 5450.0); // 5000 + 450/mo interest
+      expect(inst.accountId, 'shopeepay');
+      expect(inst.categoryId, 'cat-tech');
+      expect(inst.note, 'Work & gaming laptop');
 
       // 5. Verify ledger transaction stamped
       expect(ledger.allTransactions.length, 1);
@@ -421,6 +476,8 @@ void main() {
       expect(txn.amount, 30000.0);
       expect(txn.isInstallment, isTrue);
       expect(txn.installmentId, inst.id);
+      expect(txn.accountId, 'shopeepay');
+      expect(txn.categoryId, 'cat-tech');
       expect(ledger.filteredMonthOutflow, 0.0); // no instant cash drain
 
       // 6. Verify credit limit held
@@ -436,6 +493,465 @@ void main() {
       expect(foundRead.ok, isTrue);
       expect(foundRead.summary, contains('Gaming Laptop'));
       expect(foundRead.summary, contains('5450/mo'));
+      // Plans are not scoped to a month, so the summary must not claim one.
+      expect(foundRead.summary, startsWith('1 installments in any month'));
+
+      // 8. The purchase record is listed but not counted as spending: the
+      // plan's monthly payments are. Counting it would add the principal on
+      // top of every payment.
+      final txnRead = await executor.runRead(const AiToolCall(
+        id: 'read-3',
+        name: 'findTransactions',
+        input: {'query': 'laptop'},
+      ));
+      expect(txnRead.summary, contains('Spent ₱0'));
+      expect(txnRead.summary, contains('installment purchase'));
+      expect(txnRead.summary, contains('Technology · ShopeePay BNPL'));
+    });
+
+    test(
+        'findTransactions counts an installment plan\'s payments, not its '
+        'purchase record', () async {
+      await ledger.load();
+      await installments.load();
+      await bills.load();
+      final executor = FinanceActionsExecutor(
+        bills: bills,
+        ledger: ledger,
+        installments: installments,
+      );
+
+      await ledger.addInstallmentPurchase(Installment(
+        id: 'inst-phone',
+        name: 'iPhone on SPayLater',
+        accountId: 'shopeepay',
+        totalAmount: 12000.0,
+        monthlyAmount: 2000.0,
+        totalMonths: 6,
+        startMonth: '2026-10',
+        purchaseDate: DateTime(2026, 10, 2),
+        categoryId: 'cat-tech',
+      ));
+      installments.setMonth('2026-10');
+      await recordPlanMonth(ledger, 'inst-phone',
+          amount: 2000.0, description: 'iPhone on SPayLater — Payment 1/6');
+
+      final result = await executor.runRead(const AiToolCall(
+        id: 'read-1',
+        name: 'findTransactions',
+        input: {'query': 'iphone'},
+      ));
+
+      expect(result.summary, contains('2 transactions'));
+      // ₱2000 paid, not ₱14000 (principal + payment).
+      expect(result.summary, contains('Spent ₱2000'));
+      expect(result.summary, contains('1 installment purchase is listed'));
+      final purchaseRow =
+          result.summary.split('\n').singleWhere((l) => l.contains('₱12000'));
+      expect(purchaseRow, contains('installment purchase, not counted'));
+    });
+
+    group('deleting an installment purchase', () {
+      Installment plan(String id) => Installment(
+            id: id,
+            name: 'Fuse holder $id',
+            accountId: 'shopeepay',
+            totalAmount: 300.0,
+            monthlyAmount: 100.0,
+            totalMonths: 3,
+            startMonth: '2026-10',
+            purchaseDate: DateTime(2026, 9, 6),
+          );
+
+      String purchaseIdOf(String planId) => ledger.allTransactions
+          .firstWhere((t) => t.installmentId == planId && t.isInstallment)
+          .id;
+
+      Future<void> loadAll() async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+      }
+
+      test('bulk delete removes the plan, so it stops holding credit',
+          () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+        await ledger.addInstallmentPurchase(plan('b'));
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            600.0);
+
+        await ledger.deleteTransactions({purchaseIdOf('a')});
+
+        expect(installments.allInstallments.map((i) => i.id), ['b']);
+        expect(installmentsState.map((i) => i.id), ['b']);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            300.0);
+      });
+
+      test('bulk delete takes the plan payments with it, and Undo restores all',
+          () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+        // The October statement closes and bills month 1 onto the card.
+        await bills.setMonth('2026-10');
+        final cardAfterCharge =
+            ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance;
+        expect(cardAfterCharge, 100.0);
+
+        final removed = await ledger.deleteTransactions({purchaseIdOf('a')});
+
+        expect(removed, hasLength(2));
+        expect(ledger.allTransactions, isEmpty);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            0.0);
+
+        await ledger.restoreTransactions(removed);
+
+        expect(installments.allInstallments.map((i) => i.id), ['a']);
+        expect(installments.paidCount('a'), 1);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            cardAfterCharge);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            200.0);
+      });
+
+      test('single delete then Undo brings the plan back', () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+
+        final removed =
+            await ledger.deleteTransactionOrGroup(purchaseIdOf('a'));
+        expect(installments.allInstallments, isEmpty);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            0.0);
+
+        await ledger.restoreTransactions(removed);
+
+        expect(installments.allInstallments.map((i) => i.id), ['a']);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            300.0);
+      });
+    });
+
+    group('editing an installment purchase', () {
+      Installment plan({int deferralMonths = 0}) => Installment(
+            id: 'a',
+            name: 'Fuse holder',
+            accountId: 'shopeepay',
+            totalAmount: 300.0,
+            monthlyAmount: 100.0,
+            totalMonths: 3,
+            startMonth: deferralMonths == 0 ? '2026-10' : '2026-12',
+            purchaseDate: DateTime(2026, 9, 6),
+            deferralMonths: deferralMonths,
+            categoryId: 'cat-tech',
+          );
+
+      TransactionRecord purchase() => ledger.allTransactions
+          .firstWhere((t) => t.installmentId == 'a' && t.isInstallment);
+
+      double balanceOf(String id) =>
+          ledger.accounts.firstWhere((a) => a.id == id).balance;
+
+      double holdOf(String id) =>
+          ledger.accounts.firstWhere((a) => a.id == id).unbilledInstallments;
+
+      /// Purchase of 300 over 3 months with the first payment made from the
+      /// bank — the state the bug wiped on edit.
+      Future<void> purchaseWithOnePayment({int deferralMonths = 0}) async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+        await ledger
+            .addInstallmentPurchase(plan(deferralMonths: deferralMonths));
+        installments.setMonth('2026-10');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 1/3');
+      }
+
+      Future<void> saveForm({
+        double amount = 300.0,
+        int months = 3,
+        DateTime? date,
+        String accountId = 'shopeepay',
+        String description = 'Fuse holder',
+      }) =>
+          ledger.saveInstallmentPurchase(
+            existing: purchase(),
+            accountId: accountId,
+            amount: amount,
+            months: months,
+            interestRate: 0.0,
+            date: date ?? DateTime(2026, 9, 6),
+            description: description,
+            note: '',
+            categoryId: 'cat-tech',
+          );
+
+      test('keeps the plan, its payments and the paid count', () async {
+        await purchaseWithOnePayment(deferralMonths: 2);
+        final purchaseId = purchase().id;
+
+        await saveForm(description: 'Fuse holder (pair)');
+
+        expect(installments.allInstallments, hasLength(1));
+        final edited = installments.allInstallments.single;
+        expect(edited.id, 'a');
+        expect(edited.name, 'Fuse holder (pair)');
+        // Fields the form doesn't edit survive.
+        expect(edited.deferralMonths, 2);
+        expect(edited.startMonth, '2026-12');
+        expect(edited.isActive, isTrue);
+        expect(edited.monthlyAmount, 100.0);
+        expect(installments.paidCount('a'), 1);
+        expect(ledger.allTransactions, hasLength(2));
+        expect(purchase().id, purchaseId);
+        expect(purchase().description, 'Fuse holder (pair)');
+        expect(balanceOf('maribank'), 49900.0);
+        expect(holdOf('shopeepay'), 200.0);
+        expect(installmentsState.single.name, 'Fuse holder (pair)');
+      });
+
+      test('changing the amount re-prices the plan and the hold', () async {
+        await purchaseWithOnePayment();
+
+        await saveForm(amount: 600.0);
+
+        final edited = installments.allInstallments.single;
+        expect(edited.totalAmount, 600.0);
+        expect(edited.monthlyAmount, 200.0);
+        expect(installments.paidCount('a'), 1);
+        // Two payments left at the new monthly amount.
+        expect(holdOf('shopeepay'), 400.0);
+        expect(purchase().amount, 600.0);
+        expect(purchase().isInstallment, isTrue);
+        // A purchase record never touches the card balance itself.
+        expect(balanceOf('shopeepay'), 0.0);
+        expect(balanceOf('maribank'), 49900.0);
+      });
+
+      test('moving the purchase date reschedules, keeping the deferral',
+          () async {
+        await purchaseWithOnePayment(deferralMonths: 1);
+        final moved = DateTime(2026, 11, 20);
+
+        await saveForm(date: moved);
+
+        final edited = installments.allInstallments.single;
+        expect(edited.purchaseDate, moved);
+        expect(edited.deferralMonths, 1);
+        expect(
+          edited.startMonth,
+          calculateInstallmentStartMonth(shopeePay, moved, deferralMonths: 1),
+        );
+        expect(purchase().month, '2026-11');
+        expect(installments.paidCount('a'), 1);
+      });
+
+      test('turning the split off removes the plan and books the debt once',
+          () async {
+        await purchaseWithOnePayment();
+        final old = purchase();
+
+        await ledger.convertInstallmentPurchaseToRegular(TransactionRecord(
+          id: old.id,
+          date: old.date,
+          accountId: 'shopeepay',
+          categoryId: 'cat-tech',
+          amount: 300.0,
+          type: TransactionType.outflow,
+          description: old.description,
+          month: old.month,
+        ));
+
+        expect(installments.allInstallments, isEmpty);
+        expect(installmentsState, isEmpty);
+        final regular =
+            ledger.allTransactions.firstWhere((t) => t.id == old.id);
+        expect(regular.isInstallment, isFalse);
+        expect(regular.installmentId, isNull);
+        expect(holdOf('shopeepay'), 0.0);
+        // The 100 paid from the bank was real cash: it stays out of the bank
+        // and now pays the card down, as a transfer — not spending.
+        expect(balanceOf('maribank'), 49900.0);
+        expect(balanceOf('shopeepay'), 200.0);
+        final legs = ledger.allTransactions
+            .where((t) => t.transferGroupId != null)
+            .toList();
+        expect(legs, hasLength(2));
+        expect(legs.every((t) => t.installmentId == null), isTrue);
+        expect(legs.map((t) => t.accountId).toSet(), {'maribank', 'shopeepay'});
+        expect(ledger.allTransactions, hasLength(3));
+      });
+
+      test('turning the split off drops months already charged to the card',
+          () async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+        await ledger.addInstallmentPurchase(plan());
+        installments.setMonth('2026-10');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0,
+            accountId: 'shopeepay',
+            description: 'Fuse holder — Installment 1/3');
+        expect(balanceOf('shopeepay'), 100.0);
+        final old = purchase();
+
+        await ledger.convertInstallmentPurchaseToRegular(TransactionRecord(
+          id: old.id,
+          date: old.date,
+          accountId: 'shopeepay',
+          categoryId: 'cat-tech',
+          amount: 300.0,
+          type: TransactionType.outflow,
+          description: old.description,
+          month: old.month,
+        ));
+
+        // The full 300 covers that month: owed once, not 400.
+        expect(ledger.allTransactions, hasLength(1));
+        expect(balanceOf('shopeepay'), 300.0);
+        expect(holdOf('shopeepay'), 0.0);
+      });
+
+      test('converting a regular expense reverses its balance exactly once',
+          () async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+        final regular = TransactionRecord(
+          id: 'txn-monitor',
+          date: DateTime(2026, 10, 2),
+          accountId: 'shopeepay',
+          categoryId: 'cat-tech',
+          amount: 6000.0,
+          type: TransactionType.outflow,
+          description: 'New Monitor',
+          month: '2026-10',
+        );
+        await ledger.addTransaction(regular);
+        expect(balanceOf('shopeepay'), 6000.0);
+
+        await ledger.saveInstallmentPurchase(
+          existing: regular,
+          accountId: 'shopeepay',
+          amount: 6000.0,
+          months: 3,
+          interestRate: 0.0,
+          date: regular.date,
+          description: regular.description,
+          categoryId: 'cat-tech',
+        );
+
+        expect(ledger.allTransactions, hasLength(1));
+        final converted = ledger.allTransactions.single;
+        expect(converted.id, 'txn-monitor');
+        expect(converted.isInstallment, isTrue);
+        expect(balanceOf('shopeepay'), 0.0);
+        expect(holdOf('shopeepay'), 6000.0);
+        expect(installments.allInstallments, hasLength(1));
+        expect(installments.allInstallments.single.id, converted.installmentId);
+        expect(installments.allInstallments.single.monthlyAmount, 2000.0);
+      });
+
+      test('an inline grid edit carries the plan along', () async {
+        await purchaseWithOnePayment();
+
+        final applied =
+            await ledger.updateRecordInline(purchase().copyWith(amount: 900.0));
+
+        expect(applied, isTrue);
+        final edited = installments.allInstallments.single;
+        expect(edited.totalAmount, 900.0);
+        expect(edited.monthlyAmount, 300.0);
+        expect(installments.paidCount('a'), 1);
+        expect(holdOf('shopeepay'), 600.0);
+      });
+
+      test('an inline move to a non-credit account is refused', () async {
+        await purchaseWithOnePayment();
+
+        final applied = await ledger
+            .updateRecordInline(purchase().copyWith(accountId: 'maribank'));
+
+        expect(applied, isFalse);
+        expect(purchase().accountId, 'shopeepay');
+        expect(installments.allInstallments.single.accountId, 'shopeepay');
+        expect(balanceOf('maribank'), 49900.0);
+      });
+    });
+
+    group('deleting a plan is single-pass', () {
+      Future<void> purchaseWithTwoPayments() async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+        await ledger.addInstallmentPurchase(Installment(
+          id: 'a',
+          name: 'Fuse holder',
+          accountId: 'shopeepay',
+          totalAmount: 300.0,
+          monthlyAmount: 100.0,
+          totalMonths: 3,
+          startMonth: '2026-10',
+          purchaseDate: DateTime(2026, 9, 6),
+        ));
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 1/3');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 2/3', n: 2);
+        expect(ledger.allTransactions, hasLength(3));
+        clearInteractions(mockStorage);
+      }
+
+      test('from the plan: one ledger save, one plan save', () async {
+        await purchaseWithTwoPayments();
+
+        await installments.deleteInstallment('a');
+
+        verify(mockStorage.saveTransactions(any)).called(1);
+        verify(mockStorage.saveInstallments(any)).called(1);
+        expect(ledger.allTransactions, isEmpty);
+        expect(installmentsState, isEmpty);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+            50000.0);
+      });
+
+      test('from the purchase record: one ledger save, one plan save',
+          () async {
+        await purchaseWithTwoPayments();
+        final purchaseId =
+            ledger.allTransactions.firstWhere((t) => t.isInstallment).id;
+
+        await ledger.deleteTransaction(purchaseId);
+
+        verify(mockStorage.saveTransactions(any)).called(1);
+        verify(mockStorage.saveInstallments(any)).called(1);
+        expect(ledger.allTransactions, isEmpty);
+        expect(installments.allInstallments, isEmpty);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            0.0);
+      });
     });
   });
 }

@@ -36,7 +36,8 @@ class TreasuryPresenters {
   final TreasuryMonthScope monthScope;
 
   /// Owns accounts, transactions and categories — the other presenters mirror
-  /// their copies off this one.
+  /// their copies off this one. Its accounts carry each credit account's live
+  /// installment hold, derived from [installments]' plans.
   final LedgerPresenter ledger;
 
   /// Owns budgets and budget groups.
@@ -117,6 +118,18 @@ class TreasuryPresenters {
       ledger,
       stats,
       monthScope: scope,
+    );
+
+    // The ledger hands out each credit account with its installment hold —
+    // what the plans will still bill — and that hold is derived from the
+    // plans, which [installments] owns. So the ledger subscribes to the owner
+    // instead of re-reading plans from storage or persisting the hold, which
+    // left a cold start showing the hold from one write ago. Wired here, after
+    // the owner exists: the ledger has to be built first, since the plans
+    // presenter takes it.
+    ledger.watchInstallmentPlans(
+      installments,
+      () => installments.allInstallments,
     );
 
     // Bills is built before budget because budget now reads set-asides from it

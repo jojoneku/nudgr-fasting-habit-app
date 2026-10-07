@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 
 void main() {
@@ -153,6 +154,61 @@ void main() {
           a.copyWith(dueDaysAfterStatement: null, minimumRule: null);
       expect(cleared.dueDaysAfterStatement, isNull);
       expect(cleared.minimumRule, isNull);
+    });
+  });
+
+  group('installmentChargesDueAt — one charge per statement', () {
+    FinancialAccount card(
+            {int? dueDay, int? daysAfter, int statementDay = 4}) =>
+        FinancialAccount(
+          id: 'c',
+          name: 'Card',
+          category: AccountCategory.bnpl,
+          balance: 0,
+          colorHex: '#FFFFFF',
+          icon: 'bag',
+          statementDay: statementDay,
+          paymentDueDay: dueDay,
+          dueDaysAfterStatement: daysAfter,
+        );
+    Installment plan(String startMonth, int months) => Installment(
+          id: 'p',
+          name: 'Plan',
+          accountId: 'c',
+          totalAmount: 300,
+          monthlyAmount: 100,
+          totalMonths: months,
+          startMonth: startMonth,
+        );
+    int dueAt(FinancialAccount a, Installment p, int y, int m) =>
+        installmentChargesDueAt(a, p, a.cycleClosingIn(y, m)!);
+
+    test('ShopeePay (closes the 4th, due the 15th): 1, 2, 3, then capped', () {
+      final a = card(dueDay: 15);
+      final p = plan('2026-10', 3);
+      expect(dueAt(a, p, 2026, 9), 0);
+      expect(dueAt(a, p, 2026, 10), 1);
+      expect(dueAt(a, p, 2026, 11), 2);
+      expect(dueAt(a, p, 2026, 12), 3);
+      expect(dueAt(a, p, 2027, 1), 3);
+    });
+
+    test('due next month (closes the 15th, due the 4th)', () {
+      final a = card(statementDay: 15, dueDay: 4);
+      final p = plan('2026-11', 6);
+      expect(dueAt(a, p, 2026, 9), 0);
+      expect(dueAt(a, p, 2026, 10), 1); // due Nov 4
+      expect(dueAt(a, p, 2026, 11), 2);
+    });
+
+    test('a month with no due date does not bill two months next time', () {
+      // Closes the 15th, due 15 days later: Jan 15 → Jan 30, Feb 15 → Mar 2,
+      // Mar 15 → Mar 30. February has no due date; March has two.
+      final a = card(statementDay: 15, daysAfter: 15);
+      final p = plan('2026-01', 6);
+      expect(dueAt(a, p, 2026, 1), 1);
+      expect(dueAt(a, p, 2026, 2), 2); // was 3: Jan, Feb and Mar by due month
+      expect(dueAt(a, p, 2026, 3), 3);
     });
   });
 }

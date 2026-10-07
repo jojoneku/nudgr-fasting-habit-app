@@ -8,6 +8,7 @@ import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
+import '../models/finance/finance_category.dart';
 import '../models/finance/financial_account.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/receivable.dart';
@@ -63,6 +64,11 @@ class FinanceActionsExecutor extends ChangeNotifier
 
   PendingFinanceAction? _pending;
   Completer<AiToolResult>? _decision;
+
+  /// The bound installment behind [_pending], when it is an `addInstallment`.
+  /// The card is drawn from it and [confirm] writes it, so the account the
+  /// user approved is the account that gets the plan.
+  _InstallmentPlan? _pendingPlan;
 
   @override
   PendingFinanceAction? get pending => _pending;
@@ -150,7 +156,9 @@ class FinanceActionsExecutor extends ChangeNotifier
               '${_peso(inst.monthlyAmount)}/mo ($paid/${inst.totalMonths} paid)$interest, '
               'unbilled ${_peso(unbilled)}, original ${_peso(inst.totalAmount)}';
         });
-        return _rows(call, rows, 'installments', month);
+        // Plans span many months and this list is not scoped to one, so the
+        // summary must not name a month the model would then repeat.
+        return _rows(call, rows, 'installments', 'any month');
 
       case 'findAccounts':
         final ledger = _ledger;
@@ -385,10 +393,20 @@ class FinanceActionsExecutor extends ChangeNotifier
       );
     }
 
+    // An installment purchase record carries the full principal but moves no
+    // cash: the plan's monthly payments are the spending, and they are rows of
+    // their own. Counting both would report the purchase twice, so it is left
+    // out here exactly as every spending aggregation leaves it out
+    // (isSpendingOutflow). It is still listed, labelled as what it is.
     var spent = 0.0;
     var received = 0.0;
+    var installmentPurchases = 0;
     for (final t in matched) {
       if (isTransfer(t)) continue;
+      if (t.isInstallment) {
+        installmentPurchases++;
+        continue;
+      }
       if (t.type == TransactionType.outflow) spent += t.amount;
       if (t.type == TransactionType.inflow) received += t.amount;
     }
@@ -399,6 +417,10 @@ class FinanceActionsExecutor extends ChangeNotifier
       if (isTransfer(t)) {
         flow = 'transfer $account → '
             '${accounts[t.transferToAccountId] ?? 'unknown account'}';
+      } else if (t.isInstallment) {
+        final category = categories[t.categoryId] ?? 'Uncategorised';
+        flow = 'installment purchase, not counted in Spent · $category · '
+            '$account';
       } else {
         final category = categories[t.categoryId] ?? 'Uncategorised';
         flow = '${t.type == TransactionType.inflow ? 'in' : 'out'} · '
@@ -416,6 +438,12 @@ class FinanceActionsExecutor extends ChangeNotifier
           '$flow$owed$note';
     }).toList();
 
+    final purchasesNote = installmentPurchases == 0
+        ? ''
+        : '; $installmentPurchases installment '
+            '${installmentPurchases == 1 ? 'purchase is' : 'purchases are'} '
+            'listed but not counted, since a plan\'s monthly payments are the '
+            'spending';
     final shown = rows.length < matched.length
         ? 'Showing the newest ${rows.length} of ${matched.length}; narrow by '
             'month, dates or query to see the rest.'
@@ -426,7 +454,8 @@ class FinanceActionsExecutor extends ChangeNotifier
       summary: '${rebasedNote == null ? '' : '$rebasedNote '}'
           '${matched.length} transactions in $scope. '
           'Spent ${_peso(spent)}, received ${_peso(received)} '
-          '(transfers between the user\'s own accounts excluded from both). '
+          '(transfers between the user\'s own accounts excluded from both'
+          '$purchasesNote). '
           '$shown\n${rows.join('\n')}',
     );
   }
@@ -437,16 +466,19 @@ class FinanceActionsExecutor extends ChangeNotifier
 
   /// A search that found nothing says so plainly. Returning an empty list with
   /// no explanation invites the model to invent an id and carry on.
+  ///
+  /// [scope] is a month key, or a phrase such as "any month" for a list that
+  /// is not scoped to one.
   AiToolResult _rows(
-      AiToolCall call, Iterable<String> rows, String kind, String month) {
+      AiToolCall call, Iterable<String> rows, String kind, String scope) {
     final list = rows.toList();
     return AiToolResult(
       toolUseId: call.id,
       ok: true,
       summary: list.isEmpty
-          ? 'No $kind matched in $month. Do not guess an id — say you could '
+          ? 'No $kind matched in $scope. Do not guess an id — say you could '
               'not find it.'
-          : '${list.length} $kind in $month:\n${list.join('\n')}',
+          : '${list.length} $kind in $scope:\n${list.join('\n')}',
     );
   }
 
@@ -466,12 +498,31 @@ class FinanceActionsExecutor extends ChangeNotifier
     if (call.name == 'logTransactions') {
       return Future.value(_handOffToLedger(call));
     }
-    final action = _describe(call);
+    // An installment is checked and bound before any card is shown: a plan
+    // the user cannot sensibly confirm (no amount, no months, an account that
+    // is not credit) is sent back to the model with the reason, instead of
+    // being parked behind a card that would save something else.
+    final problem = _proposalProblem(call);
+    if (problem != null) {
+      return Future.value(AiToolResult.failed(call.id, problem));
+    }
+    _InstallmentPlan? plan;
+    if (call.name == 'addInstallment') {
+      final resolved = _resolveInstallment(call.input);
+      final error = resolved.error;
+      if (error != null) {
+        return Future.value(AiToolResult.failed(call.id, error));
+      }
+      plan = resolved.plan;
+    }
+    final action =
+        plan != null ? _describeInstallment(call, plan) : _describe(call);
     if (action == null) {
       return Future.value(
           AiToolResult.failed(call.id, 'Unknown tool "${call.name}".'));
     }
     _pending = action;
+    _pendingPlan = plan;
     _decision = Completer<AiToolResult>();
     notifyListeners();
     return _decision!.future;
@@ -485,11 +536,14 @@ class FinanceActionsExecutor extends ChangeNotifier
     final action = _pending;
     final decision = _decision;
     if (action == null || decision == null) return;
+    final plan = _pendingPlan;
     _pending = null;
+    _pendingPlan = null;
     _decision = null;
 
     try {
-      final summary = await _write(action, applyToFuture: applyToFuture);
+      final summary =
+          await _write(action, applyToFuture: applyToFuture, plan: plan);
       decision.complete(
           AiToolResult(toolUseId: action.call.id, ok: true, summary: summary));
     } catch (e) {
@@ -507,6 +561,7 @@ class FinanceActionsExecutor extends ChangeNotifier
     final decision = _decision;
     if (action == null || decision == null) return;
     _pending = null;
+    _pendingPlan = null;
     _decision = null;
     decision.complete(AiToolResult.declined(action.call.id));
     notifyListeners();
@@ -637,41 +692,6 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
           ],
         );
-      case 'addInstallment':
-        final months = _int(i['months']).clamp(1, 120);
-        final rate = _num(i['interestRate']);
-        final monthly = Installment.computeMonthlyAmount(
-          principal: amount,
-          months: months,
-          monthlyRate: rate,
-        );
-        final totalPayable = monthly * months;
-        final totalInterest =
-            (totalPayable - amount).clamp(0.0, double.infinity);
-        final rateLabel = rate == rate.roundToDouble()
-            ? '${rate.round()}%'
-            : '${rate.toStringAsFixed(2)}%';
-        return PendingFinanceAction(
-          call: call,
-          title: 'Add installment: $name, ${_peso(amount)} ($months mo)',
-          isRecurring: false,
-          details: [
-            (label: 'Total amount', value: _peso(amount)),
-            (label: 'Duration', value: '$months months'),
-            (label: 'Monthly payment', value: _peso(monthly)),
-            if (rate > 0) ...[
-              (label: 'Interest rate', value: '$rateLabel / mo'),
-              (label: 'Total interest', value: _peso(totalInterest)),
-              (label: 'Total payable', value: _peso(totalPayable)),
-            ],
-            if (_str(i['account']).isNotEmpty)
-              (label: 'Account', value: _str(i['account'])),
-            if (_str(i['category']).isNotEmpty)
-              (label: 'Category', value: _str(i['category'])),
-            if (_str(i['date']).isNotEmpty)
-              (label: 'Date', value: _str(i['date'])),
-          ],
-        );
       case 'payCredit':
         final cardName = _str(i['creditAccount']);
         final fromName = _str(i['fromAccount']);
@@ -685,7 +705,10 @@ class FinanceActionsExecutor extends ChangeNotifier
           details: [
             (label: 'Payment to', value: cardDisplay),
             (label: 'Amount', value: _peso(amount)),
-            if (fromName.isNotEmpty) (label: 'Pay from', value: fromName),
+            (
+              label: 'Pay from',
+              value: _liquidAccountFor(fromName)?.name ?? fromName,
+            ),
             if (_str(i['date']).isNotEmpty)
               (label: 'Date', value: _str(i['date'])),
             if (_str(i['note']).isNotEmpty)
@@ -922,8 +945,237 @@ class FinanceActionsExecutor extends ChangeNotifier
     return null;
   }
 
+  // ── Installments ──────────────────────────────────────────────────────────
+
+  /// Fewest payments a plan may have. One payment is an ordinary purchase,
+  /// and a missing `months` must not quietly become one.
+  static const int _minInstallmentMonths = 2;
+  static const int _maxInstallmentMonths = 120;
+
+  /// Highest monthly add-on rate accepted, in percent. BSP caps credit card
+  /// finance charges at 3% a month; BNPL and credit lines can run a little
+  /// higher, so the bound is generous. Anything above it is far more likely an
+  /// annual rate or a typo than a real monthly one.
+  static const double _maxMonthlyRate = 10;
+
+  /// Checks an `addInstallment` call and binds it to the user's real accounts
+  /// and categories. Returns the plan, or the reason it cannot be proposed —
+  /// written for the model, which relays it or asks the user.
+  ({_InstallmentPlan? plan, String? error}) _resolveInstallment(
+      Map<String, Object?> i) {
+    ({_InstallmentPlan? plan, String? error}) fail(String error) =>
+        (plan: null, error: error);
+
+    if (_ledger == null) return fail('Installments are not available here.');
+
+    final name = _str(i['name']);
+    if (name.isEmpty) {
+      return fail('An installment needs a name, e.g. "iPhone 16". Ask the '
+          'user what they bought.');
+    }
+
+    final amount = _numOrNull(i['amount']);
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      return fail('The amount must be the total purchase price in pesos, '
+          'above zero. Ask the user for it.');
+    }
+
+    final rawMonths = i['months'];
+    final months = _numOrNull(rawMonths);
+    if (months == null) {
+      return fail('How many monthly payments is it? Ask the user rather than '
+          'guessing — e.g. 3, 6, 12 or 24.');
+    }
+    if (months != months.roundToDouble()) {
+      return fail('The number of months must be a whole number, not $months.');
+    }
+    if (months < _minInstallmentMonths) {
+      return fail('An installment needs at least $_minInstallmentMonths '
+          'monthly payments. A purchase paid in one go is an ordinary '
+          'transaction — log it with logTransactions instead.');
+    }
+    if (months > _maxInstallmentMonths) {
+      return fail('${months.toInt()} months is longer than any installment '
+          'plan ($_maxInstallmentMonths at most). Check the term with the '
+          'user.');
+    }
+
+    final rawRate = i['interestRate'];
+    final double rate;
+    if (rawRate == null || (rawRate is String && rawRate.trim().isEmpty)) {
+      rate = 0;
+    } else {
+      final parsed = _numOrNull(rawRate);
+      if (parsed == null || !parsed.isFinite) {
+        return fail('The interest rate must be a number: the monthly add-on '
+            'rate in percent, or 0 for a 0% plan.');
+      }
+      rate = parsed.toDouble();
+    }
+    if (rate < 0) {
+      return fail('The interest rate cannot be negative. Use 0 for a 0% '
+          'plan.');
+    }
+    if (rate > _maxMonthlyRate) {
+      return fail('${_rateLabel(rate)} a month is not a plausible installment '
+          'rate (BSP caps credit card finance charges at 3% a month). If the '
+          'user quoted a yearly rate, divide it by 12; otherwise ask them to '
+          'check it.');
+    }
+
+    final account = _creditAccountFor(_str(i['account']));
+    final accountError = account.error;
+    if (accountError != null) return fail(accountError);
+
+    final rawDate = _str(i['date']);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    var date = today;
+    String? dateNote;
+    if (rawDate.isNotEmpty) {
+      final given = DateTime.tryParse(rawDate);
+      if (given == null) {
+        return fail('The purchase date must be YYYY-MM-DD, not "$rawDate".');
+      }
+      // The same year-slip guard every other tool applies to a model date.
+      final rebased = rebaseStaleDate(given, now);
+      date = DateTime(rebased.year, rebased.month, rebased.day);
+      if (date.isAfter(today)) {
+        return fail('The purchase date $rawDate is in the future. Use the day '
+            'it was bought, or leave the date out for today.');
+      }
+      if (date != DateTime(given.year, given.month, given.day)) {
+        dateNote = 'moved from $rawDate';
+      }
+    }
+
+    final note = _str(i['note']);
+    return (
+      plan: _InstallmentPlan(
+        name: name,
+        amount: amount.toDouble(),
+        months: months.toInt(),
+        rate: rate,
+        account: account.account!,
+        category: _categoryFor(_str(i['category'])),
+        requestedCategory: _str(i['category']),
+        date: date,
+        dateNote: dateNote,
+        note: note.isEmpty ? null : note,
+      ),
+      error: null,
+    );
+  }
+
+  /// The credit account an installment goes on, resolved only among active
+  /// credit cards, credit lines and BNPL accounts — a plan on anything else is
+  /// never billed and holds no credit.
+  ///
+  /// An exact name wins, then a single account whose name contains the given
+  /// one, then a single account whose name the given one contains ("BDO
+  /// Credit Card" for "BDO"). No match, or more than one at the first tier
+  /// that matches at all, is an error naming the choices: the user picks, the
+  /// executor never does.
+  ({FinancialAccount? account, String? error}) _creditAccountFor(String name) {
+    final all = _ledger?.accounts ?? const <FinancialAccount>[];
+    final credit = all.where((a) => a.isLiability && a.isActive).toList();
+    if (credit.isEmpty) {
+      return (
+        account: null,
+        error: 'The user has no credit card, credit line or BNPL account, so '
+            'an installment has nowhere to go. Ask them to add one in '
+            'Accounts first.',
+      );
+    }
+    final choices = credit.map((a) => '"${a.name}"').join(', ');
+    String ask(String why) => '$why Credit accounts: $choices. Ask the user '
+        'which one it is on.';
+
+    final q = name.trim().toLowerCase();
+    if (q.isEmpty) {
+      if (credit.length == 1) return (account: credit.single, error: null);
+      return (account: null, error: ask('No account was given.'));
+    }
+
+    String norm(FinancialAccount a) => a.name.trim().toLowerCase();
+    final tiers = <List<FinancialAccount>>[
+      credit.where((a) => norm(a) == q).toList(),
+      credit.where((a) => norm(a).contains(q)).toList(),
+      credit.where((a) => norm(a).isNotEmpty && q.contains(norm(a))).toList(),
+    ];
+    for (final tier in tiers) {
+      if (tier.length == 1) return (account: tier.single, error: null);
+      if (tier.length > 1) {
+        return (
+          account: null,
+          error: ask('"$name" matches more than one credit account.'),
+        );
+      }
+    }
+
+    final other = all
+        .where((a) => !a.isLiability && (norm(a) == q || norm(a).contains(q)))
+        .firstOrNull;
+    if (other != null) {
+      return (
+        account: null,
+        error: ask('"${other.name}" is not a credit account — an installment '
+            'only goes on a credit card, credit line or BNPL account.'),
+      );
+    }
+    return (
+      account: null,
+      error: ask('No credit account matches "$name".'),
+    );
+  }
+
+  /// The confirm card for a bound installment. Every row shows what will be
+  /// saved — the resolved account and category, the resolved date — never the
+  /// model's raw words, so a wrong binding is visible before it is written.
+  PendingFinanceAction _describeInstallment(
+      AiToolCall call, _InstallmentPlan p) {
+    final monthly = p.monthly;
+    final totalPayable = monthly * p.months;
+    final totalInterest = (totalPayable - p.amount).clamp(0.0, double.infinity);
+    final category = p.category;
+    return PendingFinanceAction(
+      call: call,
+      title: 'Add installment: ${p.name}, ${_peso(p.amount)} '
+          '(${p.months} mo)',
+      isRecurring: false,
+      details: [
+        (label: 'Account', value: p.account.name),
+        (label: 'Total amount', value: _peso(p.amount)),
+        (label: 'Duration', value: '${p.months} months'),
+        (label: 'Monthly payment', value: _peso(monthly)),
+        if (p.rate > 0) ...[
+          (label: 'Interest rate', value: '${_rateLabel(p.rate)} / mo'),
+          (label: 'Total interest', value: _peso(totalInterest)),
+          (label: 'Total payable', value: _peso(totalPayable)),
+        ],
+        if (category != null)
+          (label: 'Category', value: category.name)
+        else if (p.requestedCategory.isNotEmpty)
+          (
+            label: 'Category',
+            value: 'None — no category named "${p.requestedCategory}"',
+          ),
+        (
+          label: 'Purchase date',
+          value: p.dateNote == null
+              ? _day(p.date)
+              : '${_day(p.date)} (${p.dateNote})',
+        ),
+      ],
+    );
+  }
+
+  static String _rateLabel(double rate) => rate == rate.roundToDouble()
+      ? '${rate.round()}%'
+      : '${rate.toStringAsFixed(2)}%';
+
   Future<String> _write(PendingFinanceAction action,
-      {required bool applyToFuture}) async {
+      {required bool applyToFuture, _InstallmentPlan? plan}) async {
     final call = action.call;
     final i = call.input;
     final name = _str(i['name']);
@@ -1088,7 +1340,11 @@ class FinanceActionsExecutor extends ChangeNotifier
           accountId: newAcc?.id,
           note: newNote.isNotEmpty ? newNote : null,
         );
-        await ledger.updateTransaction(updated);
+        // The same path as the ledger grid's inline edit: an installment
+        // purchase carries its plan along instead of drifting from it.
+        if (!await ledger.updateRecordInline(updated)) {
+          throw StateError('Edit refused for installment purchase "$id"');
+        }
         return 'Updated transaction "${updated.description}" (${_peso(updated.amount)}).';
 
       case 'deleteTransaction':
@@ -1152,119 +1408,159 @@ class FinanceActionsExecutor extends ChangeNotifier
         return 'Set aside ${_peso(amount)} for "$name" in $month$scope.';
 
       case 'addInstallment':
+        // Bound and checked at propose time; the card showed exactly this.
         final ledger = _ledger;
-        if (ledger == null) {
-          throw StateError(
-              'Ledger is not available to log installment purchase');
+        final p = plan;
+        if (ledger == null || p == null) {
+          throw StateError('addInstallment confirmed without a bound plan');
         }
-        final months = _int(i['months']).clamp(1, 120);
-        final rate = _num(i['interestRate']);
-        final accountName = _str(i['account']);
-        final acc = _accountFor(accountName);
-        if (acc == null) {
-          throw StateError('Could not find account "$accountName"');
-        }
-        final categoryName = _str(i['category']);
-        final categoryId = _categoryIdFor(categoryName);
-        final dateStr = _str(i['date']);
-        final date = (dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null) ??
-            DateTime.now();
-        final startMonth = calculateInstallmentStartMonth(
-          acc,
-          date,
-          deferralMonths: 0,
-        );
-        final monthly = Installment.computeMonthlyAmount(
-          principal: amount,
-          months: months,
-          monthlyRate: rate,
-        );
+        final monthly = p.monthly;
         final inst = Installment(
           id: _id(),
-          name: name,
-          accountId: acc.id,
-          totalAmount: amount,
+          name: p.name,
+          accountId: p.account.id,
+          totalAmount: p.amount,
           monthlyAmount: double.parse(monthly.toStringAsFixed(2)),
-          totalMonths: months,
-          startMonth: startMonth,
-          purchaseDate: date,
+          totalMonths: p.months,
+          startMonth: calculateInstallmentStartMonth(
+            p.account,
+            p.date,
+            deferralMonths: 0,
+          ),
+          purchaseDate: p.date,
           deferralMonths: 0,
-          interestRate: rate,
-          note: _str(i['note']).isEmpty ? null : _str(i['note']),
-          categoryId: categoryId.isEmpty ? null : categoryId,
+          interestRate: p.rate,
+          note: p.note,
+          categoryId: p.category?.id,
           isActive: true,
         );
-        final txn = TransactionRecord(
-          id: _id(),
-          date: date,
-          accountId: acc.id,
-          categoryId: categoryId,
-          amount: amount,
-          type: TransactionType.outflow,
-          description: name,
-          note: _str(i['note']).isEmpty ? null : _str(i['note']),
-          month: toMonthKey(date),
-          installmentId: inst.id,
-          isInstallment: true,
-        );
-        await ledger.addInstallmentPurchase(inst, transaction: txn);
-        return 'Added installment purchase "$name" for ${_peso(amount)} ($months months at ${_peso(monthly)}/mo) on ${acc.name}.';
+        // The same presenter call the ledger's add sheet makes. The presenter
+        // writes the purchase record itself, so chat and form cannot drift.
+        await ledger.addInstallmentPurchase(inst);
+        return 'Added installment purchase "${p.name}" for '
+            '${_peso(p.amount)} (${p.months} months at ${_peso(monthly)}/mo) '
+            'on ${p.account.name}.';
     }
     throw StateError('no writer for ${call.name}');
   }
 
   // ── Small helpers ─────────────────────────────────────────────────────────
 
-  /// Resolve an account NAME or partial name to a FinancialAccount.
-  /// Falls back to the first liability account if not matched or empty.
-  FinancialAccount? _accountFor(String name) {
-    final accounts = _ledger?.accounts ?? const [];
-    if (accounts.isEmpty) return null;
-    if (name.isEmpty) {
-      return accounts.where((a) => a.isLiability).firstOrNull ??
-          accounts.firstOrNull;
+  /// The one account in [pool] that [name] names: an exact name, else a
+  /// single account whose name contains it, else a single account whose name
+  /// it contains ("BDO Card Visa" → "BDO Card"). Null when none or several
+  /// match — never a guess. A wrong guess here pays the wrong card or moves a
+  /// transaction to an account the user never mentioned.
+  static FinancialAccount? _matchAccount(
+      String name, Iterable<FinancialAccount> pool) {
+    final q = name.trim().toLowerCase();
+    if (q.isEmpty) return null;
+    String norm(FinancialAccount a) => a.name.trim().toLowerCase();
+    final tiers = <List<FinancialAccount>>[
+      pool.where((a) => norm(a) == q).toList(),
+      pool.where((a) => norm(a).contains(q)).toList(),
+      pool.where((a) => norm(a).isNotEmpty && q.contains(norm(a))).toList(),
+    ];
+    for (final tier in tiers) {
+      if (tier.length == 1) return tier.single;
+      if (tier.length > 1) return null;
     }
-    final lower = name.toLowerCase();
-    for (final a in accounts) {
-      if (a.name.toLowerCase() == lower) return a;
-    }
-    for (final a in accounts) {
-      if (a.name.toLowerCase().contains(lower)) return a;
-    }
-    return accounts.where((a) => a.isLiability).firstOrNull ??
-        accounts.firstOrNull;
+    return null;
   }
 
-  /// Resolve a liquid funding account (bank, e-wallet, cash).
+  List<FinancialAccount> get _activeAccounts =>
+      (_ledger?.accounts ?? const <FinancialAccount>[])
+          .where((a) => a.isActive)
+          .toList();
+
+  /// The active account [name] names, or null (see [_matchAccount]).
+  FinancialAccount? _accountFor(String name) =>
+      _matchAccount(name, _activeAccounts);
+
+  /// The bank, e-wallet or cash account [name] names. With no name, the only
+  /// such account when there is exactly one; otherwise null.
   FinancialAccount? _liquidAccountFor(String name) {
-    final accounts = _ledger?.accounts ?? const [];
-    if (accounts.isEmpty) return null;
-    if (name.isNotEmpty) {
-      final lower = name.toLowerCase();
-      for (final a in accounts) {
-        if (a.isLiquid && a.name.toLowerCase() == lower) return a;
-      }
-      for (final a in accounts) {
-        if (a.isLiquid && a.name.toLowerCase().contains(lower)) return a;
-      }
+    final liquid = _activeAccounts.where((a) => a.isLiquid).toList();
+    if (name.trim().isEmpty) return liquid.length == 1 ? liquid.single : null;
+    return _matchAccount(name, liquid);
+  }
+
+  /// Why [call] cannot be shown as a card — an account it names does not
+  /// resolve to exactly one of the user's accounts, or an edit would break a
+  /// transfer pair or an installment purchase — or null when it can. Sent back
+  /// to the model, which asks the user.
+  String? _proposalProblem(AiToolCall call) {
+    final i = call.input;
+    String list(Iterable<FinancialAccount> pool) =>
+        pool.map((a) => '"${a.name}"').join(', ');
+    String? check(String field, Iterable<FinancialAccount> pool, String kind,
+        {bool required = false}) {
+      final name = _str(i[field]);
+      if (name.isEmpty && !required) return null;
+      final hit = kind == 'bank, e-wallet or cash'
+          ? _liquidAccountFor(name)
+          : _matchAccount(name, pool);
+      if (hit != null) return null;
+      final what = name.isEmpty
+          ? 'No $kind account was given'
+          : '"$name" does not match exactly one $kind account';
+      return '$what. Choices: ${list(pool)}. Ask the user which one.';
     }
-    return accounts.where((a) => a.isLiquid).firstOrNull;
+
+    final active = _activeAccounts;
+    switch (call.name) {
+      case 'payCredit':
+        return check(
+                'creditAccount', active.where((a) => a.isLiability), 'credit',
+                required: true) ??
+            check('fromAccount', active.where((a) => a.isLiquid),
+                'bank, e-wallet or cash',
+                required: true);
+      case 'editTransaction':
+        final txn = _ledger?.allTransactions
+            .where((t) => t.id == _str(i['id']))
+            .firstOrNull;
+        if (txn?.transferGroupId != null &&
+            (i['amount'] != null || _str(i['account']).isNotEmpty)) {
+          return 'That record is one leg of a transfer; changing its amount or '
+              'account here would break the pair. Ask the user to edit the '
+              'transfer in the Ledger.';
+        }
+        if (txn != null &&
+            txn.isInstallment &&
+            _str(i['account']).isNotEmpty &&
+            _accountFor(_str(i['account']))?.isLiability != true) {
+          return 'That record is an installment purchase; it can only move to '
+              'another credit account. Ask the user to change it in the Ledger.';
+        }
+        return check('account', active, 'active');
+      case 'markBillPaid':
+      case 'markReceivableReceived':
+      case 'editBill':
+      case 'editReceivable':
+        return check('account', active, 'active');
+      case 'editSetAside':
+        return check('destinationAccount', active, 'active');
+    }
+    return null;
   }
 
   /// Resolve a category NAME to its id. The model never sees ids, so it sends
   /// names and the client binds them — the same contract the expense extractor
   /// uses. An unresolved name leaves the category empty rather than guessing.
-  String _categoryIdFor(String name) {
-    if (name.isEmpty) return '';
+  String _categoryIdFor(String name) => _categoryFor(name)?.id ?? '';
+
+  FinanceCategory? _categoryFor(String name) {
+    if (name.isEmpty) return null;
     final lower = name.toLowerCase();
-    final categories = _budget?.allCategories ?? const [];
+    final categories = _budget?.allCategories ?? const <FinanceCategory>[];
     for (final c in categories) {
-      if (c.name.toLowerCase() == lower) return c.id;
+      if (c.name.toLowerCase() == lower) return c;
     }
     for (final c in categories) {
-      if (c.name.toLowerCase().startsWith(lower)) return c.id;
+      if (c.name.toLowerCase().startsWith(lower)) return c;
     }
-    return '';
+    return null;
   }
 
   /// The month a proposal lands in. A year the model slipped back to its own
@@ -1285,6 +1581,11 @@ class FinanceActionsExecutor extends ChangeNotifier
   static double _num(Object? v) =>
       v is num ? v.toDouble() : (v is String ? double.tryParse(v) ?? 0 : 0);
 
+  /// A number, or null when absent or unreadable — unlike [_num] and [_int],
+  /// which fall back to a value and so cannot tell "missing" from "zero".
+  static num? _numOrNull(Object? v) =>
+      v is num ? v : (v is String ? num.tryParse(v.trim()) : null);
+
   static int _int(Object? v) =>
       v is num ? v.toInt() : (v is String ? int.tryParse(v) ?? 1 : 1);
 
@@ -1292,4 +1593,47 @@ class FinanceActionsExecutor extends ChangeNotifier
 
   static String _id() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+}
+
+/// An `addInstallment` call checked and bound against the user's real
+/// accounts and categories at propose time. The confirm card is drawn from it
+/// and the write saves it, so what the user approves is what is saved.
+class _InstallmentPlan {
+  const _InstallmentPlan({
+    required this.name,
+    required this.amount,
+    required this.months,
+    required this.rate,
+    required this.account,
+    required this.category,
+    required this.requestedCategory,
+    required this.date,
+    required this.dateNote,
+    required this.note,
+  });
+
+  final String name;
+  final double amount;
+  final int months;
+
+  /// Monthly add-on rate, in percent.
+  final double rate;
+
+  /// Always an active credit card, credit line or BNPL account.
+  final FinancialAccount account;
+
+  /// Null when no category was given or none matched [requestedCategory].
+  final FinanceCategory? category;
+  final String requestedCategory;
+  final DateTime date;
+
+  /// Set when the model's date was moved (a slipped year), to say so.
+  final String? dateNote;
+  final String? note;
+
+  double get monthly => Installment.computeMonthlyAmount(
+        principal: amount,
+        months: months,
+        monthlyRate: rate,
+      );
 }

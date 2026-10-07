@@ -1,12 +1,9 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
-import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
@@ -46,7 +43,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   int _deferralMonths = 0;
   double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
-  bool _startMonthManuallyEdited = false;
+
+  /// True once the start-month stepper was used in THIS session. Until then
+  /// the start month follows account / purchase date / deferral — on edit
+  /// too, so changing the deferral saves the month the hint shows.
+  bool _startMonthTouched = false;
   bool _saving = false;
   bool _accountError = false;
 
@@ -69,10 +70,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   }
 
   void _recalculateStartMonth() {
-    if (_startMonthManuallyEdited) return;
-    final computed = calculateInstallmentStartMonth(
-      _selectedAccount,
-      _purchaseDate,
+    if (_startMonthTouched) return;
+    final computed = widget.presenter.suggestedStartMonth(
+      accountId: _accountId,
+      purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
     );
     setState(() => _startMonth = computed);
@@ -127,7 +128,6 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _deferralMonths = e.deferralMonths;
       _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
-      _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
@@ -141,17 +141,28 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   }
 
   void _onTotalChanged() {
-    if (_monthlyManuallyEdited) return;
-    final total = double.tryParse(_totalCtrl.text);
-    if (total != null && _totalMonths > 0) {
-      final monthly = Installment.computeMonthlyAmount(
-        principal: total,
-        months: _totalMonths,
-        monthlyRate: _interestRate,
-      );
-      _monthlyCtrl.text = monthly.toStringAsFixed(2);
-    }
+    // Rebuild either way: the interest preview reads the total.
+    setState(() {
+      if (_monthlyManuallyEdited) return;
+      final total = double.tryParse(_totalCtrl.text);
+      if (total != null && _totalMonths > 0) {
+        final monthly = Installment.computeMonthlyAmount(
+          principal: total,
+          months: _totalMonths,
+          monthlyRate: _interestRate,
+        );
+        _monthlyCtrl.text = monthly.toStringAsFixed(2);
+      }
+    });
   }
+
+  InstallmentInterestPreview? get _interestPreview =>
+      widget.presenter.interestPreview(
+        principal: double.tryParse(_totalCtrl.text),
+        months: _totalMonths,
+        rate: _interestRate,
+        monthlyAmount: double.tryParse(_monthlyCtrl.text),
+      );
 
   void _onMonthsChanged(int months) {
     setState(() {
@@ -186,32 +197,22 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     }
     setState(() => _saving = true);
 
-    final total = double.parse(_totalCtrl.text);
-    final monthly = double.parse(_monthlyCtrl.text);
     final e = widget.existing;
-
-    final installment = Installment(
-      id: e?.id ??
-          '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-      name: _nameCtrl.text.trim(),
+    final installment = widget.presenter.buildInstallment(
+      existing: e,
+      name: _nameCtrl.text,
       accountId: _accountId!,
-      totalAmount: total,
-      monthlyAmount: monthly,
+      totalAmount: double.parse(_totalCtrl.text),
+      monthlyAmount: double.parse(_monthlyCtrl.text),
       totalMonths: _totalMonths,
       startMonth: _startMonth,
       purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
       interestRate: _interestRate,
-      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      note: _noteCtrl.text,
       categoryId: _categoryId,
-      isActive: e?.isActive ?? true,
     );
-
-    if (e != null) {
-      await widget.presenter.updateInstallment(installment);
-    } else {
-      await widget.presenter.addInstallment(installment);
-    }
+    await widget.presenter.saveInstallment(installment, isEdit: e != null);
     if (mounted) Navigator.pop(context);
   }
 
@@ -220,15 +221,14 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     final next = DateTime(date.year, date.month + delta);
     setState(() {
       _startMonth = toMonthKey(next);
-      _startMonthManuallyEdited = true;
+      _startMonthTouched = true;
     });
   }
 
   Widget _buildCycleHint(BuildContext context) {
-    final account = _selectedAccount;
-    final explanation = installmentCycleExplanation(
-      account,
-      _purchaseDate,
+    final explanation = widget.presenter.cycleHint(
+      accountId: _accountId,
+      purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
     );
     if (explanation == null) {
@@ -266,17 +266,9 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     );
   }
 
-  Widget _buildInterestSummary(BuildContext context) {
-    final total = double.tryParse(_totalCtrl.text) ?? 0.0;
-    final monthlyInterest = total * (_interestRate / 100.0);
-    final totalInterest = monthlyInterest * _totalMonths;
-    final totalPayable = total + totalInterest;
+  Widget _buildInterestSummary(
+      BuildContext context, InstallmentInterestPreview preview) {
     final cs = Theme.of(context).colorScheme;
-
-    final rateLabel = _interestRate == _interestRate.roundToDouble()
-        ? '${_interestRate.round()}%'
-        : '${_interestRate.toStringAsFixed(2)}%';
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -291,7 +283,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Interest: ${formatPeso(totalInterest)} ($rateLabel/mo) · Total payable: ${formatPeso(totalPayable)}',
+              preview.label,
               style: TextStyle(
                 fontSize: 12,
                 color: cs.onSurfaceVariant,
@@ -305,6 +297,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   }
 
   Widget _buildForm(BuildContext context) {
+    final interestPreview = _interestPreview;
     return Form(
       key: _formKey,
       child: Column(
@@ -418,9 +411,9 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             selected: _interestRate,
             onChanged: _onInterestRateChanged,
           ),
-          if (_interestRate > 0) ...[
+          if (interestPreview != null) ...[
             const SizedBox(height: 8),
-            _buildInterestSummary(context),
+            _buildInterestSummary(context, interestPreview),
           ],
           const SizedBox(height: 16),
 
@@ -783,8 +776,6 @@ class _InterestRateSelector extends StatelessWidget {
   final double selected;
   final ValueChanged<double> onChanged;
 
-  static const _presets = [0.0, 0.5, 1.0, 1.5, 2.0];
-
   const _InterestRateSelector({
     required this.selected,
     required this.onChanged,
@@ -792,23 +783,20 @@ class _InterestRateSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCustom = !_presets.contains(selected);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          for (final r in _presets) ...[
+          for (final r in InstallmentPresenter.ratePresets) ...[
             _MonthChip(
-              label: r == 0
-                  ? '0% (Promo)'
-                  : '${r == r.roundToDouble() ? r.round() : r}%',
+              label: InstallmentPresenter.ratePresetLabel(r),
               selected: selected == r,
               onTap: () => onChanged(r),
             ),
             const SizedBox(width: 8),
           ],
           _CustomRateField(
-            selected: isCustom ? selected : null,
+            rate: selected,
             onChanged: onChanged,
           ),
         ],
@@ -817,11 +805,17 @@ class _InterestRateSelector extends StatelessWidget {
   }
 }
 
+/// The free-text "Custom %" box beside the rate chips. [rate] is the form's
+/// current rate wherever it came from.
+///
+/// It only rewrites its own text when the rate changed from OUTSIDE (a chip):
+/// a value it just emitted is left alone, so backspacing "2.5" to "2." (which
+/// parses as the 2% preset) doesn't wipe the field mid-typing.
 class _CustomRateField extends StatefulWidget {
-  final double? selected;
+  final double rate;
   final ValueChanged<double> onChanged;
 
-  const _CustomRateField({this.selected, required this.onChanged});
+  const _CustomRateField({required this.rate, required this.onChanged});
 
   @override
   State<_CustomRateField> createState() => _CustomRateFieldState();
@@ -830,21 +824,35 @@ class _CustomRateField extends StatefulWidget {
 class _CustomRateFieldState extends State<_CustomRateField> {
   final _ctrl = TextEditingController();
 
+  /// The last rate this field sent up, or null when it holds no value.
+  double? _emitted;
+
+  bool get _active => !InstallmentPresenter.isPresetRate(widget.rate);
+
   @override
   void initState() {
     super.initState();
-    if (widget.selected != null) {
-      final s = widget.selected!;
-      _ctrl.text = s == s.roundToDouble() ? '${s.round()}' : '$s';
-    }
+    _syncFrom(widget.rate);
   }
 
   @override
   void didUpdateWidget(_CustomRateField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selected == null && oldWidget.selected != null) {
-      _ctrl.clear();
-    }
+    if (widget.rate != _emitted) _syncFrom(widget.rate);
+  }
+
+  /// Shows [rate] when it's a custom value, clears the box for a preset.
+  void _syncFrom(double rate) {
+    final custom = !InstallmentPresenter.isPresetRate(rate);
+    _ctrl.text = custom ? InstallmentPresenter.rateText(rate) : '';
+    _emitted = custom ? rate : null;
+  }
+
+  void _onTyped(String v) {
+    final parsed = double.tryParse(v);
+    if (parsed == null || parsed < 0) return;
+    _emitted = parsed;
+    widget.onChanged(parsed);
   }
 
   @override
@@ -856,7 +864,7 @@ class _CustomRateFieldState extends State<_CustomRateField> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final active = widget.selected != null;
+    final active = _active;
     return Container(
       width: 88,
       decoration: BoxDecoration(
@@ -883,10 +891,7 @@ class _CustomRateFieldState extends State<_CustomRateField> {
           hintText: 'Custom %',
           hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
         ),
-        onChanged: (v) {
-          final parsed = double.tryParse(v);
-          if (parsed != null && parsed >= 0) widget.onChanged(parsed);
-        },
+        onChanged: _onTyped,
       ),
     );
   }

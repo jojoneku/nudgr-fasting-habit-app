@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -75,6 +76,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   @override
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
+    _planOwner?.removeListener(_onPlansChanged);
     super.dispose();
   }
 
@@ -107,8 +109,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Spawns an installment when a purchase is split into installments from the ledger.
   Future<void> Function(Installment installment)? onSpawnInstallment;
 
-  /// Deletes an installment when an installment purchase is removed from the ledger.
+  /// Removes an installment plan whose ledger records the ledger has already
+  /// removed (deleting the purchase, or turning its split off). Plan-only: it
+  /// must not call back into the ledger.
   Future<void> Function(String installmentId)? onDeleteInstallment;
+
+  /// Replaces an installment plan in place when its ledger purchase is edited.
+  Future<void> Function(Installment installment)? onUpdateInstallment;
 
   /// Resolves an installment by id when editing an installment transaction.
   Installment? Function(String installmentId)? installmentResolver;
@@ -241,7 +248,39 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// True when the sort is anything other than the default newest-first date.
   bool get isCustomSort =>
       _sortField != LedgerSortField.date || !_sortDescending;
-  List<FinancialAccount> get accounts => _accounts;
+
+  /// Every account, each liability carrying its live installment hold
+  /// ([FinancialAccount.unbilledInstallments]).
+  ///
+  /// The hold is derived here, on the way out, from the plans (owned by
+  /// `InstallmentPresenter`, see [watchInstallmentPlans]) and the payments in
+  /// [allTransactions] — never stored. `_accounts` is the persisted shape and
+  /// carries no hold. Memoised on the identity of the account list and of the
+  /// holds, both of which are replaced rather than mutated, so a reader can
+  /// never see a hold from before a change.
+  List<FinancialAccount> get accounts {
+    final holds = installmentHolds;
+    final cached = _heldAccounts;
+    if (cached != null &&
+        identical(_heldAccountsFrom, _accounts) &&
+        identical(_heldAccountsHolds, holds)) {
+      return cached;
+    }
+    final result = [
+      for (final a in _accounts)
+        _holdFor(a, holds) == a.unbilledInstallments
+            ? a
+            : a.copyWith(unbilledInstallments: _holdFor(a, holds)),
+    ];
+    _heldAccounts = result;
+    _heldAccountsFrom = _accounts;
+    _heldAccountsHolds = holds;
+    return result;
+  }
+
+  static double _holdFor(FinancialAccount a, Map<String, double> holds) =>
+      a.isLiability ? holds[a.id] ?? 0.0 : 0.0;
+
   List<FinanceCategory> get categories => _categories;
   List<TransactionRecord> get allTransactions =>
       List.unmodifiable(_allTransactions);
@@ -761,23 +800,87 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   bool get hasOutstandingOwed => outstandingOwedTotal > 0;
 
-  /// Recalculates unbilled installment principal holds across liability accounts
-  /// and updates in-memory accounts.
+  // ── Installment holds ───────────────────────────────────────────────────────
+  //
+  // A credit account's installment hold is what its plans will still bill. It
+  // is derived from two slices: the plans, which `InstallmentPresenter` owns,
+  // and the payments recorded against them, which this presenter owns. It used
+  // to be stamped onto `_accounts` and persisted, one write behind the plans,
+  // so a cold start read back a stale hold. Now nothing stores it: [accounts]
+  // derives it on the way out.
+
+  /// The plan owner this presenter listens to, and how to read its plans.
+  /// Wired by `TreasuryPresenters`; null when the ledger stands alone (tests,
+  /// single-screen mounts), where [_storedPlans] stands in.
+  Listenable? _planOwner;
+  List<Installment> Function()? _readPlans;
+
+  /// Plans read from storage, only used while no owner is wired.
+  List<Installment> _storedPlans = const [];
+
+  /// Bumped whenever the plans may have changed, so the memoised holds are
+  /// recomputed even though the transaction list did not move.
+  int _plansRevision = 0;
+
+  Map<String, double> _holds = const {};
+  List<TransactionRecord>? _holdsFromTxns;
+  int _holdsFromRevision = -1;
+
+  List<FinancialAccount>? _heldAccounts;
+  List<FinancialAccount>? _heldAccountsFrom;
+  Map<String, double>? _heldAccountsHolds;
+
+  /// Subscribes to [owner], the presenter that owns the installment plans, and
+  /// reads them through [plans] from now on. Holds follow the owner from here:
+  /// it notifies, the holds are re-derived, and this presenter notifies only
+  /// when a hold actually moved. Replaces any previous owner.
+  void watchInstallmentPlans(
+    Listenable owner,
+    List<Installment> Function() plans,
+  ) {
+    _planOwner?.removeListener(_onPlansChanged);
+    _planOwner = owner;
+    _readPlans = plans;
+    _storedPlans = const [];
+    owner.addListener(_onPlansChanged);
+    _onPlansChanged();
+  }
+
+  void _onPlansChanged() {
+    final before = _holds;
+    _plansRevision++;
+    if (!mapEquals(before, installmentHolds)) safeNotify();
+  }
+
+  /// Account id → installment hold, for every account with an active plan.
+  /// See [Installment.holdsByAccount]; memoised per transaction list and plan
+  /// revision, so the scan runs once per change, not once per read.
+  Map<String, double> get installmentHolds {
+    if (identical(_holdsFromTxns, _allTransactions) &&
+        _holdsFromRevision == _plansRevision) {
+      return _holds;
+    }
+    final next = Installment.holdsByAccount(
+      _readPlans?.call() ?? _storedPlans,
+      _allTransactions,
+    );
+    // Keep the old map (and so the memoised [accounts]) when nothing moved.
+    if (!mapEquals(next, _holds)) _holds = next;
+    _holdsFromTxns = _allTransactions;
+    _holdsFromRevision = _plansRevision;
+    return _holds;
+  }
+
+  /// Re-derives the installment holds and notifies if any moved.
+  ///
+  /// With a plan owner wired the holds already follow it, and payments are
+  /// this presenter's own transactions, so this is only a change check. A
+  /// standalone ledger has no owner to follow and re-reads the stored plans.
   Future<void> refreshInstallmentHolds() async {
-    final installments = await _storage.loadInstallments();
-    _accounts = [
-      for (final a in _accounts)
-        a.isLiability
-            ? a.copyWith(
-                unbilledInstallments: Installment.totalUnbilledForAccount(
-                  a.id,
-                  installments,
-                  _allTransactions,
-                ),
-              )
-            : a
-    ];
-    safeNotify();
+    if (_planOwner == null) {
+      _storedPlans = await _storage.loadInstallments();
+    }
+    _onPlansChanged();
   }
 
   /// Refreshes the account list from storage. Call this before showing any
@@ -785,7 +888,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// or removed accounts since LedgerPresenter last loaded.
   Future<void> reloadAccounts() async {
     _accounts = await _storage.loadAccounts();
-    await refreshInstallmentHolds();
+    safeNotify();
   }
 
   /// Creates and saves a new account directly to storage, updating the in-memory
@@ -825,7 +928,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _accounts = await _storage.loadAccounts();
       _categories = await _storage.loadFinanceCategories();
       _allTransactions = await _storage.loadTransactions();
-      await refreshInstallmentHolds();
+      await _loadStoredPlansIfStandalone();
+      safeNotify();
       return;
     }
 
@@ -836,7 +940,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     await _financeDict.init();
-    await refreshInstallmentHolds();
+    await _loadStoredPlansIfStandalone();
 
     // One-time migration: reassign any category that still has the old
     // white default (#FFFFFF / near-white luminance > 0.65) to a palette color.
@@ -852,6 +956,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _isLoading = false;
     _hasLoaded = true;
     safeNotify();
+  }
+
+  /// Without a wired plan owner, the stored plans are the only source of the
+  /// installment holds. With one, the owner's live list is, and storage is
+  /// never read for them.
+  Future<void> _loadStoredPlansIfStandalone() async {
+    if (_planOwner != null) return;
+    _storedPlans = await _storage.loadInstallments();
+    _plansRevision++;
   }
 
   /// One-time backfill for the dedicated-transfer-category change. Earlier
@@ -948,6 +1061,25 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Books records the app posts on the user's behalf — installment charges
+  /// billed when a statement closes — in one write. The in-memory append runs
+  /// before the first `await`, so a caller that decided what is missing from
+  /// [allTransactions] and calls this straight away cannot race a second run
+  /// into posting the same records. Awards no XP: nothing was logged by hand.
+  Future<void> postSystemTransactions(List<TransactionRecord> txns) async {
+    if (txns.isEmpty) return;
+    _allTransactions = [..._allTransactions, ...txns];
+    for (final txn in txns) {
+      _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+          isInstallment: txn.isInstallment);
+    }
+    safeNotify();
+    await _saveAll();
+    if (txns.any((t) => t.installmentId != null)) {
+      await refreshInstallmentHolds();
+    }
+  }
+
   /// Re-adds a [txn] that was just removed via [deleteTransaction] (an Undo),
   /// restoring its linked reimbursement receivable too — otherwise undoing a
   /// reimbursable-expense delete brings the expense back but silently drops the
@@ -966,6 +1098,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // the expense↔receivable link intact.
       await spawnReimbursementReceivable(txn, null);
     }
+    await _restorePlansFor([txn]);
     if (txn.installmentId != null) {
       await refreshInstallmentHolds();
     }
@@ -992,6 +1125,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         await spawnReimbursementReceivable(txn, null);
       }
     }
+    await _restorePlansFor(txns);
     if (txns.any((t) => t.installmentId != null)) {
       await refreshInstallmentHolds();
     }
@@ -1020,13 +1154,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     Installment installment, {
     TransactionRecord? transaction,
   }) async {
-    final spawn = onSpawnInstallment;
-    if (spawn != null) {
-      await spawn(installment);
-    } else {
-      final current = await _storage.loadInstallments();
-      await _storage.saveInstallments([...current, installment]);
-    }
+    await _spawnPlan(installment);
 
     final txn = transaction ??
         TransactionRecord(
@@ -1056,6 +1184,339 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
     await _saveAll();
     await refreshInstallmentHolds();
+  }
+
+  /// Whether the add/edit form may offer "split into installments" for
+  /// [existing] (null = a new entry). A plan's payment record can't become a
+  /// purchase of its own; a new entry, a regular record, a transfer leg or an
+  /// existing purchase can.
+  bool canSplitIntoInstallments(TransactionRecord? existing) =>
+      existing == null ||
+      existing.isInstallment ||
+      existing.installmentId == null;
+
+  /// The add/edit form's "split into installments" save, shared by the phone
+  /// sheet and the web dialog.
+  ///
+  /// - New entry: creates the plan and its purchase record.
+  /// - Existing purchase: updates the plan and the record in place, so the
+  ///   plan keeps its id, its recorded payments and the fields the form does
+  ///   not edit (deferral, active flag, a hand-set monthly amount while the
+  ///   terms are unchanged). Never delete-and-recreate: deleting the purchase
+  ///   takes the plan's payments with it.
+  /// - Regular record: becomes a purchase on a new plan. The old record's
+  ///   balance effect is reversed exactly once (the purchase has none).
+  /// - Transfer leg: the whole transfer is removed, then the purchase added.
+  Future<void> saveInstallmentPurchase({
+    TransactionRecord? existing,
+    required String accountId,
+    required double amount,
+    required int months,
+    required double interestRate,
+    required DateTime date,
+    required String description,
+    String? note,
+    String? categoryId,
+  }) async {
+    if (!canSplitIntoInstallments(existing)) {
+      throw ArgumentError.value(existing?.id, 'existing',
+          'is a payment of an installment plan, not a purchase');
+    }
+    final name = description.isEmpty ? 'Installment purchase' : description;
+    final cleanNote = (note == null || note.isEmpty) ? null : note;
+    final cleanCategory =
+        (categoryId == null || categoryId.isEmpty) ? null : categoryId;
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    final isPurchase = existing != null &&
+        existing.isInstallment &&
+        existing.installmentId != null;
+    final previous =
+        isPurchase ? await _resolvePlan(existing.installmentId!) : null;
+
+    final plan = previous != null
+        ? _editedPlan(
+            previous,
+            previousDate: existing!.date,
+            account: account,
+            accountId: accountId,
+            amount: amount,
+            months: months,
+            interestRate: interestRate,
+            date: date,
+            name: name,
+            note: cleanNote,
+            categoryId: cleanCategory,
+          )
+        : Installment(
+            id: isPurchase ? existing.installmentId! : _generateId(),
+            name: name,
+            accountId: accountId,
+            totalAmount: amount,
+            monthlyAmount: _roundedMonthly(amount, months, interestRate),
+            totalMonths: months,
+            startMonth: calculateInstallmentStartMonth(account, date),
+            purchaseDate: date,
+            interestRate: interestRate,
+            note: cleanNote,
+            categoryId: cleanCategory,
+            updatedAt: DateTime.now(),
+          );
+    final record = TransactionRecord(
+      id: existing?.id ?? _generateId(),
+      date: date,
+      accountId: accountId,
+      categoryId: cleanCategory ?? '',
+      amount: amount,
+      type: TransactionType.outflow,
+      description: name,
+      note: cleanNote,
+      month: toMonthKey(date),
+      installmentId: plan.id,
+      isInstallment: true,
+    );
+
+    if (existing == null) {
+      await addInstallmentPurchase(plan, transaction: record);
+    } else if (previous != null) {
+      await updateInstallmentPurchase(plan, record);
+    } else if (existing.transferGroupId != null) {
+      // Reachable: the edit form lets a transfer flip to an expense. Both legs
+      // go, so neither account keeps half a transfer.
+      await deleteTransactionOrGroup(existing.id);
+      await addInstallmentPurchase(plan, transaction: record);
+    } else {
+      // A regular record (or a purchase whose plan went missing). The plan
+      // goes first so the hold refresh below already sees it; updateTransaction
+      // then reverses the old record's balance effect once, applies none for
+      // the purchase, and retires a reimbursement receivable the old record
+      // carried.
+      await _spawnPlan(plan);
+      await updateTransaction(record);
+    }
+  }
+
+  /// Saves an edited installment purchase: [plan] replaces the stored plan of
+  /// the same id and [record] replaces the purchase record. Recorded payments
+  /// are untouched, so the paid count survives and the credit hold becomes
+  /// the new remaining amount.
+  Future<void> updateInstallmentPurchase(
+    Installment plan,
+    TransactionRecord record,
+  ) async {
+    final update = onUpdateInstallment;
+    if (update != null) {
+      await update(plan);
+    } else {
+      final current = await _storage.loadInstallments();
+      await _storage.saveInstallments(
+          [for (final i in current) i.id == plan.id ? plan : i]);
+    }
+    await updateTransaction(record);
+  }
+
+  /// Turns an installment purchase back into an ordinary transaction — the
+  /// edit form's split switched off, or the purchase moved to a non-credit
+  /// account. [replacement] (same id, no installment fields) takes the full
+  /// balance effect the purchase record never had, and the plan is removed.
+  /// Keeping the plan would count the debt twice: once on the card, once as
+  /// the plan's hold. Months the plan charged to the card are dropped (the
+  /// full amount covers them); months paid from another account become
+  /// transfers into the card, since that cash really left.
+  Future<void> convertInstallmentPurchaseToRegular(
+    TransactionRecord replacement,
+  ) async {
+    final old =
+        _allTransactions.where((t) => t.id == replacement.id).firstOrNull;
+    if (old == null) return;
+    final planId = old.installmentId;
+    if (!old.isInstallment || planId == null) {
+      await updateTransaction(replacement);
+      return;
+    }
+    // When the purchase leaves credit altogether (moved to a bank, say), the
+    // replacement IS the payment, and every earlier payment goes.
+    final payments = _planPayments(old);
+    final onCredit = _accounts
+            .where((a) => a.id == replacement.accountId)
+            .firstOrNull
+            ?.isLiability ==
+        true;
+    final cashPayments = onCredit
+        ? payments.where((p) => p.accountId != replacement.accountId).toList()
+        : const <TransactionRecord>[];
+    final cashIds = cashPayments.map((p) => p.id).toSet();
+    final dropped = payments.where((p) => !cashIds.contains(p.id)).toList();
+    for (final p in dropped) {
+      _reverseBalanceDelta(p.accountId, p.amount, p.type);
+    }
+    _applyBalanceDelta(
+        replacement.accountId, replacement.amount, replacement.type,
+        isInstallment: replacement.isInstallment);
+    final transferCategoryId =
+        cashPayments.isEmpty ? null : await _ensureTransferCategory();
+    final asTransfers = <String, TransactionRecord>{};
+    final cardLegs = <TransactionRecord>[];
+    for (final p in cashPayments) {
+      // The cash leg keeps its id, date and balance effect; only its meaning
+      // changes, from installment spending to a transfer into the card.
+      final groupId = _generateId();
+      asTransfers[p.id] = TransactionRecord(
+        id: p.id,
+        date: p.date,
+        accountId: p.accountId,
+        categoryId: transferCategoryId!,
+        amount: p.amount,
+        type: TransactionType.outflow,
+        description: p.description,
+        note: p.note,
+        month: p.month,
+        transferToAccountId: replacement.accountId,
+        transferGroupId: groupId,
+        billId: p.billId,
+      );
+      cardLegs.add(TransactionRecord(
+        id: _generateId(),
+        date: p.date,
+        accountId: replacement.accountId,
+        categoryId: transferCategoryId,
+        amount: p.amount,
+        type: TransactionType.inflow,
+        description: p.description,
+        note: p.note,
+        month: p.month,
+        transferToAccountId: p.accountId,
+        transferGroupId: groupId,
+        billId: p.billId,
+      ));
+      _applyBalanceDelta(
+          replacement.accountId, p.amount, TransactionType.inflow);
+    }
+    final droppedIds = dropped.map((p) => p.id).toSet();
+    _allTransactions = [
+      for (final t in _allTransactions)
+        if (!droppedIds.contains(t.id))
+          t.id == old.id ? replacement : (asTransfers[t.id] ?? t),
+      ...cardLegs,
+    ];
+    safeNotify();
+    await _saveAll();
+    await _removePlan(planId);
+    await refreshInstallmentHolds();
+  }
+
+  /// Inline (web grid) edit of one record. An installment purchase carries its
+  /// plan along — amount, account, date, name, category and note all update
+  /// the plan in place — instead of drifting from it.
+  ///
+  /// Returns false, changing nothing, when the edit would end the purchase:
+  /// flipping it to income or moving it off a credit account. That needs the
+  /// full form, which says what happens to the plan.
+  Future<bool> updateRecordInline(TransactionRecord edited) async {
+    final old = _allTransactions.where((t) => t.id == edited.id).firstOrNull;
+    if (old == null) return false;
+    final planId = old.installmentId;
+    if (!old.isInstallment || planId == null) {
+      await updateTransaction(edited);
+      return true;
+    }
+    final account =
+        _accounts.where((a) => a.id == edited.accountId).firstOrNull;
+    if (edited.type != TransactionType.outflow ||
+        account?.isLiability != true) {
+      return false;
+    }
+    final plan = await _resolvePlan(planId);
+    await saveInstallmentPurchase(
+      existing: old,
+      accountId: edited.accountId,
+      amount: edited.amount,
+      months: plan?.totalMonths ?? 1,
+      interestRate: plan?.interestRate ?? 0.0,
+      date: edited.date,
+      description: edited.description,
+      note: edited.note,
+      categoryId: edited.categoryId,
+    );
+    return true;
+  }
+
+  /// [plan] with the form's edits applied. The schedule (start month) is only
+  /// recomputed when the purchase date or the card changed, and the monthly
+  /// amount only when the terms did — so a rename keeps a hand-set monthly
+  /// amount and a deferred start.
+  Installment _editedPlan(
+    Installment plan, {
+    required DateTime previousDate,
+    required FinancialAccount? account,
+    required String accountId,
+    required double amount,
+    required int months,
+    required double interestRate,
+    required DateTime date,
+    required String name,
+    required String? note,
+    required String? categoryId,
+  }) {
+    final scheduleMoved = accountId != plan.accountId ||
+        previousDate.year != date.year ||
+        previousDate.month != date.month ||
+        previousDate.day != date.day;
+    final termsChanged = amount != plan.totalAmount ||
+        months != plan.totalMonths ||
+        interestRate != plan.interestRate;
+    return Installment(
+      id: plan.id,
+      name: name,
+      accountId: accountId,
+      totalAmount: amount,
+      monthlyAmount: termsChanged
+          ? _roundedMonthly(amount, months, interestRate)
+          : plan.monthlyAmount,
+      totalMonths: months,
+      startMonth: scheduleMoved
+          ? calculateInstallmentStartMonth(account, date,
+              deferralMonths: plan.deferralMonths)
+          : plan.startMonth,
+      purchaseDate: date,
+      deferralMonths: plan.deferralMonths,
+      interestRate: interestRate,
+      note: note,
+      categoryId: categoryId,
+      isActive: plan.isActive,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  static double _roundedMonthly(
+          double amount, int months, double interestRate) =>
+      double.parse(Installment.computeMonthlyAmount(
+        principal: amount,
+        months: months,
+        monthlyRate: interestRate,
+      ).toStringAsFixed(2));
+
+  /// Stores a new plan through the installment presenter when wired, or
+  /// straight to storage otherwise (tests, standalone contexts).
+  Future<void> _spawnPlan(Installment plan) async {
+    final spawn = onSpawnInstallment;
+    if (spawn != null) {
+      await spawn(plan);
+    } else {
+      final current = await _storage.loadInstallments();
+      await _storage.saveInstallments([...current, plan]);
+    }
+  }
+
+  /// Removes a plan whose ledger records are already gone.
+  Future<void> _removePlan(String id) async {
+    final remove = onDeleteInstallment;
+    if (remove != null) {
+      await remove(id);
+    } else {
+      final current = await _storage.loadInstallments();
+      await _storage
+          .saveInstallments(current.where((i) => i.id != id).toList());
+    }
   }
 
   /// Spawns the reimbursement receivable for an already-persisted [outflow].
@@ -1189,32 +1650,90 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Deletes a transaction. An installment purchase takes its plan and the
+  /// plan's recorded payments with it, all in one pass: one mutation, one
+  /// persist, then the plan alone is removed.
   Future<void> deleteTransaction(String id) async {
     final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
     if (txn == null) return; // already gone — no-op (C9)
-    _reverseBalanceDelta(txn.accountId, txn.amount, txn.type,
-        isInstallment: txn.isInstallment);
-    _allTransactions = _allTransactions.where((t) => t.id != id).toList();
-    safeNotify();
-    await _saveAll();
-    // Tidy up the linked reimbursement receivable so deleting the expense
-    // doesn't leave an orphaned "you're owed" entry behind.
-    final receivableId = txn.reimbursementReceivableId;
-    if (receivableId != null) {
-      await deleteReimbursementReceivable(receivableId);
-    }
+    await _removeRecords([txn, ..._planPayments(txn)]);
     if (txn.isInstallment && txn.installmentId != null) {
-      final deleteInst = onDeleteInstallment;
-      if (deleteInst != null) {
-        await deleteInst(txn.installmentId!);
-      } else {
-        final current = await _storage.loadInstallments();
-        await _storage.saveInstallments(
-            current.where((i) => i.id != txn.installmentId).toList());
-      }
+      await _deletePlanOf(txn);
     }
     if (txn.installmentId != null) {
       await refreshInstallmentHolds();
+    }
+  }
+
+  /// Removes every ledger record of plan [installmentId] — its purchase and
+  /// its payments — in one mutation + persist. The installment presenter calls
+  /// this when the plan itself is deleted; it never calls back into the plan.
+  Future<void> removeInstallmentRecords(String installmentId) async {
+    final linked = _allTransactions
+        .where((t) => t.installmentId == installmentId)
+        .toList(growable: false);
+    if (linked.isNotEmpty) await _removeRecords(linked);
+    await refreshInstallmentHolds();
+  }
+
+  /// Drops [records] in one mutation + persist, reversing each balance effect
+  /// once and retiring linked reimbursement receivables so deleting an expense
+  /// doesn't leave an orphaned "you're owed" entry behind.
+  Future<void> _removeRecords(List<TransactionRecord> records) async {
+    for (final t in records) {
+      _reverseBalanceDelta(t.accountId, t.amount, t.type,
+          isInstallment: t.isInstallment);
+    }
+    final ids = records.map((t) => t.id).toSet();
+    _allTransactions =
+        _allTransactions.where((t) => !ids.contains(t.id)).toList();
+    safeNotify();
+    await _saveAll();
+    for (final t in records) {
+      final receivableId = t.reimbursementReceivableId;
+      if (receivableId != null) {
+        await deleteReimbursementReceivable(receivableId);
+      }
+    }
+  }
+
+  /// Plans removed along with their ledger purchase record, kept so an Undo
+  /// can put the plan back. Restoring only the purchase record left a record
+  /// whose plan was gone: it held no credit and was never billed again.
+  final Map<String, Installment> _deletedPlans = {};
+
+  Future<Installment?> _resolvePlan(String id) async =>
+      installmentResolver?.call(id) ??
+      (await _storage.loadInstallments()).where((i) => i.id == id).firstOrNull;
+
+  /// The payments recorded against the plan behind installment purchase
+  /// [txn]. Deleting the purchase deletes the plan, and the plan takes these
+  /// with it, so they belong in the removed set an Undo restores.
+  List<TransactionRecord> _planPayments(TransactionRecord txn) =>
+      txn.isInstallment && txn.installmentId != null
+          ? _allTransactions
+              .where(
+                  (t) => t.installmentId == txn.installmentId && t.id != txn.id)
+              .toList()
+          : const [];
+
+  /// Deletes the plan behind installment purchase [txn], remembering it for
+  /// [_restorePlansFor].
+  Future<void> _deletePlanOf(TransactionRecord txn) async {
+    final id = txn.installmentId!;
+    final plan = await _resolvePlan(id);
+    if (plan != null) _deletedPlans[id] = plan;
+    await _removePlan(id);
+  }
+
+  /// Re-creates the plan of every restored installment purchase in [txns]
+  /// that [_deletePlanOf] removed.
+  Future<void> _restorePlansFor(Iterable<TransactionRecord> txns) async {
+    for (final t in txns) {
+      if (!t.isInstallment || t.installmentId == null) continue;
+      final plan = _deletedPlans.remove(t.installmentId);
+      if (plan == null || await _resolvePlan(plan.id) != null) continue;
+      await _spawnPlan(plan);
     }
   }
 
@@ -1229,8 +1748,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (txn == null) return const [];
     final groupId = txn.transferGroupId;
     if (groupId == null) {
+      final payments = _planPayments(txn);
       await deleteTransaction(id);
-      return [txn];
+      return [txn, ...payments];
     }
     final legs = _allTransactions
         .where((t) => t.transferGroupId == groupId)
@@ -1261,10 +1781,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         .where((t) => ids.contains(t.id) && t.transferGroupId != null)
         .map((t) => t.transferGroupId)
         .toSet();
+    // An installment purchase takes its plan with it, and the plan takes its
+    // recorded payments. Skipping the plan here left it alive with no ledger
+    // record: it kept holding credit and kept being billed.
+    final planIds = _allTransactions
+        .where((t) =>
+            ids.contains(t.id) && t.isInstallment && t.installmentId != null)
+        .map((t) => t.installmentId)
+        .toSet();
     final toRemove = _allTransactions
         .where((t) =>
             ids.contains(t.id) ||
-            (t.transferGroupId != null && groupIds.contains(t.transferGroupId)))
+            (t.transferGroupId != null &&
+                groupIds.contains(t.transferGroupId)) ||
+            (t.installmentId != null && planIds.contains(t.installmentId)))
         .toList();
     if (toRemove.isEmpty) return const [];
     for (final t in toRemove) {
@@ -1276,6 +1806,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
     safeNotify();
     await _saveAll();
+    for (final t in toRemove) {
+      if (t.isInstallment && t.installmentId != null) await _deletePlanOf(t);
+    }
     if (toRemove.any((t) => t.installmentId != null)) {
       await refreshInstallmentHolds();
     }
@@ -1285,21 +1818,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
     final previous = _accounts.where((a) => a.id == account.id).firstOrNull;
-    final incoming = reconcileGoalStamps(
-      account.copyWith(
-        unbilledInstallments: account.unbilledInstallments != 0.0
-            ? account.unbilledInstallments
-            : previous?.unbilledInstallments,
-      ),
-      previous,
-      DateTime.now(),
-    );
+    // Whatever installment hold [account] carries is ignored: [accounts]
+    // derives it from the plans on the way out, and storage never keeps it.
+    final incoming = reconcileGoalStamps(account, previous, DateTime.now());
     final exists = _accounts.any((a) => a.id == incoming.id);
     _accounts = exists
         ? [for (final a in _accounts) a.id == incoming.id ? incoming : a]
         : [..._accounts, incoming];
     _stampFundedGoals();
-    await refreshInstallmentHolds();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
   }
 
@@ -1712,17 +2239,49 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// the live account and category lists. It commits nothing: the card is
   /// still the confirm surface, so an entry the model got wrong is caught in
   /// exactly the same place as one the extractor got wrong.
+  ///
+  /// Rows already waiting on the card are kept, and the new ones join them.
+  /// One Nudgy turn may call the tool more than once, and each call is told
+  /// its rows are on the card — replacing the earlier batch made that untrue
+  /// for every call but the last. An identical row is not stacked twice.
+  ///
+  /// New rows also supersede an error left by an earlier message, exactly as a
+  /// newly typed message does. The error card outranks the review card, so a
+  /// stale one hid the rows that had just been put there.
   void presentEntriesForReview(List<ExtractedEntry> entries) {
     if (entries.isEmpty) return;
+    final waiting = _chatState.phase == ChatPhase.reviewing
+        ? _chatState.entries
+        : const <ExtractedEntry>[];
+    // Compared against the rows already waiting only: two identical charges in
+    // one batch ("₱120 coffee, twice") are two real rows.
+    final waitingKeys = {for (final e in waiting) _reviewKey(e.txn)};
+    final merged = [
+      ...waiting,
+      for (final e in entries)
+        if (!waitingKeys.contains(_reviewKey(e.txn))) e,
+    ];
+    _chatHardError = null;
     _chatState = _chatState.copyWith(
       phase: ChatPhase.reviewing,
-      entries: entries,
-      draft: entries.first.txn,
+      entries: merged,
+      draft: merged.first.txn,
       clearLastStep: true,
       clearUnclear: true,
     );
     safeNotify();
   }
+
+  /// What makes two review rows the same row.
+  static String _reviewKey(ParsedTransaction t) => [
+        t.type?.name,
+        t.amount,
+        t.description.trim().toLowerCase(),
+        t.accountId,
+        t.transferToAccountId,
+        t.categoryId,
+        t.date?.toIso8601String(),
+      ].join('|');
 
   /// Seeds the review card without a round trip through the extractor, so a
   /// widget test can drive the real presenter rather than a stand-in.

@@ -12,10 +12,18 @@ class FinanceProposalCard extends StatefulWidget {
     super.key,
     required this.host,
     required this.action,
+    this.maxBodyHeight,
   });
 
   final FinanceProposalHost host;
   final PendingFinanceAction action;
+
+  /// Ceiling for everything above the buttons, measured by the chat shell. The
+  /// card sits in a strip that does not scroll, so without one the tallest
+  /// suggestion (an installment with interest, nine rows) pushed "Add it" out
+  /// of a short sheet. Over the ceiling the rows scroll; the buttons never do.
+  /// Null leaves the card at its natural height.
+  final double? maxBodyHeight;
 
   @override
   State<FinanceProposalCard> createState() => _FinanceProposalCardState();
@@ -65,8 +73,9 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
     final cs = theme.colorScheme;
     final action = widget.action;
 
-    return Column(
+    final summary = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           children: [
@@ -122,7 +131,24 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
                 : (value) => setState(() => _applyToFuture = value),
           ),
         ],
-        const SizedBox(height: 12),
+      ],
+    );
+    final cap = widget.maxBodyHeight;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (cap == null)
+          summary
+        else
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: cap),
+            child: SingleChildScrollView(child: summary),
+          ),
+        // 8, the review card's gap: the shell's ceiling budgets this card's
+        // chrome (padding, gap, action row) the same as that one's.
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [

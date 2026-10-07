@@ -86,6 +86,13 @@ class ObligationCard extends StatelessWidget {
   /// [selectionMode] is on.
   final VoidCallback? onSelectionToggle;
 
+  /// A secondary link under the row, e.g. "View items · 10" on a credit
+  /// statement. Shown only with [onDetail], and hidden while selecting.
+  final String? detailLabel;
+
+  /// Opens whatever [detailLabel] names.
+  final VoidCallback? onDetail;
+
   const ObligationCard({
     super.key,
     required this.icon,
@@ -110,6 +117,8 @@ class ObligationCard extends StatelessWidget {
     this.selectionMode = false,
     this.selected = false,
     this.onSelectionToggle,
+    this.detailLabel,
+    this.onDetail,
   });
 
   @override
@@ -230,6 +239,8 @@ class ObligationCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (detailLabel != null && onDetail != null && !selectionMode)
+                    _DetailLink(label: detailLabel!, onTap: onDetail!),
                 ],
               ),
             ),
@@ -338,6 +349,41 @@ class _UndoButton extends StatelessWidget {
         ),
         icon: const Icon(Icons.undo_rounded, size: 16),
         label: const Text('Undo'),
+      ),
+    );
+  }
+}
+
+/// The row's secondary link — quiet text in the primary color, still a full
+/// 44px-tall target so it is easy to hit without crowding the Pay button.
+class _DetailLink extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _DetailLink({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: cs.primary,
+        padding: const EdgeInsets.only(right: 8),
+        minimumSize: const Size(44, 44),
+        alignment: Alignment.centerLeft,
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.receipt_long_outlined, size: 15),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          const Icon(Icons.chevron_right_rounded, size: 16),
+        ],
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
@@ -524,6 +525,258 @@ void main() {
     });
   });
 
+  group('addInstallment', () {
+    late MockStorageService storage;
+    late MockStatsPresenter stats;
+    late List<Installment> savedPlans;
+
+    FinancialAccount credit(String id, String name,
+            {AccountCategory category = AccountCategory.creditCard,
+            bool isActive = true}) =>
+        FinancialAccount(
+          id: id,
+          name: name,
+          category: category,
+          balance: 0,
+          creditLimit: 100000,
+          colorHex: '#FFFFFF',
+          icon: 'card',
+          isActive: isActive,
+        );
+
+    final everyAccount = [
+      credit('bdo', 'BDO Card'),
+      credit('amore', 'BPI Amore'),
+      credit('gold', 'BPI Gold'),
+      credit('spl', 'SPayLater', category: AccountCategory.bnpl),
+      credit('old', 'Old Card', isActive: false),
+      _acc('mari', 'MariBank'),
+    ];
+
+    String iso(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}'
+        '-${d.day.toString().padLeft(2, '0')}';
+
+    Map<String, Object?> plan([Map<String, Object?> overrides = const {}]) => {
+          'name': 'Phone',
+          'amount': 12000,
+          'months': 6,
+          'account': 'SPayLater',
+          ...overrides,
+        };
+
+    setUp(() {
+      storage = MockStorageService();
+      stats = MockStatsPresenter();
+      savedPlans = [];
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer((_) async => everyAccount);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.loadInstallments()).thenAnswer((_) async => savedPlans);
+      when(storage.saveInstallments(any)).thenAnswer((inv) async {
+        savedPlans =
+            List<Installment>.from(inv.positionalArguments.first as List);
+      });
+      when(stats.addXp(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+    });
+
+    Future<(FinanceActionsExecutor, LedgerPresenter)> withLedger(
+        [List<FinancialAccount>? accounts]) async {
+      if (accounts != null) {
+        when(storage.loadAccounts()).thenAnswer((_) async => accounts);
+      }
+      final p = LedgerPresenter(storage, stats);
+      while (p.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      return (FinanceActionsExecutor(bills: bills, ledger: p), p);
+    }
+
+    /// Proposes and expects a refusal: nothing parked, nothing to confirm.
+    Future<String> refused(
+        FinanceActionsExecutor ex, Map<String, Object?> input) async {
+      final result = await ex.propose(call('addInstallment', input));
+      expect(result.ok, isFalse, reason: result.summary);
+      expect(ex.pending, isNull);
+      return result.summary;
+    }
+
+    String detail(FinanceActionsExecutor ex, String label) =>
+        ex.pending!.details.firstWhere((d) => d.label == label).value;
+
+    test('the card shows the account it resolved, not the model\'s words',
+        () async {
+      final (ex, _) = await withLedger();
+
+      for (final (said, resolved) in [
+        ('spaylater', 'SPayLater'),
+        ('BDO', 'BDO Card'),
+        ('BDO Card Visa', 'BDO Card'),
+        ('bpi amore', 'BPI Amore'),
+      ]) {
+        unawaited(ex.propose(call('addInstallment', plan({'account': said}))));
+        expect(detail(ex, 'Account'), resolved, reason: said);
+        ex.decline();
+      }
+    });
+
+    test('confirming books the plan on the account the card showed', () async {
+      final (ex, ledger) = await withLedger();
+
+      final future =
+          ex.propose(call('addInstallment', plan({'account': 'bdo'})));
+      expect(detail(ex, 'Account'), 'BDO Card');
+      await ex.confirm();
+      final result = await future;
+
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('on BDO Card'));
+      expect(savedPlans.single.accountId, 'bdo');
+      final purchase = ledger.allTransactions.single;
+      expect(purchase.isInstallment, isTrue);
+      expect(purchase.accountId, 'bdo');
+      expect(purchase.installmentId, savedPlans.single.id);
+    });
+
+    test('an ambiguous account is refused with the choices', () async {
+      final (ex, _) = await withLedger();
+
+      final reason = await refused(ex, plan({'account': 'BPI'}));
+
+      expect(reason, contains('more than one credit account'));
+      expect(reason, contains('"BPI Amore"'));
+      expect(reason, contains('"BPI Gold"'));
+    });
+
+    test('a bank account is refused, never booked as an installment', () async {
+      final (ex, _) = await withLedger();
+
+      final reason = await refused(ex, plan({'account': 'MariBank'}));
+
+      expect(reason, contains('"MariBank" is not a credit account'));
+      expect(reason, contains('"SPayLater"'));
+    });
+
+    test('an unknown or archived account is refused, listing active ones',
+        () async {
+      final (ex, _) = await withLedger();
+
+      final unknown = await refused(ex, plan({'account': 'Metrobank'}));
+      expect(unknown, contains('No credit account matches "Metrobank"'));
+      expect(unknown, contains('"BDO Card"'));
+      expect(unknown, isNot(contains('Old Card')));
+
+      final archived = await refused(ex, plan({'account': 'Old Card'}));
+      expect(archived, contains('No credit account matches'));
+    });
+
+    test('no account is refused when there is more than one credit account',
+        () async {
+      final (ex, _) = await withLedger();
+
+      final reason = await refused(ex, plan({'account': null}));
+
+      expect(reason, contains('No account was given'));
+    });
+
+    test('no account uses the only credit account, and the card names it',
+        () async {
+      final (ex, _) = await withLedger(
+          [credit('spl', 'SPayLater', category: AccountCategory.bnpl)]);
+
+      unawaited(ex.propose(call('addInstallment', plan({'account': null}))));
+
+      expect(detail(ex, 'Account'), 'SPayLater');
+    });
+
+    test('a user with no credit accounts gets a clear failure', () async {
+      final (ex, _) = await withLedger([_acc('mari', 'MariBank')]);
+
+      final reason = await refused(ex, plan({'account': 'MariBank'}));
+
+      expect(reason, contains('no credit card, credit line or BNPL account'));
+    });
+
+    test('an amount of zero, below zero or missing is refused', () async {
+      final (ex, _) = await withLedger();
+
+      for (final amount in [0, -500, null, 'lots']) {
+        final reason = await refused(ex, plan({'amount': amount}));
+        expect(reason, contains('above zero'), reason: '$amount');
+      }
+    });
+
+    test('a negative or implausible interest rate is refused', () async {
+      final (ex, _) = await withLedger();
+
+      expect(await refused(ex, plan({'interestRate': -1})),
+          contains('cannot be negative'));
+      // 18% is a yearly rate given as monthly.
+      expect(await refused(ex, plan({'interestRate': 18})),
+          contains('divide it by 12'));
+      expect(await refused(ex, plan({'interestRate': 'abc'})),
+          contains('must be a number'));
+    });
+
+    test('a real monthly rate is accepted and shown', () async {
+      final (ex, _) = await withLedger();
+
+      unawaited(ex.propose(call('addInstallment', plan({'interestRate': 3}))));
+
+      expect(detail(ex, 'Interest rate'), '3% / mo');
+    });
+
+    test('missing, single or fractional months are refused, never clamped',
+        () async {
+      final (ex, _) = await withLedger();
+
+      expect(await refused(ex, plan({'months': null})),
+          contains('How many monthly payments'));
+      expect(await refused(ex, plan({'months': 1})), contains('at least 2'));
+      expect(
+          await refused(ex, plan({'months': 6.5})), contains('whole number'));
+      expect(await refused(ex, plan({'months': 600})),
+          contains('longer than any installment plan'));
+    });
+
+    test('a date the model slipped back a year is rebased, and says so',
+        () async {
+      final (ex, _) = await withLedger();
+      final now = DateTime.now();
+      final slipped = DateTime(now.year - 2, now.month, 1);
+      final expected = rebaseStaleDate(slipped, now);
+
+      unawaited(
+          ex.propose(call('addInstallment', plan({'date': iso(slipped)}))));
+
+      expect(detail(ex, 'Purchase date'),
+          '${iso(expected)} (moved from ${iso(slipped)})');
+    });
+
+    test('a future or unreadable purchase date is refused', () async {
+      final (ex, _) = await withLedger();
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+
+      expect(await refused(ex, plan({'date': iso(tomorrow)})),
+          contains('in the future'));
+      expect(await refused(ex, plan({'date': 'last week'})),
+          contains('YYYY-MM-DD'));
+    });
+
+    test('a category that does not exist is shown as none, not as typed',
+        () async {
+      final (ex, _) = await withLedger();
+
+      unawaited(
+          ex.propose(call('addInstallment', plan({'category': 'Gadgets'}))));
+
+      expect(detail(ex, 'Category'), contains('no category named "Gadgets"'));
+    });
+  });
+
   group('findAccounts', () {
     test('lists active accounts with balances and categories', () async {
       final storage = MockStorageService();
@@ -715,6 +968,118 @@ void main() {
       await ex.confirm();
 
       expect(ledger.allTransactions.where((t) => t.id == 't_edit'), isEmpty);
+    });
+  });
+
+  group('account resolution and edit guards', () {
+    FinancialAccount card(String id, String name) => FinancialAccount(
+          id: id,
+          name: name,
+          category: AccountCategory.creditCard,
+          balance: 500,
+          creditLimit: 10000,
+          colorHex: '#FFFFFF',
+          icon: 'card',
+        );
+
+    Future<(FinanceActionsExecutor, LedgerPresenter)> build(
+        List<TransactionRecord> txns) async {
+      final storage = MockStorageService();
+      final stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer((_) async => [
+            card('gold', 'BPI Gold'),
+            card('rewards', 'BPI Rewards'),
+            _acc('mari', 'MariBank'),
+          ]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadTransactions()).thenAnswer((_) async => txns);
+      when(storage.loadInstallments()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+      final ledger = LedgerPresenter(storage, stats);
+      while (ledger.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      return (FinanceActionsExecutor(bills: bills, ledger: ledger), ledger);
+    }
+
+    test('payCredit refuses an ambiguous card instead of picking one',
+        () async {
+      final (ex, _) = await build(const []);
+      final result = await ex.propose(call('payCredit',
+          {'creditAccount': 'BPI', 'fromAccount': 'MariBank', 'amount': 850}));
+      expect(result.ok, isFalse);
+      expect(result.summary, contains('"BPI Gold"'));
+      expect(ex.pending, isNull);
+    });
+
+    test('payCredit refuses an unknown card instead of the first one',
+        () async {
+      final (ex, _) = await build(const []);
+      final result = await ex.propose(call('payCredit',
+          {'creditAccount': 'BDO', 'fromAccount': 'MariBank', 'amount': 850}));
+      expect(result.ok, isFalse);
+      expect(ex.pending, isNull);
+    });
+
+    test('payCredit shows the accounts it resolved', () async {
+      final (ex, _) = await build(const []);
+      unawaited(exPropose(
+          ex,
+          call('payCredit', {
+            'creditAccount': 'gold',
+            'fromAccount': 'mari',
+            'amount': 850
+          })));
+      await Future<void>.delayed(Duration.zero);
+      final rows = {for (final d in ex.pending!.details) d.label: d.value};
+      expect(rows['Payment to'], 'BPI Gold');
+      expect(rows['Pay from'], 'MariBank');
+    });
+
+    test('an edit naming an unknown account is refused, not re-pointed',
+        () async {
+      final (ex, ledger) = await build([
+        TransactionRecord(
+          id: 't1',
+          date: DateTime(2026, 9, 10),
+          accountId: 'mari',
+          categoryId: '',
+          amount: 150,
+          type: TransactionType.outflow,
+          description: 'Snack',
+          month: '2026-09',
+        ),
+      ]);
+      final result = await ex.propose(
+          call('editTransaction', {'id': 't1', 'account': 'Metrobank'}));
+      expect(result.ok, isFalse);
+      expect(ledger.allTransactions.single.accountId, 'mari');
+    });
+
+    test('changing the amount of one transfer leg is refused', () async {
+      final (ex, _) = await build([
+        TransactionRecord(
+          id: 'leg-out',
+          date: DateTime(2026, 9, 10),
+          accountId: 'mari',
+          categoryId: '__transfer__',
+          amount: 1000,
+          type: TransactionType.outflow,
+          description: 'Card payment',
+          month: '2026-09',
+          transferGroupId: 'g1',
+          transferToAccountId: 'gold',
+        ),
+      ]);
+      final result = await ex
+          .propose(call('editTransaction', {'id': 'leg-out', 'amount': 500}));
+      expect(result.ok, isFalse);
+      expect(result.summary, contains('transfer'));
     });
   });
 }
