@@ -3371,7 +3371,9 @@ class _InstallmentRow extends StatelessWidget {
     final canPay = presenter.canMarkPaid(installment);
     final canUndo = presenter.canMarkUnpaid(installment);
     final count = presenter.paidCount(installment.id);
-    final progress = presenter.paymentProgress(installment.id);
+    // Paid months only: a month billed onto an open statement is not paid.
+    final progress =
+        onStatement?.progress ?? presenter.paymentProgress(installment.id);
     final detailLine = [
       if (onStatement != null) onStatement.label,
       if (onStatement != null) onStatement.note,

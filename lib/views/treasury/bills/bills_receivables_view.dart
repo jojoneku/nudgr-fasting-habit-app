@@ -1157,7 +1157,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       // On a card with statements the note says why there is no Pay button:
       // the month can only be paid with the whole statement.
       note: onStatement?.note ?? account?.name,
-      progress: widget.installmentPresenter.paymentProgress(inst.id),
+      // Paid months only: a month billed onto an open statement is not paid.
+      progress: onStatement?.progress ??
+          widget.installmentPresenter.paymentProgress(inst.id),
       amount: inst.monthlyAmount,
       dateLabel:
           onStatement?.label ?? widget.installmentPresenter.statusLabel(inst),
