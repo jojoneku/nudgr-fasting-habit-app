@@ -13,7 +13,6 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
-import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_receipt_drop.dart';
@@ -482,24 +481,37 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
+  /// Every inline cell edit goes through here so an installment purchase's
+  /// plan follows its record. The presenter refuses an edit that would end the
+  /// purchase (income, or a non-credit account); say why.
+  Future<void> _commitInline(TransactionRecord edited) async {
+    final applied = await _p.updateRecordInline(edited);
+    if (applied || !mounted) return;
+    AppToast.error(
+      context,
+      'An installment purchase stays an expense on a credit account. '
+      'Open the row to turn the split off.',
+    );
+  }
+
   void _editDate(TransactionRecord t, DateTime d) =>
-      _p.updateTransaction(t.copyWith(date: d, month: toMonthKey(d)));
+      _commitInline(t.copyWith(date: d, month: toMonthKey(d)));
 
   void _editAccount(TransactionRecord t, String id) =>
-      _p.updateTransaction(t.copyWith(accountId: id));
+      _commitInline(t.copyWith(accountId: id));
 
   void _editCategory(TransactionRecord t, String id) =>
-      _p.updateTransaction(t.copyWith(categoryId: id));
+      _commitInline(t.copyWith(categoryId: id));
 
   void _editDescription(TransactionRecord t, String v) {
     if (v.trim() == t.description) return;
-    _p.updateTransaction(t.copyWith(description: v.trim()));
+    _commitInline(t.copyWith(description: v.trim()));
   }
 
   void _editNote(TransactionRecord t, String v) {
     final next = v.trim();
     if (next == (t.note ?? '')) return;
-    _p.updateTransaction(t.copyWith(note: next));
+    _commitInline(t.copyWith(note: next));
   }
 
   /// Editing the inflow/outflow cells: a row's two amount columns are views of
@@ -513,7 +525,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     // category aggregation. Clear it on a type change, matching the modal's
     // _setType and mobile. A pure amount edit keeps the category.
     final flippedType = t.type != dir;
-    _p.updateTransaction(t.copyWith(
+    _commitInline(t.copyWith(
       type: dir,
       amount: value,
       categoryId: flippedType ? '' : t.categoryId,
@@ -3312,65 +3324,20 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
-          (existing == null ||
-              existing.isInstallment ||
-              existing.installmentId == null) &&
+          _p.canSplitIntoInstallments(existing) &&
           _selectedAccount?.isLiability == true) {
-        final startMonth = calculateInstallmentStartMonth(
-          _selectedAccount,
-          _date,
-          deferralMonths: 0,
-        );
-        final monthlyAmount = Installment.computeMonthlyAmount(
-          principal: amount,
-          months: _installmentMonths,
-          monthlyRate: _interestRate,
-        );
-        final instId = (existing != null && existing.installmentId != null)
-            ? existing.installmentId!
-            : _genId();
-        final inst = Installment(
-          id: instId,
-          name: description.isEmpty ? 'Installment purchase' : description,
+        // New purchase, in-place edit of an existing one, or conversion of a
+        // regular record: the presenter owns all three.
+        await _p.saveInstallmentPurchase(
+          existing: existing,
           accountId: _accountId!,
-          totalAmount: amount,
-          monthlyAmount: double.parse(monthlyAmount.toStringAsFixed(2)),
-          totalMonths: _installmentMonths,
-          startMonth: startMonth,
-          purchaseDate: _date,
-          deferralMonths: 0,
+          amount: amount,
+          months: _installmentMonths,
           interestRate: _interestRate,
-          note: note.isEmpty ? null : note,
+          date: _date,
+          description: description,
+          note: note,
           categoryId: _categoryId,
-          isActive: true,
-        );
-        if (existing != null) {
-          final oldReceivableId = existing.reimbursementReceivableId;
-          if (oldReceivableId != null) {
-            await _p.deleteReimbursementReceivable(oldReceivableId);
-          }
-          if (existing.transferGroupId != null) {
-            await _p.deleteTransactionOrGroup(existing.id);
-          } else {
-            await _p.deleteTransaction(existing.id);
-          }
-        }
-        await _p.addInstallmentPurchase(
-          inst,
-          transaction: TransactionRecord(
-            id: existing?.id ?? _genId(),
-            date: _date,
-            accountId: _accountId!,
-            categoryId: _categoryId ?? '',
-            amount: amount,
-            type: TransactionType.outflow,
-            description:
-                description.isEmpty ? 'Installment purchase' : description,
-            note: note.isEmpty ? null : note,
-            month: toMonthKey(_date),
-            installmentId: inst.id,
-            isInstallment: true,
-          ),
         );
       } else {
         // Reimbursable only applies to outflows. Reuse the existing linked
@@ -3403,17 +3370,18 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
         );
         if (existing != null) {
-          // Drop a stale linked receivable when the expense is no longer
-          // reimbursable (toggled off, or type changed away from outflow).
+          // A stale linked receivable (no longer reimbursable) is retired by
+          // updateTransaction itself.
           final oldReceivableId = existing.reimbursementReceivableId;
-          if (oldReceivableId != null && !isReimbursable) {
-            await _p.deleteReimbursementReceivable(oldReceivableId);
-          }
           if (existing.transferGroupId != null) {
             // Converting a transfer into a normal income/expense: remove the
             // whole transfer group, then add the single replacement record.
             await _p.deleteTransactionOrGroup(existing.id);
             await _p.addTransaction(txn);
+          } else if (existing.isInstallment) {
+            // Split turned off, or moved off a credit account: the plan goes
+            // and the record takes its full balance effect, exactly once.
+            await _p.convertInstallmentPurchaseToRegular(txn);
           } else {
             await _p.updateTransaction(txn);
           }
@@ -3564,8 +3532,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                         ),
                       ),
                       if (_type == TransactionType.outflow) ...[
-                        if ((!isEdit ||
-                                widget.existing?.installmentId == null) &&
+                        if (_p.canSplitIntoInstallments(widget.existing) &&
                             _selectedAccount?.isLiability == true) ...[
                           const SizedBox(height: WebInsets.lg),
                           _installmentSection(theme, isEdit: isEdit),
