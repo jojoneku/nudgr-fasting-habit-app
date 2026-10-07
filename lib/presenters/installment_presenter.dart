@@ -14,9 +14,6 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intl/intl.dart';
 
-// Auto-created system category for installment payments.
-const _installmentCategoryId = '__installment__';
-
 class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   InstallmentPresenter(
     StorageService storage,
@@ -110,12 +107,68 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   Installment? findById(String id) =>
       _installments.where((i) => i.id == id).firstOrNull;
 
-  bool isPaidForMonth(String installmentId) => _ledger.allTransactions.any(
-        (t) =>
-            t.installmentId == installmentId &&
-            t.month == _selectedMonth &&
-            !t.isInstallment,
-      );
+  /// Whether [selectedMonth]'s charge for [installmentId] is on the ledger.
+  ///
+  /// Counted, not keyed on a record's month: the plan has billed this month
+  /// once its charges cover every schedule month up to it. A payment logged
+  /// early (dated the month before) used to read as unpaid in its own month and
+  /// get booked a second time.
+  bool isPaidForMonth(String installmentId) {
+    final inst = findById(installmentId);
+    if (inst == null) return false;
+    final due = inst.chargesDueBy(_selectedMonth);
+    return due > 0 && inst.paidCount(_ledger.allTransactions) >= due;
+  }
+
+  /// True when [inst]'s card has a billing cycle, so each month is billed onto
+  /// the card automatically when its statement closes and paid by paying the
+  /// statement — there is nothing to mark paid on the row itself.
+  bool billsOnStatement(Installment inst) =>
+      accounts
+          .where((a) => a.id == inst.accountId)
+          .firstOrNull
+          ?.hasBillingCycle ??
+      false;
+
+  /// Whether the row offers "Mark paid": only a plan on a card without a
+  /// billing cycle (a BNPL with no statement), only once the plan has reached
+  /// [selectedMonth], and only while that month is still open.
+  bool canMarkPaid(Installment inst) =>
+      !billsOnStatement(inst) &&
+      inst.chargesDueBy(_selectedMonth) > 0 &&
+      !isPaidForMonth(inst.id);
+
+  /// Whether the row offers undoing this month's payment — the manual
+  /// counterpart of [canMarkPaid]. A charge billed by a statement is not
+  /// undone here; the next statement run would only bill it again.
+  bool canMarkUnpaid(Installment inst) =>
+      !billsOnStatement(inst) && isPaidForMonth(inst.id);
+
+  /// The web row checkbox's tooltip: what ticking it does, or — on a card with
+  /// statements — why there is nothing to tick.
+  String checkboxTooltip(Installment inst) {
+    if (billsOnStatement(inst)) {
+      return isPaidForMonth(inst.id)
+          ? 'Billed on the card statement'
+          : 'Billed when the card statement closes';
+    }
+    return isPaidForMonth(inst.id) ? 'Mark unpaid this month' : 'Mark paid';
+  }
+
+  /// The row's status line: where this month's charge stands and which
+  /// payment it is.
+  String statusLabel(Installment inst) {
+    final count = paidCount(inst.id);
+    final total = inst.totalMonths;
+    if (billsOnStatement(inst)) {
+      return isPaidForMonth(inst.id)
+          ? 'billed · $count/$total'
+          : 'on statement · ${count + 1}/$total';
+    }
+    return isPaidForMonth(inst.id)
+        ? 'paid · $count/$total'
+        : 'payment ${count + 1}/$total';
+  }
 
   int paidCount(String installmentId) =>
       _findById(installmentId).paidCount(_ledger.allTransactions);
@@ -254,32 +307,45 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Mark paid / unpaid ───────────────────────────────────────────────────────
 
+  /// Records this month of a plan on a card with no billing cycle — the same
+  /// shape a statement close posts for a cycle card: the month is charged onto
+  /// the card in the plan's category (raising its balance, releasing the hold),
+  /// and when [fundingAccountId] names another account, a transfer from it pays
+  /// that charge off. A no-op for a cycle card ([billsOnStatement]): its months
+  /// are billed when the statement closes and settled by paying the statement.
   Future<void> markPaid(
     String installmentId, {
     double? overrideAmount,
     DateTime? date,
     String? fundingAccountId,
   }) async {
-    if (isPaidForMonth(installmentId)) return;
     final inst = _findById(installmentId);
-    final categoryId = inst.categoryId ?? _installmentCategoryId;
+    if (!canMarkPaid(inst)) return;
+    final categoryId = inst.categoryId ?? kInstallmentCategoryId;
     if (inst.categoryId == null) {
       await _ensureInstallmentCategory();
     }
 
     final count = paidCount(installmentId) + 1;
-    final txn = TransactionRecord(
-      id: _generateId(),
-      date: date ?? DateTime.now(),
-      accountId: fundingAccountId ?? inst.accountId,
-      categoryId: categoryId,
-      amount: overrideAmount ?? inst.monthlyAmount,
-      type: TransactionType.outflow,
-      description: '${inst.name} — Payment $count/${inst.totalMonths}',
+    final when = date ?? DateTime.now();
+    final txn = inst.chargeRecord(
+      recordId: _generateId(),
+      number: count,
+      date: when,
       month: _selectedMonth,
-      installmentId: installmentId,
+      categoryId: categoryId,
+      amount: overrideAmount,
     );
     await _ledger.addTransaction(txn);
+    if (fundingAccountId != null && fundingAccountId != inst.accountId) {
+      await _ledger.addTransfer(
+        fromAccountId: fundingAccountId,
+        toAccountId: inst.accountId,
+        amount: txn.amount,
+        description: _paymentDescription(inst),
+        date: when,
+      );
+    }
 
     if (count >= inst.totalMonths) {
       await _awardOnce('installment.complete/$installmentId', 50);
@@ -296,19 +362,37 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     await _ledger.refreshInstallmentHolds();
   }
 
-  /// Reverses this month's payment by deleting the transaction that records it
-  /// — an installment has no separate paid flag, the transaction IS the record.
-  /// A no-op when the month is already unpaid, so a double-tap (or an undo
-  /// racing a reload) can't throw.
+  /// Reverses this month's payment by deleting the charge that records it — an
+  /// installment has no separate paid flag, the charge IS the record — along
+  /// with the funding transfer [markPaid] booked beside it, if any. Prefers the
+  /// charge filed under this month, else the latest one. A no-op when the
+  /// month is already unpaid (so a double-tap, or an undo racing a reload,
+  /// can't throw) and for a cycle card, whose charges the statement owns.
   Future<void> markUnpaid(String installmentId) async {
-    final txn = _ledger.allTransactions
-        .where((t) =>
-            t.installmentId == installmentId &&
-            t.month == _selectedMonth &&
-            !t.isInstallment)
-        .firstOrNull;
+    final inst = findById(installmentId);
+    if (inst == null || !canMarkUnpaid(inst)) return;
+    final charges = _ledger.allTransactions
+        .where((t) => t.installmentId == installmentId && !t.isInstallment)
+        .toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final txn = charges.where((t) => t.month == _selectedMonth).lastOrNull ??
+        charges.lastOrNull;
     if (txn == null) return;
     await _ledger.deleteTransaction(txn.id);
+    // The transfer is matched tightly — into this card, same day, same amount,
+    // same description — so an unrelated payment is never unwound.
+    final transfer = _ledger.allTransactions
+        .where((t) =>
+            t.transferGroupId != null &&
+            t.type == TransactionType.inflow &&
+            t.accountId == inst.accountId &&
+            (t.amount - txn.amount).abs() < 0.005 &&
+            _sameDay(t.date, txn.date) &&
+            t.description == _paymentDescription(inst))
+        .firstOrNull;
+    if (transfer != null) {
+      await _ledger.deleteTransactionOrGroup(transfer.id);
+    }
     safeNotify();
     await _ledger.refreshInstallmentHolds();
   }
@@ -326,7 +410,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     var applied = 0;
     for (final id in ids.toSet()) {
       final inst = _installments.where((i) => i.id == id).firstOrNull;
-      if (inst == null || isPaidForMonth(id)) continue;
+      if (inst == null || !canMarkPaid(inst)) continue;
       await markPaid(id, date: date);
       applied++;
     }
@@ -338,7 +422,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   Future<int> markManyUnpaid(Iterable<String> ids) async {
     var applied = 0;
     for (final id in ids.toSet()) {
-      if (!isPaidForMonth(id)) continue;
+      final inst = findById(id);
+      if (inst == null || !canMarkUnpaid(inst)) continue;
       await markUnpaid(id);
       applied++;
     }
@@ -365,17 +450,16 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
+  String _paymentDescription(Installment inst) => '${inst.name} payment';
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   Future<void> _ensureInstallmentCategory() async {
     final exists =
-        _ledger.categories.any((c) => c.id == _installmentCategoryId);
+        _ledger.categories.any((c) => c.id == kInstallmentCategoryId);
     if (!exists) {
-      await _ledger.addCategory(FinanceCategory(
-        id: _installmentCategoryId,
-        name: 'Installment',
-        type: CategoryType.expense,
-        icon: 'credit_card',
-        colorHex: '#9C27B0',
-      ));
+      await _ledger.addCategory(installmentFallbackCategory());
     }
   }
 }

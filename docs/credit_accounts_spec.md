@@ -285,6 +285,43 @@ Inside **Credit details**:
   placeholders whenever the card owed something today. Unpaid, untransacted ₱0 auto-statements
   are swept away before generation.
 
+### 12.7 Installments are billed onto the card at statement close
+An installment purchase is a ledger record with `isInstallment: true` (no balance effect, not
+spending) plus an `Installment` plan. Its months sit in the account's **hold**
+(`unbilledInstallments` = remaining months × monthly amount), and `totalDebt` = billed balance +
+hold. Issuers bill one month per statement ("[1/3] Item ₱82.92"), and the app now does the same:
+- **On a card with a billing cycle** (`hasBillingCycle`), when the generator processes a closed
+  cycle it first posts an **installment charge** for each active plan due that cycle: an outflow on
+  the card, `installmentId` = plan id, `isInstallment: false`, the plan's monthly amount, the plan's
+  category (fallback `__installment__`), dated the **close date**, described
+  "Item — Installment 2/3". The charge raises the card balance and counts toward the plan's
+  `paidCount`, so the hold drops by the same amount. `totalDebt` is unchanged; spending is
+  recognised in the plan's category when the month is billed.
+- **Idempotent by count, not month key.** A plan should have `chargesDueBy(cycle due month)`
+  charges by now (schedule months up to that month, capped at its length); only the shortfall below
+  `paidCount` is posted. Payment records booked under the old model count, so nothing is billed
+  twice. Charge ids are deterministic (`instchg_<plan>_<n>`), so two devices write the same rows.
+- **Statement amount = `payableAsOf(close)`.** Installment months are already in the balance; there
+  is no separate installment sum and no "paid this month" exclusion. A part payment therefore
+  never shrinks the statement.
+- **Paying is always a plain transfer** to the card for the amount actually paid: Bills "Pay",
+  quick pay and a transfer typed into the ledger all settle the statement the same way, through
+  the payments made since the close. Nothing is booked against an installment at payment time.
+- **No backfill.** Charges are posted only for a cycle that has closed and is not yet past due, and
+  never for a cycle whose statement was already settled (paid, or paid through a linked entry).
+  Charges are not posted while the ledger is still loading; the run is repeated once it has.
+- **Rows.** A plan on a cycle card has no "Mark paid": it reads "on statement · 2/3" until billed,
+  then "billed · 2/3". It does not appear separately in Coming Up, because it is inside the
+  statement row.
+- **Cards without a billing cycle** (a BNPL with no statement day) keep a manual "Mark paid" with
+  the same shape: the charge is posted on the card, plus a transfer from the funding account when
+  one is given. "Mark unpaid" deletes that charge and its transfer.
+
+Worked example (ShopeePay, statement day 4, due the 15th, ₱845.69 revolving, six 3-month plans
+starting 2026-10 totalling ₱1,578.71/month, today Oct 7): six charges dated Oct 4, balance
+₱2,424.40, hold ₱3,157.42 (was ₱4,736.13), October statement ₱2,424.40, total owed ₱5,581.82
+unchanged. Paying ₱850 leaves ₱1,574.40 on the statement.
+
 ---
 
 ### Sources (verify on implementation)

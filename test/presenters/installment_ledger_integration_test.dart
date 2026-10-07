@@ -176,7 +176,7 @@ void main() {
       expect(ledger.filteredMonthOutflow, 0.0);
     });
 
-    test('marking installment paid inherits categoryId and tags installmentId',
+    test('statement close bills the month onto the card in the plan category',
         () async {
       await ledger.load();
       await installments.load();
@@ -195,21 +195,26 @@ void main() {
       );
       await ledger.addInstallmentPurchase(inst);
 
-      // Mark the current month installment paid from MariBank
-      await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
+      // ShopeePay has a billing cycle, so its rows offer no "Mark paid": the
+      // month is billed onto the card when the statement closes (Oct 1).
+      installments.setMonth('2026-10');
+      expect(installments.canMarkPaid(inst), isFalse);
+      await bills.setMonth('2026-10');
 
-      // Verify transaction inherits category 'cat-tech' and funding account deducted
-      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 payment
-      final paymentTxn =
-          ledger.allTransactions.firstWhere((t) => !t.isInstallment);
-      expect(paymentTxn.categoryId, 'cat-tech');
-      expect(paymentTxn.amount, 2000.0);
-      expect(paymentTxn.accountId, 'maribank');
-      expect(paymentTxn.installmentId, 'inst-phone');
+      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 charge
+      final charge = ledger.allTransactions.firstWhere((t) => !t.isInstallment);
+      expect(charge.categoryId, 'cat-tech');
+      expect(charge.amount, 2000.0);
+      expect(charge.accountId, 'shopeepay');
+      expect(charge.installmentId, 'inst-phone');
+      // The bank is untouched until the statement is paid.
+      expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+          50000.0);
 
-      // Verify unbilled installments decreased
+      // The month moved from the hold to the billed balance.
       final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
       expect(acct.unbilledInstallments, 10000.0);
+      expect(acct.balance, 2000.0);
     });
 
     test(
@@ -486,25 +491,25 @@ void main() {
           () async {
         await loadAll();
         await ledger.addInstallmentPurchase(plan('a'));
-        installments.setMonth('2026-10');
-        await installments.markPaid('a', fundingAccountId: 'maribank');
-        final bankAfterPay =
-            ledger.accounts.firstWhere((a) => a.id == 'maribank').balance;
-        expect(bankAfterPay, 49900.0);
+        // The October statement closes and bills month 1 onto the card.
+        await bills.setMonth('2026-10');
+        final cardAfterCharge =
+            ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance;
+        expect(cardAfterCharge, 100.0);
 
         final removed = await ledger.deleteTransactions({purchaseIdOf('a')});
 
         expect(removed, hasLength(2));
         expect(ledger.allTransactions, isEmpty);
-        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
-            50000.0);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            0.0);
 
         await ledger.restoreTransactions(removed);
 
         expect(installments.allInstallments.map((i) => i.id), ['a']);
         expect(installments.paidCount('a'), 1);
-        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
-            bankAfterPay);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            cardAfterCharge);
         expect(
             ledger.accounts
                 .firstWhere((a) => a.id == 'shopeepay')

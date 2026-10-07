@@ -379,12 +379,9 @@ class _BillsBodyState extends State<_BillsBody> {
         );
       case _BatchSection.installments:
         final picked = _selectedInstallments;
-        final paid = picked
-            .where((i) => installmentPresenter.isPaidForMonth(i.id))
-            .length;
         return (
-          settleable: picked.length - paid,
-          undoable: paid,
+          settleable: picked.where(installmentPresenter.canMarkPaid).length,
+          undoable: picked.where(installmentPresenter.canMarkUnpaid).length,
           verb: 'Pay',
         );
     }
@@ -515,9 +512,8 @@ class _BillsBodyState extends State<_BillsBody> {
   }
 
   Future<void> _batchPayInstallments() async {
-    final targets = _selectedInstallments
-        .where((i) => !installmentPresenter.isPaidForMonth(i.id))
-        .toList();
+    final targets =
+        _selectedInstallments.where(installmentPresenter.canMarkPaid).toList();
     if (targets.isEmpty) return;
     final choice = await showWebBatchSettleDialog(
       context,
@@ -596,7 +592,7 @@ class _BillsBodyState extends State<_BillsBody> {
                 '${_plural(result.applied, 'set-aside')} unfunded.');
           case _BatchSection.installments:
             final targets = _selectedInstallments
-                .where((i) => installmentPresenter.isPaidForMonth(i.id))
+                .where(installmentPresenter.canMarkUnpaid)
                 .toList();
             if (targets.isEmpty) return;
             final choice = await showUndoSettlementDialog(
@@ -3301,6 +3297,8 @@ class _InstallmentRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final paid = presenter.isPaidForMonth(installment.id);
+    final canPay = presenter.canMarkPaid(installment);
+    final canUndo = presenter.canMarkUnpaid(installment);
     final count = presenter.paidCount(installment.id);
     final remainingAmt = presenter.remainingAmount(installment.id);
     final progress = presenter.paymentProgress(installment.id);
@@ -3327,8 +3325,14 @@ class _InstallmentRow extends StatelessWidget {
           else
             _PaidCheckbox(
               checked: paid,
-              tooltip: paid ? 'Mark unpaid this month' : 'Mark paid',
-              onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
+              tooltip: presenter.checkboxTooltip(installment),
+              // A plan on a card with statements is billed at close and paid
+              // with the statement, so there is nothing to tick here.
+              onTap: canUndo
+                  ? () => _undoPaid(context)
+                  : canPay
+                      ? () => _markPaid(context)
+                      : null,
             ),
           const SizedBox(width: WebInsets.md),
           Expanded(

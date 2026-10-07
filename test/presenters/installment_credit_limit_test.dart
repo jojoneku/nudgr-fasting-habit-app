@@ -264,11 +264,20 @@ void main() {
       expect(card.totalDebt, 10000.0);
       expect(card.availableCredit, 40000.0);
 
-      // Mark 1 month paid:
-      // The 1,000 monthly slice moves into current balance (currentPayable = 1000),
-      // and unbilledInstallments drops to 9000.
+      // The statement closes and bills month 1 onto the card (the charge the
+      // statement generator posts; "Mark paid" is not offered on a card with a
+      // billing cycle). The 1,000 monthly slice moves into current balance
+      // (currentPayable = 1000), and unbilledInstallments drops to 9000.
       // totalDebt remains 10,000, availableCredit remains 40,000.
-      await presenter.markPaid('i1');
+      await ledger.postSystemTransactions([
+        newInst.chargeRecord(
+          recordId: newInst.chargeId(1),
+          number: 1,
+          date: DateTime(2026, 10, 15),
+          month: '2026-10',
+          categoryId: kInstallmentCategoryId,
+        ),
+      ]);
 
       card = ledger.accounts.firstWhere((a) => a.id == 'cc');
       expect(card.currentPayable, 1000.0);

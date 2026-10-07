@@ -948,6 +948,25 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Books records the app posts on the user's behalf — installment charges
+  /// billed when a statement closes — in one write. The in-memory append runs
+  /// before the first `await`, so a caller that decided what is missing from
+  /// [allTransactions] and calls this straight away cannot race a second run
+  /// into posting the same records. Awards no XP: nothing was logged by hand.
+  Future<void> postSystemTransactions(List<TransactionRecord> txns) async {
+    if (txns.isEmpty) return;
+    _allTransactions = [..._allTransactions, ...txns];
+    for (final txn in txns) {
+      _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
+          isInstallment: txn.isInstallment);
+    }
+    safeNotify();
+    await _saveAll();
+    if (txns.any((t) => t.installmentId != null)) {
+      await refreshInstallmentHolds();
+    }
+  }
+
   /// Re-adds a [txn] that was just removed via [deleteTransaction] (an Undo),
   /// restoring its linked reimbursement receivable too — otherwise undoing a
   /// reimbursable-expense delete brings the expense back but silently drops the
