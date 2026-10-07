@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
@@ -279,6 +280,7 @@ class _BillsBodyState extends State<_BillsBody> {
     // mutated presenter state mid-frame to get the same effect).
     final installmentsCard = _InstallmentsCard(
       presenter: installmentPresenter,
+      bills: presenter,
       batchControl: _selectControl(_BatchSection.installments, installmentIds),
       batchBar: _batchBar(_BatchSection.installments),
       selectionOf: (id) => _selectionFor(_BatchSection.installments, id),
@@ -1887,7 +1889,20 @@ class _BillRow extends StatelessWidget {
     final paid = bill.isPaid;
     final accountName = _accountName(bill.accountId);
     final progressNote = presenter.statementProgressNote(bill);
-    final itemsLabel = presenter.statementItemsLabel(bill);
+    // A credit statement reads as its card's bill, the way the mobile Bills
+    // tab's statement card does: the account leads, then the cycle, how due
+    // it is and what is on it.
+    final statement = presenter.statementCard(bill);
+    final itemsLabel = statement?.itemsLabel;
+    final subtitle = statement != null
+        ? [
+            statement.periodLabel,
+            statement.dueLabel,
+            if (statement.compositionLabel != null) statement.compositionLabel!,
+            if (progressNote != null) progressNote,
+          ].join(' · ')
+        : 'Due ${_ordinal(bill.dueDay)}${accountName != null ? ' · $accountName' : ''}'
+            '${progressNote != null ? ' · $progressNote' : ''}';
 
     final nameStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w600,
@@ -1926,7 +1941,16 @@ class _BillRow extends StatelessWidget {
           // The colour-tinted category badge is what carries a row's identity
           // on every mobile Treasury list; web rows were anonymous text. Same
           // widget, same palette slot, so a category looks the same on both.
-          _billBadge(context),
+          if (statement != null)
+            AccountBadge(
+              category: statement.account.category,
+              name: statement.account.name,
+              iconKey: statement.account.icon,
+              colorHex: statement.account.colorHex,
+              size: 32,
+            )
+          else
+            _billBadge(context),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -1936,20 +1960,23 @@ class _BillRow extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(bill.name,
-                          style: nameStyle, overflow: TextOverflow.ellipsis),
+                      child: Text(
+                          statement != null
+                              ? '${statement.account.name} statement'
+                              : bill.name,
+                          style: nameStyle,
+                          overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(width: WebInsets.sm),
                     WebBadge(
-                      _billTypeLabel(bill.billType),
+                      statement?.kindLabel ?? _billTypeLabel(bill.billType),
                       tone: _billTypeTone(bill.billType),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Due ${_ordinal(bill.dueDay)}${accountName != null ? ' · $accountName' : ''}'
-                  '${progressNote != null ? ' · $progressNote' : ''}',
+                  subtitle,
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),
@@ -1972,7 +1999,24 @@ class _BillRow extends StatelessWidget {
             ),
           ],
           const SizedBox(width: WebInsets.md),
-          Text(formatPeso(bill.amount), style: amountStyle),
+          if (statement != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(formatPeso(statement.headlineAmount), style: amountStyle),
+                Text(
+                  [
+                    statement.headlineCaption,
+                    if (statement.minimumLabel != null) statement.minimumLabel!,
+                  ].join(' · '),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            )
+          else
+            Text(formatPeso(bill.amount), style: amountStyle),
           if (selection == null)
             _RowActions(
               onEdit: () => _edit(context),
@@ -3215,12 +3259,16 @@ void _onAddInstallment(BuildContext context, InstallmentPresenter presenter) {
 /// mark-paid (and undo) wired to [InstallmentPresenter].
 class _InstallmentsCard extends StatelessWidget {
   final InstallmentPresenter presenter;
+
+  /// Resolves a plan's month against the statement it is billed on.
+  final BillsReceivablesPresenter bills;
   final Widget batchControl;
   final Widget? batchBar;
   final WebRowSelection? Function(String id) selectionOf;
 
   const _InstallmentsCard({
     required this.presenter,
+    required this.bills,
     required this.batchControl,
     required this.batchBar,
     required this.selectionOf,
@@ -3258,6 +3306,7 @@ class _InstallmentsCard extends StatelessWidget {
                 for (var i = 0; i < due.length; i++)
                   _InstallmentRow(
                     presenter: presenter,
+                    bills: bills,
                     installment: due[i],
                     showDivider: i > 0,
                     selection: selectionOf(due[i].id),
@@ -3297,12 +3346,14 @@ class _InstallmentsCard extends StatelessWidget {
 
 class _InstallmentRow extends StatelessWidget {
   final InstallmentPresenter presenter;
+  final BillsReceivablesPresenter bills;
   final Installment installment;
   final bool showDivider;
   final WebRowSelection? selection;
 
   const _InstallmentRow({
     required this.presenter,
+    required this.bills,
     required this.installment,
     required this.showDivider,
     this.selection,
@@ -3312,13 +3363,19 @@ class _InstallmentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final paid = presenter.isPaidForMonth(installment.id);
+    // On a card with statements a month is paid by paying its statement, so
+    // the row follows that statement instead of calling a billed month paid.
+    final onStatement = bills.installmentStatementStatus(installment);
+    final statementBill = onStatement?.statement;
+    final paid = onStatement?.paid ?? presenter.isPaidForMonth(installment.id);
     final canPay = presenter.canMarkPaid(installment);
     final canUndo = presenter.canMarkUnpaid(installment);
     final count = presenter.paidCount(installment.id);
     final progress = presenter.paymentProgress(installment.id);
-    final detailLine =
-        presenter.detailLine(installment, withRemaining: true) ?? '';
+    final detailLine = [
+      if (onStatement != null) onStatement.label,
+      presenter.detailLine(installment, withRemaining: true) ?? '',
+    ].where((s) => s.isNotEmpty).join(' · ');
 
     return Container(
       decoration: showDivider
@@ -3395,6 +3452,21 @@ class _InstallmentRow extends StatelessWidget {
               ],
             ),
           ),
+          if (statementBill != null &&
+              onStatement?.linkLabel != null &&
+              selection == null) ...[
+            const SizedBox(width: WebInsets.sm),
+            TextButton.icon(
+              onPressed: () => showWebStatementBreakdownDialog(
+                context,
+                presenter: bills,
+                bill: statementBill,
+              ),
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              icon: const Icon(Icons.receipt_long_outlined, size: 16),
+              label: Text(onStatement!.linkLabel!),
+            ),
+          ],
           const SizedBox(width: WebInsets.md),
           Text(
             '${formatPeso(installment.monthlyAmount)}/mo',
@@ -3407,7 +3479,7 @@ class _InstallmentRow extends StatelessWidget {
             _RowActions(
               onEdit: () => _edit(context),
               onDelete: () => _delete(context),
-              onUndo: paid ? () => _undoPaid(context) : null,
+              onUndo: canUndo ? () => _undoPaid(context) : null,
               undoLabel: 'Mark unpaid this month',
             ),
         ],

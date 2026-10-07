@@ -28,6 +28,7 @@ import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/new_entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
 import 'package:intermittent_fasting/views/treasury/bills/statement_breakdown_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/bills/statement_bill_card.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -891,9 +892,26 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   }
 
   Widget _billCard(Bill b) {
-    final v = _catVisual(b.categoryId, fallback: context.appColors.bills);
     final sel = _selectionFor(_BatchSection.bills, b.id);
     final locked = _locked(_BatchSection.bills);
+    final statement = widget.presenter.statementCard(b);
+    if (statement != null) {
+      return StatementBillCard(
+        key: ValueKey('bill_${b.id}'),
+        view: statement,
+        onPay: locked ? null : () => _showMarkBillPaidSheet(b),
+        onUndo: widget.presenter.hasUndoablePayment(b) && !locked
+            ? () => _undoBillPayment(b)
+            : null,
+        onViewItems: locked ? null : () => _showStatementItems(b),
+        onEdit: locked ? null : () => _showAddBillSheet(b),
+        onLongPress: locked ? null : sel.onLongPress,
+        selectionMode: sel.mode,
+        selected: sel.selected,
+        onSelectionToggle: sel.onToggle,
+      );
+    }
+    final v = _catVisual(b.categoryId, fallback: context.appColors.bills);
     final String? note = widget.presenter.statementProgressNote(b) ??
         (b.isPaid
             ? 'Paid ${formatPeso(b.paidAmount ?? b.amount)}'
@@ -934,15 +952,15 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       // Credit statements list what is on them: purchases, installment
       // months, refunds and repayments, each opening its transaction form.
       detailLabel: widget.presenter.statementItemsLabel(b),
-      onDetail: locked
-          ? null
-          : () => StatementBreakdownSheet.show(
-                context,
-                presenter: widget.presenter,
-                bill: b,
-              ),
+      onDetail: locked ? null : () => _showStatementItems(b),
     );
   }
+
+  void _showStatementItems(Bill b) => StatementBreakdownSheet.show(
+        context,
+        presenter: widget.presenter,
+        bill: b,
+      );
 
   /// Receivables, with a Reorder toggle in the section header once there are two
   /// or more still-owed entries to arrange. In reorder mode the still-owed rows
@@ -1120,7 +1138,12 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   Widget _installmentCard(Installment inst) {
     final sel = _selectionFor(_BatchSection.installments, inst.id);
     final locked = _locked(_BatchSection.installments);
-    final paidThisMonth = widget.installmentPresenter.isPaidForMonth(inst.id);
+    // On a card with statements a month is paid by paying its statement, so
+    // the row follows that statement instead of calling a billed month paid.
+    final onStatement = widget.presenter.installmentStatementStatus(inst);
+    final statementBill = onStatement?.statement;
+    final paidThisMonth = onStatement?.paid ??
+        widget.installmentPresenter.isPaidForMonth(inst.id);
     final canPay = widget.installmentPresenter.canMarkPaid(inst);
     final canUndo = widget.installmentPresenter.canMarkUnpaid(inst);
     final account = widget.installmentPresenter.accounts
@@ -1134,7 +1157,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       note: account?.name,
       progress: widget.installmentPresenter.paymentProgress(inst.id),
       amount: inst.monthlyAmount,
-      dateLabel: widget.installmentPresenter.statusLabel(inst),
+      dateLabel:
+          onStatement?.label ?? widget.installmentPresenter.statusLabel(inst),
       actionLabel: 'Pay',
       done: paidThisMonth,
       // A plan on a card with statements is billed at close and paid with the
@@ -1143,6 +1167,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           canPay && !locked ? () => _showMarkInstallmentPaidSheet(inst) : null,
       onUndo: canUndo && !locked ? () => _undoInstallmentPayment(inst) : null,
       undoLabel: 'Mark unpaid this month',
+      detailLabel: onStatement?.linkLabel,
+      onDetail: statementBill == null || locked
+          ? null
+          : () => _showStatementItems(statementBill),
       onEdit: locked ? null : () => _showAddInstallmentSheet(inst),
       onDelete: locked
           ? null

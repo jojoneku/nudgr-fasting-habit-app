@@ -148,6 +148,11 @@ class ObligationCard extends StatelessWidget {
             ? onSelectionToggle
             : (onLongPress ?? (hasMenu ? () => _showMenu(context) : null)),
         child: Row(
+          // A row carrying a detail link is tall; centring its badge left it
+          // floating beside the link. Top-align those, centre the rest.
+          crossAxisAlignment: detailLabel != null && onDetail != null
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
           children: [
             if (selectionMode) ...[
               Icon(

@@ -19,6 +19,7 @@ import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:intermittent_fasting/utils/statement_card_view.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1238,6 +1239,145 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (breakdown == null) return null;
     final n = breakdown.itemCount;
     return n == 0 ? 'View items' : 'View items · $n';
+  }
+
+  /// The Bills tab's statement card for [b], fully resolved; null when [b] is
+  /// not a credit statement on a liability account (it then renders as an
+  /// ordinary bill row).
+  StatementCardView? statementCard(Bill b) {
+    final current = _allBills.where((x) => x.id == b.id).firstOrNull ?? b;
+    final account = _statementAccount(current);
+    if (account == null) return null;
+    final breakdown = statementBreakdown(current);
+    final progress = statementProgress(current);
+    final partial = _partialProgress(current);
+
+    final due = billDueDate(current);
+    final now = _clock();
+    final days = DateTime(due.year, due.month, due.day)
+        .difference(DateTime(now.year, now.month, now.day))
+        .inDays;
+    final dueDay = DateFormat('MMM d').format(due);
+    final StatementDueTone tone;
+    final String dueLabel;
+    if (current.isPaid) {
+      tone = StatementDueTone.paid;
+      final paidOn = current.paidDate;
+      dueLabel = paidOn == null
+          ? 'Paid'
+          : 'Paid ${DateFormat('MMM d').format(paidOn)}';
+    } else if (days < 0) {
+      tone = StatementDueTone.overdue;
+      dueLabel = 'Overdue · $dueDay';
+    } else if (days == 0) {
+      tone = StatementDueTone.soon;
+      dueLabel = 'Due today';
+    } else {
+      tone = days <= 3 ? StatementDueTone.soon : StatementDueTone.normal;
+      dueLabel = 'Due $dueDay · in $days ${days == 1 ? 'day' : 'days'}';
+    }
+
+    String? composition;
+    var itemsLabel = 'View items';
+    if (breakdown != null) {
+      String part(int n, String one, String many) =>
+          '$n ${n == 1 ? one : many}';
+      final parts = [
+        if (breakdown.purchases.isNotEmpty)
+          part(breakdown.purchases.length, 'purchase', 'purchases'),
+        if (breakdown.installments.isNotEmpty)
+          part(breakdown.installments.length, 'installment', 'installments'),
+        if (breakdown.refunds.isNotEmpty)
+          part(breakdown.refunds.length, 'refund', 'refunds'),
+      ];
+      composition = parts.isEmpty ? null : parts.join(' · ');
+      final n = breakdown.itemCount;
+      if (n > 0) itemsLabel = 'View $n ${n == 1 ? 'item' : 'items'}';
+    }
+
+    final minimumDue = progress?.minimumRemaining ?? 0;
+    return StatementCardView(
+      bill: current,
+      account: account,
+      periodLabel: breakdown == null
+          ? 'Statement'
+          : 'Statement · ${breakdown.periodLabel}',
+      unpaid: current.isPaid ? 0 : (progress?.remaining ?? current.amount),
+      amount: current.amount,
+      dueLabel: dueLabel,
+      dueTone: tone,
+      progress: statementProgressFraction(current),
+      progressLabel: partial == null ? null : statementProgressNote(current),
+      minimumLabel: !current.isPaid &&
+              minimumDue > 0.005 &&
+              progress != null &&
+              progress.minimum < progress.amount - 0.005
+          ? 'Min ${formatPeso(minimumDue)}'
+          : null,
+      compositionLabel: composition,
+      itemsLabel: itemsLabel,
+    );
+  }
+
+  /// Where installment [inst] stands this month on a card that bills through
+  /// statements: on the statement (and unpaid until that statement is paid),
+  /// paid with it, or still to be billed. Null for a plan on a card without a
+  /// billing cycle, whose row keeps its own Pay button.
+  ///
+  /// A billed month is not a paid month. The row used to show a billed month
+  /// with the paid check while the statement holding it was still open, which
+  /// read as the same debt twice: once "paid" here, once owed there.
+  InstallmentStatementStatus? installmentStatementStatus(Installment inst) {
+    final account =
+        _ledger.accounts.where((a) => a.id == inst.accountId).firstOrNull;
+    if (account == null || !account.hasBillingCycle) return null;
+    final billed = inst.paidCount(_ledger.allTransactions);
+    final total = inst.totalMonths;
+    final statement = _allBills
+        .where((b) =>
+            b.billType == BillType.creditCard &&
+            b.accountId == inst.accountId &&
+            b.month == _selectedMonth)
+        .firstOrNull;
+    final line = statement == null
+        ? null
+        : statementBreakdown(statement)
+            ?.installments
+            .where((l) => l.txn.installmentId == inst.id)
+            .firstOrNull;
+    if (statement != null && line != null) {
+      final n = line.installmentLabel ?? '$billed/$total';
+      final link = 'View ${account.name} statement';
+      if (statement.isPaid) {
+        return InstallmentStatementStatus(
+          statement: statement,
+          paid: true,
+          label: '$n · paid with statement',
+          linkLabel: link,
+        );
+      }
+      final due = DateFormat('MMM d').format(billDueDate(statement));
+      return InstallmentStatementStatus(
+        statement: statement,
+        paid: false,
+        label: '$n · on statement, due $due',
+        linkLabel: link,
+      );
+    }
+    if (billed >= total) {
+      return InstallmentStatementStatus(
+        statement: null,
+        paid: true,
+        label: '$total/$total · all billed',
+        linkLabel: null,
+      );
+    }
+    return InstallmentStatementStatus(
+      statement: null,
+      paid: false,
+      label: '${billed + 1}/$total · bills on the next statement',
+      linkLabel: null,
+    );
   }
 
   /// The ledger the statement items live in — what a bills surface hands the
