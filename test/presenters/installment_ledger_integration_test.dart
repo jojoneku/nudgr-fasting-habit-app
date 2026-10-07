@@ -669,16 +669,50 @@ void main() {
 
         expect(installments.allInstallments, isEmpty);
         expect(installmentsState, isEmpty);
-        expect(ledger.allTransactions, hasLength(1));
-        final regular = ledger.allTransactions.single;
-        expect(regular.id, old.id);
+        final regular =
+            ledger.allTransactions.firstWhere((t) => t.id == old.id);
         expect(regular.isInstallment, isFalse);
         expect(regular.installmentId, isNull);
-        // The full amount lands on the card exactly once and nothing is held.
+        expect(holdOf('shopeepay'), 0.0);
+        // The 100 paid from the bank was real cash: it stays out of the bank
+        // and now pays the card down, as a transfer — not spending.
+        expect(balanceOf('maribank'), 49900.0);
+        expect(balanceOf('shopeepay'), 200.0);
+        final legs = ledger.allTransactions
+            .where((t) => t.transferGroupId != null)
+            .toList();
+        expect(legs, hasLength(2));
+        expect(legs.every((t) => t.installmentId == null), isTrue);
+        expect(legs.map((t) => t.accountId).toSet(), {'maribank', 'shopeepay'});
+        expect(ledger.allTransactions, hasLength(3));
+      });
+
+      test('turning the split off drops months already charged to the card',
+          () async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+        await ledger.addInstallmentPurchase(plan());
+        installments.setMonth('2026-10');
+        await installments.markPaid('a'); // charged to the card itself
+        expect(balanceOf('shopeepay'), 100.0);
+        final old = purchase();
+
+        await ledger.convertInstallmentPurchaseToRegular(TransactionRecord(
+          id: old.id,
+          date: old.date,
+          accountId: 'shopeepay',
+          categoryId: 'cat-tech',
+          amount: 300.0,
+          type: TransactionType.outflow,
+          description: old.description,
+          month: old.month,
+        ));
+
+        // The full 300 covers that month: owed once, not 400.
+        expect(ledger.allTransactions, hasLength(1));
         expect(balanceOf('shopeepay'), 300.0);
         expect(holdOf('shopeepay'), 0.0);
-        // The plan's payment went with it.
-        expect(balanceOf('maribank'), 50000.0);
       });
 
       test('converting a regular expense reverses its balance exactly once',

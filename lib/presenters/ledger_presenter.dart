@@ -1191,9 +1191,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Turns an installment purchase back into an ordinary transaction — the
   /// edit form's split switched off, or the purchase moved to a non-credit
   /// account. [replacement] (same id, no installment fields) takes the full
-  /// balance effect the purchase record never had, and the plan is removed
-  /// with its recorded payments. Keeping the plan would count the debt twice:
-  /// once on the card, once as the plan's hold.
+  /// balance effect the purchase record never had, and the plan is removed.
+  /// Keeping the plan would count the debt twice: once on the card, once as
+  /// the plan's hold. Months the plan charged to the card are dropped (the
+  /// full amount covers them); months paid from another account become
+  /// transfers into the card, since that cash really left.
   Future<void> convertInstallmentPurchaseToRegular(
     TransactionRecord replacement,
   ) async {
@@ -1205,17 +1207,70 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       await updateTransaction(replacement);
       return;
     }
+    // When the purchase leaves credit altogether (moved to a bank, say), the
+    // replacement IS the payment, and every earlier payment goes.
     final payments = _planPayments(old);
-    for (final p in payments) {
+    final onCredit = _accounts
+            .where((a) => a.id == replacement.accountId)
+            .firstOrNull
+            ?.isLiability ==
+        true;
+    final cashPayments = onCredit
+        ? payments.where((p) => p.accountId != replacement.accountId).toList()
+        : const <TransactionRecord>[];
+    final cashIds = cashPayments.map((p) => p.id).toSet();
+    final dropped = payments.where((p) => !cashIds.contains(p.id)).toList();
+    for (final p in dropped) {
       _reverseBalanceDelta(p.accountId, p.amount, p.type);
     }
     _applyBalanceDelta(
         replacement.accountId, replacement.amount, replacement.type,
         isInstallment: replacement.isInstallment);
-    final paymentIds = payments.map((p) => p.id).toSet();
+    final transferCategoryId =
+        cashPayments.isEmpty ? null : await _ensureTransferCategory();
+    final asTransfers = <String, TransactionRecord>{};
+    final cardLegs = <TransactionRecord>[];
+    for (final p in cashPayments) {
+      // The cash leg keeps its id, date and balance effect; only its meaning
+      // changes, from installment spending to a transfer into the card.
+      final groupId = _generateId();
+      asTransfers[p.id] = TransactionRecord(
+        id: p.id,
+        date: p.date,
+        accountId: p.accountId,
+        categoryId: transferCategoryId!,
+        amount: p.amount,
+        type: TransactionType.outflow,
+        description: p.description,
+        note: p.note,
+        month: p.month,
+        transferToAccountId: replacement.accountId,
+        transferGroupId: groupId,
+        billId: p.billId,
+      );
+      cardLegs.add(TransactionRecord(
+        id: _generateId(),
+        date: p.date,
+        accountId: replacement.accountId,
+        categoryId: transferCategoryId,
+        amount: p.amount,
+        type: TransactionType.inflow,
+        description: p.description,
+        note: p.note,
+        month: p.month,
+        transferToAccountId: p.accountId,
+        transferGroupId: groupId,
+        billId: p.billId,
+      ));
+      _applyBalanceDelta(
+          replacement.accountId, p.amount, TransactionType.inflow);
+    }
+    final droppedIds = dropped.map((p) => p.id).toSet();
     _allTransactions = [
       for (final t in _allTransactions)
-        if (!paymentIds.contains(t.id)) t.id == old.id ? replacement : t,
+        if (!droppedIds.contains(t.id))
+          t.id == old.id ? replacement : (asTransfers[t.id] ?? t),
+      ...cardLegs,
     ];
     safeNotify();
     await _saveAll();
