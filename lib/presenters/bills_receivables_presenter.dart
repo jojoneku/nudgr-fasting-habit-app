@@ -3059,7 +3059,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// is unchanged, the month just moves from unbilled to billed.
   ///
   /// Idempotent by COUNT, not month key: a plan should have
-  /// [Installment.chargesDueBy] the cycle's due month charges by now; only the
+  /// [installmentChargesDueAt] charges by this statement; only the
   /// shortfall below [Installment.paidCount] is posted. Payment records booked
   /// under the old model (and manual "Mark paid" charges) count too, so they
   /// are never billed again. Ids are deterministic per plan and number, so a
@@ -3077,12 +3077,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final plans = (source == null || source.isLoading)
         ? await _storage.loadInstallments()
         : source.installments;
-    final dueMonth = cycle.dueMonthKey;
     final onCard = plans
         .where((i) =>
             i.isActive &&
             i.accountId == account.id &&
-            i.chargesDueBy(dueMonth) > 0)
+            installmentChargesDueAt(account, i, cycle) > 0)
         .toList();
     if (onCard.isEmpty) return;
     if (onCard.any((i) => i.categoryId == null) &&
@@ -3099,7 +3098,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         DateTime(cycle.close.year, cycle.close.month, cycle.close.day);
     final charges = <TransactionRecord>[];
     for (final plan in onCard) {
-      final due = plan.chargesDueBy(dueMonth);
+      final due = installmentChargesDueAt(account, plan, cycle);
       var number = plan.paidCount(txns);
       while (number < due) {
         number++;

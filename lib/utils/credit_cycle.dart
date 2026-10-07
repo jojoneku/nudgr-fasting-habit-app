@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/credit_brand_presets.dart';
 import '../models/finance/financial_account.dart';
+import '../models/finance/installment.dart';
 import 'credit_finance_charge.dart';
 import 'finance_format.dart';
 
@@ -114,6 +115,37 @@ CreditCycle creditCycleContaining(
   final anchor = DateTime(y, m); // normalises a December roll-over
   return creditCycleClosingIn(anchor.year, anchor.month,
       statementDay: stmt, dueDay: dueDay, daysAfter: daysAfter);
+}
+
+/// How many of [plan]'s monthly charges the statement closing at [cycle] on
+/// [account] should have billed by now: one per statement, from the first
+/// statement whose payment falls due in or after the plan's start month.
+///
+/// Counted per statement, not per due month. Under a long days-after-close
+/// rule some months have no due date at all (closes Jan 15, due Jan 30; closes
+/// Feb 15, due Mar 2) and others have two. Counting due months then billed two
+/// months onto the statement after the gap.
+int installmentChargesDueAt(
+  FinancialAccount account,
+  Installment plan,
+  CreditCycle cycle,
+) {
+  final start = DateTime.parse('${plan.startMonth}-01');
+  DateTime? firstClose;
+  for (var k = -2; k <= 1 && firstClose == null; k++) {
+    final m = DateTime(start.year, start.month + k);
+    final c = account.cycleClosingIn(m.year, m.month);
+    if (c != null && c.dueMonthKey.compareTo(plan.startMonth) >= 0) {
+      firstClose = c.close;
+    }
+  }
+  if (firstClose == null) return 0;
+  final statements = (cycle.close.year - firstClose.year) * 12 +
+      cycle.close.month -
+      firstClose.month +
+      1;
+  if (statements <= 0) return 0;
+  return statements < plan.totalMonths ? statements : plan.totalMonths;
 }
 
 /// Account-level conveniences. Null when [a] has no billing cycle configured.
