@@ -111,9 +111,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       _category == AccountCategory.creditLine ||
       _category == AccountCategory.bnpl;
 
-  /// The opening "balance" field means *amount owed* for credit accounts.
-  String get _balanceLabel =>
-      _isCredit ? 'Current Balance Owed' : 'Opening Balance';
+  /// The opening "balance" field means *amount owed* for credit accounts —
+  /// the card's full total, installments included (see the presenter).
+  String get _balanceLabel => widget.presenter.accountBalanceLabel(_category);
+  String? get _balanceHint => widget.presenter
+      .accountBalanceHint(_category, accountId: widget.existing?.id);
+  String? _balanceError(String? text) => widget.presenter
+      .accountBalanceError(_category, text, accountId: widget.existing?.id);
 
   /// Minimum-payment rule shown and saved: the explicit pick, else the
   /// category default (credit card → % of balance; line/BNPL → pay in full).
@@ -135,7 +139,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     final existing = widget.existing;
     if (existing != null) {
       _nameController.text = existing.name;
-      _balanceController.text = existing.balance.toStringAsFixed(2);
+      _balanceController.text = widget.presenter
+          .accountBalanceFieldValue(existing)
+          .toStringAsFixed(2);
       _category = existing.category;
       _selectedColor = existing.colorHex;
       _iconKey = existing.icon;
@@ -223,8 +229,11 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     try {
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-      final balance =
-          double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0;
+      final balance = widget.presenter.balanceFromField(
+        _category,
+        double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0,
+        accountId: widget.existing?.id,
+      );
       final goalTarget = _isGoal && _goalTargetController.text.isNotEmpty
           ? double.tryParse(_goalTargetController.text.replaceAll(',', ''))
           : null;
@@ -373,6 +382,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             nameController: _nameController,
             balanceController: _balanceController,
             balanceLabel: _balanceLabel,
+            balanceHint: _balanceHint,
+            balanceValidator: _balanceError,
             goalTargetController: _goalTargetController,
             creditLimitController: _creditLimitController,
             financeRateController: _financeRateController,
@@ -428,6 +439,8 @@ class _AccountSetupForm extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController balanceController;
   final String balanceLabel;
+  final String? balanceHint;
+  final FormFieldValidator<String>? balanceValidator;
   final TextEditingController goalTargetController;
   final TextEditingController creditLimitController;
   final TextEditingController financeRateController;
@@ -476,6 +489,8 @@ class _AccountSetupForm extends StatelessWidget {
     required this.nameController,
     required this.balanceController,
     required this.balanceLabel,
+    this.balanceHint,
+    this.balanceValidator,
     required this.goalTargetController,
     required this.creditLimitController,
     required this.financeRateController,
@@ -564,7 +579,9 @@ class _AccountSetupForm extends StatelessWidget {
                             decoration: sheetFieldDecoration(
                               context,
                               prefixText: '₱ ',
-                            ),
+                              helperText: balanceHint,
+                            ).copyWith(helperMaxLines: 3, errorMaxLines: 3),
+                            validator: balanceValidator,
                           ),
                         ),
                       ),

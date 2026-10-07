@@ -437,5 +437,103 @@ void main() {
       expect(foundRead.summary, contains('Gaming Laptop'));
       expect(foundRead.summary, contains('5450/mo'));
     });
+
+    group('deleting an installment purchase', () {
+      Installment plan(String id) => Installment(
+            id: id,
+            name: 'Fuse holder $id',
+            accountId: 'shopeepay',
+            totalAmount: 300.0,
+            monthlyAmount: 100.0,
+            totalMonths: 3,
+            startMonth: '2026-10',
+            purchaseDate: DateTime(2026, 9, 6),
+          );
+
+      String purchaseIdOf(String planId) => ledger.allTransactions
+          .firstWhere((t) => t.installmentId == planId && t.isInstallment)
+          .id;
+
+      Future<void> loadAll() async {
+        await ledger.load();
+        await installments.load();
+        await bills.load();
+      }
+
+      test('bulk delete removes the plan, so it stops holding credit',
+          () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+        await ledger.addInstallmentPurchase(plan('b'));
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            600.0);
+
+        await ledger.deleteTransactions({purchaseIdOf('a')});
+
+        expect(installments.allInstallments.map((i) => i.id), ['b']);
+        expect(installmentsState.map((i) => i.id), ['b']);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            300.0);
+      });
+
+      test('bulk delete takes the plan payments with it, and Undo restores all',
+          () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+        installments.setMonth('2026-10');
+        await installments.markPaid('a', fundingAccountId: 'maribank');
+        final bankAfterPay =
+            ledger.accounts.firstWhere((a) => a.id == 'maribank').balance;
+        expect(bankAfterPay, 49900.0);
+
+        final removed = await ledger.deleteTransactions({purchaseIdOf('a')});
+
+        expect(removed, hasLength(2));
+        expect(ledger.allTransactions, isEmpty);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+            50000.0);
+
+        await ledger.restoreTransactions(removed);
+
+        expect(installments.allInstallments.map((i) => i.id), ['a']);
+        expect(installments.paidCount('a'), 1);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+            bankAfterPay);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            200.0);
+      });
+
+      test('single delete then Undo brings the plan back', () async {
+        await loadAll();
+        await ledger.addInstallmentPurchase(plan('a'));
+
+        final removed =
+            await ledger.deleteTransactionOrGroup(purchaseIdOf('a'));
+        expect(installments.allInstallments, isEmpty);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            0.0);
+
+        await ledger.restoreTransactions(removed);
+
+        expect(installments.allInstallments.map((i) => i.id), ['a']);
+        expect(
+            ledger.accounts
+                .firstWhere((a) => a.id == 'shopeepay')
+                .unbilledInstallments,
+            300.0);
+      });
+    });
   });
 }

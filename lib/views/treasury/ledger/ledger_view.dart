@@ -1078,7 +1078,7 @@ Widget _buildTxnTile(
       if (removed.isEmpty || !context.mounted) return;
       AppToast.action(
         context,
-        message: removed.length > 1
+        message: deleted.transferGroupId != null
             ? 'Deleted transfer "${deleted.description}"'
             : 'Deleted "${deleted.description}"',
         actionLabel: 'Undo',

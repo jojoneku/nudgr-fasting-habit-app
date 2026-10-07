@@ -618,7 +618,7 @@ class _CreditAccountRow extends StatelessWidget {
                     style: theme.textTheme.labelSmall
                         ?.copyWith(color: cs.onSurfaceVariant)),
                 Text(
-                  formatPeso(account.currentPayable),
+                  formatPeso(account.totalDebt),
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: cs.error,
                     fontWeight: FontWeight.w700,

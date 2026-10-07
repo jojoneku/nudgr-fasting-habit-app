@@ -529,7 +529,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     final removed = await _p.deleteTransactionOrGroup(t.id);
     if (removed.isEmpty || !mounted) return;
     _offerUndo(
-      removed.length > 1
+      t.transferGroupId != null
           ? 'Deleted transfer "${t.description}"'
           : 'Deleted "${t.description}"',
       removed,
