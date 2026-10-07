@@ -596,6 +596,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         return 'Checking your budgets…';
       case 'findTransactions':
         return 'Going through your transactions…';
+      case 'findAccounts':
+        return 'Checking your accounts…';
+      case 'checkAffordability':
+        return 'Checking affordability…';
+      case 'findBudgetGroups':
+        return 'Checking your budget groups…';
     }
     return 'Looking that up…';
   }

@@ -160,6 +160,7 @@ class TreasuryPresenters {
         // Nudgy's rows to its review card.
         ledger: ledger,
         installments: installments,
+        dashboard: dashboard,
       ),
     );
   }

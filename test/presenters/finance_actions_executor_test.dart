@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/ai_tool.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
@@ -425,7 +427,7 @@ void main() {
       expect(result.summary, contains('in 2026-09'));
       expect(result.summary, isNot(contains('2026-03-09')));
       final lines = result.summary.split('\n');
-      expect(lines[1], startsWith('2026-09-14 "Grab ride"'));
+      expect(lines[1], contains('2026-09-14 "Grab ride"'));
       expect(lines[1], contains('note: "to office"'));
     });
 
@@ -492,14 +494,15 @@ void main() {
       expect(result.summary, contains('searched $rebased instead'));
     });
 
-    test('rows carry no ids, since nothing can edit a transaction', () async {
+    test('rows carry ids so edit and delete can name the transaction',
+        () async {
       final ex = await withLedger();
 
       final result =
           await ex.runRead(call('findTransactions', {'query': 'grab'}));
 
-      expect(result.summary, isNot(contains('id=')));
-      expect(result.summary, isNot(contains('t1')));
+      expect(result.summary, contains('id=t1'));
+      expect(result.summary, contains('id=t3'));
     });
 
     test('nothing matched tells the model not to invent rows', () async {
@@ -520,6 +523,204 @@ void main() {
       expect(result.summary, contains('not available'));
     });
   });
+
+  group('findAccounts', () {
+    test('lists active accounts with balances and categories', () async {
+      final storage = MockStorageService();
+      final stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer((_) async => [
+            FinancialAccount(
+              id: 'a1',
+              name: 'GCash',
+              category: AccountCategory.ewallet,
+              balance: 1500,
+              currency: 'PHP',
+              colorHex: '#000000',
+              icon: 'wallet',
+            ),
+            FinancialAccount(
+              id: 'a2',
+              name: 'BPI Credit Card',
+              category: AccountCategory.creditCard,
+              balance: 8000,
+              creditLimit: 50000,
+              currency: 'PHP',
+              colorHex: '#FF0000',
+              icon: 'credit-card',
+            ),
+          ]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+
+      final ledger = LedgerPresenter(storage, stats);
+      while (ledger.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      final ex = FinanceActionsExecutor(bills: bills, ledger: ledger);
+
+      final result = await ex.runRead(call('findAccounts', {}));
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('GCash'));
+      expect(result.summary, contains('₱1500'));
+      expect(result.summary, contains('BPI Credit Card'));
+      expect(result.summary, contains('owed ₱8000'));
+      expect(result.summary, contains('limit ₱50000'));
+    });
+  });
+
+  group('settlements and mutations', () {
+    test('markBillPaid proposes and confirms bill settlement', () async {
+      final testBill = Bill(
+        id: 'b1',
+        name: 'Meralco',
+        billType: BillType.utility,
+        amount: 3500,
+        dueDay: 15,
+        month: '2026-09',
+        categoryId: 'util',
+      );
+      when(bills.allBills).thenReturn([testBill]);
+
+      unawaited(exPropose(
+          executor, call('markBillPaid', {'id': 'b1', 'paidAmount': 3500})));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(executor.pending, isNotNull);
+      expect(executor.pending!.title, contains('Mark bill paid: Meralco'));
+      expect(executor.pending!.confirmLabel, 'Mark Paid');
+
+      await executor.confirm();
+      verify(bills.markBillPaid('b1',
+              paidAmount: 3500,
+              paidDate: anyNamed('paidDate'),
+              accountId: anyNamed('accountId')))
+          .called(1);
+    });
+
+    test('markReceivableReceived proposes and confirms settlement', () async {
+      final testRec = Receivable(
+        id: 'r1',
+        name: 'Alex loan',
+        receivableType: ReceivableType.other,
+        amount: 2000,
+        month: '2026-09',
+        categoryId: '',
+      );
+      when(bills.allReceivables).thenReturn([testRec]);
+
+      unawaited(exPropose(
+          executor,
+          call(
+              'markReceivableReceived', {'id': 'r1', 'receivedAmount': 2000})));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(executor.pending, isNotNull);
+      expect(executor.pending!.title, contains('Mark received: Alex loan'));
+      expect(executor.pending!.confirmLabel, 'Mark Received');
+
+      await executor.confirm();
+      verify(bills.markReceivableReceived('r1',
+              receivedAmount: 2000,
+              receivedDate: anyNamed('receivedDate'),
+              accountId: anyNamed('accountId')))
+          .called(1);
+    });
+
+    test('editBill and deleteBill work through owning presenter', () async {
+      final testBill = Bill(
+        id: 'b2',
+        name: 'Gym',
+        billType: BillType.other,
+        amount: 1500,
+        dueDay: 5,
+        month: '2026-09',
+        categoryId: '',
+      );
+      when(bills.allBills).thenReturn([testBill]);
+
+      // Edit
+      unawaited(
+          exPropose(executor, call('editBill', {'id': 'b2', 'amount': 1800})));
+      await Future<void>.delayed(Duration.zero);
+      expect(executor.pending!.title, contains('Update bill: Gym'));
+      await executor.confirm();
+      verify(bills.updateBill(any, applyToFuture: false)).called(1);
+
+      // Delete
+      unawaited(exPropose(executor, call('deleteBill', {'id': 'b2'})));
+      await Future<void>.delayed(Duration.zero);
+      expect(executor.pending!.title, contains('Delete bill: Gym'));
+      expect(executor.pending!.isDestructive, isTrue);
+      await executor.confirm();
+      verify(bills.deleteBill('b2', applyToFuture: false)).called(1);
+    });
+
+    test('editTransaction and deleteTransaction mutate ledger', () async {
+      final storage = MockStorageService();
+      final stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer((_) async => [
+            _acc('cash', 'CASH'),
+          ]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => [
+            _cat('food', 'Food'),
+          ]);
+      final txnRecord = TransactionRecord(
+        id: 't_edit',
+        date: DateTime(2026, 9, 10),
+        accountId: 'cash',
+        categoryId: 'food',
+        amount: 150,
+        type: TransactionType.outflow,
+        description: 'Snack',
+        month: '2026-09',
+      );
+      when(storage.loadTransactions()).thenAnswer((_) async => [txnRecord]);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+
+      final ledger = LedgerPresenter(storage, stats);
+      while (ledger.isLoading) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      final ex = FinanceActionsExecutor(bills: bills, ledger: ledger);
+
+      // Edit
+      unawaited(exPropose(
+          ex,
+          call('editTransaction',
+              {'id': 't_edit', 'description': 'Big Snack', 'amount': 200})));
+      await Future<void>.delayed(Duration.zero);
+      expect(ex.pending!.title, contains('Edit transaction: Snack'));
+      await ex.confirm();
+
+      final updated =
+          ledger.allTransactions.firstWhere((t) => t.id == 't_edit');
+      expect(updated.description, 'Big Snack');
+      expect(updated.amount, 200);
+
+      // Delete
+      unawaited(exPropose(ex, call('deleteTransaction', {'id': 't_edit'})));
+      await Future<void>.delayed(Duration.zero);
+      expect(ex.pending!.title, contains('Delete transaction: Big Snack'));
+      expect(ex.pending!.isDestructive, isTrue);
+      await ex.confirm();
+
+      expect(ledger.allTransactions.where((t) => t.id == 't_edit'), isEmpty);
+    });
+  });
+}
+
+Future<void> exPropose(FinanceActionsExecutor ex, AiToolCall c) async {
+  await ex.propose(c);
 }
 
 /// Local `unawaited` so the test does not depend on dart:async's import.

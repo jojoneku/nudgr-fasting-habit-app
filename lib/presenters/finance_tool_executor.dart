@@ -13,6 +13,8 @@ class PendingFinanceAction {
     required this.title,
     required this.details,
     required this.isRecurring,
+    this.confirmLabel,
+    this.isDestructive = false,
   });
 
   final AiToolCall call;
@@ -27,6 +29,13 @@ class PendingFinanceAction {
   /// future-months scope choice, because only a recurring one has a series to
   /// spread across.
   final bool isRecurring;
+
+  /// Optional custom label for the primary confirm button (e.g. "Mark Paid",
+  /// "Delete Entry"). Defaults to "Add it" when null.
+  final String? confirmLabel;
+
+  /// True when this proposal removes or deletes an existing entity.
+  final bool isDestructive;
 }
 
 /// The half of the executor a confirm card talks to.
