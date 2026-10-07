@@ -154,9 +154,11 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
       _category == AccountCategory.creditLine ||
       _category == AccountCategory.bnpl;
 
-  /// The opening "balance" field means *amount owed* for credit accounts.
-  String get _balanceLabel =>
-      _isCredit ? 'Current Balance Owed' : 'Opening Balance';
+  /// The opening "balance" field means *amount owed* for credit accounts —
+  /// the card's full total, installments included (see the presenter).
+  String get _balanceLabel => widget.presenter.accountBalanceLabel(_category);
+  String? get _balanceHint => widget.presenter
+      .accountBalanceHint(_category, accountId: widget.existing?.id);
 
   /// Minimum-payment rule shown and saved: the explicit pick, else the
   /// category default (credit card → % of balance; line/BNPL → pay in full).
@@ -178,7 +180,9 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     final existing = widget.existing;
     if (existing != null) {
       _nameController.text = existing.name;
-      _balanceController.text = existing.balance.toStringAsFixed(2);
+      _balanceController.text = widget.presenter
+          .accountBalanceFieldValue(existing)
+          .toStringAsFixed(2);
       _category = existing.category;
       _selectedColor = existing.colorHex;
       _iconKey = existing.icon;
@@ -266,8 +270,11 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     try {
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-      final balance =
-          double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0;
+      final balance = widget.presenter.balanceFromField(
+        _category,
+        double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0,
+        accountId: widget.existing?.id,
+      );
       final goalTarget = _isGoal && _goalTargetController.text.isNotEmpty
           ? double.tryParse(_goalTargetController.text.replaceAll(',', ''))
           : null;
@@ -477,6 +484,8 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                               ],
                               decoration: InputDecoration(
                                 labelText: _balanceLabel,
+                                helperText: _balanceHint,
+                                helperMaxLines: 2,
                                 prefixText: '₱ ',
                                 isDense: true,
                                 border: const OutlineInputBorder(),
@@ -486,7 +495,11 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                                   _submit(), // Enter submits (U6)
                               // Reject malformed numbers (e.g. "1.2.3") instead
                               // of silently coercing them to 0. (Plan 052 C6)
-                              validator: _optionalAmountValidator,
+                              validator: (v) =>
+                                  _optionalAmountValidator(v) ??
+                                  widget.presenter.accountBalanceError(
+                                      _category, v,
+                                      accountId: widget.existing?.id),
                             ),
                           ),
                         ],

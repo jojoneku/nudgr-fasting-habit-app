@@ -1254,7 +1254,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       creditLines = t.creditAccounts.map((a) {
         return AdvisorCreditLine(
           name: a.name,
-          owed: a.currentPayable,
+          // Total debt, installments included — the figure the dashboard
+          // shows. The billed balance alone told Nudgy a card with ₱5,333 of
+          // installments on it owed ₱397.
+          owed: a.totalDebt,
           available: a.availableCredit,
           // The when alone: the minimum is its own field, and the dashboard's
           // due line already carries it.

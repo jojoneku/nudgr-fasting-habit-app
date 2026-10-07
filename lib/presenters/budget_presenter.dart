@@ -988,6 +988,12 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
+    // A loaded ledger's accounts win: they carry the live installment holds,
+    // which storage does not keep. Still loading, its notify mirrors them in.
+    final ledgerNow = _ledger;
+    if (ledgerNow != null && !ledgerNow.isLoading) {
+      _accounts = ledgerNow.accounts;
+    }
     // After the accounts load — the repair has to recognise account ids.
     await _repairOrphanedSavingsBudgets();
     _cachedNotifPrefs = await _storage.loadNotificationPreferences();

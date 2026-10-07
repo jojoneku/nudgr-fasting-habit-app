@@ -95,8 +95,8 @@ const List<AiTool> kFinanceTools = [
     description:
         'Find installment plans (e.g. credit card 0% plans, SPayLater, BNPL), '
         'with their monthly payment, total months, remaining unbilled balance, '
-        'and account. Call this when the user asks about their installments or '
-        'BNPL purchases.',
+        'and account. Lists every plan, not one month\'s. Call this when the '
+        'user asks about their installments or BNPL purchases.',
     inputSchema: {
       'type': 'object',
       'properties': {
@@ -358,11 +358,15 @@ const List<AiTool> kFinanceTools = [
     name: 'addInstallment',
     kind: AiToolKind.create,
     description:
-        'Propose a new installment purchase on a credit card or BNPL account '
-        '(e.g. SPayLater, ShopeePay, credit card installment). This logs the '
-        'purchase, holds credit limit, and schedules monthly dues across the '
-        'given duration. Call as soon as you have a name, total amount, account, '
-        'and number of months.',
+        'Propose a new installment purchase on a credit card, credit line or '
+        'BNPL account (e.g. SPayLater, a credit card 0% plan). This logs the '
+        'purchase, holds that much of the credit limit, and splits it into '
+        'monthly payments billed on the account\'s statement. Call as soon as '
+        'you have a name, total amount, credit account and number of months — '
+        'the confirmation card is how the user is asked. It only goes on a '
+        'credit account; a purchase paid in one go is a logTransactions '
+        'entry, not an installment. If the call fails, relay the reason and '
+        'ask the user rather than guessing a value.',
     inputSchema: {
       'type': 'object',
       'required': ['name', 'amount', 'months'],
@@ -374,21 +378,24 @@ const List<AiTool> kFinanceTools = [
         },
         'amount': {
           'type': 'number',
-          'description': 'Total purchase amount in pesos.',
+          'description': 'Total purchase amount in pesos, above zero.',
         },
         'months': {
           'type': 'integer',
-          'description': 'Number of monthly installments, e.g. 3, 6, 12, 24.',
+          'description': 'Number of monthly payments, at least 2, e.g. 3, 6, '
+              '12, 24. Ask the user if they did not say.',
         },
         'account': {
           'type': 'string',
-          'description':
-              'Credit card or BNPL account NAME, e.g. "ShopeePay", "BDO Card".',
+          'description': 'Credit card, credit line or BNPL account NAME, '
+              'exactly as the snapshot spells it. May be omitted only when '
+              'the user has a single credit account.',
         },
         'interestRate': {
           'type': 'number',
-          'description':
-              'Monthly add-on interest rate in percent (e.g. 0 for 0% promo, 1.5 for 1.5%/mo). Default 0.',
+          'description': 'MONTHLY add-on interest rate in percent: 0 for a 0% '
+              'promo, 1.5 for 1.5% a month. Not an annual rate — divide a '
+              'yearly rate by 12. Default 0.',
         },
         'category': {
           'type': 'string',
@@ -397,7 +404,8 @@ const List<AiTool> kFinanceTools = [
         },
         'date': {
           'type': 'string',
-          'description': 'YYYY-MM-DD purchase date. Defaults to today.',
+          'description': 'YYYY-MM-DD purchase date. Defaults to today. Never '
+              'a future date.',
         },
         'note': {
           'type': 'string',
