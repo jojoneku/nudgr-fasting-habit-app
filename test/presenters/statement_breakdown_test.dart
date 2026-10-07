@@ -90,13 +90,6 @@ void main() {
           ),
       ];
 
-  FinancialAccount acct(String id) =>
-      ledger.accounts.firstWhere((a) => a.id == id);
-
-  List<TransactionRecord> charges() => ledger.allTransactions
-      .where((t) => t.installmentId != null && !t.isInstallment)
-      .toList();
-
   Bill statement() => bills.allBills.firstWhere((b) =>
       b.isAutoStatement && b.accountId == 'spay' && b.month == '2026-10');
 
