@@ -1244,8 +1244,7 @@ _ADVISOR_SYSTEM_PREFIX = (
     "7. If you realise you broke a rule mid-answer, output a line starting "
     "'> Correction:' with the corrected statement.\n"
     "8. When tools are available you may PROPOSE creating, editing or deleting "
-    "bills, receivables, set-asides and budgets, and you may propose ledger "
-    "transactions with logTransactions, by calling one. A proposal is "
+    "bills, receivables, set-asides, budgets, and transactions, or paying debts, by calling one. A proposal is "
     "not a change: the user sees a confirmation card and decides. CALL THE "
     "TOOL IN THE SAME TURN the user asks for the change, as soon as you have "
     "the fields it requires. Answering 'sure, I can add that' without calling "
@@ -1269,10 +1268,15 @@ _ADVISOR_SYSTEM_PREFIX = (
     "transactions, never tell the user to hand them to a logger themselves, "
     "and never write out a table of entries instead of calling the tool: the "
     "rows appear on a review card, and only the user's tap saves them, so a "
-    "list in prose logs nothing. What you still CANNOT do is EDIT or DELETE a "
-    "transaction that is already in the ledger, or create or edit an account — "
-    "for a correction, say plainly that they need to open that entry in the "
-    "Ledger.\n"
+    "list in prose logs nothing. When the user asks to mark a bill paid ('paid Meralco'), "
+    "mark a receivable received ('Jana paid me back'), pay a credit card ('paid my BPI CC'), "
+    "or check accounts/affordability, call markBillPaid, markReceivableReceived, payCredit, "
+    "findAccounts, or checkAffordability. For editing or deleting an existing transaction "
+    "(editTransaction, deleteTransaction), bill (editBill, deleteBill), receivable "
+    "(editReceivable, deleteReceivable), or set-aside (editSetAside, deleteSetAside), you MUST "
+    "have its exact id. If you do not have the id yet, call findTransactions, findBills, "
+    "findReceivables, or findSetAsides first to locate the entry and its id, then propose the "
+    "change. What you still cannot do is create, edit or delete an account.\n"
     "9. DATES: the snapshot's first line, 'TODAY: ...', is the user's real current date. Trust it "
     "over your own sense of what year it is. A day or month the user names without a year ('Sept "
     "24', 'last Friday', 'March') resolves against TODAY: the most recent one on or before today, "
@@ -1787,6 +1791,10 @@ def advise_finance_stream(payload, request):
                 stop_reason = (ev.get("delta") or {}).get("stop_reason", stop_reason)
                 usage.update(ev.get("usage") or {})
 
+        # Names of tool calls the budget cut off mid-input. Only reported to a
+        # client that said it can resume them (resume_cut_tools); an older app
+        # gets the time notice instead, as before.
+        cut_tools = []
         if stop_reason == "time_budget":
             # A tool_use block whose input was still arriving is not a call --
             # its JSON never finished, so running it would run a tool with no
@@ -1794,15 +1802,19 @@ def advise_finance_stream(payload, request):
             # content_block_stop, which is exactly those.
             for idx in partial_json:
                 if 0 <= idx < len(content):
+                    if content[idx] and content[idx].get("name"):
+                        cut_tools.append(content[idx]["name"])
                     content[idx] = None
+        resumable = bool(cut_tools) and payload.get("resume_cut_tools") is True
 
         content = [b for b in content if b]
         response_text, tool_calls = _split_reply(content)
-        if stop_reason == "time_budget" and tool_calls:
-            # Tool calls survived the cut, so the turn is not over: the client
-            # runs them and comes back on a fresh invocation with a fresh
-            # budget. Saying it stopped early would be wrong, and the notice
-            # would be quoted back to the model as its own words next hop.
+        if stop_reason == "time_budget" and (tool_calls or resumable):
+            # Tool calls survived the cut, or the client will ask again for
+            # the one that was cut, so the turn is not over: the next hop is a
+            # fresh invocation with a fresh budget. Saying it stopped early
+            # would be wrong, and the notice would be quoted back to the model
+            # as its own words next hop.
             truncated = False
         else:
             truncated = stop_reason in ("max_tokens", "time_budget")
@@ -1825,6 +1837,7 @@ def advise_finance_stream(payload, request):
             "truncated": truncated,
             "tool_calls": tool_calls,
             "assistant_content": content,
+            **({"interrupted_tools": cut_tools} if resumable else {}),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)

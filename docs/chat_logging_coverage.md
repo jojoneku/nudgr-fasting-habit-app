@@ -91,12 +91,18 @@ invented becomes a picker on the row, never a fabricated id, and they land on
 the same `EntryReviewCard`. The tool result says NOT SAVED YET in as many
 words: nothing commits until the user taps Log, exactly as on the typed path.
 
-Nudgy still cannot edit or delete a transaction, or touch accounts — see §3.
+### Safe Edit & Delete via Nudgy (Plan 061)
+
+Nudgy supports editing (`editTransaction`) and deleting (`deleteTransaction`) existing transactions:
+1. **Never hallucinated:** The model must look up the exact entry using `findTransactions` first (which surfaces `id=<uuid>`).
+2. **Review card before commit:** Every edit displays a proposal diff card (`FinanceProposalCard`), and deletes display an explicit warning card. Nothing commits until the user explicitly taps confirm.
+3. **No type-flipping:** An `outflow` expense cannot be morphed into an `inflow` (requires deleting and re-logging).
+
+Settlements (`markBillPaid`, `markReceivableReceived`, `payCredit`) and live checks (`findAccounts`, `checkAffordability`) are similarly integrated as confirmed proposals or live reads.
 
 ## 3. The form can do things chat cannot
 
-- **Edit or delete.** Chat only ever creates. Every correction is a form trip.
-  This is structural, not a gap to close: a chat line names no existing row.
+- **Direct unconfirmed edits/deletes.** The ledger form edits records in place immediately. Chat and Nudgy strictly require a user confirmation step on a review card.
 - **Custodian accounts.** The form offers them; chat's account pool excludes
   them, and deliberately so. Custodian accounts are usually named after people
   ("Jana's money"), and chat text mentions people constantly — putting them in

@@ -23,7 +23,46 @@ Before implementing features or proposing architectural changes, check the follo
 
 ---
 
-## 2. Git & GitHub Pull Request Workflow (Critical Nuances)
+## 2. GitHub MCP Tool (Antigravity-Specific)
+
+Antigravity has a **`github-mcp-server`** MCP integration active for this repo (`jojoneku/nudgr-fasting-habit-app`). **Always prefer MCP tools over raw `gh` CLI commands** — they run natively in the agent context without requiring terminal approval prompts.
+
+### MCP Tool → Workflow Action Mapping
+
+| Task | MCP Tool | Notes |
+|---|---|---|
+| Look up repo info | `search_repositories` | Use `user:jojoneku` filter |
+| Create a branch | `create_branch` | Branch off `dev` — pass `sha` from `list_branches` |
+| Push / create / update files | `push_files` | Commit message must follow Conventional Commits |
+| Open a PR | `create_pull_request` | Always set `base: "dev"` |
+| Check PR status / CI | `list_pull_requests`, `pull_request_read` | Read CI checks before merging |
+| Merge a PR | `merge_pull_request` | **Set `merge_method: "merge"` only** — never `squash` or `rebase` |
+| Add PR description / comment | `add_issue_comment` | Use for review notes or summaries |
+| Review a PR | `pull_request_review_write` | For inline code suggestions |
+| List or read issues | `list_issues`, `issue_read` | Check open issues before starting a feature |
+| Create an issue | `issue_write` | Log bugs or feature requests as GitHub Issues |
+
+### Critical Nuances for MCP Usage
+
+> [!IMPORTANT]
+> **`merge_method` must always be `"merge"`** when calling `merge_pull_request`. This repo enforces merge commits. Passing `"squash"` or `"rebase"` will violate history conventions and break the release changelog automation.
+
+> [!WARNING]
+> **Never merge directly into `main`.** All `create_pull_request` calls must use `base: "dev"`. Merging to `dev` triggers the automated `Promote dev → main` pipeline, Supabase migrations, and Lambda deploys — this is intentional.
+
+> [!NOTE]
+> **Local code changes still go through `git` + `run_command`** (write files → `flutter pub get` → `dart analyze lib` → `git add/commit/push`). MCP tools handle the *GitHub* layer (branches, PRs, issues, reviews) — they are not a replacement for local build/test steps.
+
+* Before creating a branch via MCP, always call `list_branches` to get the current `dev` SHA so `create_branch` targets the right commit.
+* When using `push_files`, include all changed files in a single call to produce one atomic commit, rather than one call per file.
+* After merging, confirm deletion of the feature branch by checking that `delete_branch` is passed or the branch no longer appears in `list_branches`.
+
+> [!CAUTION]
+> **Never call `merge_pull_request` autonomously.** After opening a PR, always stop and surface the PR link to the user. Only call `merge_pull_request` after the user explicitly says **"merge"** (or equivalent confirmation). This prevents accidental release triggers from the `dev → main` pipeline.
+
+---
+
+## 3. Git & GitHub Pull Request Workflow (Critical Nuances)
 
 This project uses **GitHub Flow** with specific automation cascades. Follow these exact steps:
 
@@ -94,7 +133,7 @@ git push --force-with-lease
 
 ---
 
-## 3. Core Architectural Guardrails (MVP)
+## 4. Core Architectural Guardrails (MVP)
 
 When writing or reviewing code, uphold these core constraints:
 

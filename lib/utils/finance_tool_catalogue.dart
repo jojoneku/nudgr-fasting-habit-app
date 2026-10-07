@@ -414,6 +414,378 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  AiTool(
+    name: 'findAccounts',
+    kind: AiToolKind.read,
+    description:
+        'Find the user\'s financial accounts (cash, bank accounts, e-wallets, '
+        'credit cards, savings pockets) with their current balances, available credit, '
+        'and types. Call this when the user asks about an account balance or to find '
+        'which account to pay a credit card from.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'query': {
+          'type': 'string',
+          'description':
+              'Account name or partial name, e.g. "gcash", "bpi". Omit to list all accounts.',
+        },
+        'type': {
+          'type': 'string',
+          'enum': ['liquid', 'liability', 'savings', 'all'],
+          'description':
+              'Filter by account category: liquid (bank, ewallet, cash), '
+                  'liability (credit cards, bnpl), savings (savings, goals, time deposits), '
+                  'or all. Defaults to all.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'checkAffordability',
+    kind: AiToolKind.read,
+    description:
+        'Run the "Can I afford it?" check: calculates whether a proposed expense '
+        'or purchase fits within the user\'s projected month-end spare cash after '
+        'all planned bills, savings, and budget allocations. Call when the user '
+        'asks "Can I afford X?", "Do I have enough for Y?", or similar questions.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['amount'],
+      'properties': {
+        'amount': {
+          'type': 'number',
+          'description': 'Proposed purchase or expense amount in pesos.',
+        },
+        'account': {
+          'type': 'string',
+          'description':
+              'Optional account NAME to verify spendable cash on that specific account.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'findBudgetGroups',
+    kind: AiToolKind.read,
+    description:
+        'Summarise high-level budget group allocations and spending (e.g. Needs, '
+        'Wants, Savings) for a month. Call when the user asks how they are doing '
+        'overall across budget groups rather than a single specific category.',
+    inputSchema: {
+      'type': 'object',
+      'properties': {
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. Defaults to the month being viewed.',
+        },
+      },
+    },
+  ),
+
+  // ── Updates & Settlements ────────────────────────────────────────────────
+  AiTool(
+    name: 'payCredit',
+    kind: AiToolKind.create,
+    description:
+        'Propose a payment to a credit card or line of credit (a transfer from a '
+        'liquid account to a liability account, which reduces the debt owed). '
+        'Call as soon as you have the credit card name and the amount — the user '
+        'gets a confirmation card and nothing is saved until they accept it.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['creditAccount', 'amount'],
+      'properties': {
+        'creditAccount': {
+          'type': 'string',
+          'description': 'Credit card or BNPL account NAME being paid.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Payment amount in pesos, always positive.',
+        },
+        'fromAccount': {
+          'type': 'string',
+          'description':
+              'Funding account NAME, e.g. "BPI Savings", "GCash". Optional.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD payment date. Defaults to today.',
+        },
+        'note': {
+          'type': 'string',
+          'description': 'Optional note or reference.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markBillPaid',
+    kind: AiToolKind.update,
+    description:
+        'Mark an existing bill as paid for the month. Call ONLY after findBills '
+        'returns the bill id. The user confirms on a card before the bill is '
+        'marked paid.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding findBills result.',
+        },
+        'paidAmount': {
+          'type': 'number',
+          'description':
+              'Amount paid in pesos. Omit to pay the bill\'s full amount.',
+        },
+        'paidDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD date it was paid. Defaults to today.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME it was paid from, if named by user.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markReceivableReceived',
+    kind: AiToolKind.update,
+    description:
+        'Mark money owed to the user as received. Call ONLY after findReceivables '
+        'returns the receivable id. Settling a receivable creates the offsetting '
+        'income entry in the ledger automatically. The user confirms on a card '
+        'before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding findReceivables result.',
+        },
+        'receivedAmount': {
+          'type': 'number',
+          'description':
+              'Amount received in pesos (if partial). Defaults to full receivable amount.',
+        },
+        'receivedDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD date received. Defaults to today.',
+        },
+        'account': {
+          'type': 'string',
+          'description':
+              'Account NAME the money landed in, e.g. "GCash", "BPI".',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editBill',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing bill (name, amount, due day, or category). '
+        'Call ONLY after findBills returns the bill id. Do NOT supply an id unprompted. '
+        'Nothing is saved until the user accepts the confirmation card.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding findBills call.',
+        },
+        'name': {'type': 'string', 'description': 'Updated bill name.'},
+        'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
+        'dueDay': {
+          'type': 'integer',
+          'description': 'Updated due day of month, 1-31.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Updated category NAME.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editReceivable',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing receivable (name, amount, expected day, or debtor). '
+        'Call ONLY after findReceivables returns the receivable id. '
+        'Nothing is saved until confirmed on the card.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding findReceivables call.',
+        },
+        'name': {'type': 'string', 'description': 'Updated name.'},
+        'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
+        'expectedDay': {
+          'type': 'integer',
+          'description': 'Updated expected day of month, 1-31.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editSetAside',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing set-aside (name, amount, type, or destination). '
+        'Call ONLY after findSetAsides returns the set-aside id. '
+        'Nothing is saved until confirmed.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact set-aside id from a preceding findSetAsides call.',
+        },
+        'name': {'type': 'string', 'description': 'Updated name.'},
+        'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
+        'type': {
+          'type': 'string',
+          'enum': ['savings', 'goal', 'sinkingFund', 'gift', 'other'],
+          'description': 'Updated set-aside purpose.',
+        },
+        'destinationAccount': {
+          'type': 'string',
+          'description': 'Updated destination account NAME.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editTransaction',
+    kind: AiToolKind.update,
+    description:
+        'Propose editing an existing ledger transaction. Call ONLY after '
+        'findTransactions returns the transaction id. The user confirms on a '
+        'card before changes are applied. Do NOT use this to reverse flow '
+        'direction (inflow vs outflow) — ask the user to delete and re-log instead.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact transaction id from a preceding findTransactions call.',
+        },
+        'description': {
+          'type': 'string',
+          'description': 'Updated short description.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Updated amount in pesos, always positive.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'Updated date in YYYY-MM-DD.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Updated category NAME.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Updated account NAME.',
+        },
+        'note': {
+          'type': 'string',
+          'description': 'Updated note or remarks.',
+        },
+      },
+    },
+  ),
+
+  // ── Deletions ────────────────────────────────────────────────────────────
+  AiTool(
+    name: 'deleteBill',
+    kind: AiToolKind.destroy,
+    description:
+        'Propose deleting an existing bill. Call ONLY after findBills returns '
+        'the bill id. The user confirms on a card before the bill is deleted.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding findBills call.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'deleteReceivable',
+    kind: AiToolKind.destroy,
+    description:
+        'Propose deleting an existing receivable. Call ONLY after findReceivables '
+        'returns the receivable id. The user confirms on a card before deletion.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding findReceivables call.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'deleteSetAside',
+    kind: AiToolKind.destroy,
+    description:
+        'Propose deleting an existing set-aside. Call ONLY after findSetAsides '
+        'returns the set-aside id. The user confirms on a card before deletion.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact set-aside id from a preceding findSetAsides call.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'deleteTransaction',
+    kind: AiToolKind.destroy,
+    description:
+        'Propose permanently deleting a ledger transaction. Call ONLY after '
+        'findTransactions returns the transaction id. The user confirms on an '
+        'explicit warning card before the transaction is deleted.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact transaction id from a preceding findTransactions call.',
+        },
+      },
+    },
+  ),
 ];
 
 /// The catalogue in the shape the backend forwards to Bedrock.

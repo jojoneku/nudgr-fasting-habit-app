@@ -420,6 +420,69 @@ def test_an_unfinished_tool_call_is_dropped_rather_than_run_with_no_arguments(
     assert frames[-1]["assistant_content"] == []
 
 
+def _prose_then_cut_tool():
+    """A model that writes a sentence, starts a tool call, and is still sending
+    its input when the budget runs out."""
+    yield {"type": "message_start", "message": {"usage": {}}}
+    yield {"type": "content_block_start", "index": 0,
+           "content_block": {"type": "text"}}
+    yield {"type": "content_block_delta", "index": 0,
+           "delta": {"type": "text_delta", "text": "Here is the plan. "}}
+    yield {"type": "content_block_stop", "index": 0}
+    yield {"type": "content_block_start", "index": 1,
+           "content_block": {"type": "tool_use", "id": "t1",
+                             "name": "addInstallment"}}
+    for _ in range(20):
+        yield {"type": "content_block_delta", "index": 1,
+               "delta": {"type": "input_json_delta",
+                         "partial_json": '{"amount":'}}
+
+
+def _resuming_body():
+    return json.dumps({
+        "payload": {
+            "context": {"summary": "ACCOUNTS\n- Cash: 100"},
+            "messages": [{"role": "user", "text": "add my phone installment"}],
+            "resume_cut_tools": True,
+        }
+    }).encode()
+
+
+def test_a_client_that_resumes_is_told_which_tool_was_cut(
+        _valid_token, _no_rate_limit_calls, _fake_clock, monkeypatch):
+    # The fake clock ticks once per read; 8 lands the cut mid tool input.
+    monkeypatch.setattr(lf, "_ADVISOR_STREAM_BUDGET_SEC", 8.0)
+    monkeypatch.setattr(lf._bedrock, "invoke_model_with_response_stream",
+                        lambda **kw: _bedrock_events(_prose_then_cut_tool()))
+
+    frames = _frames(_call(headers=_valid_token, body=_resuming_body()).body)
+
+    end = frames[-1]
+    assert end["type"] == "end"
+    assert end["interrupted_tools"] == ["addInstallment"]
+    # The client asks again for the cut call, so the turn is not over: no
+    # "stopped here" notice, which the model would read back as its own words.
+    assert end["truncated"] is False
+    assert "stopped here" not in end["response"]
+    assert end["response"].strip() == "Here is the plan."
+    assert end["tool_calls"] == []
+
+
+def test_an_older_client_still_gets_the_time_notice(
+        _valid_token, _no_rate_limit_calls, _fake_clock, monkeypatch):
+    # The fake clock ticks once per read; 8 lands the cut mid tool input.
+    monkeypatch.setattr(lf, "_ADVISOR_STREAM_BUDGET_SEC", 8.0)
+    monkeypatch.setattr(lf._bedrock, "invoke_model_with_response_stream",
+                        lambda **kw: _bedrock_events(_prose_then_cut_tool()))
+
+    frames = _frames(_call(headers=_valid_token, body=_advisor_body()).body)
+
+    end = frames[-1]
+    assert "interrupted_tools" not in end
+    assert end["truncated"] is True
+    assert "stopped here" in end["response"]
+
+
 # ── Prompt trust boundary ─────────────────────────────────────────────────────
 #
 # These assert the injection rules are actually IN the prompts, which is the

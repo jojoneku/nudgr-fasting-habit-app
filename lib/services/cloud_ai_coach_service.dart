@@ -281,6 +281,10 @@ class CloudAiCoachService implements AiCoachService {
         if (img != null) 'mime_type': context.imageMimeType ?? 'image/jpeg',
         if (tools.isNotEmpty)
           'tools': [for (final t in tools) t.toRequestJson()],
+        // This client asks again for a tool call the server's time budget cut
+        // off mid-input, so the server may report it instead of ending the
+        // turn with a "stopped early" notice. See AdvisorReply.interruptedTools.
+        if (tools.isNotEmpty) 'resume_cut_tools': true,
         // A turn is sent when it has text OR content blocks. The blocks path is
         // the tool loop: an assistant turn holding a tool_use usually carries
         // no text, and dropping it would orphan the tool_result answering it,
