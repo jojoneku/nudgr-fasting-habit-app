@@ -426,6 +426,7 @@ void main() {
       expect(open.label, '1/3 · on statement, due Oct 15');
       expect(open.statement?.id, statement().id);
       expect(open.linkLabel, 'View SPayLater statement');
+      expect(open.note, "Linked to SPayLater statement · can't be paid alone");
 
       await bills.markBillPaid(statement().id,
           paidAmount: 2424.40, accountId: 'bank');

@@ -3374,6 +3374,7 @@ class _InstallmentRow extends StatelessWidget {
     final progress = presenter.paymentProgress(installment.id);
     final detailLine = [
       if (onStatement != null) onStatement.label,
+      if (onStatement != null) onStatement.note,
       presenter.detailLine(installment, withRemaining: true) ?? '',
     ].where((s) => s.isNotEmpty).join(' · ');
 

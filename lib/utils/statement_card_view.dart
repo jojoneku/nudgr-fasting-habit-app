@@ -109,10 +109,16 @@ class InstallmentStatementStatus {
   /// "View ShopeePay statement" when [statement] is set; else null.
   final String? linkLabel;
 
+  /// "Linked to ShopeePay statement · can't be paid alone" — why the row has
+  /// no Pay button: the issuer bills the month on the statement, and only the
+  /// statement can be paid.
+  final String note;
+
   const InstallmentStatementStatus({
     required this.statement,
     required this.paid,
     required this.label,
     required this.linkLabel,
+    required this.note,
   });
 }

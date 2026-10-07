@@ -1154,7 +1154,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       icon: Icons.credit_score_outlined,
       iconColor: context.appColors.purple,
       name: inst.name,
-      note: account?.name,
+      // On a card with statements the note says why there is no Pay button:
+      // the month can only be paid with the whole statement.
+      note: onStatement?.note ?? account?.name,
       progress: widget.installmentPresenter.paymentProgress(inst.id),
       amount: inst.monthlyAmount,
       dateLabel:

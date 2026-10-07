@@ -1333,6 +1333,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (account == null || !account.hasBillingCycle) return null;
     final billed = inst.paidCount(_ledger.allTransactions);
     final total = inst.totalMonths;
+    final note = "Linked to ${account.name} statement · can't be paid alone";
     final statement = _allBills
         .where((b) =>
             b.billType == BillType.creditCard &&
@@ -1354,6 +1355,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           paid: true,
           label: '$n · paid with statement',
           linkLabel: link,
+          note: note,
         );
       }
       final due = DateFormat('MMM d').format(billDueDate(statement));
@@ -1362,6 +1364,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         paid: false,
         label: '$n · on statement, due $due',
         linkLabel: link,
+        note: note,
       );
     }
     if (billed >= total) {
@@ -1370,6 +1373,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         paid: true,
         label: '$total/$total · all billed',
         linkLabel: null,
+        note: note,
       );
     }
     return InstallmentStatementStatus(
@@ -1377,6 +1381,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       paid: false,
       label: '${billed + 1}/$total · bills on the next statement',
       linkLabel: null,
+      note: note,
     );
   }
 
