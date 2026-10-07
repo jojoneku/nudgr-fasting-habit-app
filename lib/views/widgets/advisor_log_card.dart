@@ -46,20 +46,24 @@ class AdvisorLogCard extends StatelessWidget {
     final pending = proposals?.pending;
 
     Widget? body;
-    if (hardError != null) {
-      body = _Error(
-          message: hardError.userMessage, onDismiss: ledger.clearChatHardError);
-    } else if (pending != null) {
-      // A pending proposal outranks the logging states: the tool loop is
-      // blocked on this answer, and nothing else in the chat can progress
-      // until the user gives one.
+    if (pending != null) {
+      // A pending proposal outranks everything else here, the ledger's error
+      // included: the tool loop is blocked on this answer, and nothing else in
+      // the chat can progress until the user gives one. The error it used to
+      // sit behind was usually left by an earlier message — or by the hub's
+      // quick-log bar, which shares the ledger — so the suggestion never
+      // appeared and the turn waited on an answer nobody could give.
       // Keyed by proposal, so the next one in a run gets its own State rather
       // than inheriting the previous card's "busy" and recurrence choice.
       body = FinanceProposalCard(
         key: ValueKey(pending.call.id),
         host: proposals!,
         action: pending,
+        maxBodyHeight: maxRowsHeight,
       );
+    } else if (hardError != null) {
+      body = _Error(
+          message: hardError.userMessage, onDismiss: ledger.clearChatHardError);
     } else if (state.phase == ChatPhase.classifying) {
       body = _Thinking(cs: cs);
     } else if (state.entries.isNotEmpty) {

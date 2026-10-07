@@ -140,22 +140,57 @@ class Installment {
   int remainingMonths(Iterable<TransactionRecord> transactions) =>
       (totalMonths - paidCount(transactions)).clamp(0, totalMonths);
 
-  /// Total unbilled principal remaining to be charged.
+  /// What this plan will still bill: [remainingMonths] × [monthlyAmount].
+  ///
+  /// Not remaining principal — [monthlyAmount] carries the add-on interest
+  /// ([monthlyInterest]), so an interest-bearing plan holds principal AND the
+  /// interest still to come. That is deliberate: it is what the issuer holds
+  /// against the credit limit, and what the card's "owe" figure should show.
   double remainingAmount(Iterable<TransactionRecord> transactions) =>
       remainingMonths(transactions) * monthlyAmount;
 
-  /// Total unbilled installment debt across all active installments for [accountId].
+  /// What the active plans on [accountId] will still bill, interest included
+  /// (see [remainingAmount]).
   static double totalUnbilledForAccount(
     String accountId,
     Iterable<Installment> installments,
     Iterable<TransactionRecord> transactions,
+  ) =>
+      holdsByAccount(
+        installments.where((i) => i.accountId == accountId),
+        transactions,
+      )[accountId] ??
+      0.0;
+
+  /// The credit hold of every account with an active plan: account id → what
+  /// its plans will still bill, interest included (see [remainingAmount]).
+  /// Accounts with no active plan are absent.
+  ///
+  /// [remainingAmount] stays the single source of the per-plan figure. Only
+  /// the scan is indexed: transactions are grouped by `installmentId` once, so
+  /// each plan reads its own records instead of every plan rescanning the
+  /// whole ledger. That relies on [paidCount] counting only records linked to
+  /// the plan by `installmentId` — which is what links a payment to a plan.
+  static Map<String, double> holdsByAccount(
+    Iterable<Installment> installments,
+    Iterable<TransactionRecord> transactions,
   ) {
-    var total = 0.0;
-    for (final inst in installments) {
-      if (!inst.isActive || inst.accountId != accountId) continue;
-      total += inst.remainingAmount(transactions);
+    final active = installments.where((i) => i.isActive).toList();
+    if (active.isEmpty) return const {};
+    final planIds = {for (final i in active) i.id};
+    final byPlan = <String, List<TransactionRecord>>{};
+    for (final t in transactions) {
+      final id = t.installmentId;
+      if (id != null && planIds.contains(id)) {
+        (byPlan[id] ??= []).add(t);
+      }
     }
-    return total;
+    final holds = <String, double>{};
+    for (final plan in active) {
+      final remaining = plan.remainingAmount(byPlan[plan.id] ?? const []);
+      holds[plan.accountId] = (holds[plan.accountId] ?? 0.0) + remaining;
+    }
+    return holds;
   }
 
   static String _offsetMonth(String monthKey, int months) {
@@ -171,12 +206,13 @@ class Installment {
       accountId: json['accountId'] as String,
       totalAmount: (json['totalAmount'] as num).toDouble(),
       monthlyAmount: (json['monthlyAmount'] as num).toDouble(),
-      totalMonths: json['totalMonths'] as int,
+      // num, not int: a cloud round-trip can hand back 12.0.
+      totalMonths: (json['totalMonths'] as num).toInt(),
       startMonth: json['startMonth'] as String,
       purchaseDate: json['purchaseDate'] != null
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
-      deferralMonths: json['deferralMonths'] as int? ?? 0,
+      deferralMonths: (json['deferralMonths'] as num?)?.toInt() ?? 0,
       interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
       categoryId: json['categoryId'] as String?,

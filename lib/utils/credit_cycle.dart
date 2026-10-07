@@ -15,6 +15,7 @@ import 'package:intl/intl.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/credit_brand_presets.dart';
 import '../models/finance/financial_account.dart';
+import '../models/finance/installment.dart';
 import 'credit_finance_charge.dart';
 import 'finance_format.dart';
 
@@ -114,6 +115,37 @@ CreditCycle creditCycleContaining(
   final anchor = DateTime(y, m); // normalises a December roll-over
   return creditCycleClosingIn(anchor.year, anchor.month,
       statementDay: stmt, dueDay: dueDay, daysAfter: daysAfter);
+}
+
+/// How many of [plan]'s monthly charges the statement closing at [cycle] on
+/// [account] should have billed by now: one per statement, from the first
+/// statement whose payment falls due in or after the plan's start month.
+///
+/// Counted per statement, not per due month. Under a long days-after-close
+/// rule some months have no due date at all (closes Jan 15, due Jan 30; closes
+/// Feb 15, due Mar 2) and others have two. Counting due months then billed two
+/// months onto the statement after the gap.
+int installmentChargesDueAt(
+  FinancialAccount account,
+  Installment plan,
+  CreditCycle cycle,
+) {
+  final start = DateTime.parse('${plan.startMonth}-01');
+  DateTime? firstClose;
+  for (var k = -2; k <= 1 && firstClose == null; k++) {
+    final m = DateTime(start.year, start.month + k);
+    final c = account.cycleClosingIn(m.year, m.month);
+    if (c != null && c.dueMonthKey.compareTo(plan.startMonth) >= 0) {
+      firstClose = c.close;
+    }
+  }
+  if (firstClose == null) return 0;
+  final statements = (cycle.close.year - firstClose.year) * 12 +
+      cycle.close.month -
+      firstClose.month +
+      1;
+  if (statements <= 0) return 0;
+  return statements < plan.totalMonths ? statements : plan.totalMonths;
 }
 
 /// Account-level conveniences. Null when [a] has no billing cycle configured.
@@ -329,21 +361,27 @@ String? installmentCycleExplanation(
   }
   final cycle = account.cycleContaining(purchaseDate);
   if (cycle == null) return null;
-  final stmtDay = account.statementDay!;
-  final isAfterCutoff = purchaseDate.day > stmtDay;
+  // Clamped like the cycle math, so the words match the statement it picks.
+  final stmtDay = account.statementDay!.clamp(1, 28);
   final closeFmt = DateFormat('MMM d').format(cycle.close);
   final cutoffFmt =
       monthDayLabel(DateTime(purchaseDate.year, purchaseDate.month, stmtDay));
 
-  final effectiveDue = deferralMonths > 0
-      ? DateTime(
-          cycle.due.year, cycle.due.month + deferralMonths, cycle.due.day)
-      : cycle.due;
-  final dueFmt = DateFormat('MMM yyyy').format(effectiveDue);
+  // The month the saved start month will hold, so the hint and the plan
+  // agree. Shifting the due DATE by whole months overflowed on a 29th–31st
+  // due day (Jan 30 + 1 month → "Mar").
+  final startMonth = calculateInstallmentStartMonth(account, purchaseDate,
+      deferralMonths: deferralMonths);
+  final dueFmt =
+      DateFormat('MMM yyyy').format(DateTime.parse('$startMonth-01'));
 
-  final cutoffPhrase = isAfterCutoff
-      ? 'Purchased after $cutoffFmt cut-off → Charged on $closeFmt statement'
-      : 'Purchased before $cutoffFmt cut-off → Charged on $closeFmt statement';
+  final when = purchaseDate.day > stmtDay
+      ? 'after'
+      : purchaseDate.day == stmtDay
+          ? 'on the'
+          : 'before';
+  final cutoffPhrase =
+      'Purchased $when $cutoffFmt cut-off → Charged on $closeFmt statement';
 
   if (deferralMonths > 0) {
     return '$cutoffPhrase · Deferred $deferralMonths ${deferralMonths == 1 ? 'mo' : 'mos'} · Due in $dueFmt';

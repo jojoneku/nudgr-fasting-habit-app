@@ -14,7 +14,6 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
-import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
@@ -3317,9 +3316,9 @@ class _InstallmentRow extends StatelessWidget {
     final canPay = presenter.canMarkPaid(installment);
     final canUndo = presenter.canMarkUnpaid(installment);
     final count = presenter.paidCount(installment.id);
-    final remainingAmt = presenter.remainingAmount(installment.id);
     final progress = presenter.paymentProgress(installment.id);
-    final accountName = presenter.accountName(installment.accountId);
+    final detailLine =
+        presenter.detailLine(installment, withRemaining: true) ?? '';
 
     return Container(
       decoration: showDivider
@@ -3389,16 +3388,7 @@ class _InstallmentRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  [
-                    '${formatPeso(remainingAmt)} left',
-                    if (accountName != null) accountName,
-                    if (installment.purchaseDate != null)
-                      'Bought ${DateFormat('MMM d').format(installment.purchaseDate!)}',
-                    if (installment.deferralMonths > 0)
-                      'Deferred ${installment.deferralMonths} ${installment.deferralMonths == 1 ? 'mo' : 'mos'}',
-                    if (presenter.interestLabel(installment) != null)
-                      presenter.interestLabel(installment)!,
-                  ].join(' · '),
+                  detailLine,
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),
@@ -3542,23 +3532,20 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   int _deferralMonths = 0;
   double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
-  bool _startMonthManuallyEdited = false;
+
+  /// True once the start-month stepper was used in THIS session. Until then
+  /// the start month follows account / purchase date / deferral — on edit
+  /// too, so changing the deferral saves the month the hint shows.
+  bool _startMonthTouched = false;
   bool _isSubmitting = false;
 
   static const _monthPresets = [3, 6, 12, 24];
 
-  FinancialAccount? get _selectedAccount {
-    for (final a in widget.presenter.accounts) {
-      if (a.id == _accountId) return a;
-    }
-    return null;
-  }
-
   void _recalculateStartMonth() {
-    if (_startMonthManuallyEdited) return;
-    final computed = calculateInstallmentStartMonth(
-      _selectedAccount,
-      _purchaseDate,
+    if (_startMonthTouched) return;
+    final computed = widget.presenter.suggestedStartMonth(
+      accountId: _accountId,
+      purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
     );
     setState(() => _startMonth = computed);
@@ -3580,10 +3567,9 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   }
 
   Widget _buildCycleHint(ThemeData theme, ColorScheme cs) {
-    final account = _selectedAccount;
-    final explanation = installmentCycleExplanation(
-      account,
-      _purchaseDate,
+    final explanation = widget.presenter.cycleHint(
+      accountId: _accountId,
+      purchaseDate: _purchaseDate,
       deferralMonths: _deferralMonths,
     );
     if (explanation == null) return const SizedBox.shrink();
@@ -3617,16 +3603,19 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     );
   }
 
-  Widget _buildInterestSummary(ThemeData theme, ColorScheme cs) {
-    final total =
-        double.tryParse(_totalController.text.replaceAll(',', '')) ?? 0.0;
-    final monthlyInterest = total * (_interestRate / 100.0);
-    final totalInterest = monthlyInterest * _totalMonths;
-    final totalPayable = total + totalInterest;
-    final rateLabel = _interestRate == _interestRate.roundToDouble()
-        ? '${_interestRate.round()}%'
-        : '${_interestRate.toStringAsFixed(2)}%';
+  InstallmentInterestPreview? get _interestPreview =>
+      widget.presenter.interestPreview(
+        principal: _parseAmount(_totalController.text),
+        months: _totalMonths,
+        rate: _interestRate,
+        monthlyAmount: _parseAmount(_monthlyController.text),
+      );
 
+  static double? _parseAmount(String text) =>
+      double.tryParse(text.replaceAll(',', ''));
+
+  Widget _buildInterestSummary(
+      ThemeData theme, ColorScheme cs, InstallmentInterestPreview preview) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -3641,7 +3630,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Interest: ${formatPeso(totalInterest)} ($rateLabel/mo) · Total payable: ${formatPeso(totalPayable)}',
+              preview.label,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
                 height: 1.3,
@@ -3671,7 +3660,6 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _deferralMonths = e.deferralMonths;
       _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
-      _startMonthManuallyEdited = true;
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
@@ -3687,16 +3675,19 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(2);
 
   void _recomputeMonthly() {
-    if (_monthlyManuallyEdited) return;
-    final total = double.tryParse(_totalController.text.replaceAll(',', ''));
-    if (total != null && _totalMonths > 0) {
-      final monthly = Installment.computeMonthlyAmount(
-        principal: total,
-        months: _totalMonths,
-        monthlyRate: _interestRate,
-      );
-      _monthlyController.text = _trim(monthly);
-    }
+    // Rebuild either way: the interest preview reads the total.
+    setState(() {
+      if (_monthlyManuallyEdited) return;
+      final total = _parseAmount(_totalController.text);
+      if (total != null && _totalMonths > 0) {
+        final monthly = Installment.computeMonthlyAmount(
+          principal: total,
+          months: _totalMonths,
+          monthlyRate: _interestRate,
+        );
+        _monthlyController.text = _trim(monthly);
+      }
+    });
   }
 
   void _onMonthsChanged(int months) {
@@ -3720,7 +3711,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     final next = DateTime(date.year, date.month + delta);
     setState(() {
       _startMonth = toMonthKey(next);
-      _startMonthManuallyEdited = true;
+      _startMonthTouched = true;
     });
   }
 
@@ -3738,30 +3729,23 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     if (_accountId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      final total = double.parse(_totalController.text.replaceAll(',', ''));
-      final monthly = double.parse(_monthlyController.text.replaceAll(',', ''));
-      final note = _noteController.text.trim();
       final existing = widget.existing;
-      final installment = Installment(
-        id: existing?.id ??
-            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-        name: _nameController.text.trim(),
+      // No category picker here: buildInstallment keeps the existing one.
+      final installment = widget.presenter.buildInstallment(
+        existing: existing,
+        name: _nameController.text,
         accountId: _accountId!,
-        totalAmount: total,
-        monthlyAmount: monthly,
+        totalAmount: _parseAmount(_totalController.text)!,
+        monthlyAmount: _parseAmount(_monthlyController.text)!,
         totalMonths: _totalMonths,
         startMonth: _startMonth,
         purchaseDate: _purchaseDate,
         deferralMonths: _deferralMonths,
         interestRate: _interestRate,
-        note: note.isEmpty ? null : note,
-        isActive: existing?.isActive ?? true,
+        note: _noteController.text,
       );
-      if (existing == null) {
-        await widget.presenter.addInstallment(installment);
-      } else {
-        await widget.presenter.updateInstallment(installment);
-      }
+      await widget.presenter
+          .saveInstallment(installment, isEdit: existing != null);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) AppToast.error(context, 'Could not save installment: $e');
@@ -3782,6 +3766,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     ];
     final isEdit = widget.existing != null;
     final isCustomMonths = !_monthPresets.contains(_totalMonths);
+    final interestPreview = _interestPreview;
 
     return AlertDialog(
       title: Text(isEdit ? 'Edit Installment' : 'Add Installment'),
@@ -3929,38 +3914,21 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                   spacing: WebInsets.sm,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    for (final r in [0.0, 0.5, 1.0, 1.5, 2.0])
+                    for (final r in InstallmentPresenter.ratePresets)
                       ChoiceChip(
-                        label: Text(r == 0
-                            ? '0% (Promo)'
-                            : '${r == r.roundToDouble() ? r.round() : r}%'),
+                        label: Text(InstallmentPresenter.ratePresetLabel(r)),
                         selected: _interestRate == r,
                         onSelected: (_) => _onInterestRateChanged(r),
                       ),
-                    SizedBox(
-                      width: 88,
-                      child: TextFormField(
-                        decoration: InputDecoration(
-                          labelText: 'Custom %',
-                          isDense: true,
-                          filled: ![0.0, 0.5, 1.0, 1.5, 2.0]
-                              .contains(_interestRate),
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        onChanged: (v) {
-                          final parsed = double.tryParse(v);
-                          if (parsed != null && parsed >= 0) {
-                            _onInterestRateChanged(parsed);
-                          }
-                        },
-                      ),
+                    _WebCustomRateField(
+                      rate: _interestRate,
+                      onChanged: _onInterestRateChanged,
                     ),
                   ],
                 ),
-                if (_interestRate > 0) ...[
+                if (interestPreview != null) ...[
                   const SizedBox(height: WebInsets.sm),
-                  _buildInterestSummary(theme, cs),
+                  _buildInterestSummary(theme, cs, interestPreview),
                 ],
                 const SizedBox(height: WebInsets.md),
                 TextFormField(
@@ -4033,6 +4001,81 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
               : Text(isEdit ? 'Save' : 'Add Installment'),
         ),
       ],
+    );
+  }
+}
+
+/// The "Custom %" box beside the interest-rate chips. [rate] is the dialog's
+/// current rate wherever it came from: a custom rate shows here when the
+/// dialog opens on it, and a chip tap clears what was typed.
+///
+/// It only rewrites its own text when the rate changed from OUTSIDE (a chip):
+/// a value it just emitted is left alone, so backspacing "2.5" to "2." (which
+/// parses as the 2% preset) doesn't wipe the field mid-typing.
+class _WebCustomRateField extends StatefulWidget {
+  final double rate;
+  final ValueChanged<double> onChanged;
+
+  const _WebCustomRateField({required this.rate, required this.onChanged});
+
+  @override
+  State<_WebCustomRateField> createState() => _WebCustomRateFieldState();
+}
+
+class _WebCustomRateFieldState extends State<_WebCustomRateField> {
+  final _controller = TextEditingController();
+
+  /// The last rate this field sent up, or null when it holds no value.
+  double? _emitted;
+
+  bool get _active => !InstallmentPresenter.isPresetRate(widget.rate);
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFrom(widget.rate);
+  }
+
+  @override
+  void didUpdateWidget(_WebCustomRateField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.rate != _emitted) _syncFrom(widget.rate);
+  }
+
+  /// Shows [rate] when it's a custom value, clears the box for a preset.
+  void _syncFrom(double rate) {
+    final custom = !InstallmentPresenter.isPresetRate(rate);
+    _controller.text = custom ? InstallmentPresenter.rateText(rate) : '';
+    _emitted = custom ? rate : null;
+  }
+
+  void _onTyped(String v) {
+    final parsed = double.tryParse(v);
+    if (parsed == null || parsed < 0) return;
+    _emitted = parsed;
+    widget.onChanged(parsed);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 88,
+      child: TextFormField(
+        controller: _controller,
+        decoration: InputDecoration(
+          labelText: 'Custom %',
+          isDense: true,
+          filled: _active,
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        onChanged: _onTyped,
+      ),
     );
   }
 }
