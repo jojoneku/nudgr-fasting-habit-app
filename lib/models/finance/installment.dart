@@ -118,12 +118,13 @@ class Installment {
       accountId: json['accountId'] as String,
       totalAmount: (json['totalAmount'] as num).toDouble(),
       monthlyAmount: (json['monthlyAmount'] as num).toDouble(),
-      totalMonths: json['totalMonths'] as int,
+      // num, not int: a cloud round-trip can hand back 12.0.
+      totalMonths: (json['totalMonths'] as num).toInt(),
       startMonth: json['startMonth'] as String,
       purchaseDate: json['purchaseDate'] != null
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
-      deferralMonths: json['deferralMonths'] as int? ?? 0,
+      deferralMonths: (json['deferralMonths'] as num?)?.toInt() ?? 0,
       interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
       categoryId: json['categoryId'] as String?,
