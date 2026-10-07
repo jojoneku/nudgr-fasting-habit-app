@@ -24,6 +24,7 @@ import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_statement_breakdown_dialog.dart';
 
 final _expectedDateFmt = DateFormat('MMM d, yyyy');
 
@@ -1886,6 +1887,7 @@ class _BillRow extends StatelessWidget {
     final paid = bill.isPaid;
     final accountName = _accountName(bill.accountId);
     final progressNote = presenter.statementProgressNote(bill);
+    final itemsLabel = presenter.statementItemsLabel(bill);
 
     final nameStyle = theme.textTheme.bodyMedium?.copyWith(
       fontWeight: FontWeight.w600,
@@ -1954,6 +1956,21 @@ class _BillRow extends StatelessWidget {
               ],
             ),
           ),
+          if (itemsLabel != null && selection == null) ...[
+            const SizedBox(width: WebInsets.sm),
+            // A credit statement lists what is on it; each item opens the
+            // ledger's edit dialog.
+            TextButton.icon(
+              onPressed: () => showWebStatementBreakdownDialog(
+                context,
+                presenter: presenter,
+                bill: bill,
+              ),
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              icon: const Icon(Icons.receipt_long_outlined, size: 16),
+              label: Text(itemsLabel),
+            ),
+          ],
           const SizedBox(width: WebInsets.md),
           Text(formatPeso(bill.amount), style: amountStyle),
           if (selection == null)
