@@ -444,6 +444,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _isLoading = true;
     safeNotify();
     _installments = await _storage.loadInstallments();
+    // Purchases rewritten by an outdated build lose their installment flag;
+    // restore it while the ledger is ready (statement billing repeats this
+    // for cards with statements).
+    if (!_ledger.isLoading) {
+      await _ledger.repairInstallmentPurchaseFlags(_installments);
+    }
     _awardedXpKeys
       ..clear()
       ..addAll(await _storage.loadAwardedXpKeys());
