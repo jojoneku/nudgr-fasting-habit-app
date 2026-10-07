@@ -157,6 +157,17 @@ class FinancialAccount {
   final double? minimumFixedAmount;
   final double? financeChargeRate; // monthly NOMINAL rate, e.g. 0.03 = 3%
   final String? creditBrand; // preset key, e.g. 'bpi_rewards'; null = manual
+
+  /// What this account's installment plans will still bill: remaining months
+  /// × monthly amount, summed over its active plans — add-on interest
+  /// included, since that is what issuers hold against the limit.
+  ///
+  /// DERIVED, never stored. [toJson] leaves it out and [fromJson] ignores any
+  /// value older builds wrote, because a stored copy lags the plans and the
+  /// payments it is computed from. The installment owner's live plan list is
+  /// the source: `LedgerPresenter.accounts` stamps it on as it hands accounts
+  /// out (see `Installment.holdsByAccount`). Zero on an account read straight
+  /// from storage.
   final double unbilledInstallments;
   final DateTime updatedAt;
 
@@ -268,10 +279,19 @@ class FinancialAccount {
   /// a credit balance, not extra debt, so it floors at zero here.
   double get currentPayable => isLiability && balance > 0 ? balance : 0;
 
-  /// Total debt on this credit account, combining already-billed balance
-  /// ([currentPayable]) and remaining principal held for [unbilledInstallments].
-  double get totalDebt =>
-      isLiability ? currentPayable + unbilledInstallments : 0;
+  /// Total debt on this credit account: the balance plus what its installment
+  /// plans will still bill ([unbilledInstallments], interest included).
+  ///
+  /// An overpaid card (negative balance) offsets its installment hold — the
+  /// credit balance is the bank's money already sitting against those future
+  /// bills — so this is `balance + hold`, floored at zero only as a whole.
+  /// Agrees with the dashboard's `totalLiabilities`, which sums the same
+  /// `balance + hold` per account.
+  double get totalDebt {
+    if (!isLiability) return 0;
+    final owed = balance + unbilledInstallments;
+    return owed > 0 ? owed : 0;
+  }
 
   /// Limit minus what's owed. Null when no limit is set or not a liability.
   /// Uses [totalDebt] so unbilled installments hold credit limit immediately,
@@ -316,8 +336,9 @@ class FinancialAccount {
       minimumFixedAmount: (json['minimumFixedAmount'] as num?)?.toDouble(),
       financeChargeRate: (json['financeChargeRate'] as num?)?.toDouble(),
       creditBrand: json['creditBrand'] as String?,
-      unbilledInstallments:
-          (json['unbilledInstallments'] as num?)?.toDouble() ?? 0.0,
+      // `unbilledInstallments` is derived from the live plans, never read
+      // back: older builds stored it, one write behind the plans, and trusting
+      // that copy double-counted on a cold start.
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -347,7 +368,7 @@ class FinancialAccount {
         'minimumFixedAmount': minimumFixedAmount,
         'financeChargeRate': financeChargeRate,
         'creditBrand': creditBrand,
-        'unbilledInstallments': unbilledInstallments,
+        // No `unbilledInstallments`: derived, see the field.
         'updatedAt': updatedAt.toIso8601String(),
       };
 

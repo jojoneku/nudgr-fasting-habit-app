@@ -285,7 +285,25 @@ Inside **Credit details**:
   placeholders whenever the card owed something today. Unpaid, untransacted ₱0 auto-statements
   are swept away before generation.
 
-### 12.7 Installments are billed onto the card at statement close
+### 12.7 Installment holds
+A credit account's installment plans hold part of its limit before they are billed.
+- **The hold is what the plans will still bill**: for each active plan on the account,
+  `remainingMonths × monthlyAmount` (`Installment.remainingAmount`). The monthly amount carries the
+  add-on interest, so an interest-bearing plan holds the interest still to come as well as the
+  principal. That is what issuers hold against the limit. It is not "remaining principal".
+- **Owe** (`totalDebt`) = `balance + hold`, floored at zero as a whole. An overpaid card (negative
+  balance) offsets its hold: ₱−2,000 with a ₱5,000 hold owes ₱3,000, so ₱47,000 of a ₱50,000 limit
+  is available. This matches `totalLiabilities` on the dashboard, which sums `balance + hold`.
+  **Available** = limit − owe. **Utilization** = owe / limit.
+- **Derived, never stored.** `FinancialAccount.unbilledInstallments` is not written by `toJson`,
+  and `fromJson` ignores any value older builds stored. Storage and sync carry no hold.
+- **One source.** `InstallmentPresenter` owns the plans. `LedgerPresenter` subscribes to it
+  (`watchInstallmentPlans`, wired in `TreasuryPresenters`) and stamps each credit account's live hold
+  onto `LedgerPresenter.accounts`, derived from the plans and the payments in its own transactions.
+  Every other presenter mirrors those accounts, so the dashboard, bills, the account form and Nudgy's
+  credit context all read the same hold, including on a cold start.
+
+### 12.8 Installments are billed onto the card at statement close
 An installment purchase is a ledger record with `isInstallment: true` (no balance effect, not
 spending) plus an `Installment` plan. Its months sit in the account's **hold**
 (`unbilledInstallments` = remaining months × monthly amount), and `totalDebt` = billed balance +
@@ -297,9 +315,11 @@ hold. Issuers bill one month per statement ("[1/3] Item ₱82.92"), and the app 
   "Item — Installment 2/3". The charge raises the card balance and counts toward the plan's
   `paidCount`, so the hold drops by the same amount. `totalDebt` is unchanged; spending is
   recognised in the plan's category when the month is billed.
-- **Idempotent by count, not month key.** A plan should have `chargesDueBy(cycle due month)`
-  charges by now (schedule months up to that month, capped at its length); only the shortfall below
-  `paidCount` is posted. Payment records booked under the old model count, so nothing is billed
+- **Idempotent by count, one per statement.** A plan should have
+  `installmentChargesDueAt(account, plan, cycle)` charges by now: one per statement from the first
+  statement due in or after its start month, capped at its length. Counting statements, not due
+  months, keeps a month with no due date (a long days-after-close rule) from billing two months on
+  the next statement. Only the shortfall below `paidCount` is posted. Payment records booked under the old model count, so nothing is billed
   twice. Charge ids are deterministic (`instchg_<plan>_<n>`), so two devices write the same rows.
 - **Statement amount = `payableAsOf(close)`.** Installment months are already in the balance; there
   is no separate installment sum and no "paid this month" exclusion. A part payment therefore

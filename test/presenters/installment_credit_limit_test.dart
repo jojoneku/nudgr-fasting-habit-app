@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -82,8 +83,7 @@ void main() {
   });
 
   group('FinancialAccount installment debt and availableCredit', () {
-    test(
-        'availableCredit deducts totalDebt (currentPayable + unbilledInstallments)',
+    test('availableCredit deducts totalDebt (balance + unbilledInstallments)',
         () {
       final account = FinancialAccount(
         id: 'cc',
@@ -102,8 +102,12 @@ void main() {
       expect(account.utilization, 12000.0 / 50000.0);
     });
 
-    test(
-        'overpaid card with unbilled installments still respects limit ceiling',
+    // The credit balance offsets the hold: the bank already holds ₱2,000 of
+    // the user's money against the ₱5,000 the plans will still bill, so ₱3,000
+    // is owed and ₱47,000 is free. This used to floor the balance at zero
+    // before adding the hold (₱5,000 owed, ₱45,000 free), which also
+    // disagreed with the dashboard's totalLiabilities (balance + hold).
+    test('overpaid card offsets its unbilled installments, within the limit',
         () {
       final account = FinancialAccount(
         id: 'cc',
@@ -117,8 +121,9 @@ void main() {
       );
 
       expect(account.currentPayable, 0.0);
-      expect(account.totalDebt, 5000.0);
-      expect(account.availableCredit, 45000.0);
+      expect(account.totalDebt, 3000.0);
+      expect(account.availableCredit, 47000.0);
+      expect(account.availableCredit! <= account.creditLimit!, isTrue);
     });
   });
 
@@ -336,6 +341,299 @@ void main() {
       expect(presenter.interestLabel(zero), isNull);
       expect(presenter.interestLabel(intRate), '1%/mo int');
       expect(presenter.interestLabel(fracRate), '1.5%/mo int');
+    });
+  });
+
+  group('InstallmentPresenter due dates and shared form logic', () {
+    late MockStorageService mockStorage;
+    late MockStatsPresenter mockStats;
+    late LedgerPresenter ledger;
+    late InstallmentPresenter presenter;
+
+    FinancialAccount card(
+      String id, {
+      int? statementDay,
+      int? dueDay,
+      int? daysAfter,
+      AccountCategory category = AccountCategory.creditCard,
+    }) =>
+        FinancialAccount(
+          id: id,
+          name: id.toUpperCase(),
+          category: category,
+          balance: 0,
+          creditLimit: 100000,
+          statementDay: statementDay,
+          paymentDueDay: dueDay,
+          dueDaysAfterStatement: daysAfter,
+          colorHex: '#FFFFFF',
+          icon: 'card',
+        );
+
+    // Closes the 20th, due 15 days later (Maya-style "days after statement").
+    final maya = card('maya',
+        statementDay: 20, daysAfter: 15, category: AccountCategory.creditLine);
+    // Closes the 20th, due the 10th (fixed day of month).
+    final bpi = card('bpi', statementDay: 20, dueDay: 10);
+    // Closes the 15th, due 15 days later: Jan 30, then Mar 2 (skips Feb).
+    final midMonth = card('mid', statementDay: 15, daysAfter: 15);
+    // Closes the 28th, due the 5th: the close sits on February's last day.
+    final lateClose = card('late', statementDay: 28, dueDay: 5);
+    // No statement day: a bare due day, clamped to the month's length.
+    final bnpl = card('bnpl', dueDay: 30, category: AccountCategory.bnpl);
+
+    var storedInstallments = <Installment>[];
+
+    Installment plan(String accountId,
+            {String startMonth = '2026-11',
+            String? categoryId,
+            DateTime? purchaseDate,
+            int deferralMonths = 0,
+            double interestRate = 0}) =>
+        Installment(
+          id: 'p-$accountId',
+          name: 'Phone',
+          accountId: accountId,
+          totalAmount: 12000,
+          monthlyAmount: 1000,
+          totalMonths: 12,
+          startMonth: startMonth,
+          categoryId: categoryId,
+          purchaseDate: purchaseDate,
+          deferralMonths: deferralMonths,
+          interestRate: interestRate,
+        );
+
+    setUp(() async {
+      mockStorage = MockStorageService();
+      mockStats = MockStatsPresenter();
+      storedInstallments = [];
+      var accounts = <FinancialAccount>[maya, bpi, midMonth, lateClose, bnpl];
+      var txns = <TransactionRecord>[];
+
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => accounts);
+      when(mockStorage.saveAccounts(any)).thenAnswer((inv) async {
+        accounts = List<FinancialAccount>.from(inv.positionalArguments[0]);
+      });
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => txns);
+      when(mockStorage.saveTransactions(any)).thenAnswer((inv) async {
+        txns = List<TransactionRecord>.from(inv.positionalArguments[0]);
+      });
+      when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(mockStorage.saveFinanceCategories(any)).thenAnswer((_) async {});
+      when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(mockStorage.loadInstallments())
+          .thenAnswer((_) async => storedInstallments);
+      when(mockStorage.saveInstallments(any)).thenAnswer((inv) async {
+        storedInstallments = List<Installment>.from(inv.positionalArguments[0]);
+      });
+      when(mockStorage.loadAwardedXpKeys()).thenAnswer((_) async => <String>{});
+      when(mockStorage.saveAwardedXpKeys(any)).thenAnswer((_) async {});
+      when(mockStats.addXp(any)).thenAnswer((_) async {});
+      when(mockStats.awardStat(any)).thenAnswer((_) async {});
+      when(mockStats.stats).thenReturn(UserStats.initial());
+
+      ledger = LedgerPresenter(mockStorage, mockStats);
+      presenter = InstallmentPresenter(mockStorage, ledger, mockStats);
+      await ledger.load();
+      await presenter.load();
+    });
+
+    group('dueDate', () {
+      test(
+          'days-after rule: the statement DUE in the month, not the one '
+          'closing in it', () {
+        // Bought Oct 19 → Oct 20 statement, due Nov 4 → startMonth 2026-11.
+        final inst = plan('maya', startMonth: '2026-11');
+        presenter.setMonth('2026-11');
+        expect(presenter.dueDate(inst), DateTime(2026, 11, 4));
+        expect(presenter.dueLabel(inst), 'Due Nov 4');
+
+        // The next payment rides the Nov 20 statement, due Dec 5.
+        presenter.setMonth('2026-12');
+        expect(presenter.dueDate(inst), DateTime(2026, 12, 5));
+      });
+
+      test('days-after rule across the year end', () {
+        final inst = plan('maya', startMonth: '2026-12');
+        presenter.setMonth('2027-01');
+        // Dec 20 close + 15 days → Jan 4.
+        expect(presenter.dueDate(inst), DateTime(2027, 1, 4));
+      });
+
+      test('days-after rule landing on a month end', () {
+        final inst = plan('mid', startMonth: '2026-01');
+        presenter.setMonth('2026-01');
+        // Jan 15 close + 15 days → Jan 30.
+        expect(presenter.dueDate(inst), DateTime(2026, 1, 30));
+
+        // Feb 15 + 15 days is Mar 2: no statement falls due in February.
+        presenter.setMonth('2026-02');
+        expect(presenter.dueDate(inst), isNull);
+        expect(presenter.dueLabel(inst), isNull);
+
+        // March gets two (Mar 2 and Mar 30) — the later statement wins.
+        presenter.setMonth('2026-03');
+        expect(presenter.dueDate(inst), DateTime(2026, 3, 30));
+      });
+
+      test('fixed due-day rule on a billing cycle', () {
+        final inst = plan('bpi', startMonth: '2026-11');
+        presenter.setMonth('2026-11');
+        expect(presenter.dueDate(inst), DateTime(2026, 11, 10));
+        presenter.setMonth('2027-01');
+        expect(presenter.dueDate(inst), DateTime(2027, 1, 10));
+      });
+
+      test('fixed due-day rule with a close on the 28th (February end)', () {
+        final inst = plan('late', startMonth: '2026-03');
+        presenter.setMonth('2026-03');
+        // Feb 28 close → due Mar 5.
+        expect(presenter.dueDate(inst), DateTime(2026, 3, 5));
+      });
+
+      test('bare due day without a cycle clamps to the month length', () {
+        final inst = plan('bnpl', startMonth: '2026-01');
+        presenter.setMonth('2026-02');
+        expect(presenter.dueDate(inst), DateTime(2026, 2, 28));
+        presenter.setMonth('2026-04');
+        expect(presenter.dueDate(inst), DateTime(2026, 4, 30));
+      });
+
+      test("the due date agrees with the start month's cycle", () {
+        // Whatever month the plan starts in, its first due date is the due
+        // date of the cycle the purchase landed on.
+        for (final day in [1, 19, 20, 21, 31]) {
+          final bought = DateTime(2026, 10, day);
+          final start = calculateInstallmentStartMonth(maya, bought);
+          presenter.setMonth(start);
+          expect(presenter.dueDate(plan('maya', startMonth: start)),
+              maya.cycleContaining(bought)!.due,
+              reason: 'bought Oct $day');
+        }
+      });
+    });
+
+    group('interestPreview', () {
+      test('null for 0% or no principal', () {
+        expect(presenter.interestPreview(principal: 12000, months: 12, rate: 0),
+            isNull);
+        expect(presenter.interestPreview(principal: null, months: 12, rate: 1),
+            isNull);
+      });
+
+      test('computed add-on payment when no monthly amount is given', () {
+        final p =
+            presenter.interestPreview(principal: 12000, months: 12, rate: 1)!;
+        expect(p.totalPayable, 13440);
+        expect(p.totalInterest, 1440);
+        expect(p.label, contains('(1%/mo)'));
+      });
+
+      test('honours a manually edited monthly amount', () {
+        // The bank quoted ₱1,200/mo — totals must follow what is saved.
+        final p = presenter.interestPreview(
+            principal: 12000, months: 12, rate: 1, monthlyAmount: 1200)!;
+        expect(p.totalPayable, 14400);
+        expect(p.totalInterest, 2400);
+        expect(p.label, contains('Total payable: ₱14,400.00'));
+      });
+
+      test('formats a fractional rate without trailing zeros', () {
+        final p = presenter.interestPreview(
+            principal: 10000, months: 10, rate: 1.25)!;
+        expect(p.label, contains('(1.25%/mo)'));
+      });
+    });
+
+    group('buildInstallment', () {
+      test('editing without a category keeps the existing one', () {
+        final existing = plan('maya', categoryId: 'tech');
+        final edited = presenter.buildInstallment(
+          existing: existing,
+          name: '  Phone 2 ',
+          accountId: 'maya',
+          totalAmount: 12000,
+          monthlyAmount: 1000,
+          totalMonths: 12,
+          startMonth: '2026-11',
+          purchaseDate: DateTime(2026, 10, 19),
+          note: '  ',
+        );
+        expect(edited.id, existing.id);
+        expect(edited.categoryId, 'tech');
+        expect(edited.name, 'Phone 2');
+        expect(edited.note, isNull);
+      });
+
+      test('passing a null category clears it; a new plan gets an id', () {
+        final cleared = presenter.buildInstallment(
+          existing: plan('maya', categoryId: 'tech'),
+          name: 'Phone',
+          accountId: 'maya',
+          totalAmount: 12000,
+          monthlyAmount: 1000,
+          totalMonths: 12,
+          startMonth: '2026-11',
+          purchaseDate: DateTime(2026, 10, 19),
+          categoryId: null,
+        );
+        expect(cleared.categoryId, isNull);
+
+        final fresh = presenter.buildInstallment(
+          name: 'Laptop',
+          accountId: 'bpi',
+          totalAmount: 6000,
+          monthlyAmount: 1000,
+          totalMonths: 6,
+          startMonth: '2026-11',
+          purchaseDate: DateTime(2026, 10, 1),
+          categoryId: 'tech',
+          note: 'promo',
+        );
+        expect(fresh.id, isNotEmpty);
+        expect(fresh.categoryId, 'tech');
+        expect(fresh.note, 'promo');
+        expect(fresh.isActive, isTrue);
+      });
+
+      test('saveInstallment updates in place on edit', () async {
+        final existing = plan('maya', categoryId: 'tech');
+        await presenter.saveInstallment(existing, isEdit: false);
+        final edited = presenter.buildInstallment(
+          existing: existing,
+          name: 'Phone',
+          accountId: 'maya',
+          totalAmount: 12000,
+          monthlyAmount: 1000,
+          totalMonths: 12,
+          startMonth: presenter.suggestedStartMonth(
+              accountId: 'maya',
+              purchaseDate: DateTime(2026, 10, 19),
+              deferralMonths: 2),
+          purchaseDate: DateTime(2026, 10, 19),
+          deferralMonths: 2,
+        );
+        await presenter.saveInstallment(edited, isEdit: true);
+        expect(storedInstallments, hasLength(1));
+        expect(storedInstallments.single.startMonth, '2027-01');
+        expect(storedInstallments.single.categoryId, 'tech');
+      });
+    });
+
+    test('detailLine lists account, purchase, deferral, interest and due', () {
+      presenter.setMonth('2027-01');
+      final inst = plan('maya',
+          startMonth: '2027-01',
+          purchaseDate: DateTime(2026, 10, 19),
+          deferralMonths: 2,
+          interestRate: 1.5);
+      expect(presenter.detailLine(inst),
+          'MAYA · Bought Oct 19 · Deferred 2 mos · 1.5%/mo int · Due Jan 4');
+      expect(presenter.deferralLabel(plan('maya', deferralMonths: 1)),
+          'Deferred 1 mo');
+      expect(presenter.purchasedLabel(plan('maya')), isNull);
     });
   });
 }
