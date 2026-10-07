@@ -1791,6 +1791,10 @@ def advise_finance_stream(payload, request):
                 stop_reason = (ev.get("delta") or {}).get("stop_reason", stop_reason)
                 usage.update(ev.get("usage") or {})
 
+        # Names of tool calls the budget cut off mid-input. Only reported to a
+        # client that said it can resume them (resume_cut_tools); an older app
+        # gets the time notice instead, as before.
+        cut_tools = []
         if stop_reason == "time_budget":
             # A tool_use block whose input was still arriving is not a call --
             # its JSON never finished, so running it would run a tool with no
@@ -1798,15 +1802,19 @@ def advise_finance_stream(payload, request):
             # content_block_stop, which is exactly those.
             for idx in partial_json:
                 if 0 <= idx < len(content):
+                    if content[idx] and content[idx].get("name"):
+                        cut_tools.append(content[idx]["name"])
                     content[idx] = None
+        resumable = bool(cut_tools) and payload.get("resume_cut_tools") is True
 
         content = [b for b in content if b]
         response_text, tool_calls = _split_reply(content)
-        if stop_reason == "time_budget" and tool_calls:
-            # Tool calls survived the cut, so the turn is not over: the client
-            # runs them and comes back on a fresh invocation with a fresh
-            # budget. Saying it stopped early would be wrong, and the notice
-            # would be quoted back to the model as its own words next hop.
+        if stop_reason == "time_budget" and (tool_calls or resumable):
+            # Tool calls survived the cut, or the client will ask again for
+            # the one that was cut, so the turn is not over: the next hop is a
+            # fresh invocation with a fresh budget. Saying it stopped early
+            # would be wrong, and the notice would be quoted back to the model
+            # as its own words next hop.
             truncated = False
         else:
             truncated = stop_reason in ("max_tokens", "time_budget")
@@ -1829,6 +1837,7 @@ def advise_finance_stream(payload, request):
             "truncated": truncated,
             "tool_calls": tool_calls,
             "assistant_content": content,
+            **({"interrupted_tools": cut_tools} if resumable else {}),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)

@@ -537,6 +537,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // label is on screen. The strip is for after the model has written words.
     _advisorStatus = null;
 
+    // Prose a hop wrote before the time budget cut its tool call. The resume
+    // hop is told not to repeat it, so it stays on screen unless that hop
+    // writes words of its own.
+    var carried = '';
+    var resumed = false;
     for (var hop = 1; hop <= maxToolHops; hop++) {
       final reply = await _streamAdvisorHopWithRetries(
         cloud,
@@ -546,9 +551,36 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         tools: tools,
       );
       if (isDisposed || reply == null) return;
+      final text = reply.text.isEmpty ? carried : reply.text;
 
       if (!reply.wantsTools) {
-        _updateLastMessage(reply.text, isStreaming: false);
+        final cut = reply.interruptedTools;
+        if (cut.isNotEmpty) {
+          // The server ran out of time while the model was still writing a
+          // tool call, so no card ever appeared. Ask once more, on a fresh
+          // hop with a fresh budget, for just that call. Once only: a second
+          // cut means the call itself is too large to finish.
+          if (!resumed && reply.text.isNotEmpty && hop < maxToolHops) {
+            resumed = true;
+            carried = reply.text;
+            _updateLastMessage(carried, isStreaming: true);
+            transcript
+              ..add(AiChatMessage.assistantToolUse(
+                text: reply.text,
+                contentBlocks: reply.assistantContent,
+              ))
+              ..add(AiChatMessage.user(_resumeCutToolPrompt(cut)));
+            _advisorStatus = _workingStatus;
+            safeNotify();
+            continue;
+          }
+          _updateLastMessage(
+            text.isEmpty ? _cutToolNotice : '$text\n\n_${_cutToolNotice}_',
+            isStreaming: false,
+          );
+          return;
+        }
+        _updateLastMessage(text, isStreaming: false);
         return;
       }
 
@@ -598,6 +630,23 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// Shown between hops, when the model is being asked again and has not yet
   /// started writing.
   static const _workingStatus = 'Working on it…';
+
+  /// Said when a tool call was cut off and asking again did not bring it
+  /// back, so the user knows nothing was proposed or saved.
+  static const _cutToolNotice =
+      "I ran out of time before I could set that up, so nothing was saved. "
+      'Ask me again and I will do just that part.';
+
+  /// The protocol turn that asks the model to re-issue the tool calls in
+  /// [names] after the server's time budget cut them off. Never shown or
+  /// persisted: it lives only in this turn's transcript.
+  static String _resumeCutToolPrompt(List<String> names) {
+    final list = names.map((n) => '`$n`').join(', ');
+    return '(Automatic follow-up from the app, not from the user.) Your '
+        'previous reply hit the time limit while you were calling $list, so '
+        'that call never arrived and nothing was proposed. Call it again now '
+        'with the same details. Do not repeat what you already wrote.';
+  }
 
   /// What to say while [call] runs.
   ///

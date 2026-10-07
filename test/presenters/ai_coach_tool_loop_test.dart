@@ -292,4 +292,75 @@ void main() {
     expect(tools.map((t) => t.name), contains('addSetAside'));
     p.dispose();
   });
+
+  group('a tool call cut off by the server time budget', () {
+    const cutHop = AdvisorReply(
+      text: 'Here is the plan for your phone.',
+      assistantContent: [
+        {'type': 'text', 'text': 'Here is the plan for your phone.'}
+      ],
+      interruptedTools: ['addInstallment'],
+    );
+
+    List<List<dynamic>> sentTranscripts() => verify(service.adviseFinance(
+          messages: captureAnyNamed('messages'),
+          context: anyNamed('context'),
+          profile: anyNamed('profile'),
+          historical: anyNamed('historical'),
+          tools: anyNamed('tools'),
+        )).captured.cast<List<dynamic>>();
+
+    test('is asked for again on a fresh hop, so the card appears', () async {
+      scriptReplies([
+        cutHop,
+        _toolTurn('addInstallment'),
+        const AdvisorReply(text: 'Added.'),
+      ]);
+      final executor = _RecordingExecutor();
+      final p = build(executor: executor);
+
+      await p.send('add my phone as a 12 month installment');
+
+      expect(executor.proposals, ['addInstallment']);
+      expect(p.messages.last.text, 'Added.');
+      expect(p.errorMessage, isNull);
+      // The transcript list is shared across hops, so look for the follow-up
+      // rather than at a position.
+      final followUps = sentTranscripts()[1]
+          .where((m) => (m.text as String).contains('Automatic follow-up'))
+          .toList();
+      expect(followUps, hasLength(1));
+      expect(followUps.single.text, contains('`addInstallment`'));
+      p.dispose();
+    });
+
+    test('keeps the prose already written when the resume hop writes none',
+        () async {
+      scriptReplies([
+        cutHop,
+        _toolTurn('addInstallment'),
+        const AdvisorReply(text: ''),
+      ]);
+      final p = build(executor: _RecordingExecutor());
+
+      await p.send('add my phone as a 12 month installment');
+
+      expect(p.messages.last.text, 'Here is the plan for your phone.');
+      p.dispose();
+    });
+
+    test('is asked for once only, then says nothing was saved', () async {
+      scriptReplies([cutHop]);
+      final executor = _RecordingExecutor();
+      final p = build(executor: executor);
+
+      await p.send('add my phone as a 12 month installment');
+
+      expect(executor.proposals, isEmpty);
+      expect(sentTranscripts(), hasLength(2));
+      expect(p.messages.last.text, startsWith('Here is the plan'));
+      expect(p.messages.last.text, contains('nothing was saved'));
+      p.dispose();
+    });
+  });
 }

@@ -13,6 +13,7 @@ class AdvisorReply {
     this.toolCalls = const [],
     this.assistantContent = const [],
     this.truncated = false,
+    this.interruptedTools = const [],
   });
 
   /// The prose half of the turn. May be empty when the model went straight to
@@ -31,12 +32,22 @@ class AdvisorReply {
   /// The reply hit its token ceiling and stopped early.
   final bool truncated;
 
+  /// Tools the model was in the middle of calling when the server's time
+  /// budget ended the hop. Their input never finished, so they are not in
+  /// [toolCalls]; the client asks for them again on a fresh hop. Only sent
+  /// when the request opted in with `resume_cut_tools`.
+  final List<String> interruptedTools;
+
   /// True when this turn is a request to run tools rather than an answer.
   bool get wantsTools => toolCalls.isNotEmpty;
 
   factory AdvisorReply.fromJson(Map<String, Object?> json) => AdvisorReply(
         text: (json['response'] as String?) ?? '',
         truncated: (json['truncated'] as bool?) ?? false,
+        interruptedTools: [
+          for (final t in (json['interrupted_tools'] as List?) ?? const [])
+            if (t is String && t.isNotEmpty) t,
+        ],
         toolCalls: [
           for (final c in (json['tool_calls'] as List?) ?? const [])
             if (c is Map) AiToolCall.fromJson(Map<String, Object?>.from(c)),
