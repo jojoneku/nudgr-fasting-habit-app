@@ -75,6 +75,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   @override
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
+    _planOwner?.removeListener(_onPlansChanged);
     super.dispose();
   }
 
@@ -241,7 +242,39 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// True when the sort is anything other than the default newest-first date.
   bool get isCustomSort =>
       _sortField != LedgerSortField.date || !_sortDescending;
-  List<FinancialAccount> get accounts => _accounts;
+
+  /// Every account, each liability carrying its live installment hold
+  /// ([FinancialAccount.unbilledInstallments]).
+  ///
+  /// The hold is derived here, on the way out, from the plans (owned by
+  /// `InstallmentPresenter`, see [watchInstallmentPlans]) and the payments in
+  /// [allTransactions] — never stored. `_accounts` is the persisted shape and
+  /// carries no hold. Memoised on the identity of the account list and of the
+  /// holds, both of which are replaced rather than mutated, so a reader can
+  /// never see a hold from before a change.
+  List<FinancialAccount> get accounts {
+    final holds = installmentHolds;
+    final cached = _heldAccounts;
+    if (cached != null &&
+        identical(_heldAccountsFrom, _accounts) &&
+        identical(_heldAccountsHolds, holds)) {
+      return cached;
+    }
+    final result = [
+      for (final a in _accounts)
+        _holdFor(a, holds) == a.unbilledInstallments
+            ? a
+            : a.copyWith(unbilledInstallments: _holdFor(a, holds)),
+    ];
+    _heldAccounts = result;
+    _heldAccountsFrom = _accounts;
+    _heldAccountsHolds = holds;
+    return result;
+  }
+
+  static double _holdFor(FinancialAccount a, Map<String, double> holds) =>
+      a.isLiability ? holds[a.id] ?? 0.0 : 0.0;
+
   List<FinanceCategory> get categories => _categories;
   List<TransactionRecord> get allTransactions =>
       List.unmodifiable(_allTransactions);
@@ -761,23 +794,87 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   bool get hasOutstandingOwed => outstandingOwedTotal > 0;
 
-  /// Recalculates unbilled installment principal holds across liability accounts
-  /// and updates in-memory accounts.
+  // ── Installment holds ───────────────────────────────────────────────────────
+  //
+  // A credit account's installment hold is what its plans will still bill. It
+  // is derived from two slices: the plans, which `InstallmentPresenter` owns,
+  // and the payments recorded against them, which this presenter owns. It used
+  // to be stamped onto `_accounts` and persisted, one write behind the plans,
+  // so a cold start read back a stale hold. Now nothing stores it: [accounts]
+  // derives it on the way out.
+
+  /// The plan owner this presenter listens to, and how to read its plans.
+  /// Wired by `TreasuryPresenters`; null when the ledger stands alone (tests,
+  /// single-screen mounts), where [_storedPlans] stands in.
+  Listenable? _planOwner;
+  List<Installment> Function()? _readPlans;
+
+  /// Plans read from storage, only used while no owner is wired.
+  List<Installment> _storedPlans = const [];
+
+  /// Bumped whenever the plans may have changed, so the memoised holds are
+  /// recomputed even though the transaction list did not move.
+  int _plansRevision = 0;
+
+  Map<String, double> _holds = const {};
+  List<TransactionRecord>? _holdsFromTxns;
+  int _holdsFromRevision = -1;
+
+  List<FinancialAccount>? _heldAccounts;
+  List<FinancialAccount>? _heldAccountsFrom;
+  Map<String, double>? _heldAccountsHolds;
+
+  /// Subscribes to [owner], the presenter that owns the installment plans, and
+  /// reads them through [plans] from now on. Holds follow the owner from here:
+  /// it notifies, the holds are re-derived, and this presenter notifies only
+  /// when a hold actually moved. Replaces any previous owner.
+  void watchInstallmentPlans(
+    Listenable owner,
+    List<Installment> Function() plans,
+  ) {
+    _planOwner?.removeListener(_onPlansChanged);
+    _planOwner = owner;
+    _readPlans = plans;
+    _storedPlans = const [];
+    owner.addListener(_onPlansChanged);
+    _onPlansChanged();
+  }
+
+  void _onPlansChanged() {
+    final before = _holds;
+    _plansRevision++;
+    if (!mapEquals(before, installmentHolds)) safeNotify();
+  }
+
+  /// Account id → installment hold, for every account with an active plan.
+  /// See [Installment.holdsByAccount]; memoised per transaction list and plan
+  /// revision, so the scan runs once per change, not once per read.
+  Map<String, double> get installmentHolds {
+    if (identical(_holdsFromTxns, _allTransactions) &&
+        _holdsFromRevision == _plansRevision) {
+      return _holds;
+    }
+    final next = Installment.holdsByAccount(
+      _readPlans?.call() ?? _storedPlans,
+      _allTransactions,
+    );
+    // Keep the old map (and so the memoised [accounts]) when nothing moved.
+    if (!mapEquals(next, _holds)) _holds = next;
+    _holdsFromTxns = _allTransactions;
+    _holdsFromRevision = _plansRevision;
+    return _holds;
+  }
+
+  /// Re-derives the installment holds and notifies if any moved.
+  ///
+  /// With a plan owner wired the holds already follow it, and payments are
+  /// this presenter's own transactions, so this is only a change check. A
+  /// standalone ledger has no owner to follow and re-reads the stored plans.
   Future<void> refreshInstallmentHolds() async {
-    final installments = await _storage.loadInstallments();
-    _accounts = [
-      for (final a in _accounts)
-        a.isLiability
-            ? a.copyWith(
-                unbilledInstallments: Installment.totalUnbilledForAccount(
-                  a.id,
-                  installments,
-                  _allTransactions,
-                ),
-              )
-            : a
-    ];
-    safeNotify();
+    if (_planOwner == null) {
+      _storedPlans = await _storage.loadInstallments();
+    }
+    _onPlansChanged();
   }
 
   /// Refreshes the account list from storage. Call this before showing any
@@ -785,7 +882,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// or removed accounts since LedgerPresenter last loaded.
   Future<void> reloadAccounts() async {
     _accounts = await _storage.loadAccounts();
-    await refreshInstallmentHolds();
+    safeNotify();
   }
 
   /// Creates and saves a new account directly to storage, updating the in-memory
@@ -825,7 +922,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       _accounts = await _storage.loadAccounts();
       _categories = await _storage.loadFinanceCategories();
       _allTransactions = await _storage.loadTransactions();
-      await refreshInstallmentHolds();
+      await _loadStoredPlansIfStandalone();
+      safeNotify();
       return;
     }
 
@@ -836,7 +934,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     await _financeDict.init();
-    await refreshInstallmentHolds();
+    await _loadStoredPlansIfStandalone();
 
     // One-time migration: reassign any category that still has the old
     // white default (#FFFFFF / near-white luminance > 0.65) to a palette color.
@@ -852,6 +950,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _isLoading = false;
     _hasLoaded = true;
     safeNotify();
+  }
+
+  /// Without a wired plan owner, the stored plans are the only source of the
+  /// installment holds. With one, the owner's live list is, and storage is
+  /// never read for them.
+  Future<void> _loadStoredPlansIfStandalone() async {
+    if (_planOwner != null) return;
+    _storedPlans = await _storage.loadInstallments();
+    _plansRevision++;
   }
 
   /// One-time backfill for the dedicated-transfer-category change. Earlier
@@ -1347,21 +1454,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
     final previous = _accounts.where((a) => a.id == account.id).firstOrNull;
-    final incoming = reconcileGoalStamps(
-      account.copyWith(
-        unbilledInstallments: account.unbilledInstallments != 0.0
-            ? account.unbilledInstallments
-            : previous?.unbilledInstallments,
-      ),
-      previous,
-      DateTime.now(),
-    );
+    // Whatever installment hold [account] carries is ignored: [accounts]
+    // derives it from the plans on the way out, and storage never keeps it.
+    final incoming = reconcileGoalStamps(account, previous, DateTime.now());
     final exists = _accounts.any((a) => a.id == incoming.id);
     _accounts = exists
         ? [for (final a in _accounts) a.id == incoming.id ? incoming : a]
         : [..._accounts, incoming];
     _stampFundedGoals();
-    await refreshInstallmentHolds();
+    safeNotify();
     await _storage.saveAccounts(_accounts);
   }
 
