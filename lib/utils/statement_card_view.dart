@@ -114,11 +114,17 @@ class InstallmentStatementStatus {
   /// statement can be paid.
   final String note;
 
+  /// Share of the plan actually paid (0–1): months billed onto a statement
+  /// that has been paid. A month billed onto an open statement is not paid
+  /// yet, so it does not move the bar.
+  final double progress;
+
   const InstallmentStatementStatus({
     required this.statement,
     required this.paid,
     required this.label,
     required this.linkLabel,
     required this.note,
+    required this.progress,
   });
 }
