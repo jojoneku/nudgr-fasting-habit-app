@@ -13,6 +13,18 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.95] - 2026-10-07
+
+### Fixed
+- keep cash payments as card transfers when a split is undone
+- always show action suggestion cards
+- derive installment holds from the live plans instead of storing them
+- edit installment purchases in place without losing payments
+- correct installment due dates and share installment form logic
+- validate installment chat tool and resolve only credit accounts
+- account form shows the same total owed as the credit card
+- stop orphaned installment plans and show installment debt as owed
+
 ## [1.1.94] - 2026-10-06
 
 ### Added
@@ -865,7 +877,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.94...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.95...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -961,3 +973,4 @@ distributed via `manifest.json`.
 [1.1.92]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.92
 [1.1.93]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.93
 [1.1.94]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.94
+[1.1.95]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.95
