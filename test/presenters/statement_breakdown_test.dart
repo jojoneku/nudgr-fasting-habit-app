@@ -426,6 +426,8 @@ void main() {
       expect(open.label, '1/3 · on statement, due Oct 15');
       expect(open.statement?.id, statement().id);
       expect(open.linkLabel, 'View SPayLater statement');
+      // Billed onto the open statement, not paid: the bar has not moved.
+      expect(open.progress, 0);
       expect(open.note, "Linked to SPayLater statement · can't be paid alone");
 
       await bills.markBillPaid(statement().id,
@@ -434,6 +436,7 @@ void main() {
       final settled = bills.installmentStatementStatus(plan)!;
       expect(settled.paid, isTrue);
       expect(settled.label, '1/3 · paid with statement');
+      expect(settled.progress, closeTo(1 / 3, 0.0001));
     });
 
     test('a plan on a card without statements keeps its own row state',
