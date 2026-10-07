@@ -155,9 +155,8 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
       _category == AccountCategory.bnpl;
 
   /// The opening "balance" field means *amount owed* for credit accounts —
-  /// excluding installments, which the presenter's label and hint spell out.
-  String get _balanceLabel => widget.presenter
-      .accountBalanceLabel(_category, accountId: widget.existing?.id);
+  /// the card's full total, installments included (see the presenter).
+  String get _balanceLabel => widget.presenter.accountBalanceLabel(_category);
   String? get _balanceHint => widget.presenter
       .accountBalanceHint(_category, accountId: widget.existing?.id);
 
@@ -181,7 +180,9 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     final existing = widget.existing;
     if (existing != null) {
       _nameController.text = existing.name;
-      _balanceController.text = existing.balance.toStringAsFixed(2);
+      _balanceController.text = widget.presenter
+          .accountBalanceFieldValue(existing)
+          .toStringAsFixed(2);
       _category = existing.category;
       _selectedColor = existing.colorHex;
       _iconKey = existing.icon;
@@ -269,8 +270,11 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     try {
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-      final balance =
-          double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0;
+      final balance = widget.presenter.balanceFromField(
+        _category,
+        double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0,
+        accountId: widget.existing?.id,
+      );
       final goalTarget = _isGoal && _goalTargetController.text.isNotEmpty
           ? double.tryParse(_goalTargetController.text.replaceAll(',', ''))
           : null;
@@ -491,7 +495,11 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                                   _submit(), // Enter submits (U6)
                               // Reject malformed numbers (e.g. "1.2.3") instead
                               // of silently coercing them to 0. (Plan 052 C6)
-                              validator: _optionalAmountValidator,
+                              validator: (v) =>
+                                  _optionalAmountValidator(v) ??
+                                  widget.presenter.accountBalanceError(
+                                      _category, v,
+                                      accountId: widget.existing?.id),
                             ),
                           ),
                         ],
