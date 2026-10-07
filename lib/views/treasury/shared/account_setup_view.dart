@@ -111,9 +111,12 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       _category == AccountCategory.creditLine ||
       _category == AccountCategory.bnpl;
 
-  /// The opening "balance" field means *amount owed* for credit accounts.
-  String get _balanceLabel =>
-      _isCredit ? 'Current Balance Owed' : 'Opening Balance';
+  /// The opening "balance" field means *amount owed* for credit accounts —
+  /// excluding installments, which the presenter's label and hint spell out.
+  String get _balanceLabel => widget.presenter
+      .accountBalanceLabel(_category, accountId: widget.existing?.id);
+  String? get _balanceHint => widget.presenter
+      .accountBalanceHint(_category, accountId: widget.existing?.id);
 
   /// Minimum-payment rule shown and saved: the explicit pick, else the
   /// category default (credit card → % of balance; line/BNPL → pay in full).
@@ -373,6 +376,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             nameController: _nameController,
             balanceController: _balanceController,
             balanceLabel: _balanceLabel,
+            balanceHint: _balanceHint,
             goalTargetController: _goalTargetController,
             creditLimitController: _creditLimitController,
             financeRateController: _financeRateController,
@@ -428,6 +432,7 @@ class _AccountSetupForm extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController balanceController;
   final String balanceLabel;
+  final String? balanceHint;
   final TextEditingController goalTargetController;
   final TextEditingController creditLimitController;
   final TextEditingController financeRateController;
@@ -476,6 +481,7 @@ class _AccountSetupForm extends StatelessWidget {
     required this.nameController,
     required this.balanceController,
     required this.balanceLabel,
+    this.balanceHint,
     required this.goalTargetController,
     required this.creditLimitController,
     required this.financeRateController,
@@ -564,7 +570,8 @@ class _AccountSetupForm extends StatelessWidget {
                             decoration: sheetFieldDecoration(
                               context,
                               prefixText: '₱ ',
-                            ),
+                              helperText: balanceHint,
+                            ).copyWith(helperMaxLines: 3),
                           ),
                         ),
                       ),

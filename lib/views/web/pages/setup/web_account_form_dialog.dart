@@ -154,9 +154,12 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
       _category == AccountCategory.creditLine ||
       _category == AccountCategory.bnpl;
 
-  /// The opening "balance" field means *amount owed* for credit accounts.
-  String get _balanceLabel =>
-      _isCredit ? 'Current Balance Owed' : 'Opening Balance';
+  /// The opening "balance" field means *amount owed* for credit accounts —
+  /// excluding installments, which the presenter's label and hint spell out.
+  String get _balanceLabel => widget.presenter
+      .accountBalanceLabel(_category, accountId: widget.existing?.id);
+  String? get _balanceHint => widget.presenter
+      .accountBalanceHint(_category, accountId: widget.existing?.id);
 
   /// Minimum-payment rule shown and saved: the explicit pick, else the
   /// category default (credit card → % of balance; line/BNPL → pay in full).
@@ -477,6 +480,8 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                               ],
                               decoration: InputDecoration(
                                 labelText: _balanceLabel,
+                                helperText: _balanceHint,
+                                helperMaxLines: 2,
                                 prefixText: '₱ ',
                                 isDense: true,
                                 border: const OutlineInputBorder(),

@@ -966,6 +966,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // the expense↔receivable link intact.
       await spawnReimbursementReceivable(txn, null);
     }
+    await _restorePlansFor([txn]);
     if (txn.installmentId != null) {
       await refreshInstallmentHolds();
     }
@@ -992,6 +993,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         await spawnReimbursementReceivable(txn, null);
       }
     }
+    await _restorePlansFor(txns);
     if (txns.any((t) => t.installmentId != null)) {
       await refreshInstallmentHolds();
     }
@@ -1204,17 +1206,63 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       await deleteReimbursementReceivable(receivableId);
     }
     if (txn.isInstallment && txn.installmentId != null) {
-      final deleteInst = onDeleteInstallment;
-      if (deleteInst != null) {
-        await deleteInst(txn.installmentId!);
-      } else {
-        final current = await _storage.loadInstallments();
-        await _storage.saveInstallments(
-            current.where((i) => i.id != txn.installmentId).toList());
-      }
+      await _deletePlanOf(txn);
     }
     if (txn.installmentId != null) {
       await refreshInstallmentHolds();
+    }
+  }
+
+  /// Plans removed along with their ledger purchase record, kept so an Undo
+  /// can put the plan back. Restoring only the purchase record left a record
+  /// whose plan was gone: it held no credit and was never billed again.
+  final Map<String, Installment> _deletedPlans = {};
+
+  Future<Installment?> _resolvePlan(String id) async =>
+      installmentResolver?.call(id) ??
+      (await _storage.loadInstallments()).where((i) => i.id == id).firstOrNull;
+
+  /// The payments recorded against the plan behind installment purchase
+  /// [txn]. Deleting the purchase deletes the plan, and the plan takes these
+  /// with it, so they belong in the removed set an Undo restores.
+  List<TransactionRecord> _planPayments(TransactionRecord txn) =>
+      txn.isInstallment && txn.installmentId != null
+          ? _allTransactions
+              .where(
+                  (t) => t.installmentId == txn.installmentId && t.id != txn.id)
+              .toList()
+          : const [];
+
+  /// Deletes the plan behind installment purchase [txn], remembering it for
+  /// [_restorePlansFor].
+  Future<void> _deletePlanOf(TransactionRecord txn) async {
+    final id = txn.installmentId!;
+    final plan = await _resolvePlan(id);
+    if (plan != null) _deletedPlans[id] = plan;
+    final deleteInst = onDeleteInstallment;
+    if (deleteInst != null) {
+      await deleteInst(id);
+    } else {
+      final current = await _storage.loadInstallments();
+      await _storage
+          .saveInstallments(current.where((i) => i.id != id).toList());
+    }
+  }
+
+  /// Re-creates the plan of every restored installment purchase in [txns]
+  /// that [_deletePlanOf] removed.
+  Future<void> _restorePlansFor(Iterable<TransactionRecord> txns) async {
+    for (final t in txns) {
+      if (!t.isInstallment || t.installmentId == null) continue;
+      final plan = _deletedPlans.remove(t.installmentId);
+      if (plan == null || await _resolvePlan(plan.id) != null) continue;
+      final spawn = onSpawnInstallment;
+      if (spawn != null) {
+        await spawn(plan);
+      } else {
+        final current = await _storage.loadInstallments();
+        await _storage.saveInstallments([...current, plan]);
+      }
     }
   }
 
@@ -1229,8 +1277,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (txn == null) return const [];
     final groupId = txn.transferGroupId;
     if (groupId == null) {
+      final payments = _planPayments(txn);
       await deleteTransaction(id);
-      return [txn];
+      return [txn, ...payments];
     }
     final legs = _allTransactions
         .where((t) => t.transferGroupId == groupId)
@@ -1261,10 +1310,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         .where((t) => ids.contains(t.id) && t.transferGroupId != null)
         .map((t) => t.transferGroupId)
         .toSet();
+    // An installment purchase takes its plan with it, and the plan takes its
+    // recorded payments. Skipping the plan here left it alive with no ledger
+    // record: it kept holding credit and kept being billed.
+    final planIds = _allTransactions
+        .where((t) =>
+            ids.contains(t.id) && t.isInstallment && t.installmentId != null)
+        .map((t) => t.installmentId)
+        .toSet();
     final toRemove = _allTransactions
         .where((t) =>
             ids.contains(t.id) ||
-            (t.transferGroupId != null && groupIds.contains(t.transferGroupId)))
+            (t.transferGroupId != null &&
+                groupIds.contains(t.transferGroupId)) ||
+            (t.installmentId != null && planIds.contains(t.installmentId)))
         .toList();
     if (toRemove.isEmpty) return const [];
     for (final t in toRemove) {
@@ -1276,6 +1335,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
     safeNotify();
     await _saveAll();
+    for (final t in toRemove) {
+      if (t.isInstallment && t.installmentId != null) await _deletePlanOf(t);
+    }
     if (toRemove.any((t) => t.installmentId != null)) {
       await refreshInstallmentHolds();
     }

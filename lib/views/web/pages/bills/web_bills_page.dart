@@ -4027,7 +4027,7 @@ class _WebCreditCardsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final totalOwed = cards.fold(0.0, (s, c) => s + c.currentPayable);
+    final totalOwed = presenter.totalCreditOwed(cards);
     return WebCard(
       accentColor: cs.error,
       title: 'Credit Cards',

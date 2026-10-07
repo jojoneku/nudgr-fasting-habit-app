@@ -755,7 +755,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       for (final a in creditAccounts)
         DashboardAccountRow(
           name: a.name,
-          balance: a.currentPayable,
+          balance: a.totalDebt,
           held: 0.0,
           yours: a.availableCredit ?? 0.0,
           isCredit: true,
@@ -1655,6 +1655,44 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   // --- Account CRUD ---
+
+  static bool _isCreditCategory(AccountCategory c) =>
+      c == AccountCategory.creditCard ||
+      c == AccountCategory.creditLine ||
+      c == AccountCategory.bnpl;
+
+  /// The live installment hold on [accountId], or zero for a new account.
+  double _installmentHoldOf(String? accountId) =>
+      _accounts
+          .where((a) => a.id == accountId)
+          .firstOrNull
+          ?.unbilledInstallments ??
+      0;
+
+  /// Label for the account form's balance field. A credit account's
+  /// installments are held outside [FinancialAccount.balance] (in
+  /// [FinancialAccount.unbilledInstallments]), so once it carries any the
+  /// field must say it leaves them out. Read as "what I owe", it showed ₱397
+  /// on a card the dashboard put at ₱5,730 — and typing the issuer's total
+  /// into it counted every installment twice.
+  String accountBalanceLabel(AccountCategory category, {String? accountId}) {
+    if (!_isCreditCategory(category)) return 'Opening Balance';
+    return _installmentHoldOf(accountId) > 0
+        ? 'Owed excl. installments'
+        : 'Current Balance Owed';
+  }
+
+  /// Helper under the balance field of a credit account with installments:
+  /// what the installments add and the total the dashboard shows. Null when
+  /// there is nothing to add.
+  String? accountBalanceHint(AccountCategory category, {String? accountId}) {
+    if (!_isCreditCategory(category)) return null;
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    final hold = account?.unbilledInstallments ?? 0;
+    if (account == null || hold <= 0) return null;
+    return '+ ${formatPeso(hold)} left on installments · '
+        '${formatPeso(account.totalDebt)} total';
+  }
 
   Future<void> addAccount(FinancialAccount account) async {
     // A goal created with an opening balance already at its target is funded on

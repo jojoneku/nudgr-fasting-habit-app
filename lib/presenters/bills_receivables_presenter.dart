@@ -3052,6 +3052,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   // ─── Credit account helpers ───────────────────────────────────────────────────
 
   /// All active liability accounts (credit card, credit line, BNPL).
+  /// What [cards] owe in total, installments included — the dashboard's
+  /// "Owe" figure, so the two pages agree.
+  double totalCreditOwed(Iterable<FinancialAccount> cards) =>
+      cards.fold(0.0, (s, c) => s + c.totalDebt);
+
   List<FinancialAccount> get creditAccounts =>
       _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
 
