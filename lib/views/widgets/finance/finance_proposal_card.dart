@@ -159,8 +159,17 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
             const SizedBox(width: 4),
             FilledButton.icon(
               onPressed: _busy ? null : _confirm,
-              icon: const Icon(Icons.check, size: 18),
-              label: const Text('Add it'),
+              style: action.isDestructive
+                  ? FilledButton.styleFrom(
+                      backgroundColor: cs.error,
+                      foregroundColor: cs.onError,
+                    )
+                  : null,
+              icon: Icon(
+                action.isDestructive ? Icons.delete_outline : Icons.check,
+                size: 18,
+              ),
+              label: Text(action.confirmLabel ?? 'Add it'),
             ),
           ],
         ),

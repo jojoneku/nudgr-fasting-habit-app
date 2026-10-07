@@ -244,6 +244,23 @@ void main() {
     p.dispose();
   });
 
+  test('status messages for new read tools work', () async {
+    scriptReplies([
+      _toolTurn('findAccounts', text: 'Let me look at your accounts.'),
+      const AdvisorReply(text: 'All accounts loaded.'),
+    ]);
+    final executor = _RecordingExecutor();
+    final p = build(executor: executor);
+    String? statusDuringTool;
+    executor.onCall = () => statusDuringTool = p.advisorStatus;
+
+    await p.send('what accounts do I have?');
+
+    expect(statusDuringTool, 'Checking your accounts…');
+    expect(p.advisorStatus, isNull);
+    p.dispose();
+  });
+
   test('a pending proposal reports no status — the card speaks for itself',
       () async {
     scriptReplies([

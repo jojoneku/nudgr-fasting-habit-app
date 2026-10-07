@@ -56,9 +56,24 @@ void main() {
         expect(tool.mutates, tool.kind != AiToolKind.read,
             reason: '${tool.name} disagrees with its kind');
       }
-      // Phase 1 ships creates and reads only; edit and delete come later.
-      expect(kFinanceTools.map((t) => t.kind).toSet(),
-          {AiToolKind.read, AiToolKind.create});
+      expect(kFinanceTools.map((t) => t.kind).toSet(), {
+        AiToolKind.read,
+        AiToolKind.create,
+        AiToolKind.update,
+        AiToolKind.destroy,
+      });
+    });
+
+    test('every update and destroy tool requires an entity id', () {
+      for (final tool in kFinanceTools.where(
+          (t) => t.kind == AiToolKind.update || t.kind == AiToolKind.destroy)) {
+        final schema = tool.inputSchema;
+        final requiredKeys =
+            (schema['required'] as List?)?.map((k) => '$k') ?? [];
+        expect(requiredKeys, contains('id'),
+            reason:
+                '${tool.name} is an update or destroy but does not require id');
+      }
     });
 
     test('logging transactions is a create, and takes no id anywhere', () {
