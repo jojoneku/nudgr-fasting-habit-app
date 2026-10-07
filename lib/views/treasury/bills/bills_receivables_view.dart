@@ -27,6 +27,7 @@ import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dar
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/new_entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
+import 'package:intermittent_fasting/views/treasury/bills/statement_breakdown_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -930,6 +931,16 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       selectionMode: sel.mode,
       selected: sel.selected,
       onSelectionToggle: sel.onToggle,
+      // Credit statements list what is on them: purchases, installment
+      // months, refunds and repayments, each opening its transaction form.
+      detailLabel: widget.presenter.statementItemsLabel(b),
+      onDetail: locked
+          ? null
+          : () => StatementBreakdownSheet.show(
+                context,
+                presenter: widget.presenter,
+                bill: b,
+              ),
     );
   }
 

@@ -3095,6 +3095,23 @@ class _LoadingBlock extends StatelessWidget {
 // Add-Transaction modal
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Opens the web ledger's edit dialog for [txn] from outside the ledger page —
+/// e.g. a line on a credit statement's item list. Same dialog, and the same
+/// account refresh first, as editing a transfer row in the grid.
+Future<void> showWebEditTransactionDialog(
+  BuildContext context, {
+  required LedgerPresenter presenter,
+  required TransactionRecord txn,
+}) async {
+  await presenter.reloadAccounts();
+  if (!context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) => _AddTransactionDialog(presenter: presenter, existing: txn),
+  );
+}
+
 class _AddTransactionDialog extends StatefulWidget {
   final LedgerPresenter presenter;
   final ParsedTransaction? prefill;

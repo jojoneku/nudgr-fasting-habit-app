@@ -322,6 +322,27 @@ starting 2026-10 totalling ₱1,578.71/month, today Oct 7): six charges dated Oc
 ₱2,424.40, hold ₱3,157.42 (was ₱4,736.13), October statement ₱2,424.40, total owed ₱5,581.82
 unchanged. Paying ₱850 leaves ₱1,574.40 on the statement.
 
+### 12.8 Statement items ("View items")
+Every credit statement bill whose card has a billing cycle shows a "View items · N" link (Bills
+tab card on mobile, bill row on web). It opens the statement's item list — a bottom sheet on
+mobile, a dialog on web — modelled on the issuer's own bill screen:
+- **Header:** Unpaid amount, then Bill amount / Repaid / Unpaid, the due date, and
+  "Transaction total: N items · 05 Sep – 04 Oct" (the cycle from the day after the previous
+  close through this close).
+- **Lines** are the card's own records in exactly the window `payableAsOf` bills, grouped as
+  **Purchases** (outflows), **Installments** (charges with `installmentId`, shown "[1/3] Item"),
+  **Refunds** (inflows in the window that are not payments — no transfer group, no bill link) and
+  **Repaid** (every inflow after the close, as `paymentsToLiabilitySince` counts them). Installment
+  purchase records (`isInstallment`) and other accounts' transfer legs are never lines.
+- **Reconciliation:** carried over (owed at the previous close − payments during the cycle) +
+  purchases + installments − refunds = bill amount; bill amount − repaid (capped, from statement
+  progress) = unpaid = `creditStatementRemaining`. A statement frozen before a line was edited (paid,
+  or hand-keyed) says so instead of hiding the difference.
+- **Editing:** tapping a line opens that record's transaction form (mobile `AddTransactionSheet`,
+  web ledger edit dialog). The list reads the ledger on every rebuild, and an open generated
+  statement's amount now follows the ledger as soon as a line in its cycle changes (same scope as
+  the generator: unpaid, untransacted, not past due, never down to ₱0).
+
 ---
 
 ### Sources (verify on implementation)

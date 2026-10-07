@@ -16,6 +16,7 @@ import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
+import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
@@ -151,7 +152,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       unawaited(_autoGenerateCreditStatements().then((_) => safeNotify()));
       return;
     }
-    if (!_refreshStatementProgress()) return;
+    // An edit to a line inside an open statement's cycle moves its amount
+    // (the card's balance at close), so the amount follows before progress.
+    final amountsMoved = _refreshStatementAmounts();
+    if (!_refreshStatementProgress() && !amountsMoved) return;
     safeNotify();
     unawaited(_storage.saveBills(_allBills));
     unawaited(_syncCreditDueReminders());
@@ -1130,6 +1134,37 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     );
   }
 
+  /// Keeps every open generated statement's amount equal to its card's
+  /// balance at the close ([LedgerPresenter.payableAsOf]) — the figure the
+  /// generator billed — so editing or deleting a charge inside the cycle
+  /// (e.g. from the statement's item list) updates the statement right away
+  /// rather than on the next generator run. Same scope as the generator's own
+  /// refresh: unpaid, untransacted auto-statements whose cycle is not yet past
+  /// due, and never down to ₱0 (the generator's sweep owns that). True when
+  /// any changed.
+  bool _refreshStatementAmounts() {
+    final now = _clock();
+    final today = DateTime(now.year, now.month, now.day);
+    var changed = false;
+    final next = <Bill>[];
+    for (final b in _allBills) {
+      next.add(b);
+      if (!_isAutoStatement(b) || b.isPaid || b.transactionId != null) {
+        continue;
+      }
+      final a = _statementAccount(b);
+      final cycle = a == null ? null : cycleForStatement(a, b);
+      if (a == null || cycle == null || cycle.due.isBefore(today)) continue;
+      if (today.isBefore(cycle.close)) continue;
+      final amount = _ledger.payableAsOf(a.id, cycle.close);
+      if (amount <= 0 || (amount - b.amount).abs() <= 0.005) continue;
+      next[next.length - 1] = b.copyWith(amount: amount);
+      changed = true;
+    }
+    if (changed) _allBills = next;
+    return changed;
+  }
+
   /// Re-derives every open credit statement in memory. True when any changed.
   bool _refreshStatementProgress() {
     final next = [for (final b in _allBills) _withLedgerProgress(b)];
@@ -1174,6 +1209,40 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final p = _partialProgress(b);
     return p == null || p.amount <= 0 ? null : p.paid / p.amount;
   }
+
+  /// What is on credit statement [b] — its cycle, the card's purchases,
+  /// installment months, refunds and the payments since the close — with
+  /// totals that add up to the bill amount and to [statementProgress]. Null
+  /// when [b] is not a credit statement with a billing cycle behind it.
+  ///
+  /// Read straight off the ledger on every call, never cached, so an edit made
+  /// from the item list (or anywhere else) shows on the next rebuild.
+  StatementBreakdown? statementBreakdown(Bill b) {
+    final current = _allBills.where((x) => x.id == b.id).firstOrNull ?? b;
+    final a = _statementAccount(current);
+    final cycle = a == null ? null : cycleForStatement(a, current);
+    if (a == null || cycle == null) return null;
+    return buildStatementBreakdown(
+      account: a,
+      bill: current,
+      cycle: cycle,
+      transactions: _ledger.allTransactions,
+      paid: CreditStatementProgress.ofBill(current, a).paid,
+    );
+  }
+
+  /// "View items · 10" for a credit statement whose items can be listed,
+  /// "View items" when its cycle is empty; null for any other bill.
+  String? statementItemsLabel(Bill b) {
+    final breakdown = statementBreakdown(b);
+    if (breakdown == null) return null;
+    final n = breakdown.itemCount;
+    return n == 0 ? 'View items' : 'View items · $n';
+  }
+
+  /// The ledger the statement items live in — what a bills surface hands the
+  /// transaction edit form when one of those items is tapped.
+  LedgerPresenter get ledger => _ledger;
 
   /// What is still owed on [b]: the unpaid remainder of a credit statement, or
   /// the full amount of any other bill.
