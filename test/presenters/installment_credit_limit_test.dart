@@ -83,8 +83,7 @@ void main() {
   });
 
   group('FinancialAccount installment debt and availableCredit', () {
-    test(
-        'availableCredit deducts totalDebt (currentPayable + unbilledInstallments)',
+    test('availableCredit deducts totalDebt (balance + unbilledInstallments)',
         () {
       final account = FinancialAccount(
         id: 'cc',
@@ -103,8 +102,12 @@ void main() {
       expect(account.utilization, 12000.0 / 50000.0);
     });
 
-    test(
-        'overpaid card with unbilled installments still respects limit ceiling',
+    // The credit balance offsets the hold: the bank already holds ₱2,000 of
+    // the user's money against the ₱5,000 the plans will still bill, so ₱3,000
+    // is owed and ₱47,000 is free. This used to floor the balance at zero
+    // before adding the hold (₱5,000 owed, ₱45,000 free), which also
+    // disagreed with the dashboard's totalLiabilities (balance + hold).
+    test('overpaid card offsets its unbilled installments, within the limit',
         () {
       final account = FinancialAccount(
         id: 'cc',
@@ -118,8 +121,9 @@ void main() {
       );
 
       expect(account.currentPayable, 0.0);
-      expect(account.totalDebt, 5000.0);
-      expect(account.availableCredit, 45000.0);
+      expect(account.totalDebt, 3000.0);
+      expect(account.availableCredit, 47000.0);
+      expect(account.availableCredit! <= account.creditLimit!, isTrue);
     });
   });
 

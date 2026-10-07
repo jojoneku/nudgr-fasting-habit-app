@@ -285,6 +285,24 @@ Inside **Credit details**:
   placeholders whenever the card owed something today. Unpaid, untransacted ₱0 auto-statements
   are swept away before generation.
 
+### 12.7 Installment holds
+A credit account's installment plans hold part of its limit before they are billed.
+- **The hold is what the plans will still bill**: for each active plan on the account,
+  `remainingMonths × monthlyAmount` (`Installment.remainingAmount`). The monthly amount carries the
+  add-on interest, so an interest-bearing plan holds the interest still to come as well as the
+  principal. That is what issuers hold against the limit. It is not "remaining principal".
+- **Owe** (`totalDebt`) = `balance + hold`, floored at zero as a whole. An overpaid card (negative
+  balance) offsets its hold: ₱−2,000 with a ₱5,000 hold owes ₱3,000, so ₱47,000 of a ₱50,000 limit
+  is available. This matches `totalLiabilities` on the dashboard, which sums `balance + hold`.
+  **Available** = limit − owe. **Utilization** = owe / limit.
+- **Derived, never stored.** `FinancialAccount.unbilledInstallments` is not written by `toJson`,
+  and `fromJson` ignores any value older builds stored. Storage and sync carry no hold.
+- **One source.** `InstallmentPresenter` owns the plans. `LedgerPresenter` subscribes to it
+  (`watchInstallmentPlans`, wired in `TreasuryPresenters`) and stamps each credit account's live hold
+  onto `LedgerPresenter.accounts`, derived from the plans and the payments in its own transactions.
+  Every other presenter mirrors those accounts, so the dashboard, bills, the account form and Nudgy's
+  credit context all read the same hold, including on a cold start.
+
 ---
 
 ### Sources (verify on implementation)

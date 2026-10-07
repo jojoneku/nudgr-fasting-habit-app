@@ -1785,6 +1785,18 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _summaries = await _storage.loadMonthlySummaries();
     _currentMonth = toMonthKey(_clock());
+    // The ledger's slices win over the storage copies read above. Storage has
+    // no installment holds (they are derived from the live plans), and this
+    // load runs concurrently with the ledger's: had the ledger finished first,
+    // the storage copy would overwrite its live accounts until its next
+    // notify, so cards would show their limit with no installments held. If
+    // the ledger is still loading, its notify on finishing mirrors them in.
+    final ledger = _ledger;
+    if (ledger != null && !ledger.isLoading) {
+      _accounts = ledger.accounts;
+      _transactions = ledger.allTransactions;
+      _categories = ledger.categories;
+    }
 
     _isLoading = false;
     safeNotify();
