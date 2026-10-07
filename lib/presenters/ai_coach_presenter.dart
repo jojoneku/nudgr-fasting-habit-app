@@ -234,6 +234,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// The financial advisor restores its persisted history + profile so the user
   /// can keep confiding across sessions; other coaches start fresh.
   void openSession(AiCoachEntryPoint entryPoint) {
+    // Reopening the advisor while one of its turns is still running — the
+    // mobile sheet calls this every time it opens, and closing it while a
+    // suggestion card waits is ordinary — must not reload the thread. Storage
+    // does not have the in-flight turn yet, so a reload dropped the prose that
+    // introduced the card, and the reply after the user answered it was then
+    // written over whatever older message happened to be last.
+    if (_isResponding &&
+        entryPoint == AiCoachEntryPoint.financeAdvisor &&
+        _entryPoint == entryPoint) {
+      safeNotify();
+      return;
+    }
     _entryPoint = entryPoint;
     _errorMessage = null;
     if (entryPoint == AiCoachEntryPoint.financeAdvisor) {
@@ -382,26 +394,34 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // preparser, which knows the user's actual accounts and categories — so a
     // plainly-stated entry with no spend verb in it, like "207 lunch at alturas
     // maya credit card", is recognised as the log it obviously is instead of
-    // being answered as a question.
+    // being answered as a question. A request only Nudgy's tools can carry out
+    // is the exception, and stays with Nudgy — see [isAdvisorToolRequest].
     final ledger = _ledger;
+    var promptShown = false;
     if (image == null &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
-        (ledger.chatState.phase == ChatPhase.clarifying ||
-            looksLikeExpenseLog(trimmed) ||
-            ledger.recognisesLoggableEntry(trimmed))) {
+        _routesToLedger(trimmed, ledger)) {
       _messages.add(AiChatMessage.user(trimmed));
       _errorMessage = null;
       _isResponding = true;
       safeNotify();
+      var handled = true;
       try {
         await ledger.sendChatInput(trimmed);
+        handled = !_ledgerFoundNothing(ledger);
       } finally {
-        _isResponding = false;
-        _persistAdvisor();
-        safeNotify();
+        if (handled) {
+          _isResponding = false;
+          _persistAdvisor();
+          safeNotify();
+        }
       }
-      return;
+      if (handled || isDisposed) return;
+      // The ledger had nothing to put on a card. Nudgy answers instead — it
+      // has the whole conversation and every tool, including logging — so the
+      // message is never left without a reply. It is already in the thread.
+      promptShown = true;
     }
 
     // Compress an attached photo off the UI thread before building the turn.
@@ -416,10 +436,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       if (isDisposed) return;
     }
 
-    // With an image but no caption, give the model a natural prompt to react to.
-    final display = trimmed.isEmpty ? 'What do you make of this?' : trimmed;
-    final userMsg = AiChatMessage.user(display, imageBytes: compressed);
-    _messages.add(userMsg);
+    if (!promptShown) {
+      // With an image but no caption, give the model a natural prompt to react
+      // to.
+      final display = trimmed.isEmpty ? 'What do you make of this?' : trimmed;
+      _messages.add(AiChatMessage.user(display, imageBytes: compressed));
+    }
     _errorMessage = null;
     _isResponding = true;
     safeNotify();
@@ -1548,6 +1570,60 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         r"(pls\s+|please\s+|just\s+)?"
         r"(add|log|record|enter|put|note|save)\b",
       ).hasMatch(text.toLowerCase());
+
+  /// Does [text] ask for something only Nudgy's tools can create — an
+  /// installment, a bill with a due day, a set-aside, a receivable?
+  ///
+  /// [looksLikeExpenseLog] treats "add", "pay" and "bill" as spend verbs, so
+  /// without this carve-out "add an installment for my phone 24000 over 12
+  /// months" went to the ledger's transaction pipeline and came back as a plain
+  /// ₱24,000 expense, an error, or nothing at all. Nudgy never saw it, so its
+  /// suggestion card could never appear for the very sentence that asks for
+  /// one.
+  ///
+  /// Erring toward Nudgy is cheap: it can still log a plain expense through
+  /// `logTransactions`, which lands on the same review card. Erring toward the
+  /// ledger is a dead end, because the ledger only knows transactions.
+  static bool isAdvisorToolRequest(String text) => _advisorToolIntent.hasMatch(
+        text.toLowerCase(),
+      );
+
+  static final _advisorToolIntent = RegExp(
+    // Installments, by name or by their terms ("12 months", "0%").
+    r'\b(instal{1,2}ments?|hulugan|bnpl)\b'
+    r'|\b\d+\s*-?\s*(months?|mos?)\b'
+    r'|\b0\s*%'
+    // Set-asides and sinking funds.
+    r'|\bset[\s-]?asides?\b|\bsinking\s+funds?\b'
+    // Receivables.
+    r'|\breceivables?\b'
+    // A bill to track rather than one already paid: it has a due day.
+    r'|\bdue\b',
+  );
+
+  /// True when [text] should go to the ledger's confirm-before-commit pipeline
+  /// rather than to Nudgy.
+  bool _routesToLedger(String text, LedgerPresenter ledger) {
+    if (ledger.chatState.phase == ChatPhase.clarifying) return true;
+    // A request for something only a tool can create belongs to Nudgy — but
+    // only when this build has tools to carry it out.
+    if (_toolExecutor != null && isAdvisorToolRequest(text)) return false;
+    return looksLikeExpenseLog(text) || ledger.recognisesLoggableEntry(text);
+  }
+
+  /// True when the ledger read a routed message and found nothing to log.
+  ///
+  /// The extractor says so by asking a question back, and that question lives
+  /// on [LedgerChatState.unclear] — which no chat surface renders. Left alone,
+  /// the user's message sat in the thread with no reply, no card and no error.
+  static bool _ledgerFoundNothing(LedgerPresenter ledger) {
+    final state = ledger.chatState;
+    return state.phase == ChatPhase.idle &&
+        state.unclear != null &&
+        state.entries.isEmpty &&
+        state.lastStep == null &&
+        ledger.chatHardError == null;
+  }
 
   /// Heuristic: does [text] read as an expense to log (an amount plus a spend
   /// verb/keyword) rather than an advisory question? Used by the advisor mode
