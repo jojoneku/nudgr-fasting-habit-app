@@ -2220,17 +2220,49 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// the live account and category lists. It commits nothing: the card is
   /// still the confirm surface, so an entry the model got wrong is caught in
   /// exactly the same place as one the extractor got wrong.
+  ///
+  /// Rows already waiting on the card are kept, and the new ones join them.
+  /// One Nudgy turn may call the tool more than once, and each call is told
+  /// its rows are on the card — replacing the earlier batch made that untrue
+  /// for every call but the last. An identical row is not stacked twice.
+  ///
+  /// New rows also supersede an error left by an earlier message, exactly as a
+  /// newly typed message does. The error card outranks the review card, so a
+  /// stale one hid the rows that had just been put there.
   void presentEntriesForReview(List<ExtractedEntry> entries) {
     if (entries.isEmpty) return;
+    final waiting = _chatState.phase == ChatPhase.reviewing
+        ? _chatState.entries
+        : const <ExtractedEntry>[];
+    // Compared against the rows already waiting only: two identical charges in
+    // one batch ("₱120 coffee, twice") are two real rows.
+    final waitingKeys = {for (final e in waiting) _reviewKey(e.txn)};
+    final merged = [
+      ...waiting,
+      for (final e in entries)
+        if (!waitingKeys.contains(_reviewKey(e.txn))) e,
+    ];
+    _chatHardError = null;
     _chatState = _chatState.copyWith(
       phase: ChatPhase.reviewing,
-      entries: entries,
-      draft: entries.first.txn,
+      entries: merged,
+      draft: merged.first.txn,
       clearLastStep: true,
       clearUnclear: true,
     );
     safeNotify();
   }
+
+  /// What makes two review rows the same row.
+  static String _reviewKey(ParsedTransaction t) => [
+        t.type?.name,
+        t.amount,
+        t.description.trim().toLowerCase(),
+        t.accountId,
+        t.transferToAccountId,
+        t.categoryId,
+        t.date?.toIso8601String(),
+      ].join('|');
 
   /// Seeds the review card without a round trip through the extractor, so a
   /// widget test can drive the real presenter rather than a stand-in.
