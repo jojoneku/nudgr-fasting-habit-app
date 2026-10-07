@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -360,12 +361,23 @@ void main() {
       await ledger.load();
       await installments.load();
       await bills.load();
+      // Built the way TreasuryPresenters builds it. Without a budget presenter
+      // the executor has no categories to bind "Technology" against, and the
+      // plan would silently land uncategorised.
+      final budget = BudgetPresenter(
+          mockStorage, mockStats, ledger, mockNotifications, null, bills);
+      await budget.load();
 
       final executor = FinanceActionsExecutor(
         bills: bills,
+        budget: budget,
         ledger: ledger,
         installments: installments,
       );
+      final purchased = DateTime.now().subtract(const Duration(days: 2));
+      final purchasedIso = '${purchased.year}-'
+          '${purchased.month.toString().padLeft(2, '0')}-'
+          '${purchased.day.toString().padLeft(2, '0')}';
 
       // 1. Querying findInstallments before adding returns empty
       final emptyRead = await executor.runRead(const AiToolCall(
@@ -377,7 +389,7 @@ void main() {
       expect(emptyRead.summary.contains('No installments matched'), isTrue);
 
       // 2. Propose addInstallment via chat
-      final proposeFuture = executor.propose(const AiToolCall(
+      final proposeFuture = executor.propose(AiToolCall(
         id: 'call-1',
         name: 'addInstallment',
         input: {
@@ -387,7 +399,7 @@ void main() {
           'account': 'ShopeePay',
           'interestRate': 1.5,
           'category': 'Technology',
-          'date': '2026-10-05',
+          'date': purchasedIso,
           'note': 'Work & gaming laptop',
         },
       ));
@@ -395,9 +407,15 @@ void main() {
       // Verify pending proposal card
       expect(executor.pending, isNotNull);
       final pending = executor.pending!;
+      String detail(String label) =>
+          pending.details.firstWhere((d) => d.label == label).value;
       expect(pending.title, contains('Gaming Laptop'));
       expect(pending.details.any((d) => d.label == 'Monthly payment'), isTrue);
       expect(pending.details.any((d) => d.label == 'Interest rate'), isTrue);
+      // The card names what will be saved, not what the model typed.
+      expect(detail('Account'), 'ShopeePay BNPL');
+      expect(detail('Category'), 'Technology');
+      expect(detail('Purchase date'), purchasedIso);
 
       // 3. User confirms proposal card
       await executor.confirm();
@@ -413,6 +431,9 @@ void main() {
       expect(inst.totalMonths, 6);
       expect(inst.interestRate, 1.5);
       expect(inst.monthlyAmount, 5450.0); // 5000 + 450/mo interest
+      expect(inst.accountId, 'shopeepay');
+      expect(inst.categoryId, 'cat-tech');
+      expect(inst.note, 'Work & gaming laptop');
 
       // 5. Verify ledger transaction stamped
       expect(ledger.allTransactions.length, 1);
@@ -421,6 +442,8 @@ void main() {
       expect(txn.amount, 30000.0);
       expect(txn.isInstallment, isTrue);
       expect(txn.installmentId, inst.id);
+      expect(txn.accountId, 'shopeepay');
+      expect(txn.categoryId, 'cat-tech');
       expect(ledger.filteredMonthOutflow, 0.0); // no instant cash drain
 
       // 6. Verify credit limit held
@@ -436,6 +459,61 @@ void main() {
       expect(foundRead.ok, isTrue);
       expect(foundRead.summary, contains('Gaming Laptop'));
       expect(foundRead.summary, contains('5450/mo'));
+      // Plans are not scoped to a month, so the summary must not claim one.
+      expect(foundRead.summary, startsWith('1 installments in any month'));
+
+      // 8. The purchase record is listed but not counted as spending: the
+      // plan's monthly payments are. Counting it would add the principal on
+      // top of every payment.
+      final txnRead = await executor.runRead(const AiToolCall(
+        id: 'read-3',
+        name: 'findTransactions',
+        input: {'query': 'laptop'},
+      ));
+      expect(txnRead.summary, contains('Spent ₱0'));
+      expect(txnRead.summary, contains('installment purchase'));
+      expect(txnRead.summary, contains('Technology · ShopeePay BNPL'));
+    });
+
+    test(
+        'findTransactions counts an installment plan\'s payments, not its '
+        'purchase record', () async {
+      await ledger.load();
+      await installments.load();
+      await bills.load();
+      final executor = FinanceActionsExecutor(
+        bills: bills,
+        ledger: ledger,
+        installments: installments,
+      );
+
+      await ledger.addInstallmentPurchase(Installment(
+        id: 'inst-phone',
+        name: 'iPhone on SPayLater',
+        accountId: 'shopeepay',
+        totalAmount: 12000.0,
+        monthlyAmount: 2000.0,
+        totalMonths: 6,
+        startMonth: '2026-10',
+        purchaseDate: DateTime(2026, 10, 2),
+        categoryId: 'cat-tech',
+      ));
+      installments.setMonth('2026-10');
+      await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
+
+      final result = await executor.runRead(const AiToolCall(
+        id: 'read-1',
+        name: 'findTransactions',
+        input: {'query': 'iphone'},
+      ));
+
+      expect(result.summary, contains('2 transactions'));
+      // ₱2000 paid, not ₱14000 (principal + payment).
+      expect(result.summary, contains('Spent ₱2000'));
+      expect(result.summary, contains('1 installment purchase is listed'));
+      final purchaseRow =
+          result.summary.split('\n').singleWhere((l) => l.contains('₱12000'));
+      expect(purchaseRow, contains('installment purchase, not counted'));
     });
 
     group('deleting an installment purchase', () {
