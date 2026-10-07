@@ -14,7 +14,35 @@ import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../mocks.mocks.dart';
+
+/// Records month [n] (1 = October 2026) of plan [planId] directly. From a bank
+/// it is a payment booked under the old model; on the card it is a statement
+/// charge. On a card with a billing cycle "Mark paid" does nothing — the
+/// statement generator bills each month — so tests that need a recorded month
+/// write it here.
+Future<void> recordPlanMonth(
+  LedgerPresenter ledger,
+  String planId, {
+  required double amount,
+  required String description,
+  String accountId = 'maribank',
+  int n = 1,
+}) {
+  final month = DateTime(2026, 9 + n);
+  return ledger.addTransaction(TransactionRecord(
+    id: 'month-$planId-$accountId-$n',
+    date: DateTime(month.year, month.month, 10),
+    accountId: accountId,
+    categoryId: 'cat-tech',
+    amount: amount,
+    type: TransactionType.outflow,
+    description: description,
+    month: toMonthKey(month),
+    installmentId: planId,
+  ));
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -178,7 +206,7 @@ void main() {
       expect(ledger.filteredMonthOutflow, 0.0);
     });
 
-    test('marking installment paid inherits categoryId and tags installmentId',
+    test('statement close bills the month onto the card in the plan category',
         () async {
       await ledger.load();
       await installments.load();
@@ -197,21 +225,26 @@ void main() {
       );
       await ledger.addInstallmentPurchase(inst);
 
-      // Mark the current month installment paid from MariBank
-      await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
+      // ShopeePay has a billing cycle, so its rows offer no "Mark paid": the
+      // month is billed onto the card when the statement closes (Oct 1).
+      installments.setMonth('2026-10');
+      expect(installments.canMarkPaid(inst), isFalse);
+      await bills.setMonth('2026-10');
 
-      // Verify transaction inherits category 'cat-tech' and funding account deducted
-      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 payment
-      final paymentTxn =
-          ledger.allTransactions.firstWhere((t) => !t.isInstallment);
-      expect(paymentTxn.categoryId, 'cat-tech');
-      expect(paymentTxn.amount, 2000.0);
-      expect(paymentTxn.accountId, 'maribank');
-      expect(paymentTxn.installmentId, 'inst-phone');
+      expect(ledger.allTransactions.length, 2); // 1 purchase + 1 charge
+      final charge = ledger.allTransactions.firstWhere((t) => !t.isInstallment);
+      expect(charge.categoryId, 'cat-tech');
+      expect(charge.amount, 2000.0);
+      expect(charge.accountId, 'shopeepay');
+      expect(charge.installmentId, 'inst-phone');
+      // The bank is untouched until the statement is paid.
+      expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
+          50000.0);
 
-      // Verify unbilled installments decreased
+      // The month moved from the hold to the billed balance.
       final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
       expect(acct.unbilledInstallments, 10000.0);
+      expect(acct.balance, 2000.0);
     });
 
     test(
@@ -500,7 +533,8 @@ void main() {
         categoryId: 'cat-tech',
       ));
       installments.setMonth('2026-10');
-      await installments.markPaid('inst-phone', fundingAccountId: 'maribank');
+      await recordPlanMonth(ledger, 'inst-phone',
+          amount: 2000.0, description: 'iPhone on SPayLater — Payment 1/6');
 
       final result = await executor.runRead(const AiToolCall(
         id: 'read-1',
@@ -565,25 +599,25 @@ void main() {
           () async {
         await loadAll();
         await ledger.addInstallmentPurchase(plan('a'));
-        installments.setMonth('2026-10');
-        await installments.markPaid('a', fundingAccountId: 'maribank');
-        final bankAfterPay =
-            ledger.accounts.firstWhere((a) => a.id == 'maribank').balance;
-        expect(bankAfterPay, 49900.0);
+        // The October statement closes and bills month 1 onto the card.
+        await bills.setMonth('2026-10');
+        final cardAfterCharge =
+            ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance;
+        expect(cardAfterCharge, 100.0);
 
         final removed = await ledger.deleteTransactions({purchaseIdOf('a')});
 
         expect(removed, hasLength(2));
         expect(ledger.allTransactions, isEmpty);
-        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
-            50000.0);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            0.0);
 
         await ledger.restoreTransactions(removed);
 
         expect(installments.allInstallments.map((i) => i.id), ['a']);
         expect(installments.paidCount('a'), 1);
-        expect(ledger.accounts.firstWhere((a) => a.id == 'maribank').balance,
-            bankAfterPay);
+        expect(ledger.accounts.firstWhere((a) => a.id == 'shopeepay').balance,
+            cardAfterCharge);
         expect(
             ledger.accounts
                 .firstWhere((a) => a.id == 'shopeepay')
@@ -647,7 +681,8 @@ void main() {
         await ledger
             .addInstallmentPurchase(plan(deferralMonths: deferralMonths));
         installments.setMonth('2026-10');
-        await installments.markPaid('a', fundingAccountId: 'maribank');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 1/3');
       }
 
       Future<void> saveForm({
@@ -772,7 +807,10 @@ void main() {
         await bills.load();
         await ledger.addInstallmentPurchase(plan());
         installments.setMonth('2026-10');
-        await installments.markPaid('a'); // charged to the card itself
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0,
+            accountId: 'shopeepay',
+            description: 'Fuse holder — Installment 1/3');
         expect(balanceOf('shopeepay'), 100.0);
         final old = purchase();
 
@@ -875,10 +913,10 @@ void main() {
           startMonth: '2026-10',
           purchaseDate: DateTime(2026, 9, 6),
         ));
-        installments.setMonth('2026-10');
-        await installments.markPaid('a', fundingAccountId: 'maribank');
-        installments.setMonth('2026-11');
-        await installments.markPaid('a', fundingAccountId: 'maribank');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 1/3');
+        await recordPlanMonth(ledger, 'a',
+            amount: 100.0, description: 'Fuse holder — Payment 2/3', n: 2);
         expect(ledger.allTransactions, hasLength(3));
         clearInteractions(mockStorage);
       }
