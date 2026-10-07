@@ -1,4 +1,18 @@
+import 'finance_category.dart';
 import 'transaction_record.dart';
+
+/// System category an installment charge falls back to when its plan has no
+/// category of its own.
+const String kInstallmentCategoryId = '__installment__';
+
+/// The [kInstallmentCategoryId] category, created on first use.
+FinanceCategory installmentFallbackCategory() => FinanceCategory(
+      id: kInstallmentCategoryId,
+      name: 'Installment',
+      type: CategoryType.expense,
+      icon: 'credit_card',
+      colorHex: '#9C27B0',
+    );
 
 // Represents a purchase split into equal monthly payments.
 // Each month the installment is "due", and paying it creates a
@@ -77,6 +91,45 @@ class Installment {
 
   // The 'YYYY-MM' key for payment index [i] (0-based).
   String monthForIndex(int i) => _offsetMonth(startMonth, i);
+
+  /// How many of this plan's monthly charges fall in or before [month] — the
+  /// number a statement due in [month] should have billed by now. Zero before
+  /// the first month, [totalMonths] from the last month on.
+  int chargesDueBy(String month) {
+    var n = 0;
+    while (n < totalMonths && monthForIndex(n).compareTo(month) <= 0) {
+      n++;
+    }
+    return n;
+  }
+
+  /// Deterministic id for this plan's [number]th charge (1-based), so two
+  /// devices billing the same statement write the same ledger row.
+  String chargeId(int number) => 'instchg_${id}_$number';
+
+  /// The ledger record for one month of this plan billed onto its card: an
+  /// outflow on [accountId] in the plan's category, which raises the card's
+  /// balance and — being a non-purchase record linked by [installmentId] —
+  /// counts toward [paidCount], releasing that month from the hold.
+  TransactionRecord chargeRecord({
+    required String recordId,
+    required int number,
+    required DateTime date,
+    required String month,
+    required String categoryId,
+    double? amount,
+  }) =>
+      TransactionRecord(
+        id: recordId,
+        date: date,
+        accountId: accountId,
+        categoryId: categoryId,
+        amount: amount ?? monthlyAmount,
+        type: TransactionType.outflow,
+        description: '$name — Installment $number/$totalMonths',
+        month: month,
+        installmentId: id,
+      );
 
   /// How many payments have been recorded for this installment in [transactions].
   int paidCount(Iterable<TransactionRecord> transactions) => transactions

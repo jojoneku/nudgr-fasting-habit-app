@@ -303,6 +303,66 @@ A credit account's installment plans hold part of its limit before they are bill
   Every other presenter mirrors those accounts, so the dashboard, bills, the account form and Nudgy's
   credit context all read the same hold, including on a cold start.
 
+### 12.8 Installments are billed onto the card at statement close
+An installment purchase is a ledger record with `isInstallment: true` (no balance effect, not
+spending) plus an `Installment` plan. Its months sit in the account's **hold**
+(`unbilledInstallments` = remaining months × monthly amount), and `totalDebt` = billed balance +
+hold. Issuers bill one month per statement ("[1/3] Item ₱82.92"), and the app now does the same:
+- **On a card with a billing cycle** (`hasBillingCycle`), when the generator processes a closed
+  cycle it first posts an **installment charge** for each active plan due that cycle: an outflow on
+  the card, `installmentId` = plan id, `isInstallment: false`, the plan's monthly amount, the plan's
+  category (fallback `__installment__`), dated the **close date**, described
+  "Item — Installment 2/3". The charge raises the card balance and counts toward the plan's
+  `paidCount`, so the hold drops by the same amount. `totalDebt` is unchanged; spending is
+  recognised in the plan's category when the month is billed.
+- **Idempotent by count, one per statement.** A plan should have
+  `installmentChargesDueAt(account, plan, cycle)` charges by now: one per statement from the first
+  statement due in or after its start month, capped at its length. Counting statements, not due
+  months, keeps a month with no due date (a long days-after-close rule) from billing two months on
+  the next statement. Only the shortfall below `paidCount` is posted. Payment records booked under the old model count, so nothing is billed
+  twice. Charge ids are deterministic (`instchg_<plan>_<n>`), so two devices write the same rows.
+- **Statement amount = `payableAsOf(close)`.** Installment months are already in the balance; there
+  is no separate installment sum and no "paid this month" exclusion. A part payment therefore
+  never shrinks the statement.
+- **Paying is always a plain transfer** to the card for the amount actually paid: Bills "Pay",
+  quick pay and a transfer typed into the ledger all settle the statement the same way, through
+  the payments made since the close. Nothing is booked against an installment at payment time.
+- **No backfill.** Charges are posted only for a cycle that has closed and is not yet past due, and
+  never for a cycle whose statement was already settled (paid, or paid through a linked entry).
+  Charges are not posted while the ledger is still loading; the run is repeated once it has.
+- **Rows.** A plan on a cycle card has no "Mark paid": it reads "on statement · 2/3" until billed,
+  then "billed · 2/3". It does not appear separately in Coming Up, because it is inside the
+  statement row.
+- **Cards without a billing cycle** (a BNPL with no statement day) keep a manual "Mark paid" with
+  the same shape: the charge is posted on the card, plus a transfer from the funding account when
+  one is given. "Mark unpaid" deletes that charge and its transfer.
+
+Worked example (ShopeePay, statement day 4, due the 15th, ₱845.69 revolving, six 3-month plans
+starting 2026-10 totalling ₱1,578.71/month, today Oct 7): six charges dated Oct 4, balance
+₱2,424.40, hold ₱3,157.42 (was ₱4,736.13), October statement ₱2,424.40, total owed ₱5,581.82
+unchanged. Paying ₱850 leaves ₱1,574.40 on the statement.
+
+### 12.9 Statement items ("View items")
+Every credit statement bill whose card has a billing cycle shows a "View items · N" link (Bills
+tab card on mobile, bill row on web). It opens the statement's item list — a bottom sheet on
+mobile, a dialog on web — modelled on the issuer's own bill screen:
+- **Header:** Unpaid amount, then Bill amount / Repaid / Unpaid, the due date, and
+  "Transaction total: N items · 05 Sep – 04 Oct" (the cycle from the day after the previous
+  close through this close).
+- **Lines** are the card's own records in exactly the window `payableAsOf` bills, grouped as
+  **Purchases** (outflows), **Installments** (charges with `installmentId`, shown "[1/3] Item"),
+  **Refunds** (inflows in the window that are not payments — no transfer group, no bill link) and
+  **Repaid** (every inflow after the close, as `paymentsToLiabilitySince` counts them). Installment
+  purchase records (`isInstallment`) and other accounts' transfer legs are never lines.
+- **Reconciliation:** carried over (owed at the previous close − payments during the cycle) +
+  purchases + installments − refunds = bill amount; bill amount − repaid (capped, from statement
+  progress) = unpaid = `creditStatementRemaining`. A statement frozen before a line was edited (paid,
+  or hand-keyed) says so instead of hiding the difference.
+- **Editing:** tapping a line opens that record's transaction form (mobile `AddTransactionSheet`,
+  web ledger edit dialog). The list reads the ledger on every rebuild, and an open generated
+  statement's amount now follows the ledger as soon as a line in its cycle changes (same scope as
+  the generator: unpaid, untransacted, not past due, never down to ₱0).
+
 ---
 
 ### Sources (verify on implementation)
