@@ -127,12 +127,13 @@ void main() {
       (tester) async {
     await pumpView(tester);
 
-    final viewItems = find.text('View items · 3');
+    final viewItems = find.text('View 3 items');
     expect(viewItems, findsOneWidget);
     expect(
         tester
-            .getSize(
-                find.ancestor(of: viewItems, matching: find.byType(TextButton)))
+            .getSize(find
+                .ancestor(of: viewItems, matching: find.byType(InkWell))
+                .first)
             .height,
         greaterThanOrEqualTo(44));
 

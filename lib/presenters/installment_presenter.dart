@@ -170,9 +170,10 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// statements — why there is nothing to tick.
   String checkboxTooltip(Installment inst) {
     if (billsOnStatement(inst)) {
+      // Nothing to tick: the month is paid only with the whole statement.
       return isPaidForMonth(inst.id)
-          ? 'Billed on the card statement'
-          : 'Billed when the card statement closes';
+          ? "On the card statement · can't be paid alone"
+          : "Billed when the card statement closes · can't be paid alone";
     }
     return isPaidForMonth(inst.id) ? 'Mark unpaid this month' : 'Mark paid';
   }

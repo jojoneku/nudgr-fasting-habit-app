@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
+import 'package:intermittent_fasting/utils/statement_card_view.dart';
 import '../mocks.mocks.dart';
 
 /// A credit statement's item list: the card's records inside the cycle,
@@ -362,6 +363,87 @@ void main() {
       );
       expect(bills.statementBreakdown(rent), isNull);
       expect(bills.statementItemsLabel(rent), isNull);
+    });
+  });
+  group('statement card and installment rows', () {
+    List<TransactionRecord> shopeeCycle() => [
+          rec('a', DateTime(2026, 9, 5), 20.09, description: 'Phone case'),
+          rec('b', DateTime(2026, 9, 18), 449.35, description: 'Groceries'),
+          rec('c', DateTime(2026, 10, 4), 376.25, description: 'Shoes'),
+        ];
+
+    test('the card leads with the account and says what is on it', () async {
+      txnState = shopeeCycle();
+      build();
+      await loadAll();
+
+      final card = bills.statementCard(statement())!;
+      expect(card.account.id, 'spay');
+      expect(card.kindLabel, 'BNPL');
+      expect(card.periodLabel, 'Statement · 05 Sep – 04 Oct');
+      expect(card.dueLabel, 'Due Oct 15 · in 8 days');
+      expect(card.dueTone, StatementDueTone.normal);
+      expect(card.headlineAmount, closeTo(2424.40, 0.005));
+      expect(card.headlineCaption, 'To pay');
+      expect(card.compositionLabel, '3 purchases · 6 installments');
+      expect(card.itemsLabel, 'View 9 items');
+      expect(card.progress, isNull);
+    });
+
+    test('a due date within three days reads as soon', () async {
+      txnState = shopeeCycle();
+      build(now: DateTime(2026, 10, 13));
+      await loadAll();
+
+      final card = bills.statementCard(statement())!;
+      expect(card.dueLabel, 'Due Oct 15 · in 2 days');
+      expect(card.dueTone, StatementDueTone.soon);
+    });
+
+    test('a part payment shows what is left and the progress', () async {
+      txnState = shopeeCycle();
+      build();
+      await loadAll();
+
+      await bills.markBillPaid(statement().id,
+          paidAmount: 850, accountId: 'bank');
+
+      final card = bills.statementCard(statement())!;
+      expect(card.headlineAmount, closeTo(1574.40, 0.005));
+      expect(card.headlineCaption, 'Left of ₱2,424.40');
+      expect(card.progress, closeTo(850 / 2424.40, 0.0001));
+      expect(card.progressLabel, startsWith('Paid ₱850.00 of ₱2,424.40'));
+    });
+
+    test('a billed month is not paid until its statement is', () async {
+      txnState = shopeeCycle();
+      build();
+      await loadAll();
+      final plan = installments.installments.firstWhere((i) => i.id == 'p0');
+
+      final open = bills.installmentStatementStatus(plan)!;
+      expect(open.paid, isFalse);
+      expect(open.label, '1/3 · on statement, due Oct 15');
+      expect(open.statement?.id, statement().id);
+      expect(open.linkLabel, 'View SPayLater statement');
+      expect(open.note, "Linked to SPayLater statement · can't be paid alone");
+
+      await bills.markBillPaid(statement().id,
+          paidAmount: 2424.40, accountId: 'bank');
+
+      final settled = bills.installmentStatementStatus(plan)!;
+      expect(settled.paid, isTrue);
+      expect(settled.label, '1/3 · paid with statement');
+    });
+
+    test('a plan on a card without statements keeps its own row state',
+        () async {
+      planState = sixPlans(accountId: 'billease');
+      build();
+      await loadAll();
+
+      final plan = installments.installments.first;
+      expect(bills.installmentStatementStatus(plan), isNull);
     });
   });
 }
