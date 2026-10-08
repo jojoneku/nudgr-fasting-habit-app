@@ -3298,6 +3298,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final plans = (source == null || source.isLoading)
         ? await _storage.loadInstallments()
         : source.installments;
+    // A purchase record that lost its flag counts as a billed month and would
+    // stop its plan from being billed; put the flag back before counting.
+    await _ledger.repairInstallmentPurchaseFlags(plans);
     final onCard = plans
         .where((i) =>
             i.isActive &&

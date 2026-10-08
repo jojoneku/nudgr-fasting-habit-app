@@ -258,8 +258,9 @@ void main() {
       final probes = backend.requests
           .where((r) => r.method == 'GET' && r.table == 'finance_records')
           .length;
-      expect(probes, lessThanOrEqualTo(2),
-          reason: 'one capability probe plus the stamp lookup');
+      expect(probes, lessThanOrEqualTo(3),
+          reason: 'two capability probes (edit time, data version) plus the '
+              'stamp lookup — per push, never per record');
     });
   });
 }

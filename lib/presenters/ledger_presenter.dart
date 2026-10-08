@@ -1066,6 +1066,53 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// before the first `await`, so a caller that decided what is missing from
   /// [allTransactions] and calls this straight away cannot race a second run
   /// into posting the same records. Awards no XP: nothing was logged by hand.
+  /// Restores the installment-purchase flag on records that lost it.
+  ///
+  /// A build older than the flag (an app or browser tab left open across an
+  /// update) reads a purchase record without it and writes it back as an
+  /// ordinary record. The record then counts as a billed month: its plan stops
+  /// being billed and its statement drops to the revolving spend alone. That
+  /// happened to six ShopeePay purchases on 2026-10-07.
+  ///
+  /// A record is restored only when its plan has no purchase record at all
+  /// and exactly one record matches the purchase: same plan, same card, the
+  /// plan's total amount, and the purchase day (when the plan has one). No
+  /// balance effect is applied: a purchase record never had one, and the
+  /// build that dropped the flag did not apply one either.
+  ///
+  /// Returns true when anything was restored.
+  Future<bool> repairInstallmentPurchaseFlags(
+      Iterable<Installment> plans) async {
+    final fixedIds = <String>{};
+    for (final plan in plans) {
+      final linked = _allTransactions.where((t) => t.installmentId == plan.id);
+      if (linked.any((t) => t.isInstallment)) continue;
+      final day = plan.purchaseDate;
+      final candidates = linked
+          .where((t) =>
+              t.accountId == plan.accountId &&
+              t.transferGroupId == null &&
+              t.type == TransactionType.outflow &&
+              (t.amount - plan.totalAmount).abs() < 0.01 &&
+              (day == null ||
+                  (t.date.year == day.year &&
+                      t.date.month == day.month &&
+                      t.date.day == day.day)))
+          .toList();
+      if (candidates.length == 1) fixedIds.add(candidates.single.id);
+    }
+    if (fixedIds.isEmpty) return false;
+    _allTransactions = [
+      for (final t in _allTransactions)
+        fixedIds.contains(t.id) ? t.copyWith(isInstallment: true) : t,
+    ];
+    debugPrint('LedgerPresenter: restored the installment-purchase flag on '
+        '${fixedIds.length} record(s)');
+    safeNotify();
+    await _saveAll();
+    return true;
+  }
+
   Future<void> postSystemTransactions(List<TransactionRecord> txns) async {
     if (txns.isEmpty) return;
     _allTransactions = [..._allTransactions, ...txns];

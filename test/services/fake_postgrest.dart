@@ -50,6 +50,15 @@ class FakePostgrest extends http.BaseClient {
   /// the server's clock and ignoring whatever the client sent.
   bool applyUpdatedAtTrigger = true;
 
+  /// Whether the schema has migration 057's `data_version` column. When false,
+  /// any request naming it is rejected like an unknown column.
+  bool hasDataVersionColumn = true;
+
+  /// Whether migration 057's guard is in place: an update of a
+  /// `finance_records` row whose `data_version` is below the stored one is
+  /// skipped (not returned), as the trigger's `RETURN NULL` does.
+  bool applyDataVersionGuard = true;
+
   /// How far this fake server's clock sits from the test process's clock.
   /// Non-zero simulates the skew Phase 5 exists to cancel.
   Duration serverClockSkew = Duration.zero;
@@ -104,6 +113,19 @@ class FakePostgrest extends http.BaseClient {
       );
     }
 
+    if (!hasDataVersionColumn &&
+        _mentionsColumn('data_version', request.url, body)) {
+      return _json(
+        {
+          'message':
+              'column "data_version" of relation "$table" does not exist',
+          'code': '42703',
+        },
+        status: 400,
+        request: request,
+      );
+    }
+
     if (method == 'POST' && failNextPostTo == table) {
       failNextPostTo = null;
       return _json(
@@ -119,6 +141,12 @@ class FakePostgrest extends http.BaseClient {
         _json(_upsert(table, body, stampServerTime: true), request: request),
       _ => _json(const [], status: 405, request: request),
     };
+  }
+
+  bool _mentionsColumn(String column, Uri url, Object? body) {
+    if ((url.queryParameters['select'] ?? '').contains(column)) return true;
+    final rows = body is List ? body : [if (body != null) body];
+    return rows.any((r) => r is Map && r.containsKey(column));
   }
 
   bool _mentionsEditTime(Uri url, Object? body) {
@@ -215,6 +243,7 @@ class FakePostgrest extends http.BaseClient {
     }
     final rows = tables.putIfAbsent(table, () => []);
     final keyCols = primaryKeys[table];
+    final written = <Map<String, dynamic>>[];
     for (final row in incoming) {
       final existing = keyCols == null
           ? -1
@@ -222,12 +251,21 @@ class FakePostgrest extends http.BaseClient {
               (r) => keyCols.every((c) => r[c] == row[c]),
             );
       if (existing >= 0) {
+        final stored = rows[existing];
+        if (stampServerTime &&
+            applyDataVersionGuard &&
+            table == 'finance_records' &&
+            ((row['data_version'] as int?) ?? 0) <
+                ((stored['data_version'] as int?) ?? 0)) {
+          continue; // migration 057: an outdated write is skipped
+        }
         rows[existing] = row;
       } else {
         rows.add(row);
       }
+      written.add(row);
     }
-    return incoming;
+    return written;
   }
 
   http.StreamedResponse _json(

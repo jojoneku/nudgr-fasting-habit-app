@@ -61,6 +61,16 @@ class _RemoteRow {
   const _RemoteRow(this.data, this.updatedAt);
 }
 
+/// Version of the finance data model this build writes. Raise it whenever a
+/// finance model gains a field that an older build would drop on a
+/// read-and-write round trip (as `TransactionRecord.isInstallment` was in
+/// #677). Migration 057 makes the server refuse to let a lower version
+/// overwrite a row a higher version wrote. See Plan 062.
+///
+/// 1 — `TransactionRecord.isInstallment`, `Installment.interestRate` /
+///     `deferralMonths` / `purchaseDate`, and every finance field before them.
+const int kFinanceDataVersion = 1;
+
 class SyncService {
   final SupabaseClient _supabase;
   final LocalStorageService _storage;
@@ -293,6 +303,57 @@ class SyncService {
     };
   }
 
+  // ── Finance data version (Plan 062 A) ──────────────────────────────────────
+
+  /// Column naming the version of the finance data model a row was written
+  /// with. Added by migration 057; absent on older schemas.
+  static const String _dataVersionColumn = 'data_version';
+
+  /// Whether the cloud schema carries [_dataVersionColumn], probed once.
+  bool? _supportsDataVersion;
+
+  Future<bool> _hasDataVersionColumn() async {
+    if (_supportsDataVersion != null) return _supportsDataVersion!;
+    try {
+      await _supabase
+          .from('finance_records')
+          .select(_dataVersionColumn)
+          .eq('user_id', _userId)
+          .limit(1);
+      _supportsDataVersion = true;
+    } catch (e) {
+      debugPrint('SyncService: $_dataVersionColumn unavailable (migration 057 '
+          'not applied?): $e');
+      _supportsDataVersion = false;
+    }
+    return _supportsDataVersion!;
+  }
+
+  /// A finance write: [row] with its edit time and, when the schema supports
+  /// it, [kFinanceDataVersion].
+  ///
+  /// The version is what lets the server refuse a write from an outdated
+  /// build. Migration 057's trigger skips an update whose `data_version` is
+  /// below the row's: a build that predates a field reads the row without it
+  /// and would write it back stripped (an old browser tab dropped
+  /// `isInstallment` from six purchases this way).
+  Future<Map<String, dynamic>> _financeWrite(
+      Map<String, dynamic> row, DateTime editedAt) async {
+    final withTime = await _withEditTime(row, editedAt);
+    if (!await _hasDataVersionColumn()) return withTime;
+    return {...withTime, _dataVersionColumn: kFinanceDataVersion};
+  }
+
+  /// The columns a finance upsert echoes back: enough to tell which rows the
+  /// server actually wrote. A row the data-version guard skipped is absent.
+  static const String _financeEcho = 'updated_at, table_name, record_id';
+
+  /// `'<table>/<recordId>'` keys of the rows an upsert echoed back.
+  static Set<String> _echoedKeys(Object? response) => {
+        for (final row in response is List ? response : const [])
+          if (row is Map) '${row['table_name']}/${row['record_id']}',
+      };
+
   /// Appends the edit-time column to a pull's column list when available.
   Future<String> _pullColumns(String base) async =>
       await _hasEditTimeColumn() ? '$base, $_editedAtColumn' : base;
@@ -514,16 +575,23 @@ class SyncService {
       try {
         final sentAt = DateTime.now();
         final written = <Map<String, dynamic>>[
-          for (final p in chunk) await _withEditTime(p.value, p.key.queuedAt),
+          for (final p in chunk) await _financeWrite(p.value, p.key.queuedAt),
         ];
         final echoed = await _supabase
             .from('finance_records')
             .upsert(written)
-            .select('updated_at');
+            .select(_financeEcho);
         await _observeServerClock(echoed, sentAt);
+        final landed = _echoedKeys(echoed);
         for (final p in chunk) {
           final id = _entryId(p.key);
           processed.add(p.key);
+          if (!landed.contains(p.key.key)) {
+            // The server kept a row written by a newer build of the app;
+            // take the cloud copy on the next pull instead.
+            _noteConflictLost(p.key);
+            continue;
+          }
           _failureCounts.remove(id);
           _retryAfter.remove(id);
           final written = DateTime.tryParse(p.value['updated_at'] as String);
@@ -700,15 +768,19 @@ class SyncService {
     final writtenAt = DateTime.now().toUtc();
     final echoed = await _supabase
         .from('finance_records')
-        .upsert(await _withEditTime({
+        .upsert(await _financeWrite({
           'user_id': _userId,
           'table_name': parts[0],
           'record_id': parts[1],
           'data': {_tombstoneKey: true},
           'updated_at': writtenAt.toIso8601String(),
         }, entry.queuedAt))
-        .select('updated_at');
+        .select(_financeEcho);
     await _observeServerClock(echoed, writtenAt);
+    // Skipped by the data-version guard: a newer build owns the row.
+    if (!_echoedKeys(echoed).contains(entry.key)) {
+      return _PushOutcome.conflictLost;
+    }
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
@@ -1121,15 +1193,19 @@ class SyncService {
     final writtenAt = DateTime.now().toUtc();
     final echoed = await _supabase
         .from('finance_records')
-        .upsert(await _withEditTime({
+        .upsert(await _financeWrite({
           'user_id': _userId,
           'table_name': tableName,
           'record_id': recordId,
           'data': data,
           'updated_at': writtenAt.toIso8601String(),
         }, entry?.queuedAt ?? writtenAt))
-        .select('updated_at');
+        .select(_financeEcho);
     await _observeServerClock(echoed, writtenAt);
+    // Skipped by the data-version guard: a newer build owns the row.
+    if (!_echoedKeys(echoed).contains(key)) {
+      return _PushOutcome.conflictLost;
+    }
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
