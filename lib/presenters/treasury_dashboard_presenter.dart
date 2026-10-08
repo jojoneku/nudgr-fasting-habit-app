@@ -875,6 +875,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// one). Lets the advisor plan any future month — e.g. "Internet ₱999 due the
   /// 15th" — even when that month hasn't been materialized in storage yet.
   /// `isInflow` marks money coming in (receivables) vs out (bills).
+  /// Only series still running count (see [_seriesStillRunning]).
   List<({String name, double amount, int dueDay, bool isInflow})>
       get recurringCommitments {
     final bills = <String, Bill>{};
@@ -896,14 +897,14 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       }
     }
     final out = <({String name, double amount, int dueDay, bool isInflow})>[
-      for (final b in bills.values)
+      for (final b in bills.values.where((b) => _seriesStillRunning(b.month)))
         (
           name: b.name,
           amount: b.nextMonthAmount ?? b.amount,
           dueDay: b.dueDay,
           isInflow: false,
         ),
-      for (final r in recs.values)
+      for (final r in recs.values.where((r) => _seriesStillRunning(r.month)))
         (
           name: r.name,
           amount: r.nextMonthAmount ?? r.amount,
@@ -914,6 +915,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     out.sort((a, b) => a.dueDay.compareTo(b.dueDay));
     return out.take(20).toList();
   }
+
+  /// Whether a recurring series whose latest instance falls in [month] is
+  /// still running. The current month's copy may not be generated yet, so a
+  /// series counts while it has an instance in the previous month or later.
+  /// Without this, a series stopped long ago stayed in [recurringCommitments]
+  /// for good: a hand-made June BPI statement marked recurring had Nudgy
+  /// planning a ₱10,128.26 bill every month into October.
+  bool _seriesStillRunning(String month) =>
+      month.compareTo(previousMonth(_currentMonth)) >= 0;
 
   /// One-off obligations already scheduled for a FUTURE month — non-recurring,
   /// still-open bills and receivables the user planned ahead (recurring ones are
