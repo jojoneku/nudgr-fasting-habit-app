@@ -449,4 +449,56 @@ void main() {
       expect(bills.installmentStatementStatus(plan), isNull);
     });
   });
+
+  group('purchase records rewritten by an outdated build', () {
+    List<TransactionRecord> purchases({required bool flagged}) => [
+          for (var i = 0; i < monthlies.length; i++)
+            rec('buy$i', DateTime(2026, 9, 20), monthlies[i] * 3,
+                description: 'Item $i',
+                installmentId: 'p$i',
+                isInstallment: flagged),
+        ];
+
+    test('get their flag back, and the statement bills the months again',
+        () async {
+      txnState = [
+        rec('a', DateTime(2026, 9, 5), 20.09),
+        rec('b', DateTime(2026, 9, 18), 449.35),
+        rec('c', DateTime(2026, 10, 4), 376.25),
+        ...purchases(flagged: false),
+      ];
+      build();
+      await loadAll();
+
+      final restored =
+          ledger.allTransactions.where((t) => t.id.startsWith('buy'));
+      expect(restored, hasLength(6));
+      expect(restored.every((t) => t.isInstallment), isTrue);
+      expect(
+          txnState
+              .where((t) => t.id.startsWith('buy'))
+              .every((t) => t.isInstallment),
+          isTrue,
+          reason: 'the repair is saved');
+      expect(
+          ledger.allTransactions
+              .where((t) => t.id.startsWith('instchg_'))
+              .length,
+          6);
+      expect(statement().amount, closeTo(2424.40, 0.005));
+    });
+
+    test('a record that does not match the purchase is left alone', () async {
+      txnState = [
+        // Right plan and card, wrong amount: a real payment, not a purchase.
+        rec('pay0', DateTime(2026, 9, 20), 299.62,
+            installmentId: 'p0', description: 'Item 0'),
+      ];
+      build();
+      await loadAll();
+
+      final pay = ledger.allTransactions.firstWhere((t) => t.id == 'pay0');
+      expect(pay.isInstallment, isFalse);
+    });
+  });
 }
