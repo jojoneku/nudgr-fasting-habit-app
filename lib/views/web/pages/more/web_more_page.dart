@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/auth_presenter.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/views/web/pages/setup/web_setup_page.dart';
+import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -10,12 +14,18 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 ///
 /// Below the desktop breakpoint the browser renders the mobile Treasury module
 /// instead of the sidebar shell — and the sidebar is the only place the web
-/// build puts the signed-in account, sign-out, the light/dark toggle and the
-/// Nudgy. Without this page a mobile-web user could not sign out at all.
+/// build puts the signed-in account, sign-out, the light/dark toggle, the
+/// Nudgy and Setup & Accounts. Without this page a mobile-web user could not
+/// sign out at all, and until Plan 063 Phase 1 could not reach Setup either.
 /// Everything here is a narrow-viewport mirror of the sidebar, nothing new.
 class WebMorePage extends StatelessWidget {
   final AuthPresenter authPresenter;
   final AiCoachPresenter advisorPresenter;
+
+  /// For the Setup & Accounts page this tab pushes — the same presenters the
+  /// desktop rail's Setup destination builds it with.
+  final TreasuryDashboardPresenter dashPresenter;
+  final LedgerPresenter ledgerPresenter;
 
   /// Current theme mode and its toggle, threaded from the web app root.
   final bool isDark;
@@ -25,6 +35,8 @@ class WebMorePage extends StatelessWidget {
     super.key,
     required this.authPresenter,
     required this.advisorPresenter,
+    required this.dashPresenter,
+    required this.ledgerPresenter,
     required this.isDark,
     required this.onToggleTheme,
   });
@@ -34,6 +46,21 @@ class WebMorePage extends StatelessWidget {
       context,
       presenter: advisorPresenter,
       entryPoint: AiCoachEntryPoint.financeAdvisor,
+    );
+  }
+
+  void _openSetup(BuildContext context) {
+    // Setup's data is reloaded on entry the way the desktop rail does it:
+    // accounts live on the dashboard presenter, categories on the ledger's.
+    dashPresenter.load();
+    ledgerPresenter.load();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _SetupRoute(
+          dashPresenter: dashPresenter,
+          ledgerPresenter: ledgerPresenter,
+        ),
+      ),
     );
   }
 
@@ -81,6 +108,29 @@ class WebMorePage extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppSection(
+                title: 'Treasury',
+                child: AppCard(
+                  variant: AppCardVariant.elevated,
+                  padding: EdgeInsets.zero,
+                  child: ListTile(
+                    key: WebKeys.moreSetup,
+                    minTileHeight: 56,
+                    leading: Icon(Icons.settings_outlined,
+                        color: cs.onSurfaceVariant),
+                    title: const Text('Setup & Accounts'),
+                    subtitle: Text(
+                      'Accounts, credit lines and categories',
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    trailing:
+                        Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                    onTap: () => _openSetup(context),
                   ),
                 ),
               ),
@@ -144,6 +194,38 @@ class WebMorePage extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Setup & Accounts as a pushed route for the narrow layout: the desktop page
+/// under an app bar with a back button, since there is no rail to return by.
+class _SetupRoute extends StatelessWidget {
+  final TreasuryDashboardPresenter dashPresenter;
+  final LedgerPresenter ledgerPresenter;
+
+  const _SetupRoute({
+    required this.dashPresenter,
+    required this.ledgerPresenter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        title: Text(
+          'SETUP & ACCOUNTS',
+          style: theme.textTheme.titleSmall?.copyWith(letterSpacing: 2.0),
+        ),
+        centerTitle: true,
+      ),
+      body: WebSetupPage(
+        presenter: dashPresenter,
+        ledgerPresenter: ledgerPresenter,
+      ),
     );
   }
 }

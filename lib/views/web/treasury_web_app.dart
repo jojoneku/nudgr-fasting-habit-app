@@ -28,6 +28,7 @@ import '../../services/sync_service.dart';
 import '../treasury/dashboard/goals_savings_screen.dart';
 import '../treasury/grocery/grocery_cart_view.dart';
 import '../treasury/treasury_module_view.dart';
+import 'design/web_dest.dart';
 import 'design/web_theme.dart';
 import 'dev/preview_seed.dart';
 import 'pages/bills/web_bills_page.dart';
@@ -37,8 +38,11 @@ import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
 import 'pages/setup/web_setup_page.dart';
+import 'web_flags.dart';
 import 'web_login_view.dart';
 import 'widgets/web_nudgy_dock.dart';
+import 'widgets/web_receipt_drop.dart';
+import 'widgets/web_shell_v2.dart';
 import 'widgets/web_widgets.dart';
 
 /// App-level theme mode for the web companion. Lifted out of the widget tree so
@@ -455,6 +459,12 @@ class _TreasuryWebHome extends StatefulWidget {
 class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
   int _index = 0;
 
+  /// The v2 position (Plan 063). Held as a [WebDest] rather than an index
+  /// because the v2 desktop list has no Cart, so a rail position is no longer
+  /// a mobile tab position; [WebDest.mobileTabIndex] does the conversion at
+  /// the breakpoint.
+  WebDest _dest = WebDest.dashboard;
+
   /// Ledger table filters live here rather than inside the page, so leaving the
   /// Ledger destination and coming back doesn't quietly drop them.
   final WebLedgerFilters _ledgerFilters = WebLedgerFilters();
@@ -557,47 +567,188 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     }
   }
 
+  // ── v2 (Plan 063) ──────────────────────────────────────────────────────────
+
+  /// Reload the focused page's presenter — the same calls [_reloadFor] makes
+  /// for the old path, keyed by destination instead of index.
+  void _onSelectDest(WebDest d) {
+    setState(() => _dest = d);
+    switch (d) {
+      case WebDest.dashboard:
+        widget.dashPresenter.load();
+      case WebDest.ledger:
+        widget.ledgerPresenter.load();
+      case WebDest.bills:
+        widget.billsPresenter.load();
+      case WebDest.budget:
+        widget.budgetPresenter.load();
+      case WebDest.history:
+        widget.historyPresenter.load();
+      case WebDest.goals:
+        // Goals & Savings figures come from the dashboard presenter.
+        widget.dashPresenter.load();
+      case WebDest.setup:
+        widget.dashPresenter.load();
+        widget.ledgerPresenter
+            .load(); // categories live on the ledger presenter
+    }
+  }
+
+  /// Unpaid bills in the selected month, for the rail's Bills pill.
+  int get _billsDue =>
+      widget.billsPresenter.bills.where((b) => !b.isPaid).length;
+
+  /// The v2 page bodies. Still the pre-v2 page widgets: Phases 3–9 swap each
+  /// for its `*_v2` page, one PR at a time, so the shell can land first.
+  Widget _pageV2(WebDest d) {
+    switch (d) {
+      case WebDest.ledger:
+        return WebLedgerPage(
+          presenter: widget.ledgerPresenter,
+          filters: _ledgerFilters,
+        );
+      case WebDest.bills:
+        return WebBillsPage(
+          presenter: widget.billsPresenter,
+          installmentPresenter: widget.installmentPresenter,
+        );
+      case WebDest.budget:
+        return WebBudgetPage(presenter: widget.budgetPresenter);
+      case WebDest.history:
+        return WebHistoryPage(presenter: widget.historyPresenter);
+      case WebDest.goals:
+        return GoalsSavingsScreen(
+          presenter: widget.dashPresenter,
+          showAppBar: false,
+        );
+      case WebDest.setup:
+        return WebSetupPage(
+          presenter: widget.dashPresenter,
+          ledgerPresenter: widget.ledgerPresenter,
+        );
+      case WebDest.dashboard:
+        return WebDashboardPage(
+          presenter: widget.dashPresenter,
+          billsPresenter: widget.billsPresenter,
+          onManageAccounts: () => _onSelectDest(WebDest.setup),
+        );
+    }
+  }
+
+  Widget _buildV2(BuildContext context, BoxConstraints constraints) {
+    if (constraints.maxWidth < WebBreakpoints.rail) {
+      return _narrow(
+        // Cross the breakpoint on the page the user was reading: the rail
+        // position becomes the matching mobile tab (Setup → More).
+        initialTabIndex: _dest.mobileTabIndex,
+        onTabChanged: (i) {
+          // Cart (5) has no desktop destination; the rail keeps the last
+          // destination it had and widening the window returns there.
+          final d = WebDest.fromMobileTabIndex(i);
+          if (d != null && d != _dest) setState(() => _dest = d);
+        },
+      );
+    }
+    // Only the Dashboard has a fixed Nudgy column; the shell folds it into
+    // the slide-over below WebBreakpoints.rightRail.
+    final isDashboard = _dest == WebDest.dashboard;
+    final railShown =
+        isDashboard && constraints.maxWidth >= WebBreakpoints.rightRail;
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: webThemeMode,
+      builder: (context, mode, _) => ListenableBuilder(
+        listenable: widget.billsPresenter,
+        builder: (context, _) => WebShellV2(
+          selected: _dest,
+          onSelect: _onSelectDest,
+          billsDueCount: _billsDue,
+          sync: widget.syncPresenter,
+          email: widget.authPresenter.userEmail,
+          displayName: widget.authPresenter.userDisplayName,
+          onSignOut: widget.authPresenter.signOut,
+          isDark: mode == ThemeMode.dark,
+          onToggleTheme: () => webThemeMode.value =
+              mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+          rightRail: isDashboard
+              ? NudgyRail(
+                  controller: widget.nudgy,
+                  onScanReceipt: () => showWebReceiptDialog(
+                    context,
+                    ledger: widget.ledgerPresenter,
+                  ),
+                )
+              : null,
+          // Persistent across every destination, so a question about a bill
+          // can be asked while the Bills table is still on screen.
+          dock: NudgyPanel(controller: widget.nudgy),
+          child: _V2PageFrame(
+            // Until a page has its own WebPageHeaderV2 (Phases 3–9), the
+            // frame supplies the header button that opens the slide-over.
+            // Redundant while the fixed rail is on screen.
+            nudgyButton:
+                railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
+            child: _pageV2(_dest),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The narrow (< 840 dp) layout: the mobile module with bottom tabs, Cart
+  /// included, plus the "More" tab that carries sign-out, the theme toggle,
+  /// Nudgy and Setup. Shared by both paths; only the index hand-over differs.
+  Widget _narrow({
+    required int initialTabIndex,
+    required ValueChanged<int> onTabChanged,
+  }) {
+    return TreasuryModuleView(
+      syncPresenter: widget.syncPresenter,
+      initialTabIndex: initialTabIndex,
+      onTabChanged: onTabChanged,
+      dashPresenter: widget.dashPresenter,
+      ledgerPresenter: widget.ledgerPresenter,
+      billsPresenter: widget.billsPresenter,
+      budgetPresenter: widget.budgetPresenter,
+      historyPresenter: widget.historyPresenter,
+      installmentPresenter: widget.installmentPresenter,
+      groceryCartPresenter: widget.groceryCartPresenter,
+      // Narrow web has no sidebar, so sign-out, the theme toggle and the
+      // Nudgy get a tab of their own. Occupies the same index as
+      // the rail's trailing destination, keeping the mapping 1:1.
+      extraTabs: [
+        TreasuryModuleTab(
+          icon: Icons.more_horiz,
+          label: 'More',
+          ownsHeader: true,
+          page: ValueListenableBuilder<ThemeMode>(
+            valueListenable: webThemeMode,
+            builder: (context, mode, _) => WebMorePage(
+              authPresenter: widget.authPresenter,
+              advisorPresenter: widget.advisorPresenter,
+              dashPresenter: widget.dashPresenter,
+              ledgerPresenter: widget.ledgerPresenter,
+              isDark: mode == ThemeMode.dark,
+              onToggleTheme: () => webThemeMode.value =
+                  mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (kWebV2) return _buildV2(context, constraints);
         if (constraints.maxWidth < WebBreakpoints.rail) {
-          return TreasuryModuleView(
-            syncPresenter: widget.syncPresenter,
+          return _narrow(
             // Same index space as the rail — hand over the current position.
             initialTabIndex: _index,
             onTabChanged: (i) {
               if (i != _index) setState(() => _index = i);
             },
-            dashPresenter: widget.dashPresenter,
-            ledgerPresenter: widget.ledgerPresenter,
-            billsPresenter: widget.billsPresenter,
-            budgetPresenter: widget.budgetPresenter,
-            historyPresenter: widget.historyPresenter,
-            installmentPresenter: widget.installmentPresenter,
-            groceryCartPresenter: widget.groceryCartPresenter,
-            // Narrow web has no sidebar, so sign-out, the theme toggle and the
-            // Nudgy get a tab of their own. Occupies the same index as
-            // the rail's trailing destination, keeping the mapping 1:1.
-            extraTabs: [
-              TreasuryModuleTab(
-                icon: Icons.more_horiz,
-                label: 'More',
-                ownsHeader: true,
-                page: ValueListenableBuilder<ThemeMode>(
-                  valueListenable: webThemeMode,
-                  builder: (context, mode, _) => WebMorePage(
-                    authPresenter: widget.authPresenter,
-                    advisorPresenter: widget.advisorPresenter,
-                    isDark: mode == ThemeMode.dark,
-                    onToggleTheme: () => webThemeMode.value =
-                        mode == ThemeMode.dark
-                            ? ThemeMode.light
-                            : ThemeMode.dark,
-                  ),
-                ),
-              ),
-            ],
           );
         }
         final theme = Theme.of(context);
@@ -635,6 +786,33 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           dockLauncher: NudgyLauncher(controller: widget.nudgy),
         );
       },
+    );
+  }
+}
+
+/// Interim frame for a pre-v2 page inside the v2 shell: a right-aligned row
+/// holding the Nudgy header button above the page. Each page loses this when
+/// its own `WebPageHeaderV2` lands (Phases 3–9) and carries the button itself.
+class _V2PageFrame extends StatelessWidget {
+  final Widget child;
+  final Widget? nudgyButton;
+  const _V2PageFrame({required this.child, this.nudgyButton});
+
+  @override
+  Widget build(BuildContext context) {
+    if (nudgyButton == null) return child;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: WebInsets.md),
+            child: nudgyButton,
+          ),
+        ),
+        Expanded(child: child),
+      ],
     );
   }
 }
