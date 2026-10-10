@@ -23,3 +23,12 @@ export 'web_settle_dialog.dart';
 export 'web_shell.dart';
 export 'web_stat_tile.dart';
 export 'web_tile_flow.dart';
+
+// Phase 2 (Plan 063) — the v2 shared kit.
+export 'web_page_header_v2.dart';
+export 'web_dialog.dart';
+export 'web_tabs.dart';
+export 'web_stat_strip.dart';
+export 'web_row_menu.dart';
+export 'web_list_row.dart';
+export '../design/web_constants.dart';
