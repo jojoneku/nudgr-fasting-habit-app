@@ -34,6 +34,7 @@ import 'dev/preview_seed.dart';
 import 'pages/bills/web_bills_page.dart';
 import 'pages/budget/web_budget_page.dart';
 import 'pages/dashboard/web_dashboard_page.dart';
+import 'pages/dashboard/web_dashboard_page_v2.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
@@ -600,7 +601,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
 
   /// The v2 page bodies. Still the pre-v2 page widgets: Phases 3–9 swap each
   /// for its `*_v2` page, one PR at a time, so the shell can land first.
-  Widget _pageV2(WebDest d) {
+  Widget _pageV2(WebDest d, {required bool railShown}) {
     switch (d) {
       case WebDest.ledger:
         return WebLedgerPage(
@@ -627,13 +628,23 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           ledgerPresenter: widget.ledgerPresenter,
         );
       case WebDest.dashboard:
-        return WebDashboardPage(
+        return WebDashboardPageV2(
           presenter: widget.dashPresenter,
           billsPresenter: widget.billsPresenter,
-          onManageAccounts: () => _onSelectDest(WebDest.setup),
+          onOpenSetup: () => _onSelectDest(WebDest.setup),
+          onOpenLedger: () => _onSelectDest(WebDest.ledger),
+          onOpenBills: () => _onSelectDest(WebDest.bills),
+          onOpenBudget: () => _onSelectDest(WebDest.budget),
+          onOpenGoals: () => _onSelectDest(WebDest.goals),
+          trailing:
+              railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
     }
   }
+
+  /// Destinations whose v2 page renders its own [WebPageHeaderV2] (and so
+  /// owns the Nudgy header button). Grows as Phases 4–9 land.
+  static const _v2OwnsHeader = {WebDest.dashboard};
 
   Widget _buildV2(BuildContext context, BoxConstraints constraints) {
     if (constraints.maxWidth < WebBreakpoints.rail) {
@@ -685,9 +696,10 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
             // Until a page has its own WebPageHeaderV2 (Phases 3–9), the
             // frame supplies the header button that opens the slide-over.
             // Redundant while the fixed rail is on screen.
-            nudgyButton:
-                railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
-            child: _pageV2(_dest),
+            nudgyButton: railShown || _v2OwnsHeader.contains(_dest)
+                ? null
+                : NudgyHeaderButton(controller: widget.nudgy),
+            child: _pageV2(_dest, railShown: railShown),
           ),
         ),
       ),
