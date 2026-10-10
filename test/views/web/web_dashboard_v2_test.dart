@@ -26,7 +26,8 @@ import '../../mocks.mocks.dart';
 /// liquid and credit accounts, the Trends card shows exactly one chart at a
 /// time, and the two dialogs the page opens still open.
 void main() {
-  const widths = [1440.0, 1100.0];
+  // 760 is the content width beside the Nudgy rail at 1440 (stacked hero).
+  const widths = [1440.0, 1100.0, 760.0];
   const modes = [true, false];
   String mode(bool dark) => dark ? 'dark' : 'light';
 

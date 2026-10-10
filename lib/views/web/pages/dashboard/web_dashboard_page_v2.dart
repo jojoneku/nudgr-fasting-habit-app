@@ -29,6 +29,10 @@ const double _gap = 20;
 /// Under this content width the hero row and the two card columns stack.
 const double _twoColMin = 900;
 
+/// Height of the net-worth hero when it stacks above the outlook card (the
+/// row height it has beside it at ≥ [_twoColMin]).
+const double _heroStackedHeight = 300;
+
 /// Web Dashboard, v2 (Plan 063 Phase 3) — the canvas layout in
 /// `docs/design-reference/web-v2/Main.dc.html`: one page header, a hero row
 /// (net worth + month-end outlook statement), then two card columns. Every
@@ -152,9 +156,15 @@ class _HeroRow extends StatelessWidget {
         final hero = _NetWorthHero(presenter: presenter);
         final outlook = _OutlookCard(presenter: presenter);
         if (constraints.maxWidth < _twoColMin) {
+          // Stacked: the hero's inner Spacer needs a bounded height, so give
+          // it the row height it would have had beside the outlook card.
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [hero, const SizedBox(height: _gap), outlook],
+            children: [
+              SizedBox(height: _heroStackedHeight, child: hero),
+              const SizedBox(height: _gap),
+              outlook,
+            ],
           );
         }
         // Stretch both to one height so the hero's sparkline can sit on its
