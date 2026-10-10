@@ -96,7 +96,7 @@ Color _statusColor(BuildContext context, double used,
   final cs = Theme.of(context).colorScheme;
   if (isSavings) return cs.tertiary;
   if (used >= 1) return cs.error;
-  if (used >= 0.75) return cs.secondary;
+  if (used >= 0.75) return context.appColors.bills;
   return cs.tertiary;
 }
 
@@ -997,7 +997,12 @@ class _GroupDropdown extends StatelessWidget {
 /// Cycles through theme accent colors by index.
 Color _groupColorByIndex(BuildContext context, int index) {
   final cs = Theme.of(context).colorScheme;
-  return [cs.primary, cs.secondary, cs.tertiary, cs.error][index % 4];
+  return [
+    cs.primary,
+    context.appColors.bills,
+    cs.tertiary,
+    cs.error
+  ][index % 4];
 }
 
 /// Editable, right-aligned amount field. Shows formatted thousands when

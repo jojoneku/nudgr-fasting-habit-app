@@ -2500,7 +2500,7 @@ class _BudgetedExpensesCard extends StatelessWidget {
     final ordered = [...pending, ...expenses.where((e) => e.isPaid)];
 
     return WebCard(
-      accentColor: cs.secondary,
+      accentColor: context.appColors.bills,
       title: 'Budgeted Set-Asides',
       description: 'Savings, sinking funds & one-off plans',
       trailing: Row(
@@ -2548,7 +2548,7 @@ class _BudgetedExpensesCard extends StatelessWidget {
                         Text(formatPeso(pendingTotal),
                             style: theme.textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: cs.secondary,
+                              color: context.appColors.bills,
                             )),
                       ],
                     ),
@@ -2780,7 +2780,7 @@ class _BudgetedExpenseRow extends StatelessWidget {
             formatPeso(expense.allocatedAmount),
             style: theme.textTheme.bodyLarge?.copyWith(
               fontWeight: FontWeight.w700,
-              color: funded ? cs.onSurfaceVariant : cs.secondary,
+              color: funded ? cs.onSurfaceVariant : context.appColors.bills,
             ),
           ),
           if (selection == null)
@@ -3283,7 +3283,7 @@ class _InstallmentsCard extends StatelessWidget {
     final paidTotal = presenter.totalPaidThisMonth;
 
     return WebCard(
-      accentColor: cs.secondary,
+      accentColor: context.appColors.bills,
       title: 'Installments',
       description: due.isEmpty
           ? 'No payments due this month'
@@ -3333,7 +3333,7 @@ class _InstallmentsCard extends StatelessWidget {
                       Text('${formatPeso(paidTotal)} / ${formatPeso(load)}',
                           style: theme.textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: cs.secondary,
+                            color: context.appColors.bills,
                           )),
                     ],
                   ),
@@ -3443,7 +3443,7 @@ class _InstallmentRow extends StatelessWidget {
                     value: progress,
                     minHeight: 4,
                     backgroundColor: cs.surfaceContainerHighest,
-                    color: cs.secondary,
+                    color: context.appColors.bills,
                   ),
                 ),
                 const SizedBox(height: 4),
