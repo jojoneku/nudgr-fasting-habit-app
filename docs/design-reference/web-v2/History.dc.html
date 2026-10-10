@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — History</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn svg{width:16px;height:16px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:20px}
+.chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chd h2{margin:0;font-size:15px;font-weight:700}
+.chd p{margin:2px 0 0;color:#9A9FA8;font-size:12.5px}
+.chd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.pill.live{background:#2E90FA;color:#fff;font-size:10px;letter-spacing:.06em}
+.row{display:flex;align-items:center;gap:12px}
+.bar{height:6px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.seg{display:inline-flex;background:#131315;border:1px solid #2A2A2E;border-radius:10px;padding:3px;gap:2px}
+.seg span{padding:5px 10px;border-radius:8px;font-size:12px;font-weight:600;color:#9A9FA8}
+.seg span.on{background:#252628;color:#F7F7F8}
+.stat{padding:14px 16px;border-radius:12px;background:#131315;display:flex;flex-direction:column;gap:4px}
+.stat b{font-size:20px;font-weight:800;letter-spacing:-0.02em}
+.stat small{font-size:11.5px;color:#83878F}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76;padding:10px 12px;border-bottom:1px solid #2A2A2E;white-space:nowrap}
+.tbl td{padding:11px 12px;border-bottom:1px solid #1E1E22;font-size:13.5px}
+.tbl tr:hover td{background:#1F1F24;cursor:pointer}
+.tbl .r{text-align:right}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni" href="Ledger.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni" href="Bills.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">3 due</span></a>
+  <a class="ni" href="Budget.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni on" href="History.dc.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni" href="Setup.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>History</h1><p class="sub">Last 6 months · Jan 2026 – Oct 2026 · October still open</p></div>
+    <div class="actions">
+      <span class="seg" role="tablist"><span role="tab">3 mo</span><span class="on" role="tab" aria-selected="true">6 mo</span><span role="tab">12 mo</span><span role="tab">All</span></span>
+      <button class="btn pri" style="width:40px;padding:0" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Current month, then the period stats in one even row -->
+  <section class="card" style="background:linear-gradient(155deg,#1B2A44,#172033 55%,#15171C);border-color:#29354B;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
+    <div style="flex:1 1 260px;min-width:0"><h2 style="margin:0;font-size:18px;font-weight:800">October 2026 <span class="pill live" style="margin-left:6px;vertical-align:middle">LIVE</span></h2><p style="margin:4px 0 0;color:#9DB6DC;font-size:12.5px">Still open — these numbers are still moving</p><a href="#detail" style="display:inline-block;margin-top:10px;font-size:12.5px;font-weight:600">Open month ›</a></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;flex:2 1 420px;min-width:0">
+      <div class="stat" style="background:rgba(0,0,0,.25)"><span class="eyebrow" style="color:#8FB4E8">In</span><b class="num" style="color:#6FCB8A">₱46.5k</b><small>salary + refunds</small></div>
+      <div class="stat" style="background:rgba(0,0,0,.25)"><span class="eyebrow" style="color:#8FB4E8">Out</span><b class="num" style="color:#FFB37A">₱12.6k</b><small>27% of income</small></div>
+      <div class="stat" style="background:rgba(0,0,0,.25)"><span class="eyebrow" style="color:#8FB4E8">Saved</span><b class="num">73%</b><small>₱33.9k net</small></div>
+    </div>
+  </section>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px">
+    <div class="stat" style="border:1px solid #2A2A2E;background:#1C1C20"><span class="eyebrow">Ending cash change</span><b class="num" style="color:#6FCB8A">+₱10.4k</b><small>Jan – Sep, closed months</small></div>
+    <div class="stat" style="border:1px solid #2A2A2E;background:#1C1C20"><span class="eyebrow">Avg monthly net</span><b class="num">₱22.5k</b><small>Income − expenses</small></div>
+    <div class="stat" style="border:1px solid #2A2A2E;background:#1C1C20"><span class="eyebrow">Avg savings rate</span><b class="num">37%</b><small>Of income kept</small></div>
+    <div class="stat" style="border:1px solid #2A2A2E;background:#1C1C20"><span class="eyebrow">Avg saved / mo</span><b class="num">₱17.3k</b><small>Into savings &amp; goals</small></div>
+    <div class="stat" style="border:1px solid #2A2A2E;background:#1C1C20"><span class="eyebrow">Best month</span><b>May</b><small>+₱45.4k net</small></div>
+  </div>
+
+  <!-- Cash flow trend -->
+  <section class="card">
+    <div class="chd"><div><h2>Cash flow trend</h2><p>Income, expenses and net each month</p></div><div class="r"><span class="pill ok">Net up 4 of the last 5 months</span><span class="row" style="gap:12px;font-size:12px;color:#9A9FA8"><span class="row" style="gap:5px"><span class="dot" style="background:#46BD6B"></span>Income</span><span class="row" style="gap:5px"><span class="dot" style="background:#FF8A4C"></span>Expenses</span><span class="row" style="gap:5px"><span class="dot" style="background:#5BAAF5"></span>Net</span></span></div></div>
+    <svg viewBox="0 0 1100 240" style="width:100%;height:240px;display:block" aria-label="Cash flow trend January to October: income rising from 35 to 46 thousand, expenses between 12 and 25 thousand, net rising to 34 thousand in October"><g stroke="#26262A"><line x1="56" y1="30" x2="1100" y2="30"/><line x1="56" y1="90" x2="1100" y2="90"/><line x1="56" y1="150" x2="1100" y2="150"/><line x1="56" y1="210" x2="1100" y2="210"/></g><g font-size="11" fill="#6A6E76" font-family="Plus Jakarta Sans, sans-serif"><text x="0" y="34">₱50k</text><text x="0" y="94">₱35k</text><text x="0" y="154">₱20k</text><text x="0" y="214">₱5k</text><text x="90" y="232">Jan</text><text x="195" y="232">Feb</text><text x="300" y="232">Mar</text><text x="405" y="232">Apr</text><text x="510" y="232">May</text><text x="615" y="232">Jun</text><text x="720" y="232">Jul</text><text x="825" y="232">Aug</text><text x="930" y="232">Sep</text><text x="1040" y="232">Oct</text></g><polyline points="100,90 205,92 310,86 415,80 520,84 625,74 730,70 835,66 940,62 1050,44" fill="none" stroke="#46BD6B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="100,140 205,150 310,130 415,136 520,124 625,146 730,138 835,142 940,150 1050,180" fill="none" stroke="#FF8A4C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="100,172 205,176 310,166 415,170 520,160 625,150 730,146 835,142 940,138 1050,94" fill="none" stroke="#5BAAF5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="1050" cy="94" r="4" fill="#fff"/><text x="1000" y="86" font-size="11" font-weight="700" fill="#F7F7F8" font-family="Plus Jakarta Sans, sans-serif">+₱33.9k</text></svg>
+  </section>
+
+  <!-- Table + two sparkline cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px;align-items:start">
+    <section class="card" style="grid-column:span 2;padding:0;overflow:hidden">
+      <div class="chd" style="margin:0;padding:16px 20px 10px"><div><h2>Monthly summary</h2><p>The numbers behind the trend · click a month for detail</p></div></div>
+      <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>Month</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net</th><th class="r">Rate</th><th style="width:140px">Saved</th></tr></thead>
+        <tbody>
+          <tr><td><b>October 2026</b> <span class="pill live" style="margin-left:4px">LIVE</span></td><td class="r num" style="color:#6FCB8A">₱46,500</td><td class="r num">₱12,589</td><td class="r num" style="font-weight:700">+₱33,911</td><td class="r num">73%</td><td><div class="bar"><i style="width:73%;background:#5BAAF5"></i></div></td></tr>
+          <tr><td><b>September</b></td><td class="r num" style="color:#6FCB8A">₱76,169</td><td class="r num">₱39,101</td><td class="r num" style="font-weight:700">+₱37,068</td><td class="r num">49%</td><td><div class="bar"><i style="width:49%;background:#5BAAF5"></i></div></td></tr>
+          <tr><td><b>August</b></td><td class="r num" style="color:#6FCB8A">₱50,624</td><td class="r num">₱44,189</td><td class="r num" style="font-weight:700">+₱6,436</td><td class="r num">13%</td><td><div class="bar"><i style="width:13%;background:#5BAAF5"></i></div></td></tr>
+          <tr><td><b>July</b></td><td class="r num" style="color:#6FCB8A">₱55,733</td><td class="r num">₱28,061</td><td class="r num" style="font-weight:700">+₱27,672</td><td class="r num">50%</td><td><div class="bar"><i style="width:50%;background:#5BAAF5"></i></div></td></tr>
+          <tr><td><b>June</b></td><td class="r num" style="color:#6FCB8A">₱54,229</td><td class="r num">₱35,702</td><td class="r num" style="font-weight:700">+₱18,527</td><td class="r num">34%</td><td><div class="bar"><i style="width:34%;background:#5BAAF5"></i></div></td></tr>
+          <tr><td><b>May</b></td><td class="r num" style="color:#6FCB8A">₱75,821</td><td class="r num">₱30,373</td><td class="r num" style="font-weight:700">+₱45,447</td><td class="r num">60%</td><td><div class="bar"><i style="width:60%;background:#5BAAF5"></i></div></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="card">
+        <div class="chd" style="margin-bottom:6px"><div><h2>Cumulative savings</h2><p>Running total of monthly net</p></div><div class="r"><span class="pill ok">+₱119k</span></div></div>
+        <svg viewBox="0 0 300 80" preserveAspectRatio="none" style="width:100%;height:80px;display:block" aria-label="Cumulative savings rising steadily to 119 thousand pesos"><defs><linearGradient id="cs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46BD6B" stop-opacity=".3"/><stop offset="1" stop-color="#46BD6B" stop-opacity="0"/></linearGradient></defs><path d="M0,80 L0,70 L60,62 L120,52 L180,40 L240,28 L300,8 L300,80Z" fill="url(#cs)"/><polyline points="0,70 60,62 120,52 180,40 240,28 300,8" fill="none" stroke="#6FCB8A" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </section>
+      <section class="card">
+        <div class="chd" style="margin-bottom:6px"><div><h2>Ending cash trend</h2><p>Month-end liquid balance</p></div><div class="r"><span class="pill ok">+₱15.2k</span></div></div>
+        <svg viewBox="0 0 300 80" preserveAspectRatio="none" style="width:100%;height:80px;display:block" aria-label="Ending cash trend, up 15 thousand over the period"><defs><linearGradient id="ec" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BAAF5" stop-opacity=".3"/><stop offset="1" stop-color="#5BAAF5" stop-opacity="0"/></linearGradient></defs><path d="M0,80 L0,56 L60,60 L120,48 L180,52 L240,40 L300,30 L300,80Z" fill="url(#ec)"/><polyline points="0,56 60,60 120,48 180,52 240,40 300,30" fill="none" stroke="#5BAAF5" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </section>
+    </div>
+  </div>
+
+  <!-- Spending by category -->
+  <section class="card">
+    <div class="chd"><div><h2>Spending by category</h2><p>Average per month, with the latest month against the average</p></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:14px 32px">
+      <div><div class="row" style="margin-bottom:6px;font-size:13.5px"><span class="dot" style="background:#926AFA"></span><b>Household Expenses</b><span class="pill ok" style="margin-left:4px">↓ 4% vs avg</span><span class="num" style="margin-left:auto;color:#9A9FA8">₱8,320 / mo</span></div><div class="bar"><i style="width:96%;background:#926AFA"></i></div><div style="font-size:11.5px;color:#83878F;margin-top:4px">Latest: ₱7,997</div></div>
+      <div><div class="row" style="margin-bottom:6px;font-size:13.5px"><span class="dot" style="background:#2E90FA"></span><b>Bills &amp; Utilities</b><span class="pill warn" style="margin-left:4px">↑ 9% vs avg</span><span class="num" style="margin-left:auto;color:#9A9FA8">₱2,510 / mo</span></div><div class="bar"><i style="width:30%;background:#2E90FA"></i></div><div style="font-size:11.5px;color:#83878F;margin-top:4px">Latest: ₱2,738</div></div>
+      <div><div class="row" style="margin-bottom:6px;font-size:13.5px"><span class="dot" style="background:#46BD6B"></span><b>Food &amp; Drinks</b><span class="pill ok" style="margin-left:4px">↓ 38% vs avg</span><span class="num" style="margin-left:auto;color:#9A9FA8">₱1,300 / mo</span></div><div class="bar"><i style="width:16%;background:#46BD6B"></i></div><div style="font-size:11.5px;color:#83878F;margin-top:4px">Latest: ₱804</div></div>
+      <div><div class="row" style="margin-bottom:6px;font-size:13.5px"><span class="dot" style="background:#FFCA28"></span><b>Transportation</b><span class="pill" style="margin-left:4px;background:#252628;color:#9A9FA8">about average</span><span class="num" style="margin-left:auto;color:#9A9FA8">₱290 / mo</span></div><div class="bar"><i style="width:4%;background:#FFCA28"></i></div><div style="font-size:11.5px;color:#83878F;margin-top:4px">Latest: ₱276</div></div>
+    </div>
+  </section>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1460}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

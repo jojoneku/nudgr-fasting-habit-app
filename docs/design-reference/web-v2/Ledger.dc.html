@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Ledger</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.stepper{display:inline-flex;align-items:center;height:40px;border:1px solid #2A2A2E;border-radius:12px;background:#1C1C20}
+.stepper button{height:38px;width:36px;border:0;background:transparent;color:#C9CDD3;cursor:pointer;font-size:16px}
+.stepper span{min-width:118px;text-align:center;font-weight:700;font-size:13.5px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px 0 12px;border-radius:999px;background:rgba(46,144,250,.12);color:#5BAAF5;font-size:12.5px;font-weight:600;border:1px solid rgba(46,144,250,.3)}
+.chip b{font-weight:800;opacity:.8}
+.search{display:flex;align-items:center;gap:8px;height:40px;width:240px;padding:0 12px;border-radius:12px;background:#1C1C20;border:1px solid #2A2A2E;color:#9A9FA8}
+.search input{border:0;background:transparent;color:#F7F7F8;font:500 13.5px 'Plus Jakarta Sans',sans-serif;outline:none;width:100%}
+.tbl{width:100%;border-collapse:collapse;min-width:980px}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76;padding:12px 12px;border-bottom:1px solid #2A2A2E;background:#1A1A1E;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid #1E1E22;font-size:13.5px;vertical-align:middle}
+.tbl tr:hover td{background:#1F1F24}
+.tbl .r{text-align:right}
+.tbl .m{color:#83878F;font-size:12px}
+.cat{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.cat i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.acc{display:inline-flex;align-items:center;gap:7px}
+.acc i{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#fff;font-style:normal}
+.cb{width:16px;height:16px;border-radius:5px;border:1.5px solid #4A4E55;display:inline-block;vertical-align:middle}
+.cb.on{background:#2E90FA;border-color:#2E90FA}
+.draft td{background:#1A1A1E;border-bottom:1px solid #2A2A2E}
+.draft input,.draft select{height:34px;width:100%;border-radius:9px;border:1px dashed #3A3A40;background:transparent;color:#F7F7F8;padding:0 10px;font:500 13px 'Plus Jakarta Sans',sans-serif}
+.kebab{width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#83878F;cursor:pointer;font-size:16px;line-height:1}
+.kebab:hover{background:#252628;color:#F7F7F8}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni on" href="Ledger.dc.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni" href="Bills.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">3 due</span></a>
+  <a class="ni" href="Budget.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni" href="History.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni" href="Setup.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>Ledger</h1><p class="sub">October 2026 · 12 transactions · In ₱46,500 · Out ₱12,589</p></div>
+    <div class="actions">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span>October 2026</span><button aria-label="Next month">›</button></div>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 011-1h2M17 4h2a1 1 0 011 1v2M20 17v2a1 1 0 01-1 1h-2M7 20H5a1 1 0 01-1-1v-2M8 12h8"/></svg>Scan a receipt</button>
+      <button class="btn pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add transaction</button>
+      <button class="btn pri" style="width:40px;padding:0;border-radius:12px;margin-left:-4px" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+    <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="ledger-search" placeholder="Search all months…"></label>
+    <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filters &amp; sort<span class="pill info" style="padding:1px 7px">2</span></button>
+    <span class="chip">Account <b>GCash</b><button class="kebab" style="width:18px;height:18px;font-size:12px;color:inherit" aria-label="Remove account filter">×</button></span>
+    <span class="chip">Type <b>Outflow only</b><button class="kebab" style="width:18px;height:18px;font-size:12px;color:inherit" aria-label="Remove type filter">×</button></span>
+    <button class="btn ghost sm">Clear all</button>
+    <span style="margin-left:auto;font-size:12.5px;color:#9A9FA8">Sorted by <b style="color:#C9CDD3">date</b> · 12 rows</span>
+  </div>
+
+  <!-- Selection bar (shown when rows are checked) -->
+  <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:12px;background:rgba(46,144,250,.10);border:1px solid rgba(46,144,250,.25);font-size:13px"><b>2 selected</b><button class="btn ghost sm">Clear</button><span style="margin-left:auto"></span><button class="btn sm">Change category</button><button class="btn sm" style="color:#FF8A80;border-color:rgba(246,104,94,.35)">Delete 2</button></div>
+
+  <section class="card" style="overflow:hidden">
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr>
+        <th style="width:40px"><span class="cb" aria-hidden="true"></span></th>
+        <th style="width:96px">Date ↓</th><th style="width:170px">Account</th><th>Description</th><th style="width:190px">Category</th>
+        <th class="r" style="width:120px">Inflow</th><th class="r" style="width:120px">Outflow</th><th class="r" style="width:140px">Balance</th><th style="width:44px"></th>
+      </tr></thead>
+      <tbody>
+        <tr class="draft">
+          <td></td><td><input id="d-date" value="Oct 10"></td><td><select id="d-acct" aria-label="Account"><option>Account…</option><option>GCash</option><option>BPI Personal</option></select></td>
+          <td><input id="d-desc" placeholder="Add a row… press Enter to save"></td><td><select id="d-cat" aria-label="Category"><option>Category…</option><option>Food &amp; Drinks</option></select></td>
+          <td><input id="d-in" placeholder="—" style="text-align:right"></td><td><input id="d-out" placeholder="0.00" style="text-align:right"></td><td class="r m">auto</td>
+          <td><button class="btn pri sm" style="width:30px;padding:0;justify-content:center" aria-label="Add row">✓</button></td>
+        </tr>
+        <tr><td><span class="cb on" aria-label="Selected"></span></td><td class="num">Oct 9</td><td><span class="acc"><i style="background:#1565C0">G</i>GCash</span></td><td><b>Jollibee lunch</b><span style="display:block" class="m">with the team</span></td><td><span class="cat"><i style="background:#46BD6B"></i>Food &amp; Drinks</span></td><td class="r m">—</td><td class="r num">274.00</td><td class="r num" style="font-weight:700">₱279.41</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb on" aria-label="Selected"></span></td><td class="num">Oct 8</td><td><span class="acc"><i style="background:#3A3A40">₱</i>Cash</span></td><td><b>Grab to office</b></td><td><span class="cat"><i style="background:#FFCA28"></i>Transportation</span></td><td class="r m">—</td><td class="r num">126.00</td><td class="r num" style="font-weight:700">₱1,178.00</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 7</td><td><span class="acc"><i style="background:#1565C0">G</i>GCash</span></td><td><b>Coffee · Pickup</b></td><td><span class="cat"><i style="background:#46BD6B"></i>Food &amp; Drinks</span></td><td class="r m">—</td><td class="r num">210.00</td><td class="r num" style="font-weight:700">₱553.41</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 6</td><td><span class="acc"><i style="background:#1565C0">G</i>GCash</span></td><td><b>Angkas home</b></td><td><span class="cat"><i style="background:#FFCA28"></i>Transportation</span></td><td class="r m">—</td><td class="r num">150.00</td><td class="r num" style="font-weight:700">₱763.41</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 5</td><td><span class="acc"><i style="background:#9B2C2C">B</i>BPI Personal</span></td><td><b>Meralco · September</b><span style="display:block" class="m">Paid from Bills · auto-logged</span></td><td><span class="cat"><i style="background:#2E90FA"></i>Bills &amp; Utilities</span></td><td class="r m">—</td><td class="r num">2,738.00</td><td class="r num" style="font-weight:700">₱24,990.71</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 4</td><td><span class="acc"><i style="background:#1565C0">G</i>GCash</span></td><td><b>Mercury Drug</b></td><td><span class="cat"><i style="background:#26C6DA"></i>Health &amp; Wellness</span></td><td class="r m">—</td><td class="r num">774.00</td><td class="r num" style="font-weight:700">₱913.41</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 3</td><td><span class="acc"><i style="background:#9B2C2C">B</i>BPI Personal</span></td><td><b>Rent · October</b></td><td><span class="cat"><i style="background:#926AFA"></i>Household Expenses</span></td><td class="r m">—</td><td class="r num">7,997.00</td><td class="r num" style="font-weight:700">₱27,728.71</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 2</td><td><span class="acc"><i style="background:#2A2566">MB</i>Maribank</span></td><td><b>To Maya Savings</b><span style="display:block" class="m">Transfer · edit opens the pair</span></td><td><span class="pill info">⇄ Transfer</span></td><td class="r num" style="color:#6FCB8A">5,000.00</td><td class="r num">5,000.00</td><td class="r num" style="font-weight:700">₱3,021.00</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+        <tr><td><span class="cb" aria-hidden="true"></span></td><td class="num">Oct 1</td><td><span class="acc"><i style="background:#9B2C2C">B</i>BPI Personal</span></td><td><b>Salary · October</b></td><td><span class="cat"><i style="background:#46BD6B"></i>Salary</span></td><td class="r num" style="color:#6FCB8A;font-weight:700">46,500.00</td><td class="r m">—</td><td class="r num" style="font-weight:700">₱35,725.71</td><td><button class="kebab" aria-label="Row actions">⋯</button></td></tr>
+      </tbody>
+      <tfoot><tr>
+        <td colspan="5" style="padding:14px 12px;font-size:12.5px;color:#9A9FA8;border-bottom:0">October totals · <span style="color:#C9CDD3">click a cell to edit · drag a column edge to resize · balances recalculate</span></td>
+        <td class="r num" style="font-weight:800;color:#6FCB8A;border-bottom:0">₱46,500.00</td><td class="r num" style="font-weight:800;border-bottom:0">₱12,589.00</td><td class="r num" style="font-weight:800;border-bottom:0">Net +₱33,911</td><td style="border-bottom:0"></td>
+      </tr></tfoot>
+    </table>
+    </div>
+  </section>
+
+  <!-- Row actions menu, shown open as reference -->
+  <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+    <div class="card" style="padding:6px;width:220px;display:flex;flex-direction:column;gap:2px;font-size:13.5px">
+      <div style="padding:6px 10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76">Row actions</div>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Edit in dialog</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Duplicate</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Split into installments</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Mark "I'll get this back"</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px;color:#FF8A80">Delete · undo for 6 s</button>
+    </div>
+    <p style="margin:0;max-width:520px;font-size:12.5px;color:#9A9FA8;line-height:1.5">The ⋯ menu replaces the hover-only delete icon, so every action is reachable by keyboard and on touch. The description column shows the note under the title; today notes are searchable but never shown. Inflow and Outflow stay separate columns for sheet parity, without the green and red washes behind them.</p>
+  </div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
