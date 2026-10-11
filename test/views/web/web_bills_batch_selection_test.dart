@@ -19,10 +19,11 @@ import '../../mocks.mocks.dart';
 /// Batch selection on the web Bills page, end to end.
 ///
 /// The desktop page had no selection at all, so a month of bills had to be
-/// settled one dialog at a time. The dialog itself is covered in
-/// web_batch_settle_test; these pin the wiring — that picking rows produces a
-/// selection with the right counts, that only one section can select at once,
-/// and that confirming actually settles through the presenter.
+/// settled one dialog at a time. The dialog itself (the unified Settle dialog
+/// in batch mode since Plan 063) is covered in web_batch_settle_test; these
+/// pin the wiring — that picking rows produces a selection with the right
+/// counts, that only one section can select at once, and that confirming
+/// actually settles through the presenter.
 const _month = '2026-03';
 
 FinancialAccount _account(String id, {double balance = 20000}) =>
@@ -275,7 +276,7 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Pay 2'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Mark 2 bills paid'), findsOneWidget);
+      expect(find.text('Pay 2 bills'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Mark 2 paid'));
       await tester.pumpAndSettle();
 
@@ -304,7 +305,7 @@ void main() {
       // second dropdown is "Set aside into" (the first is "Fund from").
       await tester.tap(find
           .descendant(
-            of: find.byType(AlertDialog),
+            of: find.byType(Dialog),
             matching: find.byType(DropdownButtonFormField<String>),
           )
           .last);
@@ -314,7 +315,7 @@ void main() {
       // The batch bar behind the dialog also reads "Fund 2" — and is disabled
       // while the batch is in flight, which is the point. Scope to the dialog.
       await tester.tap(find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(Dialog),
         matching: find.widgetWithText(FilledButton, 'Fund 2'),
       ));
       await tester.pumpAndSettle();
@@ -337,7 +338,7 @@ void main() {
       // Scoped to the dialog — the select control has a Cancel of its own, and
       // tapping that one would end the selection rather than the dialog.
       await tester.tap(find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(Dialog),
         matching: find.widgetWithText(TextButton, 'Cancel'),
       ));
       await tester.pumpAndSettle();
