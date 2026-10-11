@@ -8,6 +8,7 @@ import '../../widgets/ai_chat_sheet.dart';
 import '../design/web_breakpoints.dart';
 import '../web_keys.dart';
 import 'web_shell.dart';
+import 'web_shell_v2.dart';
 
 /// The input placeholder the web gives Nudgy. Mobile keeps the presenter's
 /// own "Ask your coach…": on web the one box both logs and advises, and the
@@ -78,19 +79,35 @@ class NudgyController extends ChangeNotifier {
   /// slipping out of the user's grip rather than as smoothness.
   bool get isResizing => _isResizing;
 
+  bool _hasCustomWidth = false;
+
+  /// True once the user has dragged Nudgy to a width of their own (this run or
+  /// a stored one). Until then the Dashboard rail sizes itself to the window;
+  /// a double-click on the handle returns it to that automatic width.
+  bool get hasCustomWidth => _hasCustomWidth;
+
   Future<void> _restoreWidth() async {
     final stored = await storage?.loadNudgyPanelWidth();
     if (stored == null) return;
-    final clamped = stored.clamp(minWidth, maxWidth);
-    if (clamped == _width) return;
-    _width = clamped;
+    _hasCustomWidth = true;
+    _width = stored.clamp(minWidth, maxWidth);
     notifyListeners();
   }
 
-  void beginResize() {
+  /// Starts a drag. [from] is the width on screen when it differs from
+  /// [width] — the Dashboard rail sizes itself until first dragged, and the
+  /// drag must start from what the user sees, not from a stale default.
+  void beginResize({double? from}) {
+    if (from != null) _width = from.clamp(minWidth, maxWidth);
+    _widthAtResizeStart = _width;
     _isResizing = true;
     notifyListeners();
   }
+
+  /// The width when the current drag began. A click on the handle (the drag
+  /// recognizer starts and ends with no movement when it is alone in the
+  /// arena) leaves the width here, and must not count as choosing one.
+  double _widthAtResizeStart = defaultWidth;
 
   /// Applies a drag. [delta] is the pointer's horizontal movement; the panel is
   /// on the right, so dragging LEFT (negative dx) widens it.
@@ -109,7 +126,17 @@ class NudgyController extends ChangeNotifier {
   }
 
   void endResize() {
+    // A plain click on the handle fires the drag recognizer's cancel too; with
+    // no drag in flight there is nothing to end, and treating it as one would
+    // undo the double-click reset that click belongs to.
+    if (!_isResizing) return;
     _isResizing = false;
+    if (_width == _widthAtResizeStart) {
+      // A click, not a drag: nothing was chosen, nothing to save.
+      notifyListeners();
+      return;
+    }
+    _hasCustomWidth = true;
     notifyListeners();
     // Persist only on release. Writing on every drag frame would put a few
     // hundred writes through SharedPreferences for one gesture.
@@ -120,8 +147,12 @@ class NudgyController extends ChangeNotifier {
   /// pixel or two without meaning to, and without this the only way back to a
   /// deliberate width is to drag until it looks right again.
   void resetWidth() {
-    if (_width == defaultWidth) return;
+    // The reset's own click opened a zero-length "drag" (see endResize); end
+    // it here so its release cannot mark the width custom again.
+    _isResizing = false;
+    if (_width == defaultWidth && !_hasCustomWidth) return;
     _width = defaultWidth;
+    _hasCustomWidth = false;
     notifyListeners();
     storage?.saveNudgyPanelWidth(null);
   }
@@ -261,6 +292,39 @@ class _NudgyRailState extends State<NudgyRail> {
 
   @override
   Widget build(BuildContext context) {
+    // The card fills the rail column the shell gives it. A drag handle on its
+    // left edge resizes that column, the same way the slide-over panel's does;
+    // the column is the card plus the shell's 40 px right padding.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final window = MediaQuery.sizeOf(context).width;
+        final available =
+            (window - WebShellV2.navWidth - WebShellV2.minPageWidthBesideRail)
+                .clamp(NudgyController.minWidth, NudgyController.maxWidth)
+                .toDouble();
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(child: _card(context)),
+            Positioned(
+              left: -NudgyPanel._handleWidth,
+              top: 0,
+              bottom: 0,
+              width: NudgyPanel._handleWidth * 1.5,
+              child: _ResizeHandle(
+                controller: widget.controller,
+                available: available,
+                currentWidth: () =>
+                    constraints.maxWidth + WebShellV2.railRightPadding,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _card(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final presenter = widget.controller.presenter;
@@ -675,7 +739,15 @@ class _ResizeHandle extends StatefulWidget {
   /// against the live window rather than a remembered one.
   final double available;
 
-  const _ResizeHandle({required this.controller, required this.available});
+  /// The width on screen when a drag starts, if it is not
+  /// [NudgyController.width] (the Dashboard rail before its first drag).
+  final double Function()? currentWidth;
+
+  const _ResizeHandle({
+    required this.controller,
+    required this.available,
+    this.currentWidth,
+  });
 
   @override
   State<_ResizeHandle> createState() => _ResizeHandleState();
@@ -748,7 +820,8 @@ class _ResizeHandleState extends State<_ResizeHandle> {
           // opaque, so the strip takes the gesture even where it paints
           // nothing.
           behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: (_) => widget.controller.beginResize(),
+          onHorizontalDragStart: (_) =>
+              widget.controller.beginResize(from: widget.currentWidth?.call()),
           onHorizontalDragUpdate: (details) =>
               widget.controller.applyResizeDelta(
             details.delta.dx,

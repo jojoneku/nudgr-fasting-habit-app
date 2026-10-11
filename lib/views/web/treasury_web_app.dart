@@ -702,9 +702,12 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: webThemeMode,
       builder: (context, mode, _) => ListenableBuilder(
-        listenable: widget.billsPresenter,
+        // Nudgy too: dragging the Dashboard rail resizes the shell's column.
+        listenable: Listenable.merge([widget.billsPresenter, widget.nudgy]),
         builder: (context, _) => WebShellV2(
           selected: _dest,
+          rightRailWidth:
+              widget.nudgy.hasCustomWidth ? widget.nudgy.width : null,
           onSelect: _onSelectDest,
           billsDueCount: _billsDue,
           sync: widget.syncPresenter,

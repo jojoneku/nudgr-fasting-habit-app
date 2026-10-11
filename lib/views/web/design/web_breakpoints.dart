@@ -15,6 +15,11 @@ class WebBreakpoints {
   /// Max content width for a page body — keeps line lengths and tables sane.
   static const double content = 1200;
 
+  /// Max content width for the v2 shell (Plan 063). Pages fill the window
+  /// beside the nav (and the Nudgy rail) up to this, then centre — so a
+  /// laptop uses every pixel and a 4K monitor still keeps tables readable.
+  static const double contentV2 = 1600;
+
   /// At/above this window width the v2 shell shows a page's right rail
   /// (Nudgy on the Dashboard) as a fixed column beside the content; below it
   /// the rail folds into the slide-over dock so the page keeps its width.
