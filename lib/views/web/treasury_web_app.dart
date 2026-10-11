@@ -38,6 +38,7 @@ import 'pages/dashboard/web_dashboard_page_v2.dart';
 import 'pages/budget/web_budget_page_v2.dart';
 import 'pages/history/web_history_page_v2.dart';
 import 'pages/bills/web_bills_page_v2.dart';
+import 'pages/ledger/web_ledger_page_v2.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
@@ -607,9 +608,12 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
   Widget _pageV2(WebDest d, {required bool railShown}) {
     switch (d) {
       case WebDest.ledger:
-        return WebLedgerPage(
+        return WebLedgerPageV2(
           presenter: widget.ledgerPresenter,
           filters: _ledgerFilters,
+          onOpenSetup: () => _onSelectDest(WebDest.setup),
+          trailing:
+              railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
       case WebDest.bills:
         return WebBillsPageV2(
@@ -666,6 +670,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     WebDest.budget,
     WebDest.history,
     WebDest.bills,
+    WebDest.ledger,
   };
 
   Widget _buildV2(BuildContext context, BoxConstraints constraints) {

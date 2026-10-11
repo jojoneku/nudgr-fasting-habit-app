@@ -299,7 +299,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Pay ${owed.name}'), findsOneWidget);
-      expect(find.text('Pay from'), findsOneWidget);
+      // The unified Settle dialog (Phase 5) renders field labels uppercase.
+      expect(find.text('PAY FROM'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Pay'), findsOneWidget);
     });
   });
