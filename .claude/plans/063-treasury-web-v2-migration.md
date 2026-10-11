@@ -1,6 +1,6 @@
 # Plan 063 — Treasury Web v2: migrate to the redesign
 
-> Status: PROPOSED · Owner: Treasury web · Authored: 2026-10-10
+> Status: Phases 0–10 DONE on `feat/web-v2` · Phase 11 = CI flag flip in the `feat/web-v2` PR; deleting the pre-v2 pages is a follow-up PR after one stable release · Owner: Treasury web · Authored: 2026-10-10
 > Design: private canvas **Treasury Web Redesign** (https://claude.ai/artifact/3tkCmCGcoJck3JEpJunngC) · tokens: **Nudgr Design System** (https://claude.ai/artifact/5JRAey8QH6AgTKjS87EmMF)
 > Builds on: Plan 042 (web companion), Plan 050 (desktop shell), Plan 056 (Nudgr tokens)
 > Audit that drives it: the web inventory of 2026-10-10 (31 code-level UX problems, listed in §9)
