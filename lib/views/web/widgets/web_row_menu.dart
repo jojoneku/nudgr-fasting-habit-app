@@ -95,12 +95,18 @@ class _MenuRow extends StatelessWidget {
           Icon(item.icon, size: 16, color: fg),
           const SizedBox(width: 10),
         ],
-        Text(
-          item.label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: fg,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
+        // Flexible + ellipsis: a long label shortens instead of overflowing
+        // the popup's 280 px maximum width.
+        Flexible(
+          child: Text(
+            item.label,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: fg,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
