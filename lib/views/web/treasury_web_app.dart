@@ -40,6 +40,7 @@ import 'pages/history/web_history_page_v2.dart';
 import 'pages/bills/web_bills_page_v2.dart';
 import 'pages/ledger/web_ledger_page_v2.dart';
 import 'pages/setup/web_setup_page_v2.dart';
+import 'pages/goals/web_goals_page.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
@@ -640,9 +641,15 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
               railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
       case WebDest.goals:
-        return GoalsSavingsScreen(
+        return WebGoalsPage(
           presenter: widget.dashPresenter,
-          showAppBar: false,
+          onOpenBudget: () => _onSelectDest(WebDest.budget),
+          onOpenSetup: () => _onSelectDest(WebDest.setup),
+          // A goal's monthly amount is a Savings row in Budget (set-aside
+          // funding model); the Budget page's add row takes it from there.
+          onSetMonthlyAmount: (_) => _onSelectDest(WebDest.budget),
+          trailing:
+              railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
       case WebDest.setup:
         return WebSetupPageV2(
@@ -675,6 +682,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     WebDest.bills,
     WebDest.ledger,
     WebDest.setup,
+    WebDest.goals,
   };
 
   Widget _buildV2(BuildContext context, BoxConstraints constraints) {
