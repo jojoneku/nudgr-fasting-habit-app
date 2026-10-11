@@ -21,6 +21,15 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
+/// Fraction of an allocation spent from which a budget row reads "Watch".
+///
+/// One number for every surface that badges budget health — the web Budget
+/// page's status pills and bars, and the Dashboard's Budget Health card (which
+/// reads it in its v2 integration). The two used to disagree (75 % here,
+/// 85 % there), so the same row could be calm on one page and amber on the
+/// next. At or past 1.0 a row is "Over"; that boundary is not configurable.
+const double kBudgetWatchThreshold = 0.75;
+
 class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   BudgetPresenter(
     StorageService storage,
