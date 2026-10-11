@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../models/ai_coach_context.dart';
 import '../../../presenters/ai_coach_presenter.dart';
 import '../../../services/storage_service.dart';
+import '../../widgets/advisor_memory_sheet.dart';
 import '../../widgets/ai_chat_sheet.dart';
 import '../design/web_breakpoints.dart';
+import '../web_keys.dart';
 import 'web_shell.dart';
+
+/// The input placeholder the web gives Nudgy. Mobile keeps the presenter's
+/// own "Ask your coach…": on web the one box both logs and advises, and the
+/// hint is where a first-time user learns that.
+const String kNudgyWebInputHint = 'Log a transaction or ask about your money…';
 
 /// Nudgy — the one place on web where you type at the app.
 ///
@@ -128,11 +135,18 @@ class NudgyController extends ChangeNotifier {
   void open() {
     if (_open) return;
     _open = true;
-    if (!_sessionStarted) {
-      _sessionStarted = true;
-      presenter.openSession(AiCoachEntryPoint.financeAdvisor);
-    }
+    ensureSession();
     notifyListeners();
+  }
+
+  /// Starts the advisor session if it has not been started. Called by [open],
+  /// and by the always-visible [NudgyRail] when it mounts — the rail has no
+  /// open/closed state of its own, but the conversation behind it still has
+  /// to exist before the first message.
+  void ensureSession() {
+    if (_sessionStarted) return;
+    _sessionStarted = true;
+    presenter.openSession(AiCoachEntryPoint.financeAdvisor);
   }
 
   void close() {
@@ -177,6 +191,230 @@ class NudgyLauncher extends StatelessWidget {
   }
 }
 
+/// The v2 "Ask Nudgy" control: a 40 × 40 filled primary icon button that sits
+/// in a page header and toggles the slide-over [NudgyPanel]. Replaces the
+/// floating [NudgyLauncher] on the v2 path, where a page header is the one
+/// place every page already has for its controls and nothing floats over the
+/// content.
+class NudgyHeaderButton extends StatelessWidget {
+  final NudgyController controller;
+  const NudgyHeaderButton({super.key, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) => Semantics(
+        toggled: controller.isOpen,
+        child: IconButton.filled(
+          key: WebKeys.nudgyOpen,
+          tooltip: 'Ask Nudgy',
+          onPressed: controller.toggle,
+          constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+          padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(
+            backgroundColor: cs.primary,
+            foregroundColor: cs.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          icon: const Icon(Icons.auto_awesome, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+/// Nudgy as a fixed column (the Dashboard's right rail, ≥ 1280 px): one card
+/// holding a single header row — title, Think/Fast, Conversations, Advisor
+/// memory — the conversation, a row of quick-action chips and the input.
+///
+/// Built on [AiChatBody] with its own header hidden (`compactHeader`), so the
+/// column has one title row rather than the two the slide-over used to show.
+/// Always visible, so it has no open/closed state; it starts the advisor
+/// session itself when it mounts.
+class NudgyRail extends StatefulWidget {
+  final NudgyController controller;
+
+  /// Opens the receipt dialog ("Scan a receipt" chip). The other two chips
+  /// send their text to Nudgy as a message.
+  final VoidCallback onScanReceipt;
+
+  const NudgyRail({
+    super.key,
+    required this.controller,
+    required this.onScanReceipt,
+  });
+
+  @override
+  State<NudgyRail> createState() => _NudgyRailState();
+}
+
+class _NudgyRailState extends State<NudgyRail> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.ensureSession();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final presenter = widget.controller.presenter;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 6, 6),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 18, color: cs.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Nudgy',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                ),
+                KeyedSubtree(
+                  key: WebKeys.nudgyThinkingToggle,
+                  child: AiThinkingToggle(presenter: presenter),
+                ),
+                const SizedBox(width: 2),
+                IconButton(
+                  key: WebKeys.nudgyConversations,
+                  tooltip: 'Conversations',
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                  onPressed: () =>
+                      AiChatBody.showConversations(context, presenter),
+                  icon: Icon(Icons.forum_outlined,
+                      size: 20, color: cs.onSurfaceVariant),
+                ),
+                IconButton(
+                  key: WebKeys.nudgyMemory,
+                  tooltip: 'Advisor memory',
+                  constraints:
+                      const BoxConstraints(minWidth: 44, minHeight: 44),
+                  onPressed: () => AdvisorMemorySheet.show(context, presenter),
+                  icon: Icon(Icons.bookmark_border,
+                      size: 20, color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          Divider(height: 1, color: cs.outlineVariant),
+          Expanded(
+            child: AiChatBody(
+              presenter: presenter,
+              entryPoint: AiCoachEntryPoint.financeAdvisor,
+              showEntryLabel: false,
+              compactHeader: true,
+              allowModelDownload: false,
+              inputHint: kNudgyWebInputHint,
+              aboveInput: _QuickActions(
+                presenter: presenter,
+                onScanReceipt: widget.onScanReceipt,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The three quick-action chips above the rail's input.
+class _QuickActions extends StatelessWidget {
+  final AiCoachPresenter presenter;
+  final VoidCallback onScanReceipt;
+
+  const _QuickActions({required this.presenter, required this.onScanReceipt});
+
+  static const String payCard = 'Pay a card';
+  static const String spendToday = 'What can I spend today?';
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        final canSend = presenter.isModelAvailable &&
+            !presenter.isResponding &&
+            !presenter.isInitializing;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _QuickChip(
+                key: WebKeys.nudgyChipScanReceipt,
+                label: 'Scan a receipt',
+                onTap: onScanReceipt,
+              ),
+              _QuickChip(
+                key: WebKeys.nudgyChipPayCard,
+                label: payCard,
+                onTap: canSend ? () => presenter.send(payCard) : null,
+              ),
+              _QuickChip(
+                key: WebKeys.nudgyChipSpendToday,
+                label: spendToday,
+                onTap: canSend ? () => presenter.send(spendToday) : null,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QuickChip extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+  const _QuickChip({super.key, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return ActionChip(
+      label: Text(label),
+      labelStyle: theme.textTheme.labelMedium?.copyWith(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: onTap == null ? cs.onSurfaceVariant : cs.onSurface,
+      ),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      backgroundColor: cs.surfaceContainerHigh,
+      disabledColor: cs.surfaceContainerHigh,
+      side: BorderSide(color: cs.outlineVariant),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      onPressed: onTap,
+    );
+  }
+}
+
 /// Nudgy's conversation column. Zero-width while closed, so the shell can keep
 /// it mounted in the row unconditionally and the page gets the space back.
 ///
@@ -187,6 +425,13 @@ class NudgyLauncher extends StatelessWidget {
 /// than pick one width for both jobs, the user drags.
 class NudgyPanel extends StatelessWidget {
   final NudgyController controller;
+
+  /// The v2 shell's look: one header row carrying the title, Think/Fast,
+  /// Conversations, Advisor memory and Collapse, over a chat body with its
+  /// own header hidden — the same row [NudgyRail] draws, so the slide-over
+  /// and the Dashboard column read as one control. Off by default so the
+  /// pre-v2 shell keeps its two-row panel until Phase 11 removes it.
+  final bool compact;
 
   /// Default width of the open column. Retained as the historical name for
   /// [NudgyController.defaultWidth]; the live width now lives on the
@@ -203,7 +448,11 @@ class NudgyPanel extends StatelessWidget {
   /// handle on a 380px panel is a hunt.
   static const double _handleWidth = 10;
 
-  const NudgyPanel({super.key, required this.controller});
+  const NudgyPanel({
+    super.key,
+    required this.controller,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -288,6 +537,7 @@ class NudgyPanel extends StatelessWidget {
   }
 
   Widget _body(BuildContext context) {
+    if (compact) return _compactBody(context);
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
@@ -330,6 +580,81 @@ class NudgyPanel extends StatelessWidget {
             // No on-device tier on web — an unavailable model is terminal here,
             // so don't offer a download the platform cannot perform.
             allowModelDownload: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// One header row (mirrors [NudgyRail]) and the chat body underneath.
+  Widget _compactBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final presenter = controller.presenter;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 6, 6),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Nudgy',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              KeyedSubtree(
+                key: WebKeys.nudgyThinkingToggle,
+                child: AiThinkingToggle(presenter: presenter),
+              ),
+              const SizedBox(width: 2),
+              IconButton(
+                key: WebKeys.nudgyConversations,
+                tooltip: 'Conversations',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () =>
+                    AiChatBody.showConversations(context, presenter),
+                icon: Icon(Icons.forum_outlined,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+              IconButton(
+                key: WebKeys.nudgyMemory,
+                tooltip: 'Advisor memory',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => AdvisorMemorySheet.show(context, presenter),
+                icon: Icon(Icons.bookmark_border,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+              IconButton(
+                key: WebKeys.nudgyClose,
+                tooltip: 'Collapse Nudgy',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: controller.close,
+                icon: Icon(Icons.chevron_right,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: cs.outlineVariant),
+        Expanded(
+          child: AiChatBody(
+            presenter: presenter,
+            entryPoint: AiCoachEntryPoint.financeAdvisor,
+            showEntryLabel: false,
+            compactHeader: true,
+            // No on-device tier on web — an unavailable model is terminal
+            // here, so don't offer a download the platform cannot perform.
+            allowModelDownload: false,
+            inputHint: kNudgyWebInputHint,
           ),
         ),
       ],

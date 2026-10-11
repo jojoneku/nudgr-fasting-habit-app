@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
+import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_nudgy_dock.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_shell.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
@@ -197,6 +198,171 @@ void main() {
       expect(find.text('Nudgy is unavailable'), findsOneWidget);
       expect(find.textContaining('Download'), findsNothing);
       c.dispose();
+      p.dispose();
+    });
+  });
+
+  group('Nudgy v2: header button and rail', () {
+    testWidgets('the header button toggles the controller', (tester) async {
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: Row(children: [
+            Expanded(
+                child: Align(
+                    alignment: Alignment.topRight,
+                    child: NudgyHeaderButton(controller: c))),
+            NudgyPanel(controller: c),
+          ]),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // 40 × 40, keyed, labelled — and no floating launcher beside it.
+      final button = find.byKey(WebKeys.nudgyOpen);
+      expect(button, findsOneWidget);
+      // A 40 px visual inside a ≥ 44 px hit area.
+      expect(tester.widget<IconButton>(button).constraints,
+          const BoxConstraints.tightFor(width: 40, height: 40));
+      expect(tester.getSize(button).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+      expect(find.byTooltip('Ask Nudgy'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(c.isOpen, isTrue);
+      expect(find.byType(AiChatBody), findsOneWidget);
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      expect(c.isOpen, isFalse);
+      c.dispose();
+      p.dispose();
+    });
+
+    Widget wrapRail(NudgyController c, {VoidCallback? onScanReceipt}) =>
+        MaterialApp(
+          theme: buildWebDarkTheme(),
+          home: Scaffold(
+            body: Row(children: [
+              const Expanded(child: SizedBox()),
+              SizedBox(
+                width: 360,
+                child: NudgyRail(
+                  controller: c,
+                  onScanReceipt: onScanReceipt ?? () {},
+                ),
+              ),
+            ]),
+          ),
+        );
+
+    testWidgets('the rail draws one header row and the three quick actions',
+        (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c));
+      await tester.pumpAndSettle();
+
+      // Exactly one title: the chat body's own header is hidden.
+      expect(find.text('Nudgy'), findsOneWidget);
+      expect(find.text('AI'), findsNothing);
+      expect(find.byKey(WebKeys.nudgyThinkingToggle), findsOneWidget);
+      expect(find.text('Fast'), findsOneWidget);
+      expect(find.byTooltip('Conversations'), findsOneWidget);
+      expect(find.byTooltip('Advisor memory'), findsOneWidget);
+      expect(find.byType(AiChatBody), findsOneWidget);
+
+      expect(find.byKey(WebKeys.nudgyChipScanReceipt), findsOneWidget);
+      expect(find.byKey(WebKeys.nudgyChipPayCard), findsOneWidget);
+      expect(find.byKey(WebKeys.nudgyChipSpendToday), findsOneWidget);
+      expect(find.text('Scan a receipt'), findsOneWidget);
+      expect(find.text('Pay a card'), findsOneWidget);
+      expect(find.text('What can I spend today?'), findsOneWidget);
+
+      // The web hint, and the session already open without a toggle.
+      expect(find.text(kNudgyWebInputHint), findsOneWidget);
+      expect(p.entryPoint, AiCoachEntryPoint.financeAdvisor);
+      expect(c.isOpen, isFalse);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('the header controls keep their 44 px targets', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c));
+      await tester.pumpAndSettle();
+
+      for (final key in [WebKeys.nudgyConversations, WebKeys.nudgyMemory]) {
+        final size = tester.getSize(find.byKey(key));
+        expect(size.width, greaterThanOrEqualTo(44));
+        expect(size.height, greaterThanOrEqualTo(44));
+      }
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('"Scan a receipt" calls back; the other chips send their text',
+        (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer(
+          (_) => advisorStreamOf(const AdvisorReply(text: 'About ₱400.')));
+
+      var scans = 0;
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c, onScanReceipt: () => scans++));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(WebKeys.nudgyChipScanReceipt));
+      await tester.pumpAndSettle();
+      expect(scans, 1);
+
+      await tester.tap(find.byKey(WebKeys.nudgyChipSpendToday));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('What can I spend today?'),
+          findsAtLeastNWidgets(1));
+      expect(find.textContaining('About ₱400.'), findsOneWidget);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('the mobile sheet still shows its own header row',
+        (tester) async {
+      // compactHeader defaults off: the sheet keeps the label, the AI badge is
+      // absent (label shown), and the toggle sits in the body's header.
+      final p = buildWebAdvisor();
+      await tester.pumpWidget(MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: AiChatBody(
+            presenter: p,
+            entryPoint: AiCoachEntryPoint.financeAdvisor,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('Nudgy'), findsOneWidget);
+      expect(find.byType(AiThinkingToggle), findsOneWidget);
+      expect(find.text('Ask your coach…'), findsOneWidget);
       p.dispose();
     });
   });
@@ -559,6 +725,52 @@ void main() {
       // Once on release, not once per drag frame — a single gesture would
       // otherwise put hundreds of writes through SharedPreferences.
       verify(storage.saveNudgyPanelWidth(c.width)).called(1);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets(
+        'compact (v2 shell): exactly one "Nudgy" title, the rail\'s header '
+        'controls, the web hint, and Collapse still closes', (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: Row(children: [
+            Expanded(child: NudgyLauncher(controller: c)),
+            NudgyPanel(controller: c, compact: true),
+          ]),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // One header row: the chat body's own header is hidden.
+      expect(find.text('Nudgy'), findsOneWidget);
+      expect(find.text('AI'), findsNothing);
+      expect(find.byKey(WebKeys.nudgyThinkingToggle), findsOneWidget);
+      expect(find.byTooltip('Conversations'), findsOneWidget);
+      expect(find.byTooltip('Advisor memory'), findsOneWidget);
+      expect(find.byKey(WebKeys.nudgyClose), findsOneWidget);
+      expect(find.byType(AiChatBody), findsOneWidget);
+      expect(find.text(kNudgyWebInputHint), findsOneWidget);
+      for (final key in [
+        WebKeys.nudgyConversations,
+        WebKeys.nudgyMemory,
+        WebKeys.nudgyClose,
+      ]) {
+        final size = tester.getSize(find.byKey(key));
+        expect(size.width, greaterThanOrEqualTo(44), reason: '$key');
+        expect(size.height, greaterThanOrEqualTo(44), reason: '$key');
+      }
+
+      await tester.tap(find.byTooltip('Collapse Nudgy'));
+      await tester.pumpAndSettle();
+      expect(c.isOpen, isFalse);
+      expect(find.text('Nudgy'), findsNothing);
+      expect(tester.takeException(), isNull);
       c.dispose();
       p.dispose();
     });

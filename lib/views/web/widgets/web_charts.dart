@@ -579,12 +579,17 @@ class WebMultiLineChart extends StatelessWidget {
   final String Function(double)? leftLabelFormat;
   final double height;
 
+  /// Draws the series legend under the chart. A card that already names the
+  /// series in its header (History's "Cash flow trend") passes false.
+  final bool showLegend;
+
   const WebMultiLineChart({
     super.key,
     required this.series,
     this.bottomLabels,
     this.leftLabelFormat,
     this.height = 240,
+    this.showLegend = true,
   });
 
   @override
@@ -744,15 +749,18 @@ class WebMultiLineChart extends StatelessWidget {
             curve: Curves.easeOutCubic,
           ),
         ),
-        const SizedBox(height: WebInsets.md),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: WebInsets.lg,
-          runSpacing: WebInsets.sm,
-          children: [
-            for (final s in series) _LegendDot(color: s.color, label: s.label),
-          ],
-        ),
+        if (showLegend) ...[
+          const SizedBox(height: WebInsets.md),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: WebInsets.lg,
+            runSpacing: WebInsets.sm,
+            children: [
+              for (final s in series)
+                _LegendDot(color: s.color, label: s.label),
+            ],
+          ),
+        ],
       ],
     );
   }

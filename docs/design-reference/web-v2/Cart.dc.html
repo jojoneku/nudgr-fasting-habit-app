@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Cart</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:20px}
+.chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chd h2{margin:0;font-size:15px;font-weight:700}
+.chd p{margin:2px 0 0;color:#9A9FA8;font-size:12.5px}
+.chd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.mute{background:#252628;color:#9A9FA8}
+.row{display:flex;align-items:center;gap:12px}
+.bar{height:8px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.item{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid #1E1E22}
+.item:last-child{border-bottom:0}
+.cb{width:18px;height:18px;border-radius:6px;border:1.5px solid #4A4E55;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cb.on{background:#46BD6B;border-color:#46BD6B}
+.qty{display:inline-flex;align-items:center;border:1px solid #2A2A2E;border-radius:10px;background:#131315;height:34px}
+.qty button{width:34px;height:32px;border:0;background:transparent;color:#C9CDD3;font-size:16px;cursor:pointer}
+.qty span{min-width:28px;text-align:center;font-weight:700}
+.sub{font-size:11.5px;color:#83878F;display:block}
+.kebab{width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#83878F;cursor:pointer;font-size:16px}
+.kebab:hover{background:#252628;color:#F7F7F8}
+.kv{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1E1E22;font-size:13.5px}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:#9A9FA8}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni" href="Ledger.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni" href="Bills.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">3 due</span></a>
+  <a class="ni" href="Budget.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni" href="History.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni" href="Setup.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>Cart</h1><p class="sub">SM Supermarket · started 6:40 PM · 5 items, 1 unpriced</p></div>
+    <div class="actions">
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Trip history</button>
+      <button class="btn pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add item</button>
+      <button class="btn pri" style="width:40px;padding:0" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:20px;align-items:start">
+    <!-- Items -->
+    <section class="card" style="grid-column:span 2;min-width:0">
+      <div class="chd"><div><h2>In the cart</h2><p>Tick an item when it is in the basket · quantities update the running total</p></div><div class="r"><button class="btn ghost sm" style="color:#FF8A80">Clear cart</button></div></div>
+      <div class="item"><span class="cb on" aria-label="Confirmed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span style="flex:1;min-width:0"><b>Chicken thighs 1 kg</b><span class="sub">Meat · last paid ₱245 at SM · Sep 26</span></span><span class="qty" aria-label="Quantity"><button aria-label="Fewer">−</button><span class="num">1</span><button aria-label="More">+</button></span><b class="num" style="width:96px;text-align:right">₱249.00</b><button class="kebab" aria-label="Item actions">⋯</button></div>
+      <div class="item"><span class="cb on" aria-label="Confirmed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span style="flex:1;min-width:0"><b>Jasmine rice 5 kg</b><span class="sub">Pantry · price memory ₱315</span></span><span class="qty" aria-label="Quantity"><button aria-label="Fewer">−</button><span class="num">1</span><button aria-label="More">+</button></span><b class="num" style="width:96px;text-align:right">₱318.00</b><button class="kebab" aria-label="Item actions">⋯</button></div>
+      <div class="item"><span class="cb on" aria-label="Confirmed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span style="flex:1;min-width:0"><b>Eggs · tray of 30</b><span class="sub">Dairy &amp; eggs</span></span><span class="qty" aria-label="Quantity"><button aria-label="Fewer">−</button><span class="num">2</span><button aria-label="More">+</button></span><b class="num" style="width:96px;text-align:right">₱478.00</b><button class="kebab" aria-label="Item actions">⋯</button></div>
+      <div class="item"><span class="cb" aria-label="Not yet in basket"></span><span style="flex:1;min-width:0"><b>Dish soap refill</b><span class="sub">Household · price memory ₱89</span></span><span class="qty" aria-label="Quantity"><button aria-label="Fewer">−</button><span class="num">1</span><button aria-label="More">+</button></span><b class="num" style="width:96px;text-align:right;color:#9A9FA8">₱89.00</b><button class="kebab" aria-label="Item actions">⋯</button></div>
+      <div class="item"><span class="cb" aria-label="Not yet in basket"></span><span style="flex:1;min-width:0"><b>Bananas</b><span class="sub">Produce · <a href="#price">Set a price</a> · scan the shelf tag</span></span><span class="qty" aria-label="Quantity"><button aria-label="Fewer">−</button><span class="num">1</span><button aria-label="More">+</button></span><span class="pill mute" style="width:96px;justify-content:center">unpriced</span><button class="kebab" aria-label="Item actions">⋯</button></div>
+    </section>
+
+    <!-- Running total -->
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="card" style="background:linear-gradient(155deg,#1B2A44,#172033 55%,#15171C);border-color:#29354B">
+        <div class="eyebrow" style="color:#8FB4E8">Running total</div>
+        <div class="num" style="font-size:40px;font-weight:800;letter-spacing:-0.03em;line-height:1.05;margin-top:6px">₱1,134.00</div>
+        <div style="font-size:12.5px;color:#9DB6DC;margin-top:4px"><b style="color:#F7F7F8">₱1,045.00</b> confirmed · 1 unpriced, not counted</div>
+        <div style="margin-top:16px"><div class="row" style="font-size:12.5px;margin-bottom:6px"><span style="color:#9DB6DC">Trip budget</span><b class="num" style="margin-left:auto">₱1,134 of ₱1,500</b></div><div class="bar"><i style="width:76%;background:#5BAAF5"></i></div><div class="row" style="margin-top:6px;font-size:12px;color:#9DB6DC"><span class="pill ok">₱366 under</span><a href="#budget" style="margin-left:auto">Change budget</a></div></div>
+        <button class="btn pri" style="width:100%;height:48px;margin-top:18px;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Finish trip · log ₱1,134 to the ledger</button>
+        <div style="font-size:11.5px;color:#9DB6DC;margin-top:8px;text-align:center">Logs one Groceries expense from the account you pick.</div>
+      </section>
+
+      <section class="card">
+        <div class="chd" style="margin-bottom:8px"><div><h2>Last trips</h2><p>Repeat a trip to load its items</p></div></div>
+        <div class="kv"><span style="color:#F7F7F8"><b>SM Supermarket</b><span class="sub">Sep 26 · 7 items</span></span><span class="row" style="gap:8px"><b class="num">₱1,420</b><button class="btn sm">Repeat</button></span></div>
+        <div class="kv"><span style="color:#F7F7F8"><b>Puregold</b><span class="sub">Sep 12 · 4 items</span></span><span class="row" style="gap:8px"><b class="num">₱612</b><button class="btn sm">Repeat</button></span></div>
+      </section>
+    </div>
+  </div>
+
+  <p style="margin:0;max-width:720px;font-size:12.5px;color:#9A9FA8;line-height:1.5">The phone layout is replaced by a two-column desktop one. Add item, Set price, Trip budget, Trip history, Finish trip and Clear cart all remain; the phone bottom sheets become dialogs, and the bottom bar becomes the header actions and the Finish button on the total card.</p>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -8,6 +8,8 @@ import '../../../presenters/ledger_presenter.dart';
 import '../../../services/image_compressor.dart';
 import '../../../utils/app_radii.dart';
 import '../design/web_breakpoints.dart';
+import '../web_keys.dart';
+import 'web_dialog.dart';
 
 /// Scan a receipt into an expense, from the desktop.
 ///
@@ -25,8 +27,8 @@ Future<void> showWebReceiptDialog(
   required LedgerPresenter ledger,
   ImageCompressor compressor = const ImageCompressor(),
 }) {
-  return showDialog<void>(
-    context: context,
+  return showWebDialog<void>(
+    context,
     builder: (_) => _WebReceiptDialog(ledger: ledger, compressor: compressor),
   );
 }
@@ -118,57 +120,50 @@ class _WebReceiptDialogState extends State<_WebReceiptDialog> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return AlertDialog(
-      title: const Text('Scan a receipt'),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _DropTarget(
-              dragging: _dragging,
-              bytes: _bytes,
-              onDraggingChanged: (v) => setState(() => _dragging = v),
-              onDropped: (bytes) => setState(() {
-                _bytes = bytes;
-                _error = null;
-              }),
-              onBrowse: _pickFile,
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: WebInsets.md),
-              Text(
-                _error!,
-                style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
-              ),
-            ],
+    return WebDialog(
+      title: 'Scan a receipt',
+      subtitle: 'Nudgy reads the total, the store and the date, then asks '
+          'you to confirm before anything is logged.',
+      body: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DropTarget(
+            key: WebKeys.ledgerReceiptDropZone,
+            dragging: _dragging,
+            bytes: _bytes,
+            onDraggingChanged: (v) => setState(() => _dragging = v),
+            onDropped: (bytes) => setState(() {
+              _bytes = bytes;
+              _error = null;
+            }),
+            onBrowse: _pickFile,
+          ),
+          if (_error != null) ...[
             const SizedBox(height: WebInsets.md),
             Text(
-              'The amount and merchant are read from the receipt, then shown '
-              'for you to confirm before anything is logged.',
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              _error!,
+              style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
             ),
           ],
-        ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _bytes == null || _busy ? null : _scan,
-          child: _busy
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Scan'),
-        ),
-      ],
+      secondary: TextButton(
+        key: WebKeys.ledgerReceiptCancel,
+        onPressed: _busy ? null : () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      primary: FilledButton(
+        key: WebKeys.ledgerReceiptScan,
+        onPressed: _bytes == null || _busy ? null : _scan,
+        child: _busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Scan'),
+      ),
     );
   }
 }
@@ -182,6 +177,7 @@ class _DropTarget extends StatelessWidget {
   final VoidCallback onBrowse;
 
   const _DropTarget({
+    super.key,
     required this.dragging,
     required this.bytes,
     required this.onDraggingChanged,
@@ -224,9 +220,8 @@ class _DropTarget extends StatelessWidget {
                   : cs.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(AppRadii.md),
               border: Border.all(
-                color: dragging
-                    ? cs.primary
-                    : cs.outlineVariant.withValues(alpha: 0.8),
+                color: dragging ? cs.primary : cs.outline,
+                width: 1.5,
               ),
             ),
             clipBehavior: Clip.antiAlias,
@@ -236,16 +231,16 @@ class _DropTarget extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 32, color: cs.onSurfaceVariant),
+                        Icon(Icons.upload_rounded, size: 28, color: cs.primary),
                         const SizedBox(height: WebInsets.sm),
                         Text(
-                          'Drop a receipt image here',
-                          style: theme.textTheme.bodyMedium,
+                          'Drop a photo here',
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: WebInsets.xs),
                         Text(
-                          'or click to browse',
+                          'or click to choose a file · JPG, PNG, HEIC',
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: cs.onSurfaceVariant),
                         ),

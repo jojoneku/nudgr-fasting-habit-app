@@ -1,6 +1,6 @@
 # Treasury Web Companion Spec
 
-> Status: PLANNED — NOT IMPLEMENTED · Owner: Treasury · Plan: [.claude/plans/042-treasury-web-companion.md](../.claude/plans/042-treasury-web-companion.md)
+> Status: SHIPPED (Plans 042/050) · v2 redesign behind the `WEB_V2` build flag (Plan 063, [design reference](design-reference/web-v2/README.md)) · Owner: Treasury · Plan: [.claude/plans/042-treasury-web-companion.md](../.claude/plans/042-treasury-web-companion.md)
 > Related: Plan 016 (Google Sheets Import — **superseded by this spec's Decision Record**), Plan 014/015 (Supabase sync), Plan 040 (credit accounts, shipped).
 > Date: 2026-06-10
 

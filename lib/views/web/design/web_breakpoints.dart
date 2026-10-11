@@ -15,6 +15,11 @@ class WebBreakpoints {
   /// Max content width for a page body — keeps line lengths and tables sane.
   static const double content = 1200;
 
+  /// At/above this window width the v2 shell shows a page's right rail
+  /// (Nudgy on the Dashboard) as a fixed column beside the content; below it
+  /// the rail folds into the slide-over dock so the page keeps its width.
+  static const double rightRail = 1280;
+
   static bool isDesktop(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= rail;
 }

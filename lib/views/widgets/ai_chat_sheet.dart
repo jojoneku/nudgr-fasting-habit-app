@@ -119,6 +119,24 @@ class AiChatBody extends StatefulWidget {
   /// platform cannot perform would be a dead end.
   final bool allowModelDownload;
 
+  /// Drops the body's own header row (entry icon, Conversations, Advisor
+  /// memory, Think/Fast) and its divider. For a host that draws one header of
+  /// its own and places those controls there — the web Nudgy rail — so the
+  /// column does not show two title rows. The host reaches the controls via
+  /// [AiThinkingToggle], [showConversations] and `AdvisorMemorySheet.show`.
+  /// Off by default: the mobile sheet is unchanged.
+  final bool compactHeader;
+
+  /// Replaces the presenter's resting hint ("Ask your coach…") while the input
+  /// is enabled. The presenter's hints for a disabled input (getting ready,
+  /// working, not ready) still show — they explain *why* it is disabled, and
+  /// a host must not paper over that.
+  final String? inputHint;
+
+  /// A row rendered directly above the input bar, inside the chat's own
+  /// bottom padding (the web rail's quick-action chips).
+  final Widget? aboveInput;
+
   const AiChatBody({
     super.key,
     required this.presenter,
@@ -126,7 +144,18 @@ class AiChatBody extends StatefulWidget {
     this.showDragHandle = false,
     this.showEntryLabel = true,
     this.allowModelDownload = true,
+    this.compactHeader = false,
+    this.inputHint,
+    this.aboveInput,
   });
+
+  /// Opens the saved-conversations browser for [presenter]. Public so a host
+  /// with [compactHeader] on can offer the same control from its own header.
+  static Future<void> showConversations(
+    BuildContext context,
+    AiCoachPresenter presenter,
+  ) =>
+      _ConversationsSheet.show(context, presenter);
 
   @override
   State<AiChatBody> createState() => _AiChatBodyState();
@@ -403,12 +432,15 @@ class _AiChatBodyState extends State<AiChatBody> {
     return Column(
       children: [
         if (widget.showDragHandle) _DragHandle(),
-        _SheetHeader(
-          meta: meta,
-          presenter: _presenter,
-          showLabel: widget.showEntryLabel,
-        ),
-        Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+        if (!widget.compactHeader) ...[
+          _SheetHeader(
+            meta: meta,
+            presenter: _presenter,
+            showLabel: widget.showEntryLabel,
+          ),
+          Divider(
+              height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+        ],
         Expanded(
           child: Stack(
             // expand so the chat area keeps the tight full-height constraints
@@ -480,20 +512,26 @@ class _AiChatBodyState extends State<AiChatBody> {
                   bytes: _pendingImage!,
                   onRemove: () => setState(() => _pendingImage = null),
                 ),
+              if (widget.aboveInput != null) widget.aboveInput!,
               ListenableBuilder(
                 listenable: _presenter,
-                builder: (_, __) => _InputBar(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: _presenter.isModelAvailable &&
+                builder: (_, __) {
+                  final enabled = _presenter.isModelAvailable &&
                       !_presenter.isResponding &&
-                      !_presenter.isInitializing,
-                  hint: _presenter.inputHint,
-                  onSend: _send,
-                  // Photo upload is an advisor-only capability (its op is
-                  // the only one wired for vision).
-                  onAttach: _advisorMode ? _attachPhoto : null,
-                ),
+                      !_presenter.isInitializing;
+                  return _InputBar(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    enabled: enabled,
+                    hint: enabled
+                        ? (widget.inputHint ?? _presenter.inputHint)
+                        : _presenter.inputHint,
+                    onSend: _send,
+                    // Photo upload is an advisor-only capability (its op is
+                    // the only one wired for vision).
+                    onAttach: _advisorMode ? _attachPhoto : null,
+                  );
+                },
               ),
             ],
           ),
@@ -569,6 +607,73 @@ class _DragHandle extends StatelessWidget {
       );
 }
 
+/// The Think / Fast pill: flips [AiCoachPresenter.toggleThinking], inert while
+/// a reply is streaming. Public so a host that hides the chat's own header
+/// (`AiChatBody.compactHeader`) can put the same control in its header.
+class AiThinkingToggle extends StatelessWidget {
+  final AiCoachPresenter presenter;
+  const AiThinkingToggle({super.key, required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (_, __) => Semantics(
+        button: true,
+        toggled: presenter.isThinkingEnabled,
+        label:
+            presenter.isThinkingEnabled ? 'Thinking mode on' : 'Fast mode on',
+        child: GestureDetector(
+          onTap: presenter.isResponding ? null : presenter.toggleThinking,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: presenter.isThinkingEnabled
+                  ? cs.primary.withValues(alpha: 0.2)
+                  : cs.onSurfaceVariant.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: presenter.isThinkingEnabled
+                    ? cs.primary.withValues(alpha: 0.5)
+                    : cs.onSurfaceVariant.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  presenter.isThinkingEnabled
+                      ? Icons.psychology_outlined
+                      : Icons.bolt_outlined,
+                  color: presenter.isThinkingEnabled
+                      ? cs.primary
+                      : cs.onSurfaceVariant,
+                  size: 13,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  presenter.isThinkingEnabled ? 'Think' : 'Fast',
+                  style: TextStyle(
+                    color: presenter.isThinkingEnabled
+                        ? cs.primary
+                        : cs.onSurfaceVariant,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SheetHeader extends StatelessWidget {
   final ({String label, IconData icon}) meta;
   final AiCoachPresenter presenter;
@@ -629,55 +734,7 @@ class _SheetHeader extends StatelessWidget {
               onPressed: () => AdvisorMemorySheet.show(context, presenter),
             ),
           ],
-          ListenableBuilder(
-            listenable: presenter,
-            builder: (_, __) => GestureDetector(
-              onTap: presenter.isResponding ? null : presenter.toggleThinking,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: presenter.isThinkingEnabled
-                      ? cs.primary.withValues(alpha: 0.2)
-                      : cs.onSurfaceVariant.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: presenter.isThinkingEnabled
-                        ? cs.primary.withValues(alpha: 0.5)
-                        : cs.onSurfaceVariant.withValues(alpha: 0.2),
-                    width: 0.5,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      presenter.isThinkingEnabled
-                          ? Icons.psychology_outlined
-                          : Icons.bolt_outlined,
-                      color: presenter.isThinkingEnabled
-                          ? cs.primary
-                          : cs.onSurfaceVariant,
-                      size: 13,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      presenter.isThinkingEnabled ? 'Think' : 'Fast',
-                      style: TextStyle(
-                        color: presenter.isThinkingEnabled
-                            ? cs.primary
-                            : cs.onSurfaceVariant,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          AiThinkingToggle(presenter: presenter),
           // The "AI" badge only earns its ~40px when the persona label isn't
           // printed (the web dock prints the title above instead). Beside
           // "Nudgy" + a Think/Fast toggle it says nothing new, and it

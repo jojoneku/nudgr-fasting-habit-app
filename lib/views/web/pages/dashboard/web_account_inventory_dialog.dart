@@ -6,6 +6,9 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../design/account_category_label.dart';
 import '../../design/web_breakpoints.dart';
+import '../../design/web_constants.dart';
+import '../../web_keys.dart';
+import '../../widgets/web_dialog.dart';
 import '../../widgets/web_number.dart';
 
 /// "All accounts" — every account the treasury knows about, grouped by where
@@ -29,8 +32,8 @@ class WebAccountInventoryDialog extends StatelessWidget {
     BuildContext context, {
     required TreasuryDashboardPresenter presenter,
   }) =>
-      showDialog<void>(
-        context: context,
+      showWebDialog<void>(
+        context,
         builder: (_) => WebAccountInventoryDialog(presenter: presenter),
       );
 
@@ -49,98 +52,34 @@ class WebAccountInventoryDialog extends StatelessWidget {
         final total = presenter.accountInventoryCount;
         final shown = presenter.accountInventoryShownCount;
 
-        return Dialog(
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadii.lg),
+        return WebDialog(
+          title: 'All accounts',
+          subtitle: '$total total · $shown shown as tiles on the dashboard',
+          width: kWebDialogWideWidth,
+          primaryExpands: false,
+          primary: TextButton(
+            key: WebKeys.dashboardAccountInventoryClose,
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
           ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _Header(total: total, shown: shown),
-                Divider(height: 1, color: cs.outlineVariant),
-                Flexible(
-                  child: groups.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.all(WebInsets.xxl),
-                          child: Text(
-                            'No accounts yet.',
-                            style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: WebInsets.xl,
-                            vertical: WebInsets.lg,
-                          ),
-                          itemCount: groups.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: WebInsets.xl),
-                          itemBuilder: (context, i) => _Group(group: groups[i]),
-                        ),
+          body: groups.isEmpty
+              ? Text(
+                  'No accounts yet.',
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < groups.length; i++) ...[
+                      if (i > 0) const SizedBox(height: WebInsets.xl),
+                      _Group(group: groups[i]),
+                    ],
+                  ],
                 ),
-                Divider(height: 1, color: cs.outlineVariant),
-                Padding(
-                  padding: const EdgeInsets.all(WebInsets.md),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         );
       },
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  final int total;
-  final int shown;
-  const _Header({required this.total, required this.shown});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          WebInsets.xl, WebInsets.xl, WebInsets.md, WebInsets.lg),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('All accounts',
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-                const SizedBox(height: WebInsets.xs),
-                Text(
-                  '$total total · $shown shown as tiles on the dashboard',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Close',
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
-      ),
     );
   }
 }
