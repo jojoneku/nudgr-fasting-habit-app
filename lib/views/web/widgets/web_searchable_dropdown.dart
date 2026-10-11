@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -205,9 +207,11 @@ class _WebSearchableDropdownState<T> extends State<WebSearchableDropdown<T>> {
           child: Align(
             alignment: Alignment.topLeft,
             child: ConstrainedBox(
+              // The panel is at least 200 px wide even under a narrower
+              // field (a grid cell), so the constraints stay normalized.
               constraints: BoxConstraints(
                 minWidth: 200,
-                maxWidth: widget.width ?? 320,
+                maxWidth: math.max(200, widget.width ?? 320),
               ),
               child: Material(
                 color: cs.surfaceContainerHigh,
