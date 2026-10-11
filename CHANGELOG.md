@@ -13,6 +13,30 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.102] - 2026-10-11
+
+### Added
+- v2 forms pass, Login, keys consolidation, Nudgy panel header
+- route Goals to the new web page
+- route Setup & Accounts to the v2 page
+- Goals web page
+- Setup & Accounts v2 page and account form
+- route Ledger to the v2 page; Dashboard test follows the unified Settle dialog
+- route Bills to the v2 page
+- Ledger v2 page and dialogs
+- Bills v2 page, unified Settle dialog
+- route History to the v2 page; Open in Ledger jumps to that month
+- History v2 page and month detail
+- route Budget to the v2 page; Dashboard reads kBudgetWatchThreshold
+- Budget v2 page, shared watch threshold
+- route the Dashboard destination to the v2 page
+- Dashboard v2 page
+- v2 shell behind WEB_V2 — WebDest, grouped nav, Nudgy header button and rail
+- v2 shared kit — dialog, fields, tabs, stat strip, row menu
+
+### Fixed
+- bound the stacked Dashboard hero so it lays out beside the Nudgy rail
+
 ## [1.1.101] - 2026-10-08
 
 ### Fixed
@@ -914,7 +938,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.101...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.102...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1017,3 +1041,4 @@ distributed via `manifest.json`.
 [1.1.99]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.99
 [1.1.100]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.100
 [1.1.101]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.101
+[1.1.102]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.102
