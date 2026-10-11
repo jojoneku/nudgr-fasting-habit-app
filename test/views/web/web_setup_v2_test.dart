@@ -90,10 +90,10 @@ void main() {
     WebKeys.setupTabCategories,
     WebKeys.setupStatStrip,
     WebKeys.setupAccountsTable,
-    kSetupStatLiquidKey,
-    kSetupStatSavingsKey,
-    kSetupStatCreditOwedKey,
-    kSetupStatCreditAvailableKey,
+    WebKeys.setupStatLiquid,
+    WebKeys.setupStatSavings,
+    WebKeys.setupStatCreditOwed,
+    WebKeys.setupStatCreditAvailable,
   ];
 
   group('parity', () {
@@ -125,7 +125,7 @@ void main() {
               reason: 'the investment account has a group too');
           // One inline type switcher per non-credit row; one ⋯ per row.
           final rows = dash.activeAccountCount;
-          expect(find.byKey(kSetupRowMenuKey), findsNWidgets(rows));
+          expect(find.byKey(WebKeys.setupRowMenu), findsNWidgets(rows));
           expect(find.byKey(WebKeys.setupRowType),
               findsNWidgets(rows - dash.creditAccounts.length));
           expect(find.byKey(WebKeys.setupRowEdit), findsNWidgets(rows));
@@ -190,15 +190,17 @@ void main() {
       Finder inStat(Key key, String text) =>
           find.descendant(of: find.byKey(key), matching: find.text(text));
 
-      expect(inStat(kSetupStatLiquidKey, formatPeso(dash.totalLiquidCash)),
+      expect(inStat(WebKeys.setupStatLiquid, formatPeso(dash.totalLiquidCash)),
           findsOneWidget);
       expect(
-          inStat(kSetupStatSavingsKey, formatPeso(dash.totalSavingsAndGoals)),
-          findsOneWidget);
-      expect(inStat(kSetupStatCreditOwedKey, formatPeso(dash.totalCreditOwed)),
+          inStat(
+              WebKeys.setupStatSavings, formatPeso(dash.totalSavingsAndGoals)),
           findsOneWidget);
       expect(
-          inStat(kSetupStatCreditAvailableKey,
+          inStat(WebKeys.setupStatCreditOwed, formatPeso(dash.totalCreditOwed)),
+          findsOneWidget);
+      expect(
+          inStat(WebKeys.setupStatCreditAvailable,
               formatPeso(dash.totalCreditAvailable)),
           findsOneWidget);
       // The seed has an overdrawn liquid account; the caption names it.
@@ -219,7 +221,7 @@ void main() {
       expect(creditWithLimit, greaterThan(0));
       expect(goalsWithTarget, greaterThan(0));
 
-      expect(find.byKey(kSetupRowMeterKey),
+      expect(find.byKey(WebKeys.setupRowMeter),
           findsNWidgets(creditWithLimit + goalsWithTarget));
       expect(find.text('—'), findsNothing,
           reason: 'liquid rows leave the column empty');
@@ -243,7 +245,7 @@ void main() {
 
       final maribank = dash.liquidAccounts.firstWhere((a) => a.balance < 0);
       expect(maribank.name, 'Maribank');
-      expect(find.byKey(kSetupRowNeedsFixKey), findsOneWidget);
+      expect(find.byKey(WebKeys.setupRowNeedsFix), findsOneWidget);
       expect(find.text('Needs a fix'), findsOneWidget);
       expect(
           find.text('−${formatPeso(maribank.balance.abs())}'), findsOneWidget);
@@ -252,7 +254,8 @@ void main() {
             'Overdrawn · the last transfer out was larger than the balance'),
         findsOneWidget,
       );
-      final pill = tester.widget<WebBadge>(find.byKey(kSetupRowNeedsFixKey));
+      final pill =
+          tester.widget<WebBadge>(find.byKey(WebKeys.setupRowNeedsFix));
       expect(pill.tone, WebBadgeTone.warning);
     });
   });
@@ -298,11 +301,11 @@ void main() {
       await pumpPage(tester, presenter: dash, ledger: ledger);
 
       final first = dash.liquidAccounts.first;
-      await tester.tap(find.byKey(kSetupRowMenuKey).first);
+      await tester.tap(find.byKey(WebKeys.setupRowMenu).first);
       await tester.pumpAndSettle();
       expect(find.byKey(WebKeys.setupRowDelete), findsOneWidget);
       // Archive is a goal-only action; a liquid row's menu has none.
-      expect(find.byKey(kSetupRowArchiveKey), findsNothing);
+      expect(find.byKey(WebKeys.setupRowArchive), findsNothing);
 
       await tester.tap(find.byKey(WebKeys.setupRowDelete));
       await tester.pumpAndSettle();
@@ -322,12 +325,12 @@ void main() {
 
       final goal = dash.goalAccounts.first;
       final goalRow = find.byKey(ValueKey('web.setup.row.${goal.id}'));
-      await tester.tap(
-          find.descendant(of: goalRow, matching: find.byKey(kSetupRowMenuKey)));
+      await tester.tap(find.descendant(
+          of: goalRow, matching: find.byKey(WebKeys.setupRowMenu)));
       await tester.pumpAndSettle();
-      expect(find.byKey(kSetupRowArchiveKey), findsOneWidget);
+      expect(find.byKey(WebKeys.setupRowArchive), findsOneWidget);
 
-      await tester.tap(find.byKey(kSetupRowArchiveKey));
+      await tester.tap(find.byKey(WebKeys.setupRowArchive));
       await tester.pumpAndSettle();
       expect(find.text('Archive ${goal.name}?'), findsOneWidget);
     });
@@ -477,7 +480,7 @@ void main() {
       expect(find.text('No accounts yet'), findsOneWidget);
       expect(find.byKey(WebKeys.setupStatStrip), findsNothing);
       expect(find.byKey(WebKeys.setupAccountsTable), findsNothing);
-      await tester.tap(find.byKey(kSetupEmptyAddAccountKey));
+      await tester.tap(find.byKey(WebKeys.setupEmptyAddAccount));
       await tester.pumpAndSettle();
       expect(find.byType(WebAccountFormDialogV2), findsOneWidget);
     });

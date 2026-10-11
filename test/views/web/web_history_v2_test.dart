@@ -78,9 +78,9 @@ void main() {
 
   /// Every parity key the page attaches with seeded data.
   const parityKeys = <Key>[
-    kHistoryRangeKey,
+    WebKeys.historyRange,
     WebKeys.historyLiveCard,
-    kHistoryLiveOpenKey,
+    WebKeys.historyLiveCardOpen,
     WebKeys.historyStatStrip,
     WebKeys.historyCashFlowTrend,
     WebKeys.historyMonthlyTable,
@@ -134,7 +134,7 @@ void main() {
       final live = history.currentMonthSummary == null ? 0 : 1;
       expect(monthRows(), findsNWidgets(history.summaries.length + live));
       for (final s in history.summaries) {
-        expect(find.byKey(historyMonthRowKey(s.month)), findsOneWidget,
+        expect(find.byKey(WebKeys.historyMonthRow(s.month)), findsOneWidget,
             reason: s.month);
       }
       expect(find.text(monthLabel(history.currentMonthSummary!.month)),
@@ -224,7 +224,7 @@ void main() {
       await pumpPage(tester, presenter: history);
       final s = history.summaries.first;
 
-      await tester.tap(find.byKey(historyMonthRowKey(s.month)));
+      await tester.tap(find.byKey(WebKeys.historyMonthRow(s.month)));
       await tester.pumpAndSettle();
 
       expect(find.byKey(WebKeys.historyMonthDetail), findsOneWidget);
@@ -247,7 +247,7 @@ void main() {
       await pumpPage(tester, presenter: history, onOpenLedgerMonth: opened.add);
       final s = history.summaries.first;
 
-      await tester.tap(find.byKey(historyMonthRowKey(s.month)));
+      await tester.tap(find.byKey(WebKeys.historyMonthRow(s.month)));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(WebKeys.historyMonthDetailOpenLedger));
       await tester.pumpAndSettle();

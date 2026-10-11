@@ -19,7 +19,6 @@ import '../../design/web_breakpoints.dart';
 import '../../design/web_constants.dart';
 import '../../widgets/web_dialog.dart';
 import '../../widgets/web_searchable_dropdown.dart';
-import 'ledger_keys_v2.dart';
 
 /// Opens the v2 Add / Edit transaction dialog (Plan 063, Phase 4 — the
 /// "Ledger" section of `Forms.dc.html`).
@@ -526,6 +525,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
     return WebDialog(
       title: _title,
       subtitle: _subtitle,
+      onSubmit: _isSubmitting ? null : _submit,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -549,12 +549,11 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
             child: WebInput.amount(
               key: WebKeys.ledgerDialogAmount,
               controller: _amountController,
-              autofocus: !_isEdit,
+              autofocus: true,
               error: _amountError != null,
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
               ],
-              onSubmitted: (_) => _submit(),
             ),
           ),
           const SizedBox(height: 14),
@@ -614,7 +613,6 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
                     onChanged: (_) {
                       if (_showFieldErrors) setState(() {});
                     },
-                    onSubmitted: (_) => _submit(),
                   ),
                 ),
               ),
@@ -677,7 +675,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
       ),
       destructive: showDelete
           ? TextButton(
-              key: LedgerKeysV2.dialogDelete,
+              key: WebKeys.ledgerDialogDelete,
               style: TextButton.styleFrom(foregroundColor: cs.error),
               onPressed: _isSubmitting
                   ? null
@@ -876,7 +874,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
           WebField(
             label: 'Months',
             child: WebChips<int>(
-              key: LedgerKeysV2.dialogInstallmentMonths,
+              key: WebKeys.ledgerDialogInstallmentMonths,
               options: const [
                 WebChipOption(3, '3'),
                 WebChipOption(6, '6'),
@@ -891,7 +889,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
           WebField(
             label: 'Interest / month',
             child: WebChips<double>(
-              key: LedgerKeysV2.dialogInstallmentRate,
+              key: WebKeys.ledgerDialogInstallmentRate,
               options: const [
                 WebChipOption(0.0, '0 %'),
                 WebChipOption(1.0, '1 %'),
@@ -971,7 +969,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
             label: 'Expected back by',
             helper: date == null ? 'ASAP shows it in this month' : null,
             child: _dateButton(
-              key: LedgerKeysV2.dialogExpectedBack,
+              key: WebKeys.ledgerDialogExpectedBack,
               label: date == null ? 'ASAP' : _kLongDate.format(date),
               onTap: _pickReimbursementDate,
               trailing: date == null
@@ -991,7 +989,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
             label: 'Who owes you?',
             optional: true,
             child: WebInput(
-              key: LedgerKeysV2.dialogOwedBy,
+              key: WebKeys.ledgerDialogOwedBy,
               controller: _owedByController,
               hint: 'Name',
               maxLength: 40,

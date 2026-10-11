@@ -428,7 +428,7 @@ class _PaceCard extends StatelessWidget {
           children: [
             if (current)
               _PacePill(
-                key: WebBudgetKeys.heroPacePill,
+                key: WebKeys.budgetHeroPacePill,
                 ahead: presenter.isAheadOfPace,
                 over: over,
               ),
@@ -546,7 +546,7 @@ class _DonutCard extends StatelessWidget {
                 for (var i = 0; i < sections.length; i++) ...[
                   if (i > 0) const SizedBox(height: WebInsets.sm),
                   Row(
-                    key: WebBudgetKeys.legend(sections[i].group.id),
+                    key: WebKeys.budgetLegend(sections[i].group.id),
                     children: [
                       WebDot(color: sections[i].color),
                       const SizedBox(width: WebInsets.sm),
@@ -631,7 +631,7 @@ class _TableCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            key: WebBudgetKeys.tableHeader,
+            key: WebKeys.budgetTableHeader,
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -706,7 +706,7 @@ class _TableCard extends StatelessWidget {
                         _GroupRow(section: s),
                         for (final r in s.rows)
                           _DataRow(
-                            key: WebBudgetKeys.row(r.id),
+                            key: WebKeys.budgetRow(r.id),
                             presenter: presenter,
                             row: r,
                             groupColor: s.color,
@@ -821,7 +821,7 @@ class _GroupRow extends StatelessWidget {
         );
 
     return Container(
-      key: WebBudgetKeys.group(s.group.id),
+      key: WebKeys.budgetGroup(s.group.id),
       color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
@@ -1073,7 +1073,7 @@ class _DataRow extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: _StatusPill(
-                  key: WebBudgetKeys.status(row.id),
+                  key: WebKeys.budgetStatus(row.id),
                   label: status.label,
                   tone: status.tone,
                 ),
@@ -1359,7 +1359,7 @@ class _DraftRowState extends State<_DraftRow> {
     );
 
     return Container(
-      key: WebBudgetKeys.draftRow,
+      key: WebKeys.budgetDraftRow,
       color: cs.surfaceContainerHighest.withValues(alpha: 0.35),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       child: Row(
@@ -1542,7 +1542,7 @@ class _EmptyState extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     return WebCard(
-      key: WebBudgetKeys.emptyState,
+      key: WebKeys.budgetEmptyState,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: WebInsets.xl),
         child: Column(

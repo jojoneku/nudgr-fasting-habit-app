@@ -426,6 +426,13 @@ class _QuickChip extends StatelessWidget {
 class NudgyPanel extends StatelessWidget {
   final NudgyController controller;
 
+  /// The v2 shell's look: one header row carrying the title, Think/Fast,
+  /// Conversations, Advisor memory and Collapse, over a chat body with its
+  /// own header hidden — the same row [NudgyRail] draws, so the slide-over
+  /// and the Dashboard column read as one control. Off by default so the
+  /// pre-v2 shell keeps its two-row panel until Phase 11 removes it.
+  final bool compact;
+
   /// Default width of the open column. Retained as the historical name for
   /// [NudgyController.defaultWidth]; the live width now lives on the
   /// controller, since it is state the user owns.
@@ -441,7 +448,11 @@ class NudgyPanel extends StatelessWidget {
   /// handle on a 380px panel is a hunt.
   static const double _handleWidth = 10;
 
-  const NudgyPanel({super.key, required this.controller});
+  const NudgyPanel({
+    super.key,
+    required this.controller,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -526,6 +537,7 @@ class NudgyPanel extends StatelessWidget {
   }
 
   Widget _body(BuildContext context) {
+    if (compact) return _compactBody(context);
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
@@ -568,6 +580,81 @@ class NudgyPanel extends StatelessWidget {
             // No on-device tier on web — an unavailable model is terminal here,
             // so don't offer a download the platform cannot perform.
             allowModelDownload: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// One header row (mirrors [NudgyRail]) and the chat body underneath.
+  Widget _compactBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final presenter = controller.presenter;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 6, 6),
+          child: Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Nudgy',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              KeyedSubtree(
+                key: WebKeys.nudgyThinkingToggle,
+                child: AiThinkingToggle(presenter: presenter),
+              ),
+              const SizedBox(width: 2),
+              IconButton(
+                key: WebKeys.nudgyConversations,
+                tooltip: 'Conversations',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () =>
+                    AiChatBody.showConversations(context, presenter),
+                icon: Icon(Icons.forum_outlined,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+              IconButton(
+                key: WebKeys.nudgyMemory,
+                tooltip: 'Advisor memory',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: () => AdvisorMemorySheet.show(context, presenter),
+                icon: Icon(Icons.bookmark_border,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+              IconButton(
+                key: WebKeys.nudgyClose,
+                tooltip: 'Collapse Nudgy',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: controller.close,
+                icon: Icon(Icons.chevron_right,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: cs.outlineVariant),
+        Expanded(
+          child: AiChatBody(
+            presenter: presenter,
+            entryPoint: AiCoachEntryPoint.financeAdvisor,
+            showEntryLabel: false,
+            compactHeader: true,
+            // No on-device tier on web — an unavailable model is terminal
+            // here, so don't offer a download the platform cannot perform.
+            allowModelDownload: false,
+            inputHint: kNudgyWebInputHint,
           ),
         ),
       ],

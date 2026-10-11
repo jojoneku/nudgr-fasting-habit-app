@@ -55,6 +55,14 @@ class WebDialog extends StatelessWidget {
   final bool showClose;
   final bool primaryExpands;
 
+  /// The dialog's save action, for the keyboard. Every single-line [WebInput]
+  /// in the body that has no `onSubmitted` of its own and is not a
+  /// `TextInputAction.next` field submits this on Enter, so a form reads
+  /// "type, type, Enter" without each field being wired by hand. Pass null
+  /// (or a null-valued expression such as `_canSubmit ? _submit : null`)
+  /// while the form is not submittable; Enter then does nothing.
+  final VoidCallback? onSubmit;
+
   const WebDialog({
     super.key,
     required this.title,
@@ -66,6 +74,7 @@ class WebDialog extends StatelessWidget {
     this.width = kWebDialogWidth,
     this.showClose = true,
     this.primaryExpands = true,
+    this.onSubmit,
   });
 
   @override
@@ -82,42 +91,68 @@ class WebDialog extends StatelessWidget {
       ),
       insetPadding: const EdgeInsets.all(WebInsets.xl),
       clipBehavior: Clip.antiAlias,
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () =>
-              Navigator.of(context).maybePop(),
-        },
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: width),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _WebDialogHeader(
-                  title: title,
-                  subtitle: subtitle,
-                  showClose: showClose,
+      // Screen readers announce the dialog by its title; Tab moves through
+      // the dialog's own controls in reading order (header ×, the fields top
+      // to bottom, then the footer left to right) and never leaves it.
+      child: Semantics(
+        container: true,
+        label: title,
+        child: FocusTraversalGroup(
+          child: CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () =>
+                  Navigator.of(context).maybePop(),
+            },
+            child: _WebDialogScope(
+              onSubmit: onSubmit,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: width),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _WebDialogHeader(
+                        title: title,
+                        subtitle: subtitle,
+                        showClose: showClose,
+                      ),
+                      const SizedBox(height: WebInsets.lg),
+                      Flexible(
+                        child: SingleChildScrollView(child: body),
+                      ),
+                      const SizedBox(height: WebInsets.lg),
+                      WebDialogFooter(
+                        primary: primary,
+                        secondary: secondary,
+                        destructive: destructive,
+                        primaryExpands: primaryExpands,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: WebInsets.lg),
-                Flexible(
-                  child: SingleChildScrollView(child: body),
-                ),
-                const SizedBox(height: WebInsets.lg),
-                WebDialogFooter(
-                  primary: primary,
-                  secondary: secondary,
-                  destructive: destructive,
-                  primaryExpands: primaryExpands,
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Hands [WebDialog.onSubmit] down to the inputs in its body.
+class _WebDialogScope extends InheritedWidget {
+  final VoidCallback? onSubmit;
+
+  const _WebDialogScope({required this.onSubmit, required super.child});
+
+  static _WebDialogScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_WebDialogScope>();
+
+  @override
+  bool updateShouldNotify(_WebDialogScope oldWidget) =>
+      onSubmit != oldWidget.onSubmit;
 }
 
 class _WebDialogHeader extends StatelessWidget {
@@ -523,11 +558,29 @@ class WebInput extends StatelessWidget {
     );
   }
 
+  /// Whether Enter in this field falls through to the enclosing
+  /// [WebDialog.onSubmit]: single-line, no `onSubmitted` of its own, and not
+  /// a field that hands Enter to the next control.
+  bool get _submitsDialog =>
+      _kind != _WebInputKind.multiline &&
+      onSubmitted == null &&
+      switch (textInputAction) {
+        null ||
+        TextInputAction.done ||
+        TextInputAction.go ||
+        TextInputAction.send ||
+        TextInputAction.search =>
+          true,
+        _ => false,
+      };
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final large = _kind == _WebInputKind.amount;
     final style = large ? amountStyle(context) : textStyle(context);
+    final dialogSubmit =
+        _submitsDialog ? _WebDialogScope.maybeOf(context)?.onSubmit : null;
 
     final field = TextField(
       controller: controller,
@@ -540,7 +593,8 @@ class WebInput extends StatelessWidget {
       inputFormatters: inputFormatters,
       textInputAction: textInputAction,
       onChanged: onChanged,
-      onSubmitted: onSubmitted,
+      onSubmitted:
+          onSubmitted ?? (dialogSubmit == null ? null : (_) => dialogSubmit()),
       textAlign: textAlign,
       maxLength: maxLength,
       minLines: minLines,

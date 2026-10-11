@@ -17,17 +17,6 @@ import 'web_account_form_dialog_v2.dart';
 import 'web_account_form_rules.dart';
 import 'web_categories_table_v2.dart';
 
-// Local keys (not yet in WebKeys).
-const kSetupRowMenuKey = ValueKey('web.setup.row.menu');
-const kSetupRowArchiveKey = ValueKey('web.setup.row.archive');
-const kSetupEmptyAddAccountKey = ValueKey('web.setup.empty.addAccount');
-const kSetupStatLiquidKey = ValueKey('web.setup.stat.liquid');
-const kSetupStatSavingsKey = ValueKey('web.setup.stat.savings');
-const kSetupStatCreditOwedKey = ValueKey('web.setup.stat.creditOwed');
-const kSetupStatCreditAvailableKey = ValueKey('web.setup.stat.creditAvailable');
-const kSetupRowNeedsFixKey = ValueKey('web.setup.row.needsFix');
-const kSetupRowMeterKey = ValueKey('web.setup.row.meter');
-
 /// Gap between the header's blocks — the canvas grid gap (20 px).
 const double _gap = 20;
 
@@ -210,7 +199,7 @@ class _StatStrip extends StatelessWidget {
       key: WebKeys.setupStatStrip,
       items: [
         WebStat(
-          key: kSetupStatLiquidKey,
+          key: WebKeys.setupStatLiquid,
           label: 'Liquid cash',
           value: _signed(p.totalLiquidCash),
           caption: liquidCaption,
@@ -218,7 +207,7 @@ class _StatStrip extends StatelessWidget {
               p.totalLiquidCash < 0 ? WebStatTone.warning : WebStatTone.neutral,
         ),
         WebStat(
-          key: kSetupStatSavingsKey,
+          key: WebKeys.setupStatSavings,
           label: 'Savings & goals',
           value: formatPeso(p.totalSavingsAndGoals),
           caption: goals.isEmpty
@@ -227,7 +216,7 @@ class _StatStrip extends StatelessWidget {
               : '${_n(goals.length, 'goal', 'goals')}, $funded funded',
         ),
         WebStat(
-          key: kSetupStatCreditOwedKey,
+          key: WebKeys.setupStatCreditOwed,
           label: 'Credit owed',
           value: formatPeso(p.totalCreditOwed),
           caption: credit.isEmpty
@@ -237,7 +226,7 @@ class _StatStrip extends StatelessWidget {
               p.totalCreditOwed > 0 ? WebStatTone.warning : WebStatTone.neutral,
         ),
         WebStat(
-          key: kSetupStatCreditAvailableKey,
+          key: WebKeys.setupStatCreditAvailable,
           label: 'Credit available',
           value: formatPeso(p.totalCreditAvailable),
           caption: credit.isEmpty
@@ -655,7 +644,7 @@ class _AccountRow extends StatelessWidget {
       creditCell = const Align(
         alignment: Alignment.centerLeft,
         child: WebBadge('Needs a fix',
-            key: kSetupRowNeedsFixKey, tone: WebBadgeTone.warning),
+            key: WebKeys.setupRowNeedsFix, tone: WebBadgeTone.warning),
       );
     } else {
       creditCell = const SizedBox.shrink();
@@ -685,7 +674,7 @@ class _AccountRow extends StatelessWidget {
           style: _rowButtonStyle(cs),
         ),
         WebRowMenu(
-          key: kSetupRowMenuKey,
+          key: WebKeys.setupRowMenu,
           items: [
             WebMenuItem('Edit',
                 icon: Icons.edit_outlined,
@@ -696,7 +685,7 @@ class _AccountRow extends StatelessWidget {
             // only appears on goal rows.
             if (isGoal)
               WebMenuItem('Archive',
-                  key: kSetupRowArchiveKey,
+                  key: WebKeys.setupRowArchive,
                   icon: Icons.inventory_2_outlined,
                   onTap: () => _archive(context)),
             WebMenuItem('Delete',
@@ -751,7 +740,7 @@ class _MeterCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Row(
-      key: kSetupRowMeterKey,
+      key: WebKeys.setupRowMeter,
       children: [
         Expanded(
           child: WebProgressBar(value: fraction, color: color),
@@ -871,7 +860,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: WebInsets.xl),
             FilledButton.icon(
-              key: kSetupEmptyAddAccountKey,
+              key: WebKeys.setupEmptyAddAccount,
               onPressed: onAdd,
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('Add account'),

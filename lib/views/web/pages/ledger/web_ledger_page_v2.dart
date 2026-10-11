@@ -27,7 +27,6 @@ import '../../widgets/web_searchable_dropdown.dart';
 import 'ledger_cells.dart';
 import 'ledger_filters.dart';
 import 'ledger_filters_popover.dart';
-import 'ledger_keys_v2.dart';
 import 'web_transaction_dialog_v2.dart';
 
 /// One enriched, display-ready ledger row.
@@ -527,7 +526,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
               'In ${formatPeso(inflow)} · Out ${formatPeso(outflow)}',
           monthStepper: spansAll
               ? _ScopePill(
-                  key: LedgerKeysV2.scopePill,
+                  key: WebKeys.ledgerScopePill,
                   label: 'All months · ${rows.length} '
                       '${rows.length == 1 ? 'match' : 'matches'}',
                 )
@@ -844,7 +843,7 @@ class _ToolbarV2 extends StatelessWidget {
         SizedBox(
           height: kLedgerControlHeight,
           child: TextButton(
-            key: LedgerKeysV2.clearAll,
+            key: WebKeys.ledgerClearAll,
             onPressed: onClear,
             child: const Text('Clear all'),
           ),
@@ -900,7 +899,7 @@ class _ToolbarV2 extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 220),
           child: Text(
             'Sorted by $sortLabel · $rowCount ${rowCount == 1 ? 'row' : 'rows'}',
-            key: LedgerKeysV2.sortSummary,
+            key: WebKeys.ledgerSortSummary,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -1027,7 +1026,7 @@ class _SelectionBarV2 extends StatelessWidget {
           ),
           const Spacer(),
           OutlinedButton.icon(
-            key: LedgerKeysV2.selectionChangeCategory,
+            key: WebKeys.ledgerSelectionChangeCategory,
             onPressed: onChangeCategory,
             icon: const Icon(Icons.label_outline_rounded, size: 16),
             label: const Text('Change category'),
@@ -1088,7 +1087,7 @@ class _ChangeCategoryDialogState extends State<_ChangeCategoryDialog> {
             border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
           ),
           child: WebSearchableDropdown<String>(
-            key: LedgerKeysV2.changeCategoryPicker,
+            key: WebKeys.ledgerChangeCategoryPicker,
             value: _picked,
             hintText: 'Select…',
             isDense: true,
@@ -1109,7 +1108,7 @@ class _ChangeCategoryDialogState extends State<_ChangeCategoryDialog> {
         child: const Text('Cancel'),
       ),
       primary: FilledButton(
-        key: LedgerKeysV2.changeCategoryApply,
+        key: WebKeys.ledgerChangeCategoryApply,
         onPressed:
             _picked == null ? null : () => Navigator.of(context).pop(_picked),
         child: const Text('Apply'),
@@ -1309,7 +1308,7 @@ class _DraftRowV2 extends StatelessWidget {
             children: [
               const SizedBox(width: kLedgerCheckWidth),
               LedgerDateCell(
-                key: LedgerKeysV2.draftDate,
+                key: WebKeys.ledgerDraftDate,
                 width: w.date,
                 date: date,
                 enabled: true,
@@ -1325,7 +1324,7 @@ class _DraftRowV2 extends StatelessWidget {
                           _AccountTile(account: acct, index: acctIndex),
                           const SizedBox(width: WebInsets.xs),
                           LedgerAccountCell(
-                            key: LedgerKeysV2.draftAccount,
+                            key: WebKeys.ledgerDraftAccount,
                             width: w.account - WebInsets.md - 18 - WebInsets.xs,
                             value: accountId,
                             accounts: accounts,
@@ -1337,7 +1336,7 @@ class _DraftRowV2 extends StatelessWidget {
                       ),
                     ),
               LedgerInlineText(
-                key: ValueKey('${LedgerKeysV2.draftDescription.value}_$epoch'),
+                key: ValueKey('${WebKeys.ledgerDraftDescription.value}_$epoch'),
                 width: descWidth,
                 initialValue: '',
                 hintText: 'Add a row…',
@@ -1349,7 +1348,7 @@ class _DraftRowV2 extends StatelessWidget {
               categories.isEmpty
                   ? ledgerReadCell(width: w.category, child: const Text('—'))
                   : LedgerCategoryCell(
-                      key: LedgerKeysV2.draftCategory,
+                      key: WebKeys.ledgerDraftCategory,
                       width: w.category,
                       value: categoryId,
                       categories: categories,
@@ -1358,7 +1357,7 @@ class _DraftRowV2 extends StatelessWidget {
                       onChanged: onCategory,
                     ),
               LedgerAmountCell(
-                key: ValueKey('${LedgerKeysV2.draftInflow.value}_$epoch'),
+                key: ValueKey('${WebKeys.ledgerDraftInflow.value}_$epoch'),
                 width: w.inflow,
                 value: inflow,
                 color: cs.tertiary,
@@ -1367,7 +1366,7 @@ class _DraftRowV2 extends StatelessWidget {
                 onSubmit: onCommit,
               ),
               LedgerAmountCell(
-                key: ValueKey('${LedgerKeysV2.draftOutflow.value}_$epoch'),
+                key: ValueKey('${WebKeys.ledgerDraftOutflow.value}_$epoch'),
                 width: w.outflow,
                 value: outflow,
                 color: cs.onSurface,
@@ -1405,7 +1404,7 @@ class _DraftRowV2 extends StatelessWidget {
           ),
           if (error != null)
             Padding(
-              key: LedgerKeysV2.draftError,
+              key: WebKeys.ledgerDraftError,
               padding: const EdgeInsets.fromLTRB(
                 kLedgerCheckWidth + WebInsets.md,
                 0,
@@ -1767,7 +1766,7 @@ class _EmptyHintV2 extends StatelessWidget {
           if (!hasAccounts && onOpenSetup != null) ...[
             const SizedBox(height: WebInsets.sm),
             TextButton.icon(
-              key: LedgerKeysV2.emptyOpenSetup,
+              key: WebKeys.ledgerEmptyOpenSetup,
               onPressed: onOpenSetup,
               icon: const Icon(Icons.tune_rounded, size: 16),
               label: const Text('Open Setup'),

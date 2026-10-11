@@ -729,6 +729,52 @@ void main() {
       p.dispose();
     });
 
+    testWidgets(
+        'compact (v2 shell): exactly one "Nudgy" title, the rail\'s header '
+        'controls, the web hint, and Collapse still closes', (tester) async {
+      await wide(tester);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      c.open();
+      await tester.pumpWidget(MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: Row(children: [
+            Expanded(child: NudgyLauncher(controller: c)),
+            NudgyPanel(controller: c, compact: true),
+          ]),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // One header row: the chat body's own header is hidden.
+      expect(find.text('Nudgy'), findsOneWidget);
+      expect(find.text('AI'), findsNothing);
+      expect(find.byKey(WebKeys.nudgyThinkingToggle), findsOneWidget);
+      expect(find.byTooltip('Conversations'), findsOneWidget);
+      expect(find.byTooltip('Advisor memory'), findsOneWidget);
+      expect(find.byKey(WebKeys.nudgyClose), findsOneWidget);
+      expect(find.byType(AiChatBody), findsOneWidget);
+      expect(find.text(kNudgyWebInputHint), findsOneWidget);
+      for (final key in [
+        WebKeys.nudgyConversations,
+        WebKeys.nudgyMemory,
+        WebKeys.nudgyClose,
+      ]) {
+        final size = tester.getSize(find.byKey(key));
+        expect(size.width, greaterThanOrEqualTo(44), reason: '$key');
+        expect(size.height, greaterThanOrEqualTo(44), reason: '$key');
+      }
+
+      await tester.tap(find.byTooltip('Collapse Nudgy'));
+      await tester.pumpAndSettle();
+      expect(c.isOpen, isFalse);
+      expect(find.text('Nudgy'), findsNothing);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+      p.dispose();
+    });
+
     testWidgets('the handle does not steal taps from the chat body',
         (tester) async {
       await wide(tester);

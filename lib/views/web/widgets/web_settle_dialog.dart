@@ -570,9 +570,19 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
       _ => (warning, cs.surface),
     };
 
+    final dateField = WebField(
+      label: _dateLabel,
+      child: WebDateButton(
+        key: WebKeys.billsSettleDate,
+        value: _date,
+        onChanged: _isSubmitting ? null : (d) => setState(() => _date = d),
+      ),
+    );
+
     return WebDialog(
       title: _title,
       subtitle: _subtitle,
+      onSubmit: _canSubmit ? _submit : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -581,31 +591,32 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
             _BatchRows(targets: widget.targets),
             const SizedBox(height: WebInsets.lg),
           ],
-          if (!_isBatch) ...[
-            WebField(
-              label: _amountLabel,
-              error: _amountError,
-              child: WebInput.amount(
-                key: WebKeys.billsSettleAmount,
-                controller: _amountController,
-                autofocus: true,
-                enabled: !_isSubmitting,
-                error: _amountError != null,
-                onChanged: (_) => setState(() => _amountError = null),
-                onSubmitted: (_) => _canSubmit ? _submit() : null,
-              ),
+          // The canvas pairs the amount with the date on one row; a batch
+          // has no amount of its own, so the date takes the row alone.
+          if (_isBatch)
+            dateField
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: WebField(
+                    label: _amountLabel,
+                    error: _amountError,
+                    child: WebInput.amount(
+                      key: WebKeys.billsSettleAmount,
+                      controller: _amountController,
+                      autofocus: true,
+                      enabled: !_isSubmitting,
+                      error: _amountError != null,
+                      onChanged: (_) => setState(() => _amountError = null),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: WebInsets.md),
+                Expanded(child: dateField),
+              ],
             ),
-            const SizedBox(height: 14),
-          ],
-          WebField(
-            label: _dateLabel,
-            child: WebDateButton(
-              key: WebKeys.billsSettleDate,
-              value: _date,
-              onChanged:
-                  _isSubmitting ? null : (d) => setState(() => _date = d),
-            ),
-          ),
           if (showAccountPicker) ...[
             const SizedBox(height: 14),
             WebField(

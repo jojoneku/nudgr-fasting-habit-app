@@ -108,7 +108,7 @@ class _WebManageGroupsDialogV2State extends State<_WebManageGroupsDialogV2> {
             children: [
               for (var i = 0; i < groups.length; i++)
                 _GroupRow(
-                  key: WebBudgetKeys.groupRow(groups[i].id),
+                  key: WebKeys.budgetGroupRow(groups[i].id),
                   group: groups[i],
                   color: webBudgetGroupColor(context, i),
                   count: _countFor(groups[i]),
@@ -197,24 +197,24 @@ class _RenamePromptState extends State<_RenamePrompt> {
     return WebDialog(
       title: 'Rename group',
       width: 420,
+      onSubmit: _save,
       primaryExpands: false,
       body: WebField(
         label: 'Group name',
         child: WebInput(
-          key: WebBudgetKeys.groupsRenameField,
+          key: WebKeys.budgetGroupsRenameField,
           controller: _ctrl,
           autofocus: true,
           textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _save(),
         ),
       ),
       secondary: TextButton(
-        key: WebBudgetKeys.groupsRenameCancel,
+        key: WebKeys.budgetGroupsRenameCancel,
         onPressed: () => Navigator.of(context).pop(),
         child: const Text('Cancel'),
       ),
       primary: FilledButton(
-        key: WebBudgetKeys.groupsRenameSave,
+        key: WebKeys.budgetGroupsRenameSave,
         onPressed: _save,
         child: const Text('Save'),
       ),

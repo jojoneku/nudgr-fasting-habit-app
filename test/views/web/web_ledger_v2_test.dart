@@ -10,7 +10,6 @@ import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
 import 'package:intermittent_fasting/views/web/pages/ledger/ledger_cells.dart';
 import 'package:intermittent_fasting/views/web/pages/ledger/ledger_filters_popover.dart';
-import 'package:intermittent_fasting/views/web/pages/ledger/ledger_keys_v2.dart';
 import 'package:intermittent_fasting/views/web/pages/ledger/web_ledger_page_v2.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_dialog.dart';
@@ -303,7 +302,7 @@ void main() {
         find.descendant(of: chips, matching: find.text('Outflow only')),
         findsOneWidget,
       );
-      expect(find.byKey(LedgerKeysV2.clearAll), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerClearAll), findsOneWidget);
       // The button badge counts the active filter.
       expect(
         find.descendant(
@@ -324,7 +323,7 @@ void main() {
       await tester.tap(find.byKey(WebKeys.ledgerFilterClearAll));
       await tester.pumpAndSettle();
       expect(find.text('Outflow only'), findsNothing);
-      expect(find.byKey(LedgerKeysV2.clearAll), findsNothing);
+      expect(find.byKey(WebKeys.ledgerClearAll), findsNothing);
 
       // Done closes the popover.
       await tester.tap(find.byKey(WebKeys.ledgerFilterDone));
@@ -373,11 +372,11 @@ void main() {
       // Pick a category through the searchable dropdown: type, then Enter
       // selects the first hit. The popover's search field is an element
       // descendant of the cell (OverlayPortal), so scope the finder to it.
-      await tester.tap(find.byKey(LedgerKeysV2.draftCategory));
+      await tester.tap(find.byKey(WebKeys.ledgerDraftCategory));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.descendant(
-          of: find.byKey(LedgerKeysV2.draftCategory),
+          of: find.byKey(WebKeys.ledgerDraftCategory),
           matching: find.byType(TextField),
         ),
         'Food & Drinks',
@@ -386,7 +385,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.descendant(
-          of: find.byKey(LedgerKeysV2.draftCategory),
+          of: find.byKey(WebKeys.ledgerDraftCategory),
           matching: find.text('Food & Drinks'),
         ),
         findsOneWidget,
@@ -395,7 +394,7 @@ void main() {
 
       final outflow = find.descendant(
         of: find.byKey(
-          ValueKey('${LedgerKeysV2.draftOutflow.value}_0'),
+          ValueKey('${WebKeys.ledgerDraftOutflow.value}_0'),
         ),
         matching: find.byType(TextField),
       );
@@ -405,10 +404,10 @@ void main() {
 
       expect(p.ledgerSpreadsheetRows.length, before + 1);
       expect(find.text('Taho'), findsOneWidget);
-      expect(find.byKey(LedgerKeysV2.draftError), findsNothing);
+      expect(find.byKey(WebKeys.ledgerDraftError), findsNothing);
       // The draft reset for the next entry.
       expect(
-        find.byKey(ValueKey('${LedgerKeysV2.draftOutflow.value}_1')),
+        find.byKey(ValueKey('${WebKeys.ledgerDraftOutflow.value}_1')),
         findsOneWidget,
       );
     });
@@ -420,7 +419,7 @@ void main() {
       final before = p.ledgerSpreadsheetRows.length;
 
       final outflow = find.descendant(
-        of: find.byKey(ValueKey('${LedgerKeysV2.draftOutflow.value}_0')),
+        of: find.byKey(ValueKey('${WebKeys.ledgerDraftOutflow.value}_0')),
         matching: find.byType(TextField),
       );
       await tester.enterText(outflow, '35');
@@ -428,7 +427,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(p.ledgerSpreadsheetRows.length, before);
-      expect(find.byKey(LedgerKeysV2.draftError), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerDraftError), findsOneWidget);
       expect(
           find.text('Pick a category before adding the row.'), findsOneWidget);
     });
@@ -447,7 +446,7 @@ void main() {
 
       expect(find.byKey(WebKeys.ledgerSelectionBar), findsOneWidget);
       expect(find.text('1 selected'), findsOneWidget);
-      expect(find.byKey(LedgerKeysV2.selectionChangeCategory), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerSelectionChangeCategory), findsOneWidget);
 
       await tester.tap(find.byKey(WebKeys.ledgerSelectionDelete));
       await tester.pumpAndSettle();
@@ -509,7 +508,7 @@ void main() {
       expect(find.text('Both sides of the transfer change together.'),
           findsOneWidget);
       expect(find.byKey(WebKeys.ledgerDialogToAccount), findsOneWidget);
-      expect(find.byKey(LedgerKeysV2.dialogDelete), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerDialogDelete), findsOneWidget);
       expect(find.text('Save changes'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
@@ -531,8 +530,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(WebKeys.ledgerDialogInstallments), findsOneWidget);
-      expect(find.byKey(LedgerKeysV2.dialogInstallmentMonths), findsOneWidget);
-      expect(find.byKey(LedgerKeysV2.dialogInstallmentRate), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerDialogInstallmentMonths), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerDialogInstallmentRate), findsOneWidget);
       expect(find.text('Convert to installments'), findsNWidgets(2));
       expect(find.textContaining('/ month'), findsOneWidget);
 
@@ -551,7 +550,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(WebKeys.ledgerMonthStepper), findsNothing);
-      expect(find.byKey(LedgerKeysV2.scopePill), findsOneWidget);
+      expect(find.byKey(WebKeys.ledgerScopePill), findsOneWidget);
       // Two salaries: this month's and last month's.
       expect(find.textContaining('All months · 2 matches'), findsOneWidget);
       expect(find.text('Alphaus Salary'), findsNWidgets(2));
@@ -567,7 +566,7 @@ void main() {
         find.text('Add an account in Setup before logging transactions.'),
         findsOneWidget,
       );
-      await tester.tap(find.byKey(LedgerKeysV2.emptyOpenSetup));
+      await tester.tap(find.byKey(WebKeys.ledgerEmptyOpenSetup));
       expect(opened, 1);
       expect(find.byKey(WebKeys.ledgerFooterTotals), findsOneWidget);
     });

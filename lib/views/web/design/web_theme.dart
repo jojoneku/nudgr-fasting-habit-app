@@ -6,6 +6,12 @@ import '../../../app_colors.dart';
 import '../../../design_tokens_nudgr.dart';
 import '../../../utils/app_radii.dart';
 
+/// App-level theme mode for the web companion. Lifted out of the widget tree so
+/// the shell's topbar toggle and the login page's toggle can flip light/dark
+/// without prop-threading through the stateful composition root. Defaults to
+/// the dark Solo-Leveling identity.
+final ValueNotifier<ThemeMode> webThemeMode = ValueNotifier(ThemeMode.dark);
+
 /// Web-only theme for the Treasury companion. Unified with the mobile **Nudgr**
 /// design system (docs/design_system_nudgr_spec.md) so desktop and mobile share
 /// one identity — near-black dark surfaces, derived light palette, and the

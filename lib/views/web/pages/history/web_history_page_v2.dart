@@ -11,19 +11,6 @@ import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_month_detail_dialog_v2.dart';
 
-// ── Keys the page attaches that `WebKeys` does not list yet ─────────────────
-// (Plan 063 Phase 7 — to be folded into web_keys.dart by the integrator.)
-
-/// The 3 mo · 6 mo · 12 mo · All range control in the header.
-const Key kHistoryRangeKey = ValueKey('web.history.range');
-
-/// "Open month ›" on the live card.
-const Key kHistoryLiveOpenKey = ValueKey('web.history.liveCard.open');
-
-/// The Month cell of one summary row in the monthly table.
-Key historyMonthRowKey(String monthKey) =>
-    ValueKey('web.history.monthRow.$monthKey');
-
 /// Gap between cards — the canvas grid gap (20 px).
 const double _gap = 20;
 
@@ -125,7 +112,7 @@ class _WebHistoryPageV2State extends State<WebHistoryPageV2> {
                   SizedBox(
                     width: 300,
                     child: WebSegmented<_HistoryRange>(
-                      key: kHistoryRangeKey,
+                      key: WebKeys.historyRange,
                       value: _range,
                       onChanged: (r) => setState(() => _range = r),
                       segments: [
@@ -331,7 +318,9 @@ class _LiveCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final appColors = context.appColors;
-    final gold = appColors.treasury;
+    // The Treasury hero blue the Dashboard's net-worth card wears, so the
+    // live month reads as the same family of card rather than a gold one-off.
+    final blue = appColors.fast;
     final share = row.income > 0 ? row.expenses / row.income : 0.0;
 
     final text = Column(
@@ -355,7 +344,7 @@ class _LiveCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: WebInsets.sm),
-            _LivePill(color: gold),
+            _LivePill(color: blue),
           ],
         ),
         const SizedBox(height: WebInsets.xs),
@@ -366,12 +355,12 @@ class _LiveCard extends StatelessWidget {
         ),
         const SizedBox(height: WebInsets.sm),
         TextButton(
-          key: kHistoryLiveOpenKey,
+          key: WebKeys.historyLiveCardOpen,
           onPressed: onOpen,
           style: TextButton.styleFrom(
             minimumSize: const Size(kWebHitTarget, kWebHitTarget),
             padding: const EdgeInsets.symmetric(horizontal: WebInsets.sm),
-            foregroundColor: gold,
+            foregroundColor: blue,
             textStyle:
                 const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
@@ -420,7 +409,7 @@ class _LiveCard extends StatelessWidget {
         onTap: onOpen,
         borderRadius: BorderRadius.circular(22),
         child: WebHeroCard(
-          accent: gold,
+          accent: blue,
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < _liveCardSplitMin) {
@@ -788,7 +777,7 @@ class _MonthlyTableCard extends StatelessWidget {
             label: 'Month',
             flex: 3,
             cell: (context, r) => Row(
-              key: historyMonthRowKey(r.month),
+              key: WebKeys.historyMonthRow(r.month),
               children: [
                 Flexible(
                   child: Text(
@@ -801,7 +790,7 @@ class _MonthlyTableCard extends StatelessWidget {
                 ),
                 if (r.isLive) ...[
                   const SizedBox(width: WebInsets.sm),
-                  _LivePill(color: appColors.treasury),
+                  _LivePill(color: appColors.fast),
                 ],
               ],
             ),

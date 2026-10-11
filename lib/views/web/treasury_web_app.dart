@@ -52,11 +52,6 @@ import 'widgets/web_receipt_drop.dart';
 import 'widgets/web_shell_v2.dart';
 import 'widgets/web_widgets.dart';
 
-/// App-level theme mode for the web companion. Lifted out of the widget tree so
-/// the shell's topbar toggle can flip light/dark without prop-threading through
-/// the stateful composition root. Defaults to the dark Solo-Leveling identity.
-final ValueNotifier<ThemeMode> webThemeMode = ValueNotifier(ThemeMode.dark);
-
 /// Root of the Treasury web companion (Plan 042). Reuses the mobile dark/light
 /// identity from [buildDarkTheme]/[buildLightTheme]; defaults to the dark
 /// Solo-Leveling theme on web, toggleable from the shell topbar.
@@ -730,7 +725,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
               : null,
           // Persistent across every destination, so a question about a bill
           // can be asked while the Bills table is still on screen.
-          dock: NudgyPanel(controller: widget.nudgy),
+          dock: NudgyPanel(controller: widget.nudgy, compact: true),
           child: _V2PageFrame(
             // Until a page has its own WebPageHeaderV2 (Phases 3–9), the
             // frame supplies the header button that opens the slide-over.

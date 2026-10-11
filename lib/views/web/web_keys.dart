@@ -28,6 +28,8 @@ abstract final class WebKeys {
   // ── Login ────────────────────────────────────────────────────────────────
   static const loginGoogle = ValueKey('web.login.google');
   static const loginThemeToggle = ValueKey('web.login.themeToggle');
+  static const loginBrandPanel = ValueKey('web.login.brandPanel');
+  static const loginSignInPanel = ValueKey('web.login.signInPanel');
 
   // ── Nudgy ────────────────────────────────────────────────────────────────
   static const nudgyOpen = ValueKey('web.nudgy.open');
@@ -123,6 +125,32 @@ abstract final class WebKeys {
       ValueKey('web.ledger.dialog.reimbursable');
   static const ledgerDialogCancel = ValueKey('web.ledger.dialog.cancel');
   static const ledgerDialogSubmit = ValueKey('web.ledger.dialog.submit');
+  static const ledgerClearAll = ValueKey('web.ledger.clearAll');
+  static const ledgerSortSummary = ValueKey('web.ledger.sortSummary');
+  static const ledgerScopePill = ValueKey('web.ledger.scopePill');
+  static const ledgerSelectionChangeCategory =
+      ValueKey('web.ledger.selection.changeCategory');
+  static const ledgerChangeCategoryPicker =
+      ValueKey('web.ledger.changeCategory.picker');
+  static const ledgerChangeCategoryApply =
+      ValueKey('web.ledger.changeCategory.apply');
+  static const ledgerDraftDate = ValueKey('web.ledger.draft.date');
+  static const ledgerDraftAccount = ValueKey('web.ledger.draft.account');
+  static const ledgerDraftDescription =
+      ValueKey('web.ledger.draft.description');
+  static const ledgerDraftCategory = ValueKey('web.ledger.draft.category');
+  static const ledgerDraftInflow = ValueKey('web.ledger.draft.inflow');
+  static const ledgerDraftOutflow = ValueKey('web.ledger.draft.outflow');
+  static const ledgerDraftError = ValueKey('web.ledger.draft.error');
+  static const ledgerEmptyOpenSetup = ValueKey('web.ledger.empty.openSetup');
+  static const ledgerDialogDelete = ValueKey('web.ledger.dialog.delete');
+  static const ledgerDialogOwedBy = ValueKey('web.ledger.dialog.owedBy');
+  static const ledgerDialogExpectedBack =
+      ValueKey('web.ledger.dialog.expectedBack');
+  static const ledgerDialogInstallmentMonths =
+      ValueKey('web.ledger.dialog.installments.months');
+  static const ledgerDialogInstallmentRate =
+      ValueKey('web.ledger.dialog.installments.rate');
 
   // ── Bills ────────────────────────────────────────────────────────────────
   static const billsMonthStepper = ValueKey('web.bills.monthStepper');
@@ -169,6 +197,43 @@ abstract final class WebKeys {
   static const billsDialogMoreOptions =
       ValueKey('web.bills.dialog.moreOptions');
   static const billsStatementClose = ValueKey('web.bills.statement.close');
+  static const billsStatementPayNow = ValueKey('web.bills.statement.payNow');
+  static const billsListCard = ValueKey('web.bills.list');
+  static const billsTabSummary = ValueKey('web.bills.list.summary');
+  static const billsBatchBar = ValueKey('web.bills.batch.bar');
+  static const billsRowSettle = ValueKey('web.bills.row.settle');
+  static const billsHeroReminder = ValueKey('web.bills.hero.reminder');
+  static const billsCreditCardsEmpty = ValueKey('web.bills.creditCards.empty');
+  static const billsFormName = ValueKey('web.bills.form.name');
+  static const billsFormType = ValueKey('web.bills.form.type');
+  static const billsFormAmount = ValueKey('web.bills.form.amount');
+  static const billsFormDueDay = ValueKey('web.bills.form.dueDay');
+  static const billsFormDate = ValueKey('web.bills.form.date');
+  static const billsFormAccount = ValueKey('web.bills.form.account');
+  static const billsFormDestination = ValueKey('web.bills.form.destination');
+  static const billsFormCategory = ValueKey('web.bills.form.category');
+  static const billsFormRepeats = ValueKey('web.bills.form.repeats');
+  static const billsFormRecurrence = ValueKey('web.bills.form.recurrence');
+  static const billsFormScope = ValueKey('web.bills.form.scope');
+  static const billsFormReminder = ValueKey('web.bills.form.reminder');
+  static const billsFormReminderDays = ValueKey('web.bills.form.reminderDays');
+  static const billsFormNote = ValueKey('web.bills.form.note');
+  static const billsFormCard = ValueKey('web.bills.form.card');
+  static const billsFormTotal = ValueKey('web.bills.form.total');
+  static const billsFormStartMonth = ValueKey('web.bills.form.startMonth');
+  static const billsFormMonths = ValueKey('web.bills.form.months');
+  static const billsFormInterest = ValueKey('web.bills.form.interest');
+  static const billsFormMonthly = ValueKey('web.bills.form.monthly');
+  static const billsFormPurchaseDate = ValueKey('web.bills.form.purchaseDate');
+  static const billsFormDeferral = ValueKey('web.bills.form.deferral');
+  static const billsScopeOnlyThisMonth =
+      ValueKey('web.bills.scope.onlyThisMonth');
+  static const billsScopeThisAndFuture =
+      ValueKey('web.bills.scope.thisAndFuture');
+  static const billsScopeConfirm = ValueKey('web.bills.scope.confirm');
+  static const billsUndoRemoveTransaction =
+      ValueKey('web.bills.undo.removeTransaction');
+  static const billsUndoConfirm = ValueKey('web.bills.undo.confirm');
 
   // ── Budget ───────────────────────────────────────────────────────────────
   static const budgetMonthStepper = ValueKey('web.budget.monthStepper');
@@ -190,6 +255,49 @@ abstract final class WebKeys {
   static const budgetGroupsRename = ValueKey('web.budget.groups.rename');
   static const budgetGroupsDelete = ValueKey('web.budget.groups.delete');
   static const budgetGroupsClose = ValueKey('web.budget.groups.close');
+  static const budgetHeroPacePill = ValueKey('web.budget.hero.pacePill');
+  static const budgetEmptyState = ValueKey('web.budget.emptyState');
+  static const budgetTableHeader = ValueKey('web.budget.table.header');
+  static const budgetDraftRow = ValueKey('web.budget.draftRow');
+  static const budgetNewCategoryName = ValueKey('web.budget.newCategory.name');
+  static const budgetNewCategoryType = ValueKey('web.budget.newCategory.type');
+  static const budgetNewCategoryColor =
+      ValueKey('web.budget.newCategory.color');
+  static const budgetNewCategoryIcon = ValueKey('web.budget.newCategory.icon');
+  static const budgetNewCategoryIconMore =
+      ValueKey('web.budget.newCategory.icon.more');
+  static const budgetNewCategoryExclude =
+      ValueKey('web.budget.newCategory.exclude');
+  static const budgetNewCategoryCreate =
+      ValueKey('web.budget.newCategory.create');
+  static const budgetNewCategoryCancel =
+      ValueKey('web.budget.newCategory.cancel');
+  static const budgetGroupsRenameField =
+      ValueKey('web.budget.groups.rename.field');
+  static const budgetGroupsRenameSave =
+      ValueKey('web.budget.groups.rename.save');
+  static const budgetGroupsRenameCancel =
+      ValueKey('web.budget.groups.rename.cancel');
+
+  /// One table group header (the subtotal row) by group id.
+  static ValueKey<String> budgetGroup(String groupId) =>
+      ValueKey('web.budget.group.$groupId');
+
+  /// One category / savings row by its budget key (category or account id).
+  static ValueKey<String> budgetRow(String id) =>
+      ValueKey('web.budget.row.$id');
+
+  /// The status pill of one budget row.
+  static ValueKey<String> budgetStatus(String id) =>
+      ValueKey('web.budget.status.$id');
+
+  /// One legend line of the allocation donut.
+  static ValueKey<String> budgetLegend(String groupId) =>
+      ValueKey('web.budget.legend.$groupId');
+
+  /// One row of the Manage groups dialog.
+  static ValueKey<String> budgetGroupRow(String groupId) =>
+      ValueKey('web.budget.groups.row.$groupId');
 
   // ── History ──────────────────────────────────────────────────────────────
   static const historyLiveCard = ValueKey('web.history.liveCard');
@@ -206,6 +314,12 @@ abstract final class WebKeys {
       ValueKey('web.history.monthDetail.openLedger');
   static const historyMonthDetailClose =
       ValueKey('web.history.monthDetail.close');
+  static const historyRange = ValueKey('web.history.range');
+  static const historyLiveCardOpen = ValueKey('web.history.liveCard.open');
+
+  /// The Month cell of one summary row in the monthly table.
+  static ValueKey<String> historyMonthRow(String monthKey) =>
+      ValueKey('web.history.monthRow.$monthKey');
 
   // ── Setup & Accounts ─────────────────────────────────────────────────────
   static const setupAddAccount = ValueKey('web.setup.addAccount');
@@ -239,6 +353,21 @@ abstract final class WebKeys {
   static const setupFormDelete = ValueKey('web.setup.form.delete');
   static const setupFormCancel = ValueKey('web.setup.form.cancel');
   static const setupFormSave = ValueKey('web.setup.form.save');
+  static const setupRowMenu = ValueKey('web.setup.row.menu');
+  static const setupRowArchive = ValueKey('web.setup.row.archive');
+  static const setupEmptyAddAccount = ValueKey('web.setup.empty.addAccount');
+  static const setupStatLiquid = ValueKey('web.setup.stat.liquid');
+  static const setupStatSavings = ValueKey('web.setup.stat.savings');
+  static const setupStatCreditOwed = ValueKey('web.setup.stat.creditOwed');
+  static const setupStatCreditAvailable =
+      ValueKey('web.setup.stat.creditAvailable');
+  static const setupRowNeedsFix = ValueKey('web.setup.row.needsFix');
+  static const setupRowMeter = ValueKey('web.setup.row.meter');
+  static const setupFormCreditLimit = ValueKey('web.setup.form.creditLimit');
+  static const setupFormCardPreset = ValueKey('web.setup.form.cardPreset');
+  static const setupFormStatementDay = ValueKey('web.setup.form.statementDay');
+  static const setupFormMinimumFixed = ValueKey('web.setup.form.minimumFixed');
+  static const setupFormFinanceRate = ValueKey('web.setup.form.financeRate');
 
   // ── Goals ────────────────────────────────────────────────────────────────
   static const goalsAddGoal = ValueKey('web.goals.addGoal');
@@ -249,6 +378,22 @@ abstract final class WebKeys {
   static const goalsCardStartAgain = ValueKey('web.goals.card.startAgain');
   static const goalsSavingsTable = ValueKey('web.goals.savingsTable');
   static const goalsFundingNote = ValueKey('web.goals.fundingNote');
+  static const goalsOpenBudget = ValueKey('web.goals.openBudget');
+  static const goalsManageSetup = ValueKey('web.goals.manageSetup');
+  static const goalsEmptyAddGoal = ValueKey('web.goals.empty.addGoal');
+  static const goalsCardMenu = ValueKey('web.goals.card.menu');
+  static const goalsCardEdit = ValueKey('web.goals.card.edit');
+  static const goalsCardArchive = ValueKey('web.goals.card.archive');
+  static const goalsNoteStartAgain = ValueKey('web.goals.note.startAgain');
+  static const goalsAddGoalDialog = ValueKey('web.goals.addGoal.dialog');
+  static const goalsAddGoalName = ValueKey('web.goals.addGoal.name');
+  static const goalsAddGoalTarget = ValueKey('web.goals.addGoal.target');
+  static const goalsAddGoalStoredIn = ValueKey('web.goals.addGoal.storedIn');
+  static const goalsAddGoalSubmit = ValueKey('web.goals.addGoal.submit');
+  static const goalsStartAgainDialog = ValueKey('web.goals.startAgain.dialog');
+  static const goalsStartAgainGoal = ValueKey('web.goals.startAgain.goal');
+  static const goalsStartAgainTarget = ValueKey('web.goals.startAgain.target');
+  static const goalsStartAgainSubmit = ValueKey('web.goals.startAgain.submit');
 
   // ── More (narrow layout) ─────────────────────────────────────────────────
   static const moreOpenNudgy = ValueKey('web.more.openNudgy');

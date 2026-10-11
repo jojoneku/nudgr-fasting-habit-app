@@ -14,7 +14,6 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/pages/budget/web_budget_page_v2.dart';
-import 'package:intermittent_fasting/views/web/pages/budget/web_budget_shared.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_charts.dart';
 
@@ -181,12 +180,12 @@ void main() {
   }
 
   Finder inGroup(String groupId, Finder matching) => find.descendant(
-        of: find.byKey(WebBudgetKeys.group(groupId)),
+        of: find.byKey(WebKeys.budgetGroup(groupId)),
         matching: matching,
       );
 
   Finder inRow(String id, Finder matching) => find.descendant(
-      of: find.byKey(WebBudgetKeys.row(id)), matching: matching);
+      of: find.byKey(WebKeys.budgetRow(id)), matching: matching);
 
   group('layout', () {
     for (final dark in [true, false]) {
@@ -202,8 +201,8 @@ void main() {
         expect(find.byKey(WebKeys.budgetPaceRing), findsOneWidget);
         expect(find.byKey(WebKeys.budgetGroupDonut), findsOneWidget);
         expect(find.byKey(WebKeys.budgetTable), findsOneWidget);
-        expect(find.byKey(WebBudgetKeys.draftRow), findsOneWidget);
-        expect(find.byKey(WebBudgetKeys.emptyState), findsNothing);
+        expect(find.byKey(WebKeys.budgetDraftRow), findsOneWidget);
+        expect(find.byKey(WebKeys.budgetEmptyState), findsNothing);
 
         // Subtitle carries the count the dropped stat strip used to show.
         expect(
@@ -211,9 +210,9 @@ void main() {
           findsOneWidget,
         );
         // The three groups each open with a header row.
-        expect(find.byKey(WebBudgetKeys.group(ess)), findsOneWidget);
-        expect(find.byKey(WebBudgetKeys.group(vari)), findsOneWidget);
-        expect(find.byKey(WebBudgetKeys.group(sav)), findsOneWidget);
+        expect(find.byKey(WebKeys.budgetGroup(ess)), findsOneWidget);
+        expect(find.byKey(WebKeys.budgetGroup(vari)), findsOneWidget);
+        expect(find.byKey(WebKeys.budgetGroup(sav)), findsOneWidget);
         // Every row carries its parity keys.
         expect(find.byKey(WebKeys.budgetRowAllocated), findsNWidgets(5));
         expect(find.byKey(WebKeys.budgetRowRemove), findsNWidgets(5));
@@ -239,14 +238,14 @@ void main() {
           await load(budgetsOverride: const [], transactionsOverride: const []);
       await pump(tester, p);
 
-      expect(find.byKey(WebBudgetKeys.emptyState), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetEmptyState), findsOneWidget);
       expect(find.text('No budget set for this month'), findsOneWidget);
       expect(
         find.text('Add a category below to start planning your allocations.'),
         findsOneWidget,
       );
       expect(find.byKey(WebKeys.budgetPaceRing), findsNothing);
-      expect(find.byKey(WebBudgetKeys.draftRow), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetDraftRow), findsOneWidget);
       expect(find.byKey(WebKeys.budgetAddRowPicker), findsOneWidget);
     });
   });
@@ -323,7 +322,7 @@ void main() {
 
       final pill = tester.widget<Text>(
         find.descendant(
-          of: find.byKey(WebBudgetKeys.status('c_fun')),
+          of: find.byKey(WebKeys.budgetStatus('c_fun')),
           matching: find.byType(Text),
         ),
       );
@@ -396,7 +395,7 @@ void main() {
       final b = p.budgetFor('c_health')!;
       expect(b.allocatedAmount, 1200);
       expect(b.group, vari);
-      expect(find.byKey(WebBudgetKeys.row('c_health')), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetRow('c_health')), findsOneWidget);
       // The picker is back on its hint and the amount cleared.
       expect(find.text('Choose a category…'), findsOneWidget);
     });
@@ -413,23 +412,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('New expense category'), findsOneWidget);
-      expect(find.byKey(WebBudgetKeys.newCategoryName), findsOneWidget);
-      expect(find.byKey(WebBudgetKeys.newCategoryColor), findsOneWidget);
-      expect(find.byKey(WebBudgetKeys.newCategoryIcon), findsOneWidget);
-      expect(find.byKey(WebBudgetKeys.newCategoryExclude), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetNewCategoryName), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetNewCategoryColor), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetNewCategoryIcon), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetNewCategoryExclude), findsOneWidget);
       // From the Budget the type is fixed: only an expense can be budgeted.
-      expect(find.byKey(WebBudgetKeys.newCategoryType), findsNothing);
+      expect(find.byKey(WebKeys.budgetNewCategoryType), findsNothing);
 
       // An empty name is refused, not silently created.
-      await tester.tap(find.byKey(WebBudgetKeys.newCategoryCreate));
+      await tester.tap(find.byKey(WebKeys.budgetNewCategoryCreate));
       await tester.pumpAndSettle();
       expect(find.text('New expense category'), findsOneWidget);
       expect(p.expenseCategories.length, 5);
 
       await tester.enterText(
-          find.byKey(WebBudgetKeys.newCategoryName), 'Pet care');
+          find.byKey(WebKeys.budgetNewCategoryName), 'Pet care');
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(WebBudgetKeys.newCategoryCreate));
+      await tester.tap(find.byKey(WebKeys.budgetNewCategoryCreate));
       await tester.pumpAndSettle();
 
       expect(find.text('New expense category'), findsNothing);
@@ -444,7 +443,7 @@ void main() {
       await tester.tap(find.byKey(WebKeys.budgetAddRowNewCategory));
       await tester.pumpAndSettle();
       expect(find.text('New expense category'), findsOneWidget);
-      await tester.tap(find.byKey(WebBudgetKeys.newCategoryCancel));
+      await tester.tap(find.byKey(WebKeys.budgetNewCategoryCancel));
       await tester.pumpAndSettle();
       expect(find.text('New expense category'), findsNothing);
     });
@@ -466,7 +465,7 @@ void main() {
       await tester.tap(find.text('Remove'));
       await tester.pumpAndSettle();
       expect(p.budgetFor('c_trans'), isNull);
-      expect(find.byKey(WebBudgetKeys.row('c_trans')), findsNothing);
+      expect(find.byKey(WebKeys.budgetRow('c_trans')), findsNothing);
       expect(find.text('Removed "Transportation" from the budget.'),
           findsOneWidget);
     });
@@ -484,7 +483,7 @@ void main() {
           ['Essentials', 'Variable', 'Savings']);
 
       Finder legend(String g) => find.descendant(
-          of: find.byKey(WebBudgetKeys.legend(g)), matching: find.byType(Text));
+          of: find.byKey(WebKeys.budgetLegend(g)), matching: find.byType(Text));
       expect(
         tester.widgetList<Text>(legend(ess)).map((t) => t.data),
         containsAll(['Essentials', formatPeso(24000), '81%']),
@@ -510,7 +509,7 @@ void main() {
       await tester.tap(find.byKey(WebKeys.budgetManageGroups));
       await tester.pumpAndSettle();
       expect(find.text('Budget groups'), findsOneWidget);
-      expect(find.byKey(WebBudgetKeys.groupRow(ess)), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetGroupRow(ess)), findsOneWidget);
       expect(find.textContaining('· 2 categories'), findsNWidgets(2));
       // Built-in groups cannot be deleted (they come back from defaults).
       expect(find.byKey(WebKeys.budgetGroupsDelete), findsNothing);
@@ -527,7 +526,7 @@ void main() {
       final travel = p.groups.where((g) => g.name == 'Travel').single;
       expect(travel.isBuiltIn, isFalse);
       expect(savedGroups.any((g) => g.id == travel.id), isTrue);
-      expect(find.byKey(WebBudgetKeys.groupRow(travel.id)), findsOneWidget);
+      expect(find.byKey(WebKeys.budgetGroupRow(travel.id)), findsOneWidget);
       expect(find.byKey(WebKeys.budgetGroupsDelete), findsOneWidget);
 
       // A blank name is rejected silently.
@@ -538,14 +537,14 @@ void main() {
 
       // Rename: through the kit prompt.
       await tester.tap(find.descendant(
-        of: find.byKey(WebBudgetKeys.groupRow(travel.id)),
+        of: find.byKey(WebKeys.budgetGroupRow(travel.id)),
         matching: find.byKey(WebKeys.budgetGroupsRename),
       ));
       await tester.pumpAndSettle();
       expect(find.text('Rename group'), findsOneWidget);
       await tester.enterText(
-          find.byKey(WebBudgetKeys.groupsRenameField), 'Trips');
-      await tester.tap(find.byKey(WebBudgetKeys.groupsRenameSave));
+          find.byKey(WebKeys.budgetGroupsRenameField), 'Trips');
+      await tester.tap(find.byKey(WebKeys.budgetGroupsRenameSave));
       await tester.pumpAndSettle();
       expect(p.groups.where((g) => g.id == travel.id).single.name, 'Trips');
       expect(find.textContaining('Trips ·'), findsOneWidget);

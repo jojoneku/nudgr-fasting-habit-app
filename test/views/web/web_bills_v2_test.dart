@@ -9,7 +9,6 @@ import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
-import 'package:intermittent_fasting/views/web/pages/bills/web_bills_forms_v2.dart';
 import 'package:intermittent_fasting/views/web/pages/bills/web_bills_page_v2.dart';
 import 'package:intermittent_fasting/views/web/pages/bills/web_statement_breakdown_dialog.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
@@ -109,7 +108,7 @@ void main() {
   const parityKeys = <Key>[
     WebKeys.billsMonthStepper,
     WebKeys.billsAddMenu,
-    BillsV2Keys.listCard,
+    WebKeys.billsListCard,
     WebKeys.billsTabUpcoming,
     WebKeys.billsTabSetAsides,
     WebKeys.billsTabReceivables,
@@ -203,7 +202,7 @@ void main() {
       await pumpPage(tester, bills: bills, plans: plans);
 
       Finder inList(String name) => find.descendant(
-            of: find.byKey(BillsV2Keys.listCard),
+            of: find.byKey(WebKeys.billsListCard),
             matching: find.text(name),
           );
       // Statement rows are titled after their card, so compare plain bills.
@@ -279,7 +278,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(Checkbox).at(1));
       await tester.pumpAndSettle();
-      expect(find.byKey(BillsV2Keys.batchBar), findsOneWidget);
+      expect(find.byKey(WebKeys.billsBatchBar), findsOneWidget);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Pay 2'));
       await tester.pumpAndSettle();
@@ -293,7 +292,7 @@ void main() {
 
       await closeDialog(tester, WebKeys.billsSettleCancel);
       // Cancelling keeps the selection.
-      expect(find.byKey(BillsV2Keys.batchBar), findsOneWidget);
+      expect(find.byKey(WebKeys.billsBatchBar), findsOneWidget);
     });
 
     testWidgets('Mark paid on a row opens single mode prefilled',
@@ -302,7 +301,7 @@ void main() {
       await pumpPage(tester, bills: bills, plans: plans);
       final first = upcomingOrder(bills).first;
 
-      await tester.tap(find.byKey(BillsV2Keys.rowSettle).first);
+      await tester.tap(find.byKey(WebKeys.billsRowSettle).first);
       await tester.pumpAndSettle();
 
       expect(find.text('Mark ${first.name} paid'), findsOneWidget);

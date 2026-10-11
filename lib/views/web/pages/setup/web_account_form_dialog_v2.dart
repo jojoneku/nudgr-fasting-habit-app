@@ -382,6 +382,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
       title: title,
       subtitle: subtitle,
       width: kWebDialogWideWidth,
+      onSubmit: _isSubmitting ? null : _submit,
       destructive: _isEdit
           ? TextButton.icon(
               key: WebKeys.setupFormDelete,
@@ -419,7 +420,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
               child: WebInput(
                 key: WebKeys.setupFormName,
                 controller: _nameController,
-                autofocus: !_isEdit,
+                autofocus: true,
                 hint: _isPocket ? 'Travel Fund' : 'BPI Savings',
                 textInputAction: TextInputAction.next,
                 error: _errors['name'] != null,
@@ -483,7 +484,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
           label: 'Credit limit',
           error: _errors['creditLimit'],
           child: _amountInput(
-            key: _kFormCreditLimit,
+            key: WebKeys.setupFormCreditLimit,
             controller: _creditLimitController,
             error: _errors['creditLimit'] != null,
           ),
@@ -658,7 +659,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
               optional: true,
               helper: 'Prefills the finance rate',
               child: _Dropdown<String?>(
-                key: _kFormCardPreset,
+                key: WebKeys.setupFormCardPreset,
                 value: _creditBrand,
                 items: [
                   DropdownMenuItem<String?>(
@@ -676,7 +677,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
             right: WebField(
               label: 'Statement day',
               child: _DayNumberDropdown(
-                key: _kFormStatementDay,
+                key: WebKeys.setupFormStatementDay,
                 value: _statementDay,
                 onChanged: (d) => setState(() => _statementDay = d),
               ),
@@ -740,7 +741,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
               helper: 'e.g. a monthly installment',
               error: _errors['minimumFixed'],
               child: _amountInput(
-                key: _kFormMinimumFixed,
+                key: WebKeys.setupFormMinimumFixed,
                 controller: _minimumFixedController,
                 error: _errors['minimumFixed'] != null,
               ),
@@ -752,7 +753,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
             helper: 'Interest on the unpaid balance · BSP cap 3%',
             error: _errors['financeRate'],
             child: WebInput(
-              key: _kFormFinanceRate,
+              key: WebKeys.setupFormFinanceRate,
               controller: _financeRateController,
               hint: '3.00',
               suffix: Text('% / mo',
@@ -771,13 +772,6 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
     );
   }
 }
-
-// Local keys (not yet in WebKeys): the credit-only inputs.
-const _kFormCreditLimit = ValueKey('web.setup.form.creditLimit');
-const _kFormCardPreset = ValueKey('web.setup.form.cardPreset');
-const _kFormStatementDay = ValueKey('web.setup.form.statementDay');
-const _kFormMinimumFixed = ValueKey('web.setup.form.minimumFixed');
-const _kFormFinanceRate = ValueKey('web.setup.form.financeRate');
 
 /// Two fields side by side with the canvas' 14 px gutter.
 class _TwoUp extends StatelessWidget {

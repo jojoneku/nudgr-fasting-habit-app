@@ -27,45 +27,6 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 
-/// Keys the Bills v2 page needs that `WebKeys` does not carry yet. Listed in
-/// the Phase 5 report so they can move into the registry.
-abstract final class BillsV2Keys {
-  static const listCard = ValueKey('web.bills.list');
-  static const tabSummary = ValueKey('web.bills.list.summary');
-  static const batchBar = ValueKey('web.bills.batch.bar');
-  static const rowSettle = ValueKey('web.bills.row.settle');
-  static const heroReminder = ValueKey('web.bills.hero.reminder');
-  static const creditCardsEmpty = ValueKey('web.bills.creditCards.empty');
-  static const formName = ValueKey('web.bills.form.name');
-  static const formType = ValueKey('web.bills.form.type');
-  static const formAmount = ValueKey('web.bills.form.amount');
-  static const formDueDay = ValueKey('web.bills.form.dueDay');
-  static const formDate = ValueKey('web.bills.form.date');
-  static const formAccount = ValueKey('web.bills.form.account');
-  static const formDestination = ValueKey('web.bills.form.destination');
-  static const formCategory = ValueKey('web.bills.form.category');
-  static const formRepeats = ValueKey('web.bills.form.repeats');
-  static const formRecurrence = ValueKey('web.bills.form.recurrence');
-  static const formScope = ValueKey('web.bills.form.scope');
-  static const formReminder = ValueKey('web.bills.form.reminder');
-  static const formReminderDays = ValueKey('web.bills.form.reminderDays');
-  static const formNote = ValueKey('web.bills.form.note');
-  static const formCard = ValueKey('web.bills.form.card');
-  static const formTotal = ValueKey('web.bills.form.total');
-  static const formStartMonth = ValueKey('web.bills.form.startMonth');
-  static const formMonths = ValueKey('web.bills.form.months');
-  static const formInterest = ValueKey('web.bills.form.interest');
-  static const formMonthly = ValueKey('web.bills.form.monthly');
-  static const formPurchaseDate = ValueKey('web.bills.form.purchaseDate');
-  static const formDeferral = ValueKey('web.bills.form.deferral');
-  static const scopeOnlyThisMonth = ValueKey('web.bills.scope.onlyThisMonth');
-  static const scopeThisAndFuture = ValueKey('web.bills.scope.thisAndFuture');
-  static const scopeConfirm = ValueKey('web.bills.scope.confirm');
-  static const undoRemoveTransaction =
-      ValueKey('web.bills.undo.removeTransaction');
-  static const undoConfirm = ValueKey('web.bills.undo.confirm');
-}
-
 const _gap = SizedBox(height: 14);
 
 /// "1st", "2nd", "16th" — due days read as dates, not counts.
@@ -333,6 +294,7 @@ class _BillDialogState extends State<_BillDialog> {
 
     return WebDialog(
       title: isEdit ? 'Edit bill' : 'Add bill',
+      onSubmit: _submit,
       subtitle: 'Something you pay on a date.',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -342,7 +304,7 @@ class _BillDialogState extends State<_BillDialog> {
             label: 'Name',
             error: _nameError,
             child: WebInput(
-              key: BillsV2Keys.formName,
+              key: WebKeys.billsFormName,
               controller: _nameController,
               autofocus: true,
               hint: 'Electricity',
@@ -357,7 +319,7 @@ class _BillDialogState extends State<_BillDialog> {
           WebField(
             label: 'Type',
             child: WebDropdown<BillType>(
-              key: BillsV2Keys.formType,
+              key: WebKeys.billsFormType,
               value: _billType,
               items: [
                 for (final t in BillType.values)
@@ -378,7 +340,7 @@ class _BillDialogState extends State<_BillDialog> {
                   label: 'Amount',
                   error: _amountError,
                   child: WebInput.amount(
-                    key: BillsV2Keys.formAmount,
+                    key: WebKeys.billsFormAmount,
                     controller: _amountController,
                     enabled: !busy,
                     error: _amountError != null,
@@ -386,7 +348,6 @@ class _BillDialogState extends State<_BillDialog> {
                     onChanged: (_) => _amountError == null
                         ? null
                         : setState(() => _amountError = null),
-                    onSubmitted: (_) => _submit(),
                   ),
                 ),
               ),
@@ -396,7 +357,7 @@ class _BillDialogState extends State<_BillDialog> {
                 child: WebField(
                   label: 'Due day',
                   child: WebDropdown<int>(
-                    key: BillsV2Keys.formDueDay,
+                    key: WebKeys.billsFormDueDay,
                     value: _dueDay,
                     items: [
                       for (var d = 1; d <= 31; d++)
@@ -416,7 +377,7 @@ class _BillDialogState extends State<_BillDialog> {
               label: 'Pay from',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formAccount,
+                key: WebKeys.billsFormAccount,
                 // A stored account that is no longer active would assert.
                 value:
                     accounts.any((a) => a.id == _accountId) ? _accountId : null,
@@ -436,7 +397,7 @@ class _BillDialogState extends State<_BillDialog> {
               label: 'Category',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formCategory,
+                key: WebKeys.billsFormCategory,
                 value: categories.any((c) => c.id == _categoryId)
                     ? _categoryId
                     : null,
@@ -452,7 +413,7 @@ class _BillDialogState extends State<_BillDialog> {
           ],
           _gap,
           WebSwitchRow(
-            key: BillsV2Keys.formRepeats,
+            key: WebKeys.billsFormRepeats,
             title: _isRecurring
                 ? 'Repeats ${recurrenceLabel(_recurrenceType).toLowerCase()}'
                 : 'Repeats',
@@ -473,7 +434,7 @@ class _BillDialogState extends State<_BillDialog> {
           if (_showScopeField) ...[
             _gap,
             RecurringScopeField(
-              key: BillsV2Keys.formScope,
+              key: WebKeys.billsFormScope,
               futureMonthCount: _futureMonthCount,
               month: widget.existing?.month ?? widget.presenter.selectedMonth,
               value: _scope,
@@ -484,7 +445,7 @@ class _BillDialogState extends State<_BillDialog> {
           ],
           _gap,
           WebSwitchRow(
-            key: BillsV2Keys.formReminder,
+            key: WebKeys.billsFormReminder,
             title: 'Remind me before it is due',
             subtitle: _reminderOn
                 ? '${_reminderDays == 1 ? '1 day' : '$_reminderDays days'} before'
@@ -495,7 +456,7 @@ class _BillDialogState extends State<_BillDialog> {
           if (_reminderOn) ...[
             const SizedBox(height: WebInsets.sm),
             WebChips<int>(
-              key: BillsV2Keys.formReminderDays,
+              key: WebKeys.billsFormReminderDays,
               options: [
                 for (final d in _reminderDayOptions) WebChipOption(d, '$d d'),
               ],
@@ -516,19 +477,18 @@ class _BillDialogState extends State<_BillDialog> {
                 label: 'Payment note',
                 optional: true,
                 child: WebInput(
-                  key: BillsV2Keys.formNote,
+                  key: WebKeys.billsFormNote,
                   controller: _paymentNoteController,
                   hint: 'Account number, reference…',
                   enabled: !busy,
                   textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
                 ),
               ),
               if (_isRecurring)
                 WebField(
                   label: 'Recurrence',
                   child: WebDropdown<RecurrenceType>(
-                    key: BillsV2Keys.formRecurrence,
+                    key: WebKeys.billsFormRecurrence,
                     value: _recurrenceType,
                     items: [
                       for (final r in RecurrenceType.values)
@@ -709,6 +669,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
 
     return WebDialog(
       title: isEdit ? 'Edit receivable' : 'Add receivable',
+      onSubmit: _submit,
       subtitle: 'Money someone owes you.',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -718,7 +679,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
             label: 'Name',
             error: _nameError,
             child: WebInput(
-              key: BillsV2Keys.formName,
+              key: WebKeys.billsFormName,
               controller: _nameController,
               autofocus: true,
               hint: 'Who owes you, and for what',
@@ -733,7 +694,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           WebField(
             label: 'Type',
             child: WebDropdown<ReceivableType>(
-              key: BillsV2Keys.formType,
+              key: WebKeys.billsFormType,
               value: _type,
               items: [
                 for (final t in ReceivableType.values)
@@ -754,7 +715,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                   label: 'Amount',
                   error: _amountError,
                   child: WebInput.amount(
-                    key: BillsV2Keys.formAmount,
+                    key: WebKeys.billsFormAmount,
                     controller: _amountController,
                     enabled: !busy,
                     error: _amountError != null,
@@ -762,7 +723,6 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                     onChanged: (_) => _amountError == null
                         ? null
                         : setState(() => _amountError = null),
-                    onSubmitted: (_) => _submit(),
                   ),
                 ),
               ),
@@ -772,7 +732,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                 child: WebField(
                   label: 'Expected on',
                   child: WebDateButton(
-                    key: BillsV2Keys.formDate,
+                    key: WebKeys.billsFormDate,
                     value: _expectedDate,
                     onChanged:
                         busy ? null : (d) => setState(() => _expectedDate = d),
@@ -787,7 +747,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
               label: 'Deposit into',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formAccount,
+                key: WebKeys.billsFormAccount,
                 value:
                     accounts.any((a) => a.id == _accountId) ? _accountId : null,
                 items: [
@@ -806,7 +766,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
               label: 'Category',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formCategory,
+                key: WebKeys.billsFormCategory,
                 value: categories.any((c) => c.id == _categoryId)
                     ? _categoryId
                     : null,
@@ -822,7 +782,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           ],
           _gap,
           WebSwitchRow(
-            key: BillsV2Keys.formRepeats,
+            key: WebKeys.billsFormRepeats,
             title: _isRecurring
                 ? 'Repeats ${recurrenceLabel(_recurrenceType).toLowerCase()}'
                 : 'Repeats',
@@ -840,7 +800,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           if (_showScopeField) ...[
             _gap,
             RecurringScopeField(
-              key: BillsV2Keys.formScope,
+              key: WebKeys.billsFormScope,
               futureMonthCount: _futureMonthCount,
               month: widget.existing?.month ?? widget.presenter.selectedMonth,
               value: _scope,
@@ -860,7 +820,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                 WebField(
                   label: 'Recurrence',
                   child: WebDropdown<RecurrenceType>(
-                    key: BillsV2Keys.formRecurrence,
+                    key: WebKeys.billsFormRecurrence,
                     value: _recurrenceType,
                     items: [
                       for (final r in RecurrenceType.values)
@@ -1047,6 +1007,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
 
     return WebDialog(
       title: isEdit ? 'Edit set-aside' : 'Add set-aside',
+      onSubmit: _submit,
       subtitle: 'A planned amount to move into a fund this month.',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1056,7 +1017,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
             label: 'Name',
             error: _nameError,
             child: WebInput(
-              key: BillsV2Keys.formName,
+              key: WebKeys.billsFormName,
               controller: _nameController,
               autofocus: true,
               hint: 'Travel Fund, Tanel Birthday…',
@@ -1071,7 +1032,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
           WebField(
             label: 'Type',
             child: WebDropdown<SetAsideType>(
-              key: BillsV2Keys.formType,
+              key: WebKeys.billsFormType,
               value: _type,
               items: [
                 for (final t in SetAsideType.values)
@@ -1086,7 +1047,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
             label: 'Amount',
             error: _amountError,
             child: WebInput.amount(
-              key: BillsV2Keys.formAmount,
+              key: WebKeys.billsFormAmount,
               controller: _amountController,
               enabled: !busy,
               error: _amountError != null,
@@ -1094,7 +1055,6 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
               onChanged: (_) => _amountError == null
                   ? null
                   : setState(() => _amountError = null),
-              onSubmitted: (_) => _submit(),
             ),
           ),
           if (destinationAccounts.isNotEmpty) ...[
@@ -1108,7 +1068,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
                   : null,
               child: WebDropdown<String>(
                 key: ValueKey(
-                    '${BillsV2Keys.formDestination.value}:$_accountId'),
+                    '${WebKeys.billsFormDestination.value}:$_accountId'),
                 value: destinationAccounts.any((a) => a.id == _destinationId)
                     ? _destinationId
                     : null,
@@ -1129,7 +1089,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
               label: 'Fund from',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formAccount,
+                key: WebKeys.billsFormAccount,
                 value: liquidAccounts.any((a) => a.id == _accountId)
                     ? _accountId
                     : null,
@@ -1155,7 +1115,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
               label: 'Category',
               optional: true,
               child: WebDropdown<String>(
-                key: BillsV2Keys.formCategory,
+                key: WebKeys.billsFormCategory,
                 value: categories.any((c) => c.id == _categoryId)
                     ? _categoryId
                     : null,
@@ -1171,7 +1131,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
           ],
           _gap,
           WebSwitchRow(
-            key: BillsV2Keys.formRepeats,
+            key: WebKeys.billsFormRepeats,
             title: _isRecurring
                 ? 'Repeats ${recurrenceLabel(_recurrenceType).toLowerCase()}'
                 : 'Repeats',
@@ -1189,7 +1149,7 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
           if (_showScopeField) ...[
             _gap,
             RecurringScopeField(
-              key: BillsV2Keys.formScope,
+              key: WebKeys.billsFormScope,
               futureMonthCount: _futureMonthCount,
               month: widget.existing?.month ?? widget.presenter.selectedMonth,
               value: _scope,
@@ -1208,19 +1168,18 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
                 label: 'Note',
                 optional: true,
                 child: WebInput(
-                  key: BillsV2Keys.formNote,
+                  key: WebKeys.billsFormNote,
                   controller: _noteController,
                   hint: 'Maya Savings',
                   enabled: !busy,
                   textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
                 ),
               ),
               if (_isRecurring)
                 WebField(
                   label: 'Recurrence',
                   child: WebDropdown<RecurrenceType>(
-                    key: BillsV2Keys.formRecurrence,
+                    key: WebKeys.billsFormRecurrence,
                     value: _recurrenceType,
                     items: [
                       for (final r in RecurrenceType.values)
@@ -1491,6 +1450,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
 
     return WebDialog(
       title: isEdit ? 'Edit installment' : 'Add installment',
+      onSubmit: _submit,
       subtitle: 'A purchase paid over several card statements.',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1500,7 +1460,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
             label: 'Name',
             error: _nameError,
             child: WebInput(
-              key: BillsV2Keys.formName,
+              key: WebKeys.billsFormName,
               controller: _nameController,
               autofocus: true,
               hint: 'MacBook Pro, Braces…',
@@ -1520,7 +1480,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                         'creating installments.'
                     : null),
             child: WebDropdown<String>(
-              key: BillsV2Keys.formCard,
+              key: WebKeys.billsFormCard,
               value:
                   accounts.any((a) => a.id == _accountId) ? _accountId : null,
               hint: 'Credit card, credit line or BNPL',
@@ -1548,7 +1508,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                   label: 'Total amount',
                   error: _totalError,
                   child: WebInput.amount(
-                    key: BillsV2Keys.formTotal,
+                    key: WebKeys.billsFormTotal,
                     controller: _totalController,
                     enabled: !busy,
                     error: _totalError != null,
@@ -1562,7 +1522,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                 child: WebField(
                   label: 'First statement',
                   child: _MonthStepperField(
-                    key: BillsV2Keys.formStartMonth,
+                    key: WebKeys.billsFormStartMonth,
                     label: monthLabel(_startMonth),
                     onPrev: busy ? null : () => _adjustStartMonth(-1),
                     onNext: busy ? null : () => _adjustStartMonth(1),
@@ -1579,7 +1539,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 WebChips<int>(
-                  key: BillsV2Keys.formMonths,
+                  key: WebKeys.billsFormMonths,
                   options: [
                     for (final m in _monthPresets) WebChipOption(m, '$m'),
                   ],
@@ -1622,7 +1582,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 WebChips<double>(
-                  key: BillsV2Keys.formInterest,
+                  key: WebKeys.billsFormInterest,
                   options: [
                     for (final r in InstallmentPresenter.ratePresets)
                       WebChipOption(r, InstallmentPresenter.ratePresetLabel(r)),
@@ -1684,7 +1644,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                 : 'Worked out from the total, months and interest · editable',
             error: _monthlyError,
             child: WebInput.amount(
-              key: BillsV2Keys.formMonthly,
+              key: WebKeys.billsFormMonthly,
               controller: _monthlyController,
               enabled: !busy,
               error: _monthlyError != null,
@@ -1705,7 +1665,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
               WebField(
                 label: 'Purchase date',
                 child: WebDateButton(
-                  key: BillsV2Keys.formPurchaseDate,
+                  key: WebKeys.billsFormPurchaseDate,
                   value: _purchaseDate,
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                   onChanged: busy
@@ -1720,7 +1680,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                 label: 'Deferred first payment',
                 optional: true,
                 child: WebChips<int>(
-                  key: BillsV2Keys.formDeferral,
+                  key: WebKeys.billsFormDeferral,
                   options: const [
                     WebChipOption(0, 'None'),
                     WebChipOption(1, '1 mo'),
@@ -1739,12 +1699,11 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
                 label: 'Note',
                 optional: true,
                 child: WebInput(
-                  key: BillsV2Keys.formNote,
+                  key: WebKeys.billsFormNote,
                   controller: _noteController,
                   hint: '0% interest',
                   enabled: !busy,
                   textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
                 ),
               ),
             ],
@@ -1890,7 +1849,7 @@ class _RecurringScopeDialogState extends State<_RecurringScopeDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           _ScopeOption(
-            key: BillsV2Keys.scopeOnlyThisMonth,
+            key: WebKeys.billsScopeOnlyThisMonth,
             title: 'Only this month',
             subtitle:
                 '$thisMonth stays deleted; $next is created as usual. Earlier '
@@ -1900,7 +1859,7 @@ class _RecurringScopeDialogState extends State<_RecurringScopeDialog> {
           ),
           const SizedBox(height: WebInsets.sm),
           _ScopeOption(
-            key: BillsV2Keys.scopeThisAndFuture,
+            key: WebKeys.billsScopeThisAndFuture,
             title: 'This and future months',
             subtitle: 'Stops $series from $thisMonth on. $them in the months '
                 'already behind you.',
@@ -1914,7 +1873,7 @@ class _RecurringScopeDialogState extends State<_RecurringScopeDialog> {
         child: const Text('Cancel'),
       ),
       primary: FilledButton(
-        key: BillsV2Keys.scopeConfirm,
+        key: WebKeys.billsScopeConfirm,
         style: FilledButton.styleFrom(
           backgroundColor: cs.error,
           foregroundColor: cs.onError,
@@ -2172,7 +2131,7 @@ class _UndoSettlementDialogState extends State<_UndoSettlementDialog> {
           const SizedBox(height: 14),
           if (widget.hasLedgerEntry)
             WebSwitchRow(
-              key: BillsV2Keys.undoRemoveTransaction,
+              key: WebKeys.billsUndoRemoveTransaction,
               title: 'Also remove the ledger transaction',
               subtitle: _removeTransaction
                   ? (widget.ledgerEffect ?? 'The account balance is restored.')
@@ -2195,7 +2154,7 @@ class _UndoSettlementDialogState extends State<_UndoSettlementDialog> {
         child: const Text('Cancel'),
       ),
       primary: FilledButton(
-        key: BillsV2Keys.undoConfirm,
+        key: WebKeys.billsUndoConfirm,
         onPressed: () => Navigator.of(context).pop(
           UndoSettlementChoice(
             // Nothing to remove means the flag is all there is to reverse.

@@ -437,7 +437,7 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
     final status = _picking(section) ? _batchStatus(section) : null;
 
     return WebCard(
-      key: BillsV2Keys.listCard,
+      key: WebKeys.billsListCard,
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -455,7 +455,7 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
                 Expanded(
                   child: Text(
                     _tabSummary,
-                    key: BillsV2Keys.tabSummary,
+                    key: WebKeys.billsTabSummary,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -479,7 +479,7 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
                 WebInsets.md,
               ),
               child: WebBatchBar(
-                key: BillsV2Keys.batchBar,
+                key: WebKeys.billsBatchBar,
                 settleVerb: status.verb,
                 selectedCount: _selectedIds.length,
                 settleableCount: status.settleable,
@@ -1647,7 +1647,7 @@ class _DueSoonHeroV2 extends StatelessWidget {
                 ),
                 const SizedBox(width: WebInsets.sm),
                 IconButton(
-                  key: BillsV2Keys.heroReminder,
+                  key: WebKeys.billsHeroReminder,
                   onPressed: onToggleReminder,
                   tooltip: reminderOn
                       ? 'Reminder on · ${bill.reminderDaysBefore} '
@@ -1897,6 +1897,7 @@ class _BillRowV2 extends StatelessWidget {
                     context,
                     presenter: presenter,
                     bill: bill,
+                    onPayNow: () => _markBillPaid(context, presenter, bill),
                   ),
                   style: TextButton.styleFrom(
                     minimumSize: const Size(0, kWebHitTarget),
@@ -1909,7 +1910,7 @@ class _BillRowV2 extends StatelessWidget {
               ],
               if (!paid) ...[
                 _RowAction(
-                  key: BillsV2Keys.rowSettle,
+                  key: WebKeys.billsRowSettle,
                   label: 'Mark paid',
                   color: context.appColors.bills,
                   onPressed: () => _markBillPaid(context, presenter, bill),
@@ -2003,7 +2004,7 @@ class _SetAsideRowV2 extends StatelessWidget {
           : [
               if (!funded) ...[
                 _RowAction(
-                  key: BillsV2Keys.rowSettle,
+                  key: WebKeys.billsRowSettle,
                   label: 'Fund',
                   color: cs.primary,
                   onPressed: () => _fundSetAside(context, presenter, expense),
@@ -2096,7 +2097,7 @@ class _ReceivableRowV2 extends StatelessWidget {
           : [
               if (!received) ...[
                 _RowAction(
-                  key: BillsV2Keys.rowSettle,
+                  key: WebKeys.billsRowSettle,
                   label: 'Receive',
                   color: cs.tertiary,
                   onPressed: () =>
@@ -2229,6 +2230,8 @@ class _InstallmentRowV2 extends StatelessWidget {
                     context,
                     presenter: bills,
                     bill: statementBill,
+                    onPayNow: () =>
+                        _markBillPaid(context, bills, statementBill),
                   ),
                   style: TextButton.styleFrom(
                     minimumSize: const Size(0, kWebHitTarget),
@@ -2241,7 +2244,7 @@ class _InstallmentRowV2 extends StatelessWidget {
               ],
               if (canPay) ...[
                 _RowAction(
-                  key: BillsV2Keys.rowSettle,
+                  key: WebKeys.billsRowSettle,
                   label: 'Pay',
                   color: warning,
                   onPressed: () =>
@@ -2507,7 +2510,7 @@ class _CreditLinesCard extends StatelessWidget {
         children: [
           if (withBalance.isEmpty)
             Padding(
-              key: BillsV2Keys.creditCardsEmpty,
+              key: WebKeys.billsCreditCardsEmpty,
               padding: const EdgeInsets.only(bottom: WebInsets.sm),
               child: Text(
                 'Nothing owed on any line right now.',

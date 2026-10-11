@@ -18,32 +18,12 @@ import '../setup/web_account_form_dialog.dart';
 /// Gap between cards — the canvas grid gap.
 const double _gap = 20;
 
-/// Narrowest a goal card goes before the grid drops a column.
-const double _minCardWidth = 260;
+/// Narrowest a goal card goes before the grid drops a column: three columns
+/// across the 1120 px content column at 1440, two at 760. Four columns fit
+/// the maths but not the names ("Buy Something Nice Fund" truncated).
+const double _minCardWidth = 340;
 
 final _completedFmt = DateFormat('MMM d, yyyy');
-
-/// Keys this page needs beyond the `WebKeys` Goals block. Candidates for
-/// `web_keys.dart` once the shell integrates the page (Plan 063 Phase 9).
-class WebGoalsKeys {
-  WebGoalsKeys._();
-  static const openBudget = ValueKey('web.goals.openBudget');
-  static const manageSetup = ValueKey('web.goals.manageSetup');
-  static const emptyAddGoal = ValueKey('web.goals.empty.addGoal');
-  static const cardMenu = ValueKey('web.goals.card.menu');
-  static const cardEdit = ValueKey('web.goals.card.edit');
-  static const cardArchive = ValueKey('web.goals.card.archive');
-  static const noteStartAgain = ValueKey('web.goals.note.startAgain');
-  static const addGoalDialog = ValueKey('web.goals.addGoal.dialog');
-  static const addGoalName = ValueKey('web.goals.addGoal.name');
-  static const addGoalTarget = ValueKey('web.goals.addGoal.target');
-  static const addGoalStoredIn = ValueKey('web.goals.addGoal.storedIn');
-  static const addGoalSubmit = ValueKey('web.goals.addGoal.submit');
-  static const startAgainDialog = ValueKey('web.goals.startAgain.dialog');
-  static const startAgainGoal = ValueKey('web.goals.startAgain.goal');
-  static const startAgainTarget = ValueKey('web.goals.startAgain.target');
-  static const startAgainSubmit = ValueKey('web.goals.startAgain.submit');
-}
 
 /// Web Goals page (Plan 063 Phase 9) — the canvas layout in
 /// `docs/design-reference/web-v2/Goals.dc.html`: a page header with Add goal,
@@ -506,11 +486,11 @@ class WebGoalCard extends StatelessWidget {
     }
 
     final menu = WebRowMenu(
-      key: WebGoalsKeys.cardMenu,
+      key: WebKeys.goalsCardMenu,
       tooltip: '${a.name} actions',
       items: [
         WebMenuItem('Edit',
-            key: WebGoalsKeys.cardEdit,
+            key: WebKeys.goalsCardEdit,
             icon: Icons.edit_outlined,
             onTap: onEdit),
         if (_reached)
@@ -525,7 +505,7 @@ class WebGoalCard extends StatelessWidget {
               onTap: onStartAgain),
         if (_completed)
           WebMenuItem('Archive',
-              key: WebGoalsKeys.cardArchive,
+              key: WebKeys.goalsCardArchive,
               icon: Icons.inventory_2_outlined,
               onTap: onArchive),
       ],
@@ -584,41 +564,60 @@ class WebGoalCard extends StatelessWidget {
     }
 
     final body = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 14, 10, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Top-aligned so a name that wraps to two lines grows downward
+          // while the tile, the pill and the menu stay on the first line;
+          // a one-line name centres against the 36 px tile.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               WebRowTile(
                 color: tileColor,
                 size: 36,
                 child: Icon(accountIconFor(a), size: 18, color: iconColor),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: WebInsets.sm),
               Expanded(
-                child: Text(
-                  a.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 36),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      a.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: WebInsets.sm),
+              const SizedBox(width: 6),
               // Capped so a long pill never pushes the menu off the card;
               // it scales down instead of overflowing.
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 112),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: status,
+              SizedBox(
+                height: 36,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 112),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: status,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: WebInsets.xs),
-              menu,
+              SizedBox(height: 36, child: Center(child: menu)),
             ],
           ),
           const SizedBox(height: WebInsets.md),
@@ -732,7 +731,7 @@ class _SavingsTable extends StatelessWidget {
       title: 'Savings & investments',
       description: 'Balances that are not tied to a target',
       trailing: TextButton(
-        key: WebGoalsKeys.manageSetup,
+        key: WebKeys.goalsManageSetup,
         onPressed: onOpenSetup,
         style: TextButton.styleFrom(
           minimumSize: const Size(0, kWebHitTarget),
@@ -858,7 +857,7 @@ class _FundingNote extends StatelessWidget {
             runSpacing: WebInsets.sm,
             children: [
               OutlinedButton(
-                key: WebGoalsKeys.openBudget,
+                key: WebKeys.goalsOpenBudget,
                 onPressed: onOpenBudget,
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, kWebHitTarget),
@@ -866,7 +865,7 @@ class _FundingNote extends StatelessWidget {
                 child: const Text('Open the Savings rows in Budget'),
               ),
               TextButton(
-                key: WebGoalsKeys.noteStartAgain,
+                key: WebKeys.goalsNoteStartAgain,
                 onPressed: onStartAgain,
                 style: TextButton.styleFrom(
                   minimumSize: const Size(0, kWebHitTarget),
@@ -914,7 +913,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: WebInsets.xl),
             _SuccessButton(
-              key: WebGoalsKeys.emptyAddGoal,
+              key: WebKeys.goalsEmptyAddGoal,
               label: 'Add goal',
               onPressed: onAddGoal,
             ),
@@ -1028,8 +1027,9 @@ class _AddGoalDialogState extends State<_AddGoalDialog> {
   Widget build(BuildContext context) {
     final liquid = widget.presenter.liquidAccounts;
     return WebDialog(
-      key: WebGoalsKeys.addGoalDialog,
+      key: WebKeys.goalsAddGoalDialog,
       title: 'Add goal',
+      onSubmit: _saving ? null : _submit,
       subtitle: 'A fund with a target. It is funded through budget set-asides.',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1039,7 +1039,7 @@ class _AddGoalDialogState extends State<_AddGoalDialog> {
             label: 'Name',
             error: _nameError,
             child: WebInput(
-              key: WebGoalsKeys.addGoalName,
+              key: WebKeys.goalsAddGoalName,
               controller: _name,
               hint: 'Travel Fund',
               autofocus: true,
@@ -1053,13 +1053,12 @@ class _AddGoalDialogState extends State<_AddGoalDialog> {
             label: 'Target',
             error: _targetError,
             child: WebInput.amount(
-              key: WebGoalsKeys.addGoalTarget,
+              key: WebKeys.goalsAddGoalTarget,
               controller: _target,
               inputFormatters: amountInputFormatters,
               error: _targetError != null,
               textInputAction: TextInputAction.done,
               onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _saving ? null : _submit(),
             ),
           ),
           if (liquid.isNotEmpty) ...[
@@ -1070,7 +1069,7 @@ class _AddGoalDialogState extends State<_AddGoalDialog> {
               helper: 'The account that physically holds the money. Its '
                   'balance already counts this goal.',
               child: DropdownButtonFormField<String?>(
-                key: WebGoalsKeys.addGoalStoredIn,
+                key: WebKeys.goalsAddGoalStoredIn,
                 initialValue: _parentId,
                 decoration: WebInput.decoration(context),
                 items: [
@@ -1105,7 +1104,7 @@ class _AddGoalDialogState extends State<_AddGoalDialog> {
         child: const Text('Cancel'),
       ),
       primary: _SuccessButton(
-        key: WebGoalsKeys.addGoalSubmit,
+        key: WebKeys.goalsAddGoalSubmit,
         label: 'Add goal',
         onPressed: _saving ? null : _submit,
       ),
@@ -1182,7 +1181,8 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
     final cs = theme.colorScheme;
     final fixed = widget.account;
     return WebDialog(
-      key: WebGoalsKeys.startAgainDialog,
+      key: WebKeys.goalsStartAgainDialog,
+      onSubmit: _canSave ? _save : null,
       title: fixed != null ? 'Start ${fixed.name} again' : 'Start a goal again',
       primaryExpands: false,
       body: Column(
@@ -1200,7 +1200,7 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
             WebField(
               label: 'Goal',
               child: DropdownButtonFormField<String>(
-                key: WebGoalsKeys.startAgainGoal,
+                key: WebKeys.goalsStartAgainGoal,
                 initialValue: _selectedId,
                 decoration: WebInput.decoration(context),
                 items: [
@@ -1218,13 +1218,12 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
           WebField(
             label: 'New target',
             child: WebInput.amount(
-              key: WebGoalsKeys.startAgainTarget,
+              key: WebKeys.goalsStartAgainTarget,
               controller: _controller,
               autofocus: true,
               inputFormatters: amountInputFormatters,
               textInputAction: TextInputAction.done,
               onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _canSave ? _save() : null,
             ),
           ),
         ],
@@ -1234,7 +1233,7 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
         child: const Text('Cancel'),
       ),
       primary: FilledButton.icon(
-        key: WebGoalsKeys.startAgainSubmit,
+        key: WebKeys.goalsStartAgainSubmit,
         onPressed: _canSave ? _save : null,
         icon: const Icon(Icons.restart_alt_rounded, size: 18),
         label: const Text('Start again'),

@@ -6,8 +6,8 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
+import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
-import 'web_budget_shared.dart';
 
 /// The v2 "New category" dialog (Forms canvas, "Budget and History"): name,
 /// Expense/Income type, a colour swatch row, an icon row with Auto and the
@@ -126,6 +126,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
 
     return WebDialog(
       title: _isExpense ? 'New expense category' : 'New income category',
+      onSubmit: _create,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -139,7 +140,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
                   label: 'Name',
                   error: _nameMissing ? 'Give the category a name.' : null,
                   child: WebInput(
-                    key: WebBudgetKeys.newCategoryName,
+                    key: WebKeys.budgetNewCategoryName,
                     controller: _nameCtrl,
                     autofocus: true,
                     hint: 'Pet care',
@@ -148,7 +149,6 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
                     // Rebuild so the auto-glyph preview tracks the typed
                     // name live, the way the mobile add-form does.
                     onChanged: (_) => setState(() => _nameMissing = false),
-                    onSubmitted: (_) => _create(),
                   ),
                 ),
               ),
@@ -161,7 +161,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
                     child: SizedBox(
                       height: kWebInputHeight,
                       child: WebSegmented<CategoryType>(
-                        key: WebBudgetKeys.newCategoryType,
+                        key: WebKeys.budgetNewCategoryType,
                         value: _type,
                         onChanged: _setType,
                         segments: const [
@@ -181,7 +181,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
           WebField(
             label: 'Color',
             child: Wrap(
-              key: WebBudgetKeys.newCategoryColor,
+              key: WebKeys.budgetNewCategoryColor,
               spacing: WebInsets.sm,
               runSpacing: WebInsets.sm,
               children: [
@@ -212,7 +212,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
                 const SizedBox(width: WebInsets.md),
                 Expanded(
                   child: Wrap(
-                    key: WebBudgetKeys.newCategoryIcon,
+                    key: WebKeys.budgetNewCategoryIcon,
                     spacing: 6,
                     runSpacing: 6,
                     children: [
@@ -231,7 +231,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
                             onTap: () => setState(() => _iconKey = key),
                           ),
                       _IconTile(
-                        key: WebBudgetKeys.newCategoryIconMore,
+                        key: WebKeys.budgetNewCategoryIconMore,
                         icon: Icons.more_horiz_rounded,
                         label: 'More…',
                         selected: false,
@@ -245,7 +245,7 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
           ),
           const SizedBox(height: WebInsets.lg),
           WebSwitchRow(
-            key: WebBudgetKeys.newCategoryExclude,
+            key: WebKeys.budgetNewCategoryExclude,
             title: 'Exclude from spending totals',
             subtitle: 'For transfers, fees, reimbursements',
             value: _exclude,
@@ -254,12 +254,12 @@ class _WebNewCategoryDialogState extends State<_WebNewCategoryDialog> {
         ],
       ),
       secondary: TextButton(
-        key: WebBudgetKeys.newCategoryCancel,
+        key: WebKeys.budgetNewCategoryCancel,
         onPressed: () => Navigator.of(context).pop(),
         child: const Text('Cancel'),
       ),
       primary: FilledButton(
-        key: WebBudgetKeys.newCategoryCreate,
+        key: WebKeys.budgetNewCategoryCreate,
         onPressed: _create,
         style: FilledButton.styleFrom(
           backgroundColor: cs.primary,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
@@ -51,6 +52,7 @@ void main() {
     required TreasuryDashboardPresenter presenter,
     double width = 1440,
     bool dark = true,
+    double textScale = 1,
     VoidCallback? onOpenBudget,
     VoidCallback? onOpenSetup,
     ValueChanged<FinancialAccount>? onSetMonthlyAmount,
@@ -61,6 +63,11 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       theme: dark ? buildWebDarkTheme() : buildWebLightTheme(),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: Scaffold(
         body: WebGoalsPage(
           presenter: presenter,
@@ -73,6 +80,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// The test font draws every glyph a full em wide. Plus Jakarta Sans Bold
+  /// advances about 0.55 em on these names (summing its glyph widths,
+  /// "Maintenance Fund" is 8.85 em over 16 characters), so pumping at this
+  /// scale makes a width check on the card titles mean what it would in the
+  /// browser.
+  const proportionalScale = 0.55;
+
   /// Every key the page attaches with seeded data.
   const parityKeys = <Key>[
     WebKeys.goalsAddGoal,
@@ -80,10 +94,59 @@ void main() {
     WebKeys.goalsGrid,
     WebKeys.goalsSavingsTable,
     WebKeys.goalsFundingNote,
-    WebGoalsKeys.openBudget,
-    WebGoalsKeys.manageSetup,
-    WebGoalsKeys.noteStartAgain,
+    WebKeys.goalsOpenBudget,
+    WebKeys.goalsManageSetup,
+    WebKeys.goalsNoteStartAgain,
   ];
+
+  group('card grid', () {
+    testWidgets(
+        'at 1120 px the grid is three across and no goal name is cut off',
+        (tester) async {
+      final dash = await seeded(tester);
+      await pumpPage(
+        tester,
+        presenter: dash,
+        width: 1120,
+        textScale: proportionalScale,
+      );
+
+      final cards = find.byType(WebGoalCard);
+      expect(cards, findsNWidgets(8));
+      final lefts = {
+        for (final e in cards.evaluate())
+          tester.getRect(find.byWidget(e.widget)).left.round(),
+      };
+      expect(lefts, hasLength(3), reason: 'three columns at 1120 px');
+
+      for (final a in dash.activeGoalAccounts) {
+        final name = find.descendant(of: cards, matching: find.text(a.name));
+        expect(tester.widget<Text>(name).maxLines, 2,
+            reason: 'a name may wrap to two lines');
+        final paragraph = tester.renderObject<RenderParagraph>(name);
+        expect(paragraph.didExceedMaxLines, isFalse,
+            reason: '${a.name} is ellipsized');
+        // The pill (or percent) and the ⋯ stay on the first line's right.
+        final nameTop = tester.getRect(name).top;
+        final menu = find.descendant(
+            of: find.ancestor(of: name, matching: cards),
+            matching: find.byType(WebRowMenu));
+        expect(tester.getRect(menu).top, lessThanOrEqualTo(nameTop + 1));
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('at 760 px the grid is two across', (tester) async {
+      final dash = await seeded(tester);
+      await pumpPage(tester, presenter: dash, width: 760);
+      final cards = find.byType(WebGoalCard);
+      final lefts = {
+        for (final e in cards.evaluate())
+          tester.getRect(find.byWidget(e.widget)).left.round(),
+      };
+      expect(lefts, hasLength(2));
+    });
+  });
 
   group('parity', () {
     for (final dark in modes) {
@@ -179,7 +242,7 @@ void main() {
       await tester.tap(find.byKey(WebKeys.goalsAddGoal));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(WebGoalsKeys.addGoalDialog), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsAddGoalDialog), findsOneWidget);
       expect(
           find.text(
               'A fund with a target. It is funded through budget set-asides.'),
@@ -187,19 +250,19 @@ void main() {
       expect(find.text('Stored in'), findsOneWidget);
 
       // Required fields are enforced before the presenter is touched.
-      await tester.tap(find.byKey(WebGoalsKeys.addGoalSubmit));
+      await tester.tap(find.byKey(WebKeys.goalsAddGoalSubmit));
       await tester.pumpAndSettle();
       expect(find.text('Give the goal a name'), findsOneWidget);
       expect(find.text('Enter a target above ₱0'), findsOneWidget);
       expect(dash.activeGoalAccounts, hasLength(before));
 
       await tester.enterText(
-          find.byKey(WebGoalsKeys.addGoalName), 'Laptop Fund');
-      await tester.enterText(find.byKey(WebGoalsKeys.addGoalTarget), '45000');
-      await tester.tap(find.byKey(WebGoalsKeys.addGoalSubmit));
+          find.byKey(WebKeys.goalsAddGoalName), 'Laptop Fund');
+      await tester.enterText(find.byKey(WebKeys.goalsAddGoalTarget), '45000');
+      await tester.tap(find.byKey(WebKeys.goalsAddGoalSubmit));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(WebGoalsKeys.addGoalDialog), findsNothing);
+      expect(find.byKey(WebKeys.goalsAddGoalDialog), findsNothing);
       final added =
           dash.activeGoalAccounts.where((a) => a.name == 'Laptop Fund').single;
       expect(added.category, AccountCategory.goal);
@@ -220,12 +283,12 @@ void main() {
       await pumpPage(tester, presenter: dash);
       final goal = dash.activeGoalAccounts.first;
 
-      await tester.tap(find.byKey(WebGoalsKeys.cardMenu).first);
+      await tester.tap(find.byKey(WebKeys.goalsCardMenu).first);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(WebKeys.goalsCardStartAgain));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(WebGoalsKeys.startAgainDialog), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsStartAgainDialog), findsOneWidget);
       expect(find.text('Start ${goal.name} again'), findsOneWidget);
       expect(
         find.text('Clears the completed stamp and starts tracking toward a new '
@@ -236,11 +299,11 @@ void main() {
       expect(find.text(goal.goalTarget!.toStringAsFixed(2)), findsOneWidget);
 
       await tester.enterText(
-          find.byKey(WebGoalsKeys.startAgainTarget), '99000');
-      await tester.tap(find.byKey(WebGoalsKeys.startAgainSubmit));
+          find.byKey(WebKeys.goalsStartAgainTarget), '99000');
+      await tester.tap(find.byKey(WebKeys.goalsStartAgainSubmit));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(WebGoalsKeys.startAgainDialog), findsNothing);
+      expect(find.byKey(WebKeys.goalsStartAgainDialog), findsNothing);
       final after = dash.activeGoalAccounts.firstWhere((a) => a.id == goal.id);
       expect(after.goalTarget, 99000);
       expect(after.goalRedeemedAt, isNull);
@@ -253,13 +316,13 @@ void main() {
       final dash = await seeded(tester);
       await pumpPage(tester, presenter: dash);
 
-      await tester.tap(find.byKey(WebGoalsKeys.noteStartAgain));
+      await tester.tap(find.byKey(WebKeys.goalsNoteStartAgain));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(WebGoalsKeys.startAgainDialog), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsStartAgainDialog), findsOneWidget);
       expect(find.text('Start a goal again'), findsOneWidget);
-      expect(find.byKey(WebGoalsKeys.startAgainGoal), findsOneWidget);
-      expect(find.byKey(WebGoalsKeys.startAgainTarget), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsStartAgainGoal), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsStartAgainTarget), findsOneWidget);
     });
   });
 
@@ -270,7 +333,7 @@ void main() {
       var opened = 0;
       await pumpPage(tester, presenter: dash, onOpenBudget: () => opened++);
 
-      await tester.tap(find.byKey(WebGoalsKeys.openBudget));
+      await tester.tap(find.byKey(WebKeys.goalsOpenBudget));
       await tester.pump();
       expect(opened, 1);
     });
@@ -280,7 +343,7 @@ void main() {
       var opened = 0;
       await pumpPage(tester, presenter: dash, onOpenSetup: () => opened++);
 
-      await tester.tap(find.byKey(WebGoalsKeys.manageSetup));
+      await tester.tap(find.byKey(WebKeys.goalsManageSetup));
       await tester.pump();
       expect(opened, 1);
     });
@@ -311,13 +374,13 @@ void main() {
       await pumpPage(tester, presenter: dash);
 
       expect(find.text('No goals yet'), findsOneWidget);
-      expect(find.byKey(WebGoalsKeys.emptyAddGoal), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsEmptyAddGoal), findsOneWidget);
       expect(find.byKey(WebKeys.goalsHero), findsNothing);
       expect(find.byType(WebGoalCard), findsNothing);
 
-      await tester.tap(find.byKey(WebGoalsKeys.emptyAddGoal));
+      await tester.tap(find.byKey(WebKeys.goalsEmptyAddGoal));
       await tester.pumpAndSettle();
-      expect(find.byKey(WebGoalsKeys.addGoalDialog), findsOneWidget);
+      expect(find.byKey(WebKeys.goalsAddGoalDialog), findsOneWidget);
       // No liquid accounts to store it in, so the field is not offered.
       expect(find.text('Stored in'), findsNothing);
     });
