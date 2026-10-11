@@ -2151,19 +2151,18 @@ Future<void> _markBillPaidFlow(
   // "Mark paid" button gets them too rather than staying fixed-amount.
   final result = await showWebSettleDialog(
     context,
-    title: 'Mark "${bill.name}" paid',
-    summary: 'Records the payment and debits the funding account. '
-        'Adjust the amount for a partial payment or an overpayment.',
-    confirmLabel: 'Mark paid',
-    // A part-paid credit statement prefills what is left, not the full bill.
-    initialAmount: presenter.billAmountOwed(bill),
-    amountLabel: 'Amount paid',
-    dateLabel: 'Payment date',
+    kind: SettleKind.bill,
+    targets: [
+      SettleTarget(
+        id: bill.id,
+        name: bill.name,
+        // A part-paid credit statement prefills what is left, not the bill.
+        amount: presenter.billAmountOwed(bill),
+        accountId: bill.accountId,
+      ),
+    ],
     accounts: payers,
-    accountLabel: 'Pay from',
     initialAccountId: preferredAccountId,
-    requiresAccount: true,
-    showLedgerToggle: true,
     emptyAccountsMessage: 'Add a funding account before marking paid.',
     onSubmit: (r) => presenter.markBillPaid(
       bill.id,
@@ -2427,18 +2426,16 @@ class _ReceivableRow extends StatelessWidget {
     // instead of only on the phone.
     final result = await showWebSettleDialog(
       context,
-      title: 'Mark "${receivable.name}" received',
-      summary: 'Records the deposit and credits the destination account. '
-          'Adjust the amount if only part of it came in.',
-      confirmLabel: 'Mark received',
-      initialAmount: receivable.amount,
-      amountLabel: 'Amount received',
-      dateLabel: 'Date received',
+      kind: SettleKind.receivable,
+      targets: [
+        SettleTarget(
+          id: receivable.id,
+          name: receivable.name,
+          amount: receivable.amount,
+        ),
+      ],
       accounts: destinations,
-      accountLabel: 'Deposit to',
       initialAccountId: presenter.preferredDepositAccountId(receivable),
-      requiresAccount: true,
-      showLedgerToggle: true,
       emptyAccountsMessage: 'Add an account before marking received.',
       onSubmit: (r) => presenter.markReceivableReceived(
         receivable.id,
@@ -2871,24 +2868,19 @@ class _BudgetedExpenseRow extends StatelessWidget {
     // optional second dropdown, keeping "spend it" a deliberate choice.
     final result = await showWebSettleDialog(
       context,
-      title: 'Fund "${expense.name}"',
-      summary: 'Moves money from one account into another. Setting money aside '
-          'is recorded as a transfer, not spending. Adjust the amount to fund '
-          'part of it.',
-      confirmLabel: 'Fund',
-      initialAmount: expense.allocatedAmount,
-      amountLabel: 'Amount to set aside',
-      dateLabel: 'Date',
+      kind: SettleKind.setAside,
+      targets: [
+        SettleTarget(
+          id: expense.id,
+          name: expense.name,
+          amount: expense.allocatedAmount,
+          accountId: fromId,
+          destinationId: toId,
+        ),
+      ],
       accounts: payers,
-      accountLabel: 'Fund from',
       initialAccountId: fromId,
-      requiresAccount: true,
-      destination: WebSettleDestination(
-        options: destinations,
-        label: 'Set aside into',
-        initialId: toId,
-        initiallyChosen: toId != null,
-      ),
+      destinations: destinations,
       onSubmit: (r) => presenter.markExpensePaid(
         expense.id,
         paidAmount: r.amount,
@@ -3520,8 +3512,6 @@ class _InstallmentRow extends StatelessWidget {
   }
 
   Future<void> _markPaid(BuildContext context) async {
-    final accountName =
-        presenter.accountName(installment.accountId) ?? 'the linked account';
     // The bare `markPaid(id)` this replaced took the monthly amount dated today
     // and offered nothing else. An installment run can carry a catch-up month
     // or a rounded final payment, both of which need the amount and the date.
@@ -3529,13 +3519,15 @@ class _InstallmentRow extends StatelessWidget {
     // account, so there is nothing to choose.
     final result = await showWebSettleDialog(
       context,
-      title: 'Mark "${installment.name}" paid',
-      summary: 'Records this month\'s payment on $accountName.',
-      confirmLabel: 'Mark paid',
-      initialAmount: installment.monthlyAmount,
-      amountLabel: 'Amount paid',
-      dateLabel: 'Payment date',
-      scheduledNote: 'Monthly: ${formatPeso(installment.monthlyAmount)}',
+      kind: SettleKind.installment,
+      targets: [
+        SettleTarget(
+          id: installment.id,
+          name: installment.name,
+          amount: installment.monthlyAmount,
+        ),
+      ],
+      accounts: const [],
       onSubmit: (r) => presenter.markPaid(
         installment.id,
         overrideAmount: r.amount,
@@ -4299,179 +4291,17 @@ class _WebCreditCardRow extends StatelessWidget {
     );
   }
 
-  void _showQuickPay(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _WebQuickPayDialog(card: card, presenter: presenter),
+  /// Pays the card through the unified Settle dialog ([SettleKind.cardPayment])
+  /// via the shared wrapper, so this page and the Dashboard run one flow.
+  Future<void> _showQuickPay(BuildContext context) async {
+    final paid = await showWebQuickPayDialog(
+      context,
+      card: card,
+      presenter: presenter,
     );
-  }
-}
-
-// ─── Quick-pay dialog (web) ───────────────────────────────────────────────────
-
-class _WebQuickPayDialog extends StatefulWidget {
-  final FinancialAccount card;
-  final BillsReceivablesPresenter presenter;
-
-  const _WebQuickPayDialog({required this.card, required this.presenter});
-
-  @override
-  State<_WebQuickPayDialog> createState() => _WebQuickPayDialogState();
-}
-
-class _WebQuickPayDialogState extends State<_WebQuickPayDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _amountController;
-  String? _fromAccountId;
-  DateTime _date = DateTime.now();
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final payable = widget.card.currentPayable;
-    _amountController = TextEditingController(
-      text: payable == payable.roundToDouble()
-          ? payable.round().toString()
-          : payable.toStringAsFixed(2),
-    );
-    final payers = widget.presenter
-        .payerAccountsFor(null)
-        .where((a) => !a.isLiability && a.isActive)
-        .toList();
-    if (payers.isNotEmpty) _fromAccountId = payers.first.id;
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  List<FinancialAccount> get _payers => widget.presenter
-      .payerAccountsFor(null)
-      .where((a) => !a.isLiability && a.isActive)
-      .toList();
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-    );
-    if (picked != null && mounted) setState(() => _date = picked);
-  }
-
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_fromAccountId == null) return;
-    setState(() => _saving = true);
-    try {
-      final amount = double.parse(_amountController.text.replaceAll(',', ''));
-      await widget.presenter.quickPayCard(
-        accountId: widget.card.id,
-        fromAccountId: _fromAccountId!,
-        amount: amount,
-        date: _date,
-      );
-      if (mounted) {
-        Navigator.of(context).pop();
-        AppToast.success(
-            context, 'Paid ${formatPeso(amount)} to ${widget.card.name}.');
-      }
-    } catch (e) {
-      if (mounted) AppToast.error(context, 'Could not record payment: $e');
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    if (paid != null && context.mounted) {
+      AppToast.success(context, 'Paid ${formatPeso(paid)} to ${card.name}.');
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final payers = _payers;
-
-    return AlertDialog(
-      title: Text('Pay ${widget.card.name}'),
-      content: SizedBox(
-        width: 400,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _amountController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                    labelText: 'Amount', prefixText: '₱ '),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  final p = double.tryParse((v ?? '').replaceAll(',', ''));
-                  if (p == null || p <= 0) return 'Must be > 0';
-                  return null;
-                },
-              ),
-              const SizedBox(height: WebInsets.md),
-              if (payers.isNotEmpty)
-                DropdownButtonFormField<String>(
-                  key: ValueKey(_fromAccountId),
-                  initialValue: payers.any((a) => a.id == _fromAccountId)
-                      ? _fromAccountId
-                      : null,
-                  decoration: const InputDecoration(labelText: 'Pay from'),
-                  items: payers
-                      .map((a) =>
-                          DropdownMenuItem(value: a.id, child: Text(a.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _fromAccountId = v),
-                  validator: (v) => v == null ? 'Select an account' : null,
-                )
-              else
-                Text(
-                  'No liquid accounts available.',
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
-                ),
-              const SizedBox(height: WebInsets.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Date: ${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _pickDate,
-                    child: const Text('Change'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: (_saving || _fromAccountId == null) ? null : _submit,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Pay'),
-        ),
-      ],
-    );
   }
 }
 

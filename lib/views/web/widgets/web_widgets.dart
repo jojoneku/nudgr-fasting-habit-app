@@ -31,4 +31,5 @@ export 'web_tabs.dart';
 export 'web_stat_strip.dart';
 export 'web_row_menu.dart';
 export 'web_list_row.dart';
+export 'web_form_controls.dart';
 export '../design/web_constants.dart';
