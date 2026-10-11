@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../../../presenters/budget_presenter.dart'
+    show kBudgetWatchThreshold;
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -13,11 +16,6 @@ import '../../design/account_category_label.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_inventory_dialog.dart';
-
-/// Budget rows at or above this share of their allocation read "Watch".
-// TODO(Plan 063 Phase 6): read kBudgetWatchThreshold from budget_presenter.dart
-// so the dashboard and the Budget page agree (today: 0.85 here vs 0.75 there).
-const double _kBudgetWatchThreshold = 0.85;
 
 /// Named slices in "Where your money goes"; the rest fold into "Other (n)".
 const int _kMaxDonutSlices = 6;
@@ -1080,7 +1078,7 @@ class _BudgetHealthCard extends StatelessWidget {
 
   WebBadge _status(double ratio) {
     if (ratio >= 1.0) return const WebBadge('Over', tone: WebBadgeTone.danger);
-    if (ratio >= _kBudgetWatchThreshold) {
+    if (ratio >= kBudgetWatchThreshold) {
       return const WebBadge('Watch', tone: WebBadgeTone.warning);
     }
     return const WebBadge('On track', tone: WebBadgeTone.success);
@@ -1089,7 +1087,7 @@ class _BudgetHealthCard extends StatelessWidget {
   Color _groupColor(
       ColorScheme cs, AppThemeExtension colors, int index, double ratio) {
     if (ratio >= 1.0) return cs.error;
-    if (ratio >= _kBudgetWatchThreshold) return colors.bills;
+    if (ratio >= kBudgetWatchThreshold) return colors.bills;
     return [cs.primary, colors.weight, colors.treasury, cs.tertiary][index % 4];
   }
 
