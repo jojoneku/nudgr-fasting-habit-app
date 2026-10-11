@@ -39,6 +39,7 @@ import 'pages/budget/web_budget_page_v2.dart';
 import 'pages/history/web_history_page_v2.dart';
 import 'pages/bills/web_bills_page_v2.dart';
 import 'pages/ledger/web_ledger_page_v2.dart';
+import 'pages/setup/web_setup_page_v2.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
@@ -644,9 +645,11 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           showAppBar: false,
         );
       case WebDest.setup:
-        return WebSetupPage(
+        return WebSetupPageV2(
           presenter: widget.dashPresenter,
           ledgerPresenter: widget.ledgerPresenter,
+          trailing:
+              railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
       case WebDest.dashboard:
         return WebDashboardPageV2(
@@ -671,6 +674,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     WebDest.history,
     WebDest.bills,
     WebDest.ledger,
+    WebDest.setup,
   };
 
   Widget _buildV2(BuildContext context, BoxConstraints constraints) {
