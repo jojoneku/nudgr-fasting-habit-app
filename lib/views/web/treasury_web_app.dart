@@ -36,6 +36,7 @@ import 'pages/budget/web_budget_page.dart';
 import 'pages/dashboard/web_dashboard_page.dart';
 import 'pages/dashboard/web_dashboard_page_v2.dart';
 import 'pages/budget/web_budget_page_v2.dart';
+import 'pages/history/web_history_page_v2.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/more/web_more_page.dart';
@@ -621,7 +622,15 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
               railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
         );
       case WebDest.history:
-        return WebHistoryPage(presenter: widget.historyPresenter);
+        return WebHistoryPageV2(
+          presenter: widget.historyPresenter,
+          onOpenLedgerMonth: (month) {
+            widget.ledgerPresenter.setMonth(month);
+            _onSelectDest(WebDest.ledger);
+          },
+          trailing:
+              railShown ? null : NudgyHeaderButton(controller: widget.nudgy),
+        );
       case WebDest.goals:
         return GoalsSavingsScreen(
           presenter: widget.dashPresenter,
@@ -649,7 +658,11 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
 
   /// Destinations whose v2 page renders its own [WebPageHeaderV2] (and so
   /// owns the Nudgy header button). Grows as Phases 4–9 land.
-  static const _v2OwnsHeader = {WebDest.dashboard, WebDest.budget};
+  static const _v2OwnsHeader = {
+    WebDest.dashboard,
+    WebDest.budget,
+    WebDest.history,
+  };
 
   Widget _buildV2(BuildContext context, BoxConstraints constraints) {
     if (constraints.maxWidth < WebBreakpoints.rail) {
