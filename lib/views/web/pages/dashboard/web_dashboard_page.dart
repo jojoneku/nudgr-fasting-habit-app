@@ -760,7 +760,7 @@ class _BudgetHealthCard extends StatelessWidget {
       final ratio = alloc > 0 ? (spnt / alloc) : 0.0;
       final left = (alloc - spnt).clamp(0.0, double.infinity);
       final pct = alloc > 0 ? (spnt / alloc * 100).round() : 0;
-      final dot = _groupColor(cs, i, ratio);
+      final dot = _groupColor(cs, context.appColors.bills, i, ratio);
       if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));
       rows.add(WebBudgetRow(
         dotColor: dot,
@@ -806,10 +806,10 @@ class _BudgetHealthCard extends StatelessWidget {
     );
   }
 
-  Color _groupColor(ColorScheme cs, int index, double ratio) {
+  Color _groupColor(ColorScheme cs, Color warning, int index, double ratio) {
     if (ratio >= 1.0) return cs.error;
-    if (ratio >= 0.85) return cs.secondary;
-    return [cs.primary, cs.tertiary, cs.secondary, cs.primary][index % 4];
+    if (ratio >= 0.85) return warning;
+    return [cs.primary, cs.tertiary, warning, cs.primary][index % 4];
   }
 }
 

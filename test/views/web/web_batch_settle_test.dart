@@ -10,7 +10,9 @@ import 'package:intermittent_fasting/views/web/widgets/web_batch_settle_dialog.d
 ///
 /// The web Bills page had no selection at all, so a month of bills had to be
 /// settled one dialog at a time. These pin the two halves of the fix — the
-/// selection controls, and the dialog that asks once for what the batch shares.
+/// selection controls, and the dialog that asks once for what the batch
+/// shares. Since Plan 063 the dialog is the unified Settle dialog in batch
+/// mode, reached through the unchanged [showWebBatchSettleDialog] wrapper.
 void main() {
   FinancialAccount account(String id, String name, {double balance = 5000}) =>
       FinancialAccount(
@@ -75,7 +77,7 @@ void main() {
         initialAccountId: 'a_gcash',
       );
 
-      expect(find.text('Mark 3 bills paid'), findsOneWidget);
+      expect(find.text('Pay 3 bills'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Mark 3 paid'));
       await tester.pumpAndSettle();
 
@@ -94,7 +96,7 @@ void main() {
         accounts: [bpi],
       );
 
-      await tester.tap(find.byType(Checkbox));
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Mark 3 paid'));
       await tester.pumpAndSettle();
@@ -113,9 +115,9 @@ void main() {
         accounts: [bpi],
       );
 
-      expect(find.text('Pay from'), findsNothing);
+      expect(find.text('PAY FROM'), findsNothing);
       // And no ledger opt-out either: the payment IS its transaction.
-      expect(find.byType(Checkbox), findsNothing);
+      expect(find.byType(Switch), findsNothing);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Pay 3'));
       await tester.pumpAndSettle();
@@ -130,8 +132,8 @@ void main() {
         accounts: [bpi],
       );
 
-      expect(find.text('Deposit into'), findsOneWidget);
-      expect(find.text('Pay from'), findsNothing);
+      expect(find.text('DEPOSIT INTO'), findsOneWidget);
+      expect(find.text('PAY FROM'), findsNothing);
     });
 
     testWidgets('set-asides: confirm waits for a destination', (tester) async {
@@ -193,15 +195,15 @@ void main() {
         savedDestinationCount: 3,
       );
 
-      // Unticking "each keeps its own" means all three now need the shared
-      // destination, so Fund blocks again until it is chosen.
-      await tester.tap(find.byType(Checkbox));
+      // Switching off "each keeps its own" means all three now need the
+      // shared destination, so Fund blocks again until it is chosen.
+      await tester.tap(find.byType(Switch));
       await tester.pumpAndSettle();
 
       final blocked = tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Fund 3'));
       expect(blocked.onPressed, isNull);
-      expect(find.text('Set aside into'), findsOneWidget);
+      expect(find.text('SET ASIDE INTO'), findsOneWidget);
     });
 
     testWidgets('cancelling returns null', (tester) async {

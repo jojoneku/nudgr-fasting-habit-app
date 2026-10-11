@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Forms and dialogs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1360px;padding:36px 40px 56px;display:flex;flex-direction:column;gap:28px}
+h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em}
+.lead{margin:6px 0 0;color:#9A9FA8;font-size:13.5px;max-width:760px;line-height:1.5}
+.sec{display:flex;flex-direction:column;gap:14px}
+.sec h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:24px;align-items:start}
+.item{display:flex;flex-direction:column;gap:8px;min-width:0}
+.cap{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-size:12.5px;color:#9A9FA8;padding:0 4px}
+.cap b{color:#F7F7F8;font-size:13.5px}
+.cap .from{color:#5BAAF5}
+.dlg{width:100%;max-width:520px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:24px;padding:22px 24px 20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 60px -24px rgba(0,0,0,.8)}
+.dlg.wide{max-width:600px}
+.dh{display:flex;align-items:flex-start;gap:12px}
+.dh h3{margin:0;font-size:17px;font-weight:800;letter-spacing:-0.01em}
+.dh p{margin:3px 0 0;color:#9A9FA8;font-size:12.5px}
+.x{margin-left:auto;width:32px;height:32px;border-radius:9px;border:0;background:transparent;color:#9A9FA8;font-size:18px;cursor:pointer;flex:none}
+.x:hover{background:#252628;color:#F7F7F8}
+.fld{display:flex;flex-direction:column;gap:6px;min-width:0}
+.lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#9A9FA8}
+.lbl i{font-style:normal;font-weight:500;text-transform:none;letter-spacing:0;color:#6A6E76}
+.in{height:46px;border-radius:12px;background:#252628;border:1px solid rgba(30,30,34,.6);padding:0 14px;display:flex;align-items:center;gap:8px;font-size:14.5px;color:#F7F7F8}
+.in.ph{color:#83878F}
+.in.focus{border:1.5px solid #2E90FA}
+.in.err{border-color:#F6685E}
+.in .u{color:#83878F;font-size:13px}
+.in .caret{margin-left:auto;color:#83878F;font-size:12px}
+.in.big{height:64px;font-size:28px;font-weight:800;letter-spacing:-0.02em}
+.in.big .u{font-size:18px;font-weight:700}
+.help{font-size:12px;color:#83878F}
+.help.err{color:#FF8A80}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.seg{display:flex;background:#131315;border:1px solid #2A2A2E;border-radius:12px;padding:3px;gap:2px}
+.seg span{flex:1;text-align:center;padding:9px 0;border-radius:9px;font-size:13px;font-weight:600;color:#9A9FA8}
+.seg span.on{background:#252628;color:#F7F7F8}
+.seg span.out.on{background:rgba(255,138,76,.16);color:#FFB37A}
+.seg span.in.on{background:rgba(70,189,107,.16);color:#6FCB8A}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid #2A2A2E;background:#1C1C20;color:#C9CDD3;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;white-space:nowrap}
+.chip.on{background:rgba(46,144,250,.14);border-color:#2E90FA;color:#5BAAF5}
+.fold{border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:12px;background:#1A1A1E}
+.fold .fh{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700}
+.fold .fh small{font-weight:500;color:#9A9FA8;font-size:12px}
+.sw{width:38px;height:22px;border-radius:999px;background:#3A3A40;position:relative;flex:none;margin-left:auto}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#9A9FA8}
+.sw.on{background:#2E90FA}
+.sw.on::after{left:19px;background:#fff}
+.more{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#5BAAF5;padding:2px 0}
+.ft{display:flex;align-items:center;gap:8px;padding-top:4px}
+.btn{height:44px;padding:0 18px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 14px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff;flex:1}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.danger{background:transparent;border-color:rgba(246,104,94,.35);color:#FF8A80}
+.btn.danger.fill{background:#F6685E;border-color:#F6685E;color:#fff}
+.btn.move{background:#46BD6B;border-color:#46BD6B;color:#0B1A10;flex:1}
+.btn.bills{background:#FF8A4C;border-color:#FF8A4C;color:#241813;flex:1}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.row{display:flex;align-items:center;gap:10px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #1E1E22;font-size:13.5px}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:#9A9FA8}
+.sum{background:#131315;border-radius:12px;padding:10px 14px;font-size:13px;color:#C9CDD3;display:flex;flex-direction:column;gap:4px}
+.tile{width:32px;height:32px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex:none}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.sw-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#1A1A1E;border:1px solid #2A2A2E;font-size:13.5px}
+.sw-row small{display:block;color:#9A9FA8;font-size:12px}
+.icons{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+.icons span{aspect-ratio:1;border-radius:10px;background:#252628;display:flex;align-items:center;justify-content:center;color:#C9CDD3}
+.icons span.on{background:rgba(46,144,250,.16);outline:1.5px solid #2E90FA;color:#5BAAF5}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatches span{width:30px;height:30px;border-radius:50%;display:inline-block}
+.swatches span.on{box-shadow:0 0 0 2px #1C1C20,0 0 0 4px #F7F7F8}
+.pop{width:340px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 28px -8px rgba(0,0,0,.7)}
+.drop{border:1.5px dashed #3A3A40;border-radius:14px;padding:26px;text-align:center;color:#9A9FA8;font-size:13px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.bar{height:6px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+</style>
+</helmet>
+<div class="wrap">
+  <header>
+    <h1>Forms and dialogs</h1>
+    <p class="lead">One form language for all 17 dialogs: a 520px dialog with a 24px radius, uppercase labels above the fields, 46px inputs, one primary button on the right, Cancel beside it, and a destructive action alone on the left. Optional fields sit under a "More options" fold, so the first view shows only what a quick entry needs. Each dialog says where it opens from and where it leads.</p>
+  </header>
+
+  <!-- ============ LEDGER ============ -->
+  <section class="sec">
+    <h2>Ledger · money in and out</h2>
+    <div class="grid">
+      <div class="item">
+        <div class="cap"><b>Add transaction</b><span class="from">Opens from: Dashboard header · Ledger header · Nudgy "Edit" · Statement item</span><span>Leads to: a new ledger row, or an installment plan</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add transaction</h3><p>Saved to the ledger and synced to your phone.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="seg" role="tablist"><span class="out on" role="tab" aria-selected="true">Expense</span><span class="in" role="tab">Income</span><span role="tab">Transfer</span></div>
+          <div class="fld"><span class="lbl">Amount</span><div class="in big focus"><span class="u">₱</span><span class="num">2,340</span><span class="caret" style="font-size:12px;font-weight:500">+ − × ÷</span></div></div>
+          <div class="g2">
+            <div class="fld"><span class="lbl">Account</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#1565C0">G</span>GCASH<span class="caret">▾</span></div></div>
+            <div class="fld"><span class="lbl">Category</span><div class="in"><span class="dot" style="background:#46BD6B"></span>Food &amp; Drinks<span class="caret">▾</span></div></div>
+          </div>
+          <div class="g2">
+            <div class="fld"><span class="lbl">Description</span><div class="in">Groceries · SM</div></div>
+            <div class="fld"><span class="lbl">Date</span><div class="in">Today, Oct 10<span class="caret">▾</span></div></div>
+          </div>
+          <div class="fold">
+            <div class="fh">Split into installments<small>· credit accounts only</small><span class="sw on" role="switch" aria-checked="true" aria-label="Split into installments"></span></div>
+            <div class="fld"><span class="lbl">Months</span><div class="chips"><span class="chip">3</span><span class="chip on">6</span><span class="chip">12</span><span class="chip">24</span><span class="chip">Custom</span></div></div>
+            <div class="fld"><span class="lbl">Interest / month</span><div class="chips"><span class="chip on">0 %</span><span class="chip">1 %</span><span class="chip">1.5 %</span><span class="chip">2 %</span><span class="chip">3 %</span></div></div>
+            <div class="sum"><span>≈ <b class="num" style="color:#F7F7F8">₱390.00 / month</b> for 6 months · first on the Nov 20 statement</span><span style="color:#83878F">Billed onto the card at statement close. Paying the card is a transfer.</span></div>
+          </div>
+          <div class="more">▸ More options <span style="color:#6A6E76;font-weight:500">· notes, "I'll get this back"</span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add installment plan</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Add transaction · More options open</b><span class="from">Same dialog, Income tab</span><span>The fold shows notes and the reimbursable toggle</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add transaction</h3><p>Saved to the ledger and synced to your phone.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="seg" role="tablist"><span class="out" role="tab">Expense</span><span class="in on" role="tab" aria-selected="true">Income</span><span role="tab">Transfer</span></div>
+          <div class="fld"><span class="lbl">Amount</span><div class="in big"><span class="u">₱</span><span class="num">47,976.59</span></div></div>
+          <div class="g2">
+            <div class="fld"><span class="lbl">Account</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#9B2C2C">BPI</span>BPI Savings<span class="caret">▾</span></div></div>
+            <div class="fld"><span class="lbl">Category</span><div class="in"><span class="dot" style="background:#46BD6B"></span>Salary<span class="caret">▾</span></div></div>
+          </div>
+          <div class="g2">
+            <div class="fld"><span class="lbl">Description</span><div class="in">Alphaus Salary · October</div></div>
+            <div class="fld"><span class="lbl">Date</span><div class="in">Oct 7<span class="caret">▾</span></div></div>
+          </div>
+          <div class="more">▾ More options</div>
+          <div class="fld"><span class="lbl">Notes <i>optional</i></span><div class="in ph" style="height:64px;align-items:flex-start;padding-top:12px">Add a note…</div></div>
+          <div class="sw-row"><span style="flex:1">I'll get this back<small>Tracks as money owed to you, not spending</small></span><span class="sw" role="switch" aria-checked="false" aria-label="I'll get this back"></span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add transaction</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Edit transfer</b><span class="from">Opens from: a Transfer row's ⋯ or badge</span><span>Edits both legs at once</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Edit transfer</h3><p>Both sides of the transfer change together.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="fld"><span class="lbl">Amount</span><div class="in big"><span class="u">₱</span><span class="num">5,000</span></div></div>
+          <div class="g2">
+            <div class="fld"><span class="lbl">From account</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#2A2566">MB</span>Maribank<span class="caret">▾</span></div></div>
+            <div class="fld"><span class="lbl">To account</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#46BD6B">EF</span>Emergency Fund<span class="caret">▾</span></div></div>
+          </div>
+          <div class="g2"><div class="fld"><span class="lbl">Description</span><div class="in">To Emergency Fund</div></div><div class="fld"><span class="lbl">Date</span><div class="in">Oct 2<span class="caret">▾</span></div></div></div>
+          <div class="help">Transfers carry no category and never count as spending or income.</div>
+          <div class="ft"><button class="btn danger">Delete</button><span style="flex:1"></span><button class="btn ghost">Cancel</button><button class="btn pri" style="flex:none">Save changes</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Filters &amp; sort</b><span class="from">Opens from: the Ledger toolbar button</span><span>Popover, not a dialog · chips appear in the toolbar when applied</span></div>
+        <div class="pop">
+          <div class="fld"><span class="lbl">Accounts</span><div class="in" style="height:40px;font-size:13.5px">✓ GCASH <span class="caret">add another ▾</span></div></div>
+          <div class="fld"><span class="lbl">Categories</span><div class="in ph" style="height:40px;font-size:13.5px">All categories<span class="caret">▾</span></div></div>
+          <div class="fld"><span class="lbl">Type</span><div class="seg"><span>All</span><span class="in">Inflow</span><span class="out on">Outflow</span></div></div>
+          <div class="fld"><span class="lbl">Sort by</span><div class="in" style="height:40px;font-size:13.5px">Default (date order)<span class="caret">▾</span></div></div>
+          <div class="fld"><span class="lbl">Date range</span><div class="g2"><div class="in ph" style="height:40px;font-size:13.5px">From…</div><div class="in ph" style="height:40px;font-size:13.5px">Until…</div></div></div>
+          <div class="ft" style="padding-top:0"><button class="btn ghost" style="height:36px">Clear all</button><span style="flex:1"></span><button class="btn pri" style="height:36px;flex:none">Done</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Scan a receipt</b><span class="from">Opens from: Ledger toolbar · Nudgy quick action</span><span>Leads to: Nudgy's confirm card, then a ledger row</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Scan a receipt</h3><p>Nudgy reads the total, the store and the date, then asks you to confirm.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="drop"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5BAAF5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3M12 4v12M7 9l5-5 5 5"/></svg><b style="color:#F7F7F8">Drop a photo here</b><span>or <a href="#pick">choose a file</a> · JPG, PNG, HEIC</span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri" disabled style="opacity:.5">Scan</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Delete transactions?</b><span class="from">Opens from: the selection bar "Delete N"</span><span>A single row deletes at once with a 6-second Undo toast instead</span></div>
+        <div class="dlg" style="max-width:420px">
+          <div class="dh"><div><h3>Delete 2 transactions?</h3><p>Account balances recalculate. You can undo this for 6 seconds.</p></div></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><span style="flex:1"></span><button class="btn danger fill" style="flex:none">Delete 2</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BILLS ============ -->
+  <section class="sec">
+    <h2>Bills · the Add ▾ menu and settling</h2>
+    <div class="grid">
+      <div class="item">
+        <div class="cap"><b>Add bill</b><span class="from">Opens from: Bills › Add ▾ › Bill</span><span>Leads to: a row in Upcoming · reminders schedule a notification</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add bill</h3><p>Something you pay on a date.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in focus">Electricity</div></div><div class="fld"><span class="lbl">Type</span><div class="in">Utility<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Amount</span><div class="in"><span class="u">₱</span><span class="num">1,600</span></div></div><div class="fld"><span class="lbl">Due day</span><div class="in">16th<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Pay from <i>optional</i></span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#1565C0">G</span>GCASH<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Category <i>optional</i></span><div class="in"><span class="dot" style="background:#2E90FA"></span>Bills &amp; Utilities<span class="caret">▾</span></div></div></div>
+          <div class="sw-row"><span style="flex:1">Repeats monthly<small>Next month's bill is created when this one is paid</small></span><span class="sw on" role="switch" aria-checked="true" aria-label="Repeats monthly"></span></div>
+          <div class="sw-row"><span style="flex:1">Remind me before it is due<small>1 day before · 9:00 AM</small></span><span class="chips"><span class="chip on">1 d</span><span class="chip">3 d</span><span class="chip">7 d</span></span></div>
+          <div class="more">▸ More options <span style="color:#6A6E76;font-weight:500">· payment note, recurrence end</span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add bill</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Add receivable</b><span class="from">Opens from: Bills › Add ▾ › Receivable · Ledger "I'll get this back"</span><span>Leads to: a row in Receivables · Receive opens Settle</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add receivable</h3><p>Money someone owes you.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in">Papa Xiaomi</div></div><div class="fld"><span class="lbl">Type</span><div class="in">Loan repayment<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Amount</span><div class="in"><span class="u">₱</span><span class="num">2,000</span></div></div><div class="fld"><span class="lbl">Expected on</span><div class="in">Oct 15<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Deposit into <i>optional</i></span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#1B7A4B">M</span>MAYA<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Category <i>optional</i></span><div class="in ph">Choose…<span class="caret">▾</span></div></div></div>
+          <div class="sw-row"><span style="flex:1">Repeats monthly<small>Until Mar 2027 · 6 payments left</small></span><span class="sw on" role="switch" aria-checked="true" aria-label="Repeats monthly"></span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add receivable</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Add set-aside</b><span class="from">Opens from: Bills › Add ▾ › Set-aside · Goals "Set a monthly amount"</span><span>Leads to: a row in Set-asides · Fund opens Settle with "Set aside into"</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add set-aside</h3><p>A planned amount to move into a fund this month.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in">Emergency Fund</div></div><div class="fld"><span class="lbl">Type</span><div class="in">Savings<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Amount</span><div class="in"><span class="u">₱</span><span class="num">12,000</span></div></div><div class="fld"><span class="lbl">Set aside into</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#46BD6B">EF</span>Emergency Fund<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Fund from <i>optional</i></span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#9B2C2C">BPI</span>BPI Savings<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Category <i>optional</i></span><div class="in ph">Decide when funding<span class="caret">▾</span></div></div></div>
+          <div class="sw-row"><span style="flex:1">Repeats monthly<small>Shows in Budget as a Savings row</small></span><span class="sw on" role="switch" aria-checked="true" aria-label="Repeats monthly"></span></div>
+          <div class="more">▸ More options <span style="color:#6A6E76;font-weight:500">· note</span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add set-aside</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Add installment</b><span class="from">Opens from: Bills › Add ▾ › Installment · Ledger "Split into installments"</span><span>Leads to: a plan in Installments · each month bills onto the card statement</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add installment</h3><p>A purchase paid over several card statements.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in">Panasonic Refrigerator</div></div><div class="fld"><span class="lbl">Card</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#9B2C2C">BPI</span>Credit Card CC (BPI)<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Total amount</span><div class="in"><span class="u">₱</span><span class="num">25,992</span></div></div><div class="fld"><span class="lbl">First statement</span><div class="in">Dec 2026<span class="caret">▾</span></div></div></div>
+          <div class="fld"><span class="lbl">Months</span><div class="chips"><span class="chip">3</span><span class="chip">6</span><span class="chip on">12</span><span class="chip">24</span><span class="chip">36</span><span class="chip">Custom</span></div></div>
+          <div class="fld"><span class="lbl">Interest / month</span><div class="chips"><span class="chip on">0 %</span><span class="chip">1 %</span><span class="chip">1.5 %</span><span class="chip">2 %</span><span class="chip">3 %</span><span class="chip">Custom</span></div></div>
+          <div class="sum"><span><b class="num" style="color:#F7F7F8">₱2,166.00 / month</b> × 12 · ends Nov 2027 · <span style="color:#83878F">editable</span></span></div>
+          <div class="more">▸ More options <span style="color:#6A6E76;font-weight:500">· deferral, note</span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add installment</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Settle · Mark paid / Receive / Fund</b><span class="from">Opens from: Mark paid · Pay · Receive · Fund · Pay now on a card · Batch "Pay N"</span><span>One dialog replaces Settle, Quick pay (×2) and Batch settle · Leads to: a ledger row (unless already added)</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Mark Electricity paid</h3><p>Scheduled ₱1,600.00 · due Oct 16</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Amount paid</span><div class="in focus"><span class="u">₱</span><span class="num">1,600</span></div></div><div class="fld"><span class="lbl">Paid on</span><div class="in">Today, Oct 10<span class="caret">▾</span></div></div></div>
+          <div class="fld"><span class="lbl">Pay from</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#1565C0">G</span>GCASH<span class="caret">▾</span><span class="num" style="color:#9A9FA8;font-size:12.5px">₱250.00 · <b style="color:#FFB37A">short by ₱1,350</b></span></div></div>
+          <div class="help err">GCASH does not have enough. Pick another account, or move money in first.</div>
+          <div class="sw-row"><span style="flex:1">Already in the ledger<small>Turn on if you logged this payment by hand</small></span><span class="sw" role="switch" aria-checked="false" aria-label="Already in the ledger"></span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn bills">Mark paid</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Settle · batch of 2</b><span class="from">Opens from: the batch bar "Pay 2"</span><span>Same dialog, with the rows listed</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Pay 2 bills</h3><p>₱2,386.00 total</p></div><button class="x" aria-label="Close">×</button></div>
+          <div style="display:flex;flex-direction:column">
+            <div class="kv"><span style="color:#F7F7F8">Electricity <span class="pill warn">Oct 16</span></span><b class="num">₱1,600.00</b></div>
+            <div class="kv"><span style="color:#F7F7F8">Insurance Premium</span><b class="num">₱786.00</b></div>
+          </div>
+          <div class="g2"><div class="fld"><span class="lbl">Pay from</span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#9B2C2C">BPI</span>BPI Savings<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Paid on</span><div class="in">Today, Oct 10<span class="caret">▾</span></div></div></div>
+          <div class="sw-row"><span style="flex:1">Already in the ledger</span><span class="sw" role="switch" aria-checked="false" aria-label="Already in the ledger"></span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn bills">Mark 2 paid</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Statement items</b><span class="from">Opens from: "14 items" on a card statement row</span><span>Leads to: Edit transaction for any item</span></div>
+        <div class="dlg wide">
+          <div class="dh"><div><h3>Credit Card CC (BPI) · Sep 21 – Oct 20</h3><p>Due Nov 5 · minimum ₱768</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g3">
+            <div class="sum"><span class="lbl">Statement</span><b class="num" style="font-size:18px;color:#F7F7F8">₱7,684.79</b></div>
+            <div class="sum"><span class="lbl">Repaid</span><b class="num" style="font-size:18px;color:#6FCB8A">₱0.00</b></div>
+            <div class="sum"><span class="lbl">Unpaid</span><b class="num" style="font-size:18px;color:#FFB37A">₱7,684.79</b></div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <div class="kv"><span style="color:#F7F7F8">Carried over from last statement</span><b class="num" style="color:#9A9FA8">₱0.00</b></div>
+            <div class="kv"><span style="color:#F7F7F8"><span class="dot" style="background:#926AFA;display:inline-block;margin-right:8px"></span>Panasonic Refrigerator · 1 of 12<span style="display:block;font-size:11.5px;color:#83878F;margin-left:16px">Installment · Oct 2</span></span><b class="num">₱2,166.00</b></div>
+            <div class="kv"><span style="color:#F7F7F8"><span class="dot" style="background:#46BD6B;display:inline-block;margin-right:8px"></span>S&amp;R Groceries<span style="display:block;font-size:11.5px;color:#83878F;margin-left:16px">Food &amp; Drinks · Oct 4</span></span><b class="num">₱3,118.79</b></div>
+            <div class="kv"><span style="color:#F7F7F8"><span class="dot" style="background:#FFCA28;display:inline-block;margin-right:8px"></span>Shell · fuel<span style="display:block;font-size:11.5px;color:#83878F;margin-left:16px">Transportation · Oct 6</span></span><b class="num">₱1,200.00</b></div>
+            <div class="kv"><span style="color:#5BAAF5">11 more items…</span><span></span></div>
+          </div>
+          <div class="ft"><button class="btn ghost">Close</button><span style="flex:1"></span><button class="btn pri" style="flex:none">Pay now</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Recurring: which ones?</b><span class="from">Opens from: Delete or Edit on a recurring bill, receivable or set-aside</span></div>
+        <div class="dlg" style="max-width:440px">
+          <div class="dh"><div><h3>Delete Internet</h3><p>This bill repeats every month.</p></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label class="sw-row" style="cursor:pointer"><span style="width:18px;height:18px;border-radius:50%;border:5px solid #2E90FA;flex:none"></span><span style="flex:1">Only this month<small>October stays deleted; November is created as usual</small></span></label>
+            <label class="sw-row" style="cursor:pointer"><span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #4A4E55;flex:none"></span><span style="flex:1">This and future months<small>Stops the series from October on</small></span></label>
+          </div>
+          <div class="ft"><button class="btn ghost">Cancel</button><span style="flex:1"></span><button class="btn danger fill" style="flex:none">Delete</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BUDGET + HISTORY ============ -->
+  <section class="sec">
+    <h2>Budget and History</h2>
+    <div class="grid">
+      <div class="item">
+        <div class="cap"><b>New category</b><span class="from">Opens from: Budget add-row "＋ New category…" · Setup › Categories add row</span><span>Leads to: a category available in Ledger, Bills and Budget</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>New expense category</h3></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in focus">Pet care</div></div><div class="fld"><span class="lbl">Type</span><div class="seg"><span class="out on">Expense</span><span class="in">Income</span></div></div></div>
+          <div class="fld"><span class="lbl">Color</span><div class="swatches"><span style="background:#2E90FA"></span><span style="background:#26C6DA" class="on"></span><span style="background:#46BD6B"></span><span style="background:#FFCA28"></span><span style="background:#FF8A4C"></span><span style="background:#F6685E"></span><span style="background:#926AFA"></span><span style="background:#EC4899"></span><span style="background:#64748B"></span></div></div>
+          <div class="fld"><span class="lbl">Icon <i>· Auto picks one from the name</i></span><div class="icons"><span class="on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="2"/><circle cx="15" cy="7" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><path d="M8 19c0-3 2-5 4-5s4 2 4 5z"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v8a2 2 0 002 2v8M16 3c-2 1-3 4-3 7h3v11"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16l2-6h10l2 6M4 16h16v3H4z"/><circle cx="8" cy="19" r="1"/><circle cx="16" cy="19" r="1"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(-45 12 12)"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l8-5 8 5-8 5zM4 10v6l8 5 8-5v-6"/></svg></span><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7zM9 8V6a3 3 0 016 0v2"/></svg></span></div></div>
+          <div class="sw-row"><span style="flex:1">Exclude from spending totals<small>For transfers, fees, reimbursements</small></span><span class="sw" role="switch" aria-checked="false" aria-label="Exclude from spending totals"></span></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Create</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Manage groups</b><span class="from">Opens from: Budget header</span><span>Leads to: the Group column and the allocation donut</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Budget groups</h3><p>Groups order the table and drive the allocation donut.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div style="display:flex;flex-direction:column">
+            <div class="kv"><span class="row" style="color:#F7F7F8"><span class="dot" style="background:#2E90FA"></span>Essentials <span style="color:#83878F;font-size:12px">· 4 categories</span></span><span class="row"><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px">Rename</button><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px;color:#FF8A80">Delete</button></span></div>
+            <div class="kv"><span class="row" style="color:#F7F7F8"><span class="dot" style="background:#926AFA"></span>Variable <span style="color:#83878F;font-size:12px">· 2</span></span><span class="row"><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px">Rename</button><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px;color:#FF8A80">Delete</button></span></div>
+            <div class="kv"><span class="row" style="color:#F7F7F8"><span class="dot" style="background:#FFCA28"></span>Savings <span style="color:#83878F;font-size:12px">· 8</span></span><span class="row"><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px">Rename</button><button class="btn ghost" style="height:32px;padding:0 10px;font-size:12.5px;color:#FF8A80">Delete</button></span></div>
+          </div>
+          <div class="in ph" style="border-style:dashed">＋ Add a group…</div>
+          <div class="help">Deleting a group moves its categories to "Ungrouped". Nothing is removed from the budget.</div>
+          <div class="ft"><span style="flex:1"></span><button class="btn pri" style="flex:none">Done</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Month detail</b><span class="from">Opens from: a History table row · the live card "Open month"</span><span>Read-only · "Open in Ledger" jumps to that month</span></div>
+        <div class="dlg wide">
+          <div class="dh"><div><h3>September 2026 <span class="pill ok" style="vertical-align:middle;margin-left:6px">Net positive</span></h3><p>Closed · 9 of 11 bills paid</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g3">
+            <div class="sum"><span class="lbl">Income</span><b class="num" style="font-size:18px;color:#6FCB8A">₱76,169</b></div>
+            <div class="sum"><span class="lbl">Expenses</span><b class="num" style="font-size:18px;color:#F7F7F8">₱39,101</b></div>
+            <div class="sum"><span class="lbl">Net · 49 % saved</span><b class="num" style="font-size:18px;color:#5BAAF5">+₱37,068</b></div>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <div class="kv"><span>Ending cash</span><b class="num">₱10,577.36</b></div>
+            <div class="kv"><span>Set aside to savings</span><b class="num">₱22,000.00</b></div>
+            <div class="kv"><span>Bills paid</span><b class="num">₱28,283.58 · 9 of 11</b></div>
+            <div class="kv"><span>Receivables received</span><b class="num" style="color:#6FCB8A">₱56,245.76 · 13</b></div>
+          </div>
+          <div class="fld"><span class="lbl">Spending by category</span>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+              <div><div class="row" style="margin-bottom:4px"><span class="dot" style="background:#926AFA"></span>Household Expenses<b class="num" style="margin-left:auto">₱15,029</b><span style="width:34px;text-align:right;color:#9A9FA8">38%</span></div><div class="bar"><i style="width:38%;background:#926AFA"></i></div></div>
+              <div><div class="row" style="margin-bottom:4px"><span class="dot" style="background:#EC4899"></span>Shopping &amp; Personal<b class="num" style="margin-left:auto">₱6,296</b><span style="width:34px;text-align:right;color:#9A9FA8">16%</span></div><div class="bar"><i style="width:16%;background:#EC4899"></i></div></div>
+              <div><div class="row" style="margin-bottom:4px"><span class="dot" style="background:#2E90FA"></span>Bills &amp; Utilities<b class="num" style="margin-left:auto">₱5,087</b><span style="width:34px;text-align:right;color:#9A9FA8">13%</span></div><div class="bar"><i style="width:13%;background:#2E90FA"></i></div></div>
+            </div>
+          </div>
+          <div class="ft"><button class="btn ghost">Close</button><span style="flex:1"></span><a class="btn" href="Ledger.dc.html">Open in Ledger</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETUP + GOALS ============ -->
+  <section class="sec">
+    <h2>Setup, accounts and goals</h2>
+    <div class="grid">
+      <div class="item">
+        <div class="cap"><b>Add account · credit card</b><span class="from">Opens from: Setup header · Dashboard empty state · row Edit</span><span>Fields change with the type · Leads to: a row in its group</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add account</h3></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in focus">Credit Card (Maribank)</div></div><div class="fld"><span class="lbl">Type</span><div class="in">Credit card<span class="caret">▾</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Current balance <i>owed</i></span><div class="in"><span class="u">₱</span><span class="num">4,786.35</span></div></div><div class="fld"><span class="lbl">Credit limit</span><div class="in"><span class="u">₱</span><span class="num">75,000</span></div></div></div>
+          <div class="fld"><span class="lbl">Look</span><div class="row"><div class="swatches"><span style="background:#9B2C2C"></span><span style="background:#1565C0"></span><span style="background:#1B7A4B"></span><span style="background:#2A2566" class="on"></span><span style="background:#2F6DF6"></span><span style="background:#EE4D2D"></span></div><span class="tile" style="margin-left:auto;background:#2A2566;border:1px solid #2A2A2E;width:36px;height:36px;border-radius:10px">MB</span></div></div>
+          <div class="fold">
+            <div class="fh">Statement &amp; payment<small>· so Bills can create the statement</small></div>
+            <div class="g3"><div class="fld"><span class="lbl">Card preset</span><div class="in" style="height:40px;font-size:13.5px">Maribank<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Statement day</span><div class="in" style="height:40px;font-size:13.5px">20th</div></div><div class="fld"><span class="lbl">Due</span><div class="in" style="height:40px;font-size:13.5px">15 days after</div></div></div>
+            <div class="g2"><div class="fld"><span class="lbl">Minimum payment</span><div class="in" style="height:40px;font-size:13.5px"><span class="u">₱</span>500 or 10 %</div></div><div class="fld"><span class="lbl">Finance rate / month</span><div class="in" style="height:40px;font-size:13.5px">3.00 %<span class="caret" style="font-size:11px">BSP cap</span></div></div></div>
+          </div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn pri">Add account</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Add goal · a goal account</b><span class="from">Opens from: Goals "Add goal" · Setup "+" on a parent account</span><span>Leads to: a Goals card and a Savings row in Budget</span></div>
+        <div class="dlg">
+          <div class="dh"><div><h3>Add goal</h3><p>A fund with a target. It is funded through budget set-asides.</p></div><button class="x" aria-label="Close">×</button></div>
+          <div class="g2"><div class="fld"><span class="lbl">Name</span><div class="in focus">Travel Fund</div></div><div class="fld"><span class="lbl">Target</span><div class="in"><span class="u">₱</span><span class="num">20,000</span></div></div></div>
+          <div class="g2"><div class="fld"><span class="lbl">Stored in <i>optional</i></span><div class="in"><span class="tile" style="width:22px;height:22px;border-radius:6px;font-size:8px;background:#2A2566">MB</span>Maribank<span class="caret">▾</span></div></div><div class="fld"><span class="lbl">Target date <i>optional</i></span><div class="in ph">Pick a month…<span class="caret">▾</span></div></div></div>
+          <div class="fld"><span class="lbl">Monthly set-aside</span><div class="chips"><span class="chip">₱500</span><span class="chip on">₱1,000</span><span class="chip">₱2,000</span><span class="chip">Custom</span></div><div class="help">At ₱1,000 a month you reach ₱20,000 in Jun 2028. This becomes a Savings row in Budget.</div></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><button class="btn move">Add goal</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Start again?</b><span class="from">Opens from: Goals card ⋯ · the goal detail</span></div>
+        <div class="dlg" style="max-width:420px">
+          <div class="dh"><div><h3>Start Birthday Fund again?</h3><p>Its ₱1,500.00 balance moves back to Maribank and the goal restarts at ₱0. The ₱5,000 target stays.</p></div></div>
+          <div class="ft"><button class="btn ghost">Cancel</button><span style="flex:1"></span><button class="btn" style="flex:none">Start again</button></div>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="cap"><b>Delete account?</b><span class="from">Opens from: Setup row ⋯ › Delete · the account form's Delete</span></div>
+        <div class="dlg" style="max-width:440px">
+          <div class="dh"><div><h3>Delete GoTyme?</h3><p>It has no transactions and a ₱0 balance, so nothing else changes.</p></div></div>
+          <div class="help" style="padding:10px 12px;border-radius:12px;background:rgba(255,138,76,.10);border:1px solid rgba(255,138,76,.25);color:#FFB37A">An account with transactions cannot be deleted. Archive it instead; its history stays in the ledger.</div>
+          <div class="ft"><button class="btn ghost">Cancel</button><span style="flex:1"></span><button class="btn danger fill" style="flex:none">Delete</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":4400}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

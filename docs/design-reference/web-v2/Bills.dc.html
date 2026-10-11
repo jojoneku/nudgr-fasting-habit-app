@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Bills</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.stepper{display:inline-flex;align-items:center;height:40px;border:1px solid #2A2A2E;border-radius:12px;background:#1C1C20}
+.stepper button{height:38px;width:36px;border:0;background:transparent;color:#C9CDD3;cursor:pointer;font-size:16px}
+.stepper span{min-width:118px;text-align:center;font-weight:700;font-size:13.5px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:20px}
+.chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chd h2{margin:0;font-size:15px;font-weight:700}
+.chd p{margin:2px 0 0;color:#9A9FA8;font-size:12.5px}
+.chd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.pill.mute{background:#252628;color:#9A9FA8}
+.row{display:flex;align-items:center;gap:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid #26262A;margin:0 -20px;padding:0 12px;overflow-x:auto}
+.tabs a{padding:10px 12px;font-size:13px;font-weight:600;color:#9A9FA8;white-space:nowrap;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;display:inline-flex;gap:6px;align-items:center}
+.tabs a.on{color:#F7F7F8;border-color:#2E90FA}
+.tabs a span{font-size:11px;background:#252628;border-radius:999px;padding:1px 7px;color:#9A9FA8}
+.bill{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1E1E22}
+.bill:last-child{border-bottom:0}
+.cb{width:18px;height:18px;border-radius:6px;border:1.5px solid #4A4E55;display:inline-block;flex:none}
+.tile{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex:none}
+.sub{font-size:11.5px;color:#83878F;display:block}
+.kebab{width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:#83878F;cursor:pointer;font-size:16px}
+.kebab:hover{background:#252628;color:#F7F7F8}
+.bar{height:6px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.kv{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #1E1E22;font-size:13.5px}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:#9A9FA8}
+.cc{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1E1E22}
+.cc:last-child{border-bottom:0}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni" href="Ledger.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni on" href="Bills.dc.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">4 due</span></a>
+  <a class="ni" href="Budget.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni" href="History.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni" href="Setup.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>Bills</h1><p class="sub">October 2026 · 11 bills, 4 still due · 2 to receive · ₱7,885 unpaid</p></div>
+    <div class="actions">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span>October 2026</span><button aria-label="Next month">›</button></div>
+      <button class="btn pri" aria-haspopup="menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add<span style="opacity:.7">▾</span></button>
+      <button class="btn pri" style="width:40px;padding:0" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px;align-items:start">
+    <!-- Left (2 of 3): hero, the one list, credit cards -->
+    <div style="grid-column:span 2;display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="card" style="background:linear-gradient(155deg,#3A2417,#241813 70%,#15171C);border-color:#4A2F1C;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+        <div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:6px">
+          <div class="row" style="gap:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#FF8A4C" aria-hidden="true"><path d="M12 2l10 18H2z"/></svg><span class="eyebrow" style="color:#FFB37A">Due in 6 days</span></div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:-0.02em">Electricity</div>
+          <div style="font-size:12.5px;color:#B89478">Bills &amp; Utilities · due Oct 16 · pay from GCASH · monthly</div>
+        </div>
+        <div class="num" style="font-size:30px;font-weight:800;letter-spacing:-0.02em">₱1,600.00</div>
+        <div style="display:flex;gap:8px;flex:none"><button class="btn" style="background:#FF8A4C;border-color:#FF8A4C;color:#241813;font-weight:800"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Mark paid</button><button class="btn" style="background:rgba(255,255,255,.08);border-color:transparent;color:#FFB37A;width:40px;padding:0" aria-label="Edit Electricity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="btn" style="background:rgba(255,255,255,.08);border-color:transparent;color:#FFB37A;width:40px;padding:0" aria-label="Remind me before due"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"/></svg></button></div>
+      </section>
+
+      <section class="card" style="padding-top:12px">
+        <div class="tabs" role="tablist">
+          <a class="on" href="#upcoming" role="tab" aria-selected="true">Upcoming<span>4</span></a>
+          <a href="#setasides" role="tab">Set-asides<span>7</span></a>
+          <a href="#receivables" role="tab">Receivables<span>2</span></a>
+          <a href="#installments" role="tab">Installments<span>8</span></a>
+          <a href="#paid" role="tab">Paid<span>7</span></a>
+        </div>
+        <div class="row" style="padding:12px 0 4px;font-size:12.5px;color:#9A9FA8"><span>₱7,885 across 4 bills · all monthly</span><span style="margin-left:auto"></span><button class="btn ghost sm">Select</button></div>
+
+        <div class="bill"><span class="cb" aria-label="Select Electricity"></span><span class="tile" style="background:#2E90FA"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg></span><span style="flex:1;min-width:0"><b>Electricity</b> <span class="pill warn" style="margin-left:4px">Due Oct 16</span><span class="sub">Bills &amp; Utilities · GCASH · monthly</span></span><b class="num">₱1,600.00</b><button class="btn sm">Mark paid</button><button class="kebab" aria-label="More actions for Electricity">⋯</button></div>
+        <div class="bill"><span class="cb" aria-label="Select Insurance Premium"></span><span class="tile" style="background:#926AFA"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg></span><span style="flex:1;min-width:0"><b>Insurance Premium</b><span class="sub">Insurance · BPI Savings · due 17th · monthly</span></span><b class="num">₱786.00</b><button class="btn sm">Mark paid</button><button class="kebab" aria-label="More actions for Insurance Premium">⋯</button></div>
+        <div class="bill"><span class="cb" aria-label="Select Brace Monthly"></span><span class="tile" style="background:#26C6DA"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10a2 2 0 012 2v4a7 7 0 01-14 0V6a2 2 0 012-2zM9 20h6"/></svg></span><span style="flex:1;min-width:0"><b>Brace Monthly</b><span class="sub">Other · MAYA · due 24th · reminder 1 day before</span></span><b class="num">₱4,500.00</b><button class="btn sm">Mark paid</button><button class="kebab" aria-label="More actions for Brace Monthly">⋯</button></div>
+        <div class="bill"><span class="cb" aria-label="Select Internet"></span><span class="tile" style="background:#64748B"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 9a14 14 0 0118 0M6.5 12.5a9 9 0 0111 0M10 16a4 4 0 014 0"/><circle cx="12" cy="19" r="1" fill="#fff"/></svg></span><span style="flex:1;min-width:0"><b>Internet</b><span class="sub">Utility · Maribank · due 25th · monthly</span></span><b class="num">₱999.00</b><button class="btn sm">Mark paid</button><button class="kebab" aria-label="More actions for Internet">⋯</button></div>
+        <div class="row" style="padding-top:12px;border-top:1px solid #26262A;margin-top:4px;font-size:13px"><span class="eyebrow">Due</span><span style="font-size:12px;color:#6A6E76;margin-left:8px">7 paid already · ₱12,429.27 settled</span><b class="num" style="margin-left:auto;font-size:16px">₱7,885.00</b></div>
+      </section>
+
+      <!-- Batch bar, the state when Select is active -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:12px;background:rgba(46,144,250,.10);border:1px solid rgba(46,144,250,.25);font-size:13px"><b>2 selected</b><button class="btn ghost sm">Select all</button><button class="btn ghost sm">Clear</button><span style="margin-left:auto"></span><button class="btn pri sm">Pay 2</button><button class="btn sm">Undo 2</button><button class="btn sm" style="color:#FF8A80;border-color:rgba(246,104,94,.35)">Delete 2</button><button class="btn ghost sm">Cancel</button></div>
+
+      <section class="card">
+        <div class="chd"><div><h2>Credit cards &amp; lines</h2><p>Owe ₱18,852.04 across 4 of 6 lines · ₱216,148 available · pay anytime</p></div></div>
+        <div class="cc"><span class="tile" style="background:#9B2C2C">BPI</span><div style="flex:1;min-width:0"><div class="row"><b>Credit Card CC (BPI)</b><span class="num" style="margin-left:auto;color:#FF8A80;font-weight:700">₱7,684.79</span></div><div class="bar" style="margin:7px 0 5px"><i style="width:10%;background:#2E90FA"></i></div><div style="font-size:12px;color:#9A9FA8">₱67,315 of ₱75,000 available · statement 20th · due 5th</div></div><button class="btn sm">Pay now</button></div>
+        <div class="cc"><span class="tile" style="background:#2A2566;border:1px solid #2A2A2E">MB</span><div style="flex:1;min-width:0"><div class="row"><b>Credit Card (Maribank)</b><span class="num" style="margin-left:auto;color:#FF8A80;font-weight:700">₱4,786.35</span></div><div class="bar" style="margin:7px 0 5px"><i style="width:6%;background:#2E90FA"></i></div><div style="font-size:12px;color:#9A9FA8">₱70,214 of ₱75,000 available</div></div><button class="btn sm">Pay now</button></div>
+        <div class="cc"><span class="tile" style="background:#1B7A4B">M</span><div style="flex:1;min-width:0"><div class="row"><b>Maya Easy Credit</b> <span class="pill mute" style="margin-left:4px">Credit line</span><span class="num" style="margin-left:auto;color:#FF8A80;font-weight:700">₱6,006.00</span></div><div class="bar" style="margin:7px 0 5px"><i style="width:60%;background:#FF8A4C"></i></div><div style="font-size:12px;color:#9A9FA8"><b style="color:#FFB37A">60 % used</b> · ₱3,994 of ₱10,000 available</div></div><button class="btn sm">Pay now</button></div>
+        <div class="cc"><span class="tile" style="background:#1B7A4B">M</span><div style="flex:1;min-width:0"><div class="row"><b>Credit Card (Maya)</b><span class="num" style="margin-left:auto;color:#FF8A80;font-weight:700">₱374.90</span></div><div class="bar" style="margin:7px 0 5px"><i style="width:4%;background:#2E90FA"></i></div><div style="font-size:12px;color:#9A9FA8">₱9,625 of ₱10,000 available · statement paid Oct 10</div></div><button class="btn sm">Pay now</button></div>
+        <div class="row" style="padding-top:10px;font-size:12px;color:#6A6E76"><span>ShopeePay (₱75,000) and Maribank Loan (₱40,000) have no balance.</span></div>
+      </section>
+    </div>
+
+    <!-- Right (1 of 3): totals and helpers -->
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <section class="card">
+        <div class="chd"><div><h2>This month</h2><p>Bills, receivables, set-asides and installments</p></div></div>
+        <div class="kv"><span>Due this month</span><b class="num" style="color:#FFB37A;text-align:right">₱7,885.00<span class="sub">4 unpaid</span></b></div>
+        <div class="kv"><span>Paid</span><b class="num" style="color:#6FCB8A;text-align:right">₱12,429.27<span class="sub">7 settled</span></b></div>
+        <div class="kv"><span>Total this month</span><b class="num" style="text-align:right">₱20,314.27<span class="sub">11 bills</span></b></div>
+        <div class="kv"><span>To receive</span><b class="num" style="color:#6FCB8A;text-align:right">+₱2,000.00<span class="sub">1 pending · salary received</span></b></div>
+        <div class="kv"><span>Set-asides to fund</span><b class="num" style="text-align:right">₱18,160.00<span class="sub">7 funds</span></b></div>
+        <div class="kv"><span>Installments</span><b class="num" style="text-align:right">₱4,736.13<span class="sub">6 of 8 plans this month</span></b></div>
+      </section>
+
+      <section class="card">
+        <div class="chd"><div><h2>By account</h2><p>How much to move into each account to cover what's due</p></div></div>
+        <div class="kv"><span class="row" style="gap:8px;color:#F7F7F8"><span class="tile" style="width:26px;height:26px;border-radius:7px;font-size:9px;background:#1B7A4B">M</span><span>MAYA<span class="sub">Brace Monthly · 1 item</span></span></span><b class="num">₱4,500.00</b></div>
+        <div class="kv"><span class="row" style="gap:8px;color:#F7F7F8"><span class="tile" style="width:26px;height:26px;border-radius:7px;font-size:9px;background:#1565C0">G</span><span>GCASH<span class="sub">Electricity · 1 item</span></span></span><b class="num">₱1,600.00</b></div>
+        <div class="kv"><span class="row" style="gap:8px;color:#F7F7F8"><span class="tile" style="width:26px;height:26px;border-radius:7px;font-size:9px;background:#2A2566">MB</span><span>Maribank<span class="sub">Internet · overdrawn by ₱2,153</span></span></span><b class="num">₱3,152.06</b></div>
+        <div class="kv"><span class="row" style="gap:8px;color:#F7F7F8"><span class="tile" style="width:26px;height:26px;border-radius:7px;font-size:9px;background:#9B2C2C">BPI</span><span>BPI Savings<span class="sub">Insurance · already covered</span></span></span><b class="num" style="color:#6FCB8A">₱0.00</b></div>
+        <div class="row" style="padding-top:10px;font-size:13px"><span class="eyebrow">Total to move</span><b class="num" style="margin-left:auto;font-size:16px">₱9,252.06</b></div>
+      </section>
+
+      <section class="card">
+        <div class="chd"><div><h2>Coming up</h2><p>Next 6 across everything</p></div></div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+          <div class="row"><span class="dot" style="background:#46BD6B"></span><span><b>Papa Xiaomi</b><span class="sub">Oct 15 · receivable</span></span><b class="num" style="margin-left:auto;color:#6FCB8A">+₱2,000</b></div>
+          <div class="row"><span class="dot" style="background:#FF8A4C"></span><span><b>Electricity</b><span class="sub">Oct 16 · 6 days</span></span><b class="num" style="margin-left:auto">₱1,600</b></div>
+          <div class="row"><span class="dot" style="background:#83878F"></span><span><b>Insurance Premium</b><span class="sub">Oct 17 · 7 days</span></span><b class="num" style="margin-left:auto">₱786</b></div>
+          <div class="row"><span class="dot" style="background:#83878F"></span><span><b>Brace Monthly</b><span class="sub">Oct 24 · 14 days</span></span><b class="num" style="margin-left:auto">₱4,500</b></div>
+          <div class="row"><span class="dot" style="background:#83878F"></span><span><b>Internet</b><span class="sub">Oct 25 · 15 days</span></span><b class="num" style="margin-left:auto">₱999</b></div>
+          <div class="row"><span class="dot" style="background:#FFCA28"></span><span><b>Emergency Fund</b><span class="sub">Oct 31 · set-aside</span></span><b class="num" style="margin-left:auto">₱12,000</b></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Add menu, shown open as reference -->
+  <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+    <div class="card" style="padding:6px;width:240px;display:flex;flex-direction:column;gap:2px">
+      <div style="padding:6px 10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76">Add ▾</div>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Bill</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Receivable</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Set-aside</button>
+      <button class="btn ghost" style="justify-content:flex-start;height:36px">Installment</button>
+    </div>
+    <p style="margin:0;max-width:560px;font-size:12.5px;color:#9A9FA8;line-height:1.5">One Add menu replaces the five Add buttons. The five list cards become tabs in one list, so a bill appears once: in the hero if it is due soon, and in its tab. Batch select, Mark paid, Pay, Undo, Delete, the statement items link and the reminder bell all stay. The dialogs keep their fields; optional fields move under a "More options" fold.</p>
+  </div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1420}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -5,144 +5,98 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/statement_breakdown_sheet.dart';
-import 'package:intermittent_fasting/views/web/pages/ledger/web_ledger_page.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
+import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
+import '../ledger/web_transaction_dialog_v2.dart';
 
 /// Opens the item list of credit statement [bill] — the web twin of the
-/// mobile [StatementBreakdownSheet].
+/// mobile [StatementBreakdownSheet], on the kit's wide [WebDialog].
+///
+/// [onPayNow] is the page's settle flow for the statement; when given (and the
+/// statement is still unpaid) the footer carries a "Pay now" primary that
+/// closes this dialog and runs it. Without it the footer is just Close.
 Future<void> showWebStatementBreakdownDialog(
   BuildContext context, {
   required BillsReceivablesPresenter presenter,
   required Bill bill,
+  Future<void> Function()? onPayNow,
 }) =>
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
+    showWebDialog<void>(
+      context,
       builder: (_) => WebStatementBreakdownDialog(
         presenter: presenter,
         bill: bill,
+        onPayNow: onPayNow,
       ),
     );
 
 /// Unpaid amount, Bill / Repaid / Unpaid, the cycle's period and item count,
 /// then the card's records grouped as Purchases, Installments, Refunds and
-/// Repaid. Clicking a record opens the ledger's edit dialog for it; the
+/// Repaid. Clicking a record opens the v2 transaction dialog on it; the
 /// dialog listens to both presenters, so the figures follow the edit.
 class WebStatementBreakdownDialog extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final Bill bill;
+  final Future<void> Function()? onPayNow;
 
   const WebStatementBreakdownDialog({
     super.key,
     required this.presenter,
     required this.bill,
+    this.onPayNow,
   });
 
   void _open(BuildContext context, StatementLine line) {
-    showWebEditTransactionDialog(
+    showWebTransactionDialogV2(
       context,
       presenter: presenter.ledger,
-      txn: line.txn,
+      existing: line.txn,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Dialog(
-      backgroundColor: cs.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 560,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-        ),
-        child: ListenableBuilder(
-          listenable: Listenable.merge([presenter, presenter.ledger]),
-          builder: (context, _) {
-            final b = presenter.statementBreakdown(bill);
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _Header(title: bill.name, subtitle: b?.dueLabel),
-                Divider(
-                    height: 1, color: cs.outlineVariant.withValues(alpha: 0.5)),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(WebInsets.xl),
-                    child: b == null
-                        ? const AppEmptyState(
-                            icon: Icons.receipt_long_outlined,
-                            title: 'No statement cycle',
-                            body: 'This bill is not tied to a card with a '
-                                'statement date.',
-                          )
-                        : _Body(
-                            breakdown: b,
-                            onOpen: (line) => _open(context, line),
-                          ),
-                  ),
+    return ListenableBuilder(
+      listenable: Listenable.merge([presenter, presenter.ledger]),
+      builder: (context, _) {
+        final b = presenter.statementBreakdown(bill);
+        final close = TextButton(
+          key: WebKeys.billsStatementClose,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        );
+        final canPay = onPayNow != null && !bill.isPaid;
+        return WebDialog(
+          title: bill.name,
+          subtitle: b?.dueLabel,
+          width: kWebDialogWideWidth,
+          primaryExpands: false,
+          secondary: canPay ? close : null,
+          primary: canPay
+              ? FilledButton(
+                  key: WebKeys.billsStatementPayNow,
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    onPayNow!();
+                  },
+                  child: const Text('Pay now'),
+                )
+              : close,
+          body: b == null
+              ? const AppEmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'No statement cycle',
+                  body: 'This bill is not tied to a card with a '
+                      'statement date.',
+                )
+              : _Body(
+                  breakdown: b,
+                  onOpen: (line) => _open(context, line),
                 ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _Header extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-
-  const _Header({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        WebInsets.xl,
-        WebInsets.lg,
-        WebInsets.md,
-        WebInsets.lg,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
-            tooltip: 'Close',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

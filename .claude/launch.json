@@ -51,6 +51,24 @@
       "port": 8090
     },
     {
+      "name": "Treasury Web v2 (preview seed)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main_web.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8091",
+        "--web-hostname",
+        "localhost",
+        "--dart-define=PREVIEW_SEED=true",
+        "--dart-define=WEB_V2=true"
+      ],
+      "port": 8091
+    },
+    {
       "name": "Mobile App (Windows desktop)",
       "runtimeExecutable": "flutter",
       "runtimeArgs": [

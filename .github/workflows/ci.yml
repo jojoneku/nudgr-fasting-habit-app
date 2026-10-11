@@ -753,7 +753,11 @@ jobs:
       - name: Build web (Treasury companion)
         if: steps.changes.outputs.changed == 'true'
         run: |
+          # WEB_V2 turns on the Plan 063 redesign (lib/views/web/web_flags.dart).
+          # The pre-v2 pages stay in the tree for one release: deleting the
+          # WEB_V2 line below is the rollback.
           scripts/build_web.sh \
+            --dart-define=WEB_V2=true \
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }} \
             --dart-define=AI_ADVISOR_ENDPOINT=${{ secrets.AI_ADVISOR_ENDPOINT }}
 

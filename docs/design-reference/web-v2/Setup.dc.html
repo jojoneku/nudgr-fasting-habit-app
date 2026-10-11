@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Setup &amp; Accounts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:20px}
+.chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chd h2{margin:0;font-size:15px;font-weight:700}
+.chd p{margin:2px 0 0;color:#9A9FA8;font-size:12.5px}
+.chd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.pill.gold{background:rgba(255,202,40,.14);color:#FFCA28}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.mute{background:#252628;color:#9A9FA8}
+.row{display:flex;align-items:center;gap:12px}
+.bar{height:6px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.tabs{display:inline-flex;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:3px;gap:2px}
+.tabs a{padding:7px 14px;border-radius:9px;font-size:13px;font-weight:600;color:#9A9FA8;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.tabs a.on{background:#252628;color:#F7F7F8}
+.tabs a span{font-size:11px;background:#131315;border-radius:999px;padding:1px 7px;color:#9A9FA8}
+.stat{padding:14px 16px;border-radius:12px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;flex-direction:column;gap:4px}
+.stat b{font-size:20px;font-weight:800;letter-spacing:-0.02em}
+.stat small{font-size:11.5px;color:#83878F}
+.tbl{width:100%;border-collapse:collapse;min-width:820px}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76;padding:10px 12px;border-bottom:1px solid #2A2A2E;white-space:nowrap}
+.tbl td{padding:9px 12px;border-bottom:1px solid #1E1E22;font-size:13.5px;vertical-align:middle}
+.tbl tr:hover td{background:#1F1F24}
+.tbl .r{text-align:right}
+.tbl .g td{background:#1A1A1E;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9A9FA8;padding:8px 12px}
+.tbl .g:hover td{background:#1A1A1E}
+.tile{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex:none}
+.sub{font-size:11.5px;color:#83878F;display:block}
+.kebab{width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#83878F;cursor:pointer;font-size:16px}
+.kebab:hover{background:#252628;color:#F7F7F8}
+.sel{height:30px;border-radius:8px;border:1px solid #2A2A2E;background:#131315;color:#C9CDD3;padding:0 8px;font:500 12.5px 'Plus Jakarta Sans',sans-serif}
+.m{color:#83878F;font-size:12px}
+.acts{white-space:nowrap}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni" href="Ledger.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni" href="Bills.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">4 due</span></a>
+  <a class="ni" href="Budget.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni" href="History.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni on" href="Setup.dc.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>Setup &amp; Accounts</h1><p class="sub">23 accounts · 7 liquid · 8 goals · 6 credit lines · 1 investment · 1 custodian</p></div>
+    <div class="actions">
+      <span class="tabs" role="tablist"><a class="on" href="#accounts" role="tab" aria-selected="true">Accounts<span>23</span></a><a href="#categories" role="tab">Categories<span>33</span></a></span>
+      <button class="btn pri"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Add account</button>
+      <button class="btn pri" style="width:40px;padding:0" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:12px">
+    <div class="stat"><span class="eyebrow">Liquid cash</span><b class="num">₱30,542.27</b><small>7 accounts · Maribank is overdrawn</small></div>
+    <div class="stat"><span class="eyebrow">Savings &amp; goals</span><b class="num">₱39,350.00</b><small>8 goals, 4 funded</small></div>
+    <div class="stat"><span class="eyebrow">Credit owed</span><b class="num" style="color:#FFB37A">₱18,852.04</b><small>4 of 6 lines carry a balance</small></div>
+    <div class="stat"><span class="eyebrow">Credit available</span><b class="num" style="color:#5BAAF5">₱216,147.96</b><small>of ₱285,000 across 6 lines</small></div>
+  </div>
+
+  <section class="card" style="padding:0;overflow:hidden">
+    <div class="chd" style="margin:0;padding:16px 20px 10px"><div><h2>Accounts</h2><p>Each account's type and balance · credit cards and lines use a limit · goals show their target</p></div></div>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>Account</th><th style="width:130px">Type</th><th class="r" style="width:140px">Balance</th><th style="width:240px">Credit / target</th><th style="width:110px"></th></tr></thead>
+      <tbody>
+        <tr class="g"><td colspan="5">Liquid · 7 · ₱30,542.27</td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#9B2C2C">BPI</span><span><b>BPI Savings</b><span class="sub">Primary · salary lands here</span></span></span></td><td><select class="sel" aria-label="Type of BPI Savings"><option>Bank</option><option>eWallet</option><option>Cash</option></select></td><td class="r num" style="font-weight:700">₱25,945.33</td><td></td><td class="r acts"><button class="kebab" aria-label="Add savings pocket or goal under BPI Savings">+</button><button class="kebab" aria-label="Edit BPI Savings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#1B7A4B">M</span><b>MAYA</b></span></td><td><select class="sel" aria-label="Type of MAYA"><option>eWallet</option></select></td><td class="r num" style="font-weight:700">₱6,000.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit MAYA"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#3A3A40">₱</span><b>CASH</b></span></td><td><select class="sel" aria-label="Type of CASH"><option>Cash</option></select></td><td class="r num" style="font-weight:700">₱500.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit CASH"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#1565C0">G</span><b>GCASH</b></span></td><td><select class="sel" aria-label="Type of GCASH"><option>eWallet</option></select></td><td class="r num" style="font-weight:700">₱250.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit GCASH"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#2A2566;border:1px solid #2A2A2E">MB</span><span><b>Maribank</b><span class="sub" style="color:#FFB37A">Overdrawn · the last transfer out was larger than the balance</span></span></span></td><td><select class="sel" aria-label="Type of Maribank"><option>Bank</option></select></td><td class="r num" style="font-weight:700;color:#FFB37A">−₱2,153.06</td><td><span class="pill warn">Needs a fix</span></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit Maribank"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#2F6DF6">GT</span><b>GoTyme</b></span></td><td><select class="sel" aria-label="Type of GoTyme"><option>Bank</option></select></td><td class="r num" style="font-weight:700;color:#9A9FA8">₱0.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit GoTyme"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#9B2C2C">V</span><b>Vybe (BPI)</b></span></td><td><select class="sel" aria-label="Type of Vybe"><option>eWallet</option></select></td><td class="r num" style="font-weight:700;color:#9A9FA8">₱0.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Add pocket">+</button><button class="kebab" aria-label="Edit Vybe"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+
+        <tr class="g"><td colspan="5">Goals · 8 · ₱39,350.00 of ₱296,500</td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#46BD6B">EF</span><b>Emergency Fund</b></span></td><td class="m">Goal</td><td class="r num" style="font-weight:700">₱33,850.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:19%;background:#46BD6B"></i></div><span class="num m">19% of ₱180,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Emergency Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#2E90FA">TF</span><b>Tuition Fund</b></span></td><td class="m">Goal</td><td class="r num" style="font-weight:700">₱3,500.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:18%;background:#2E90FA"></i></div><span class="num m">18% of ₱20,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Tuition Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#FFCA28;color:#1A1A1E">BF</span><b>Birthday Fund</b></span></td><td class="m">Goal</td><td class="r num" style="font-weight:700">₱1,500.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:30%;background:#FFCA28"></i></div><span class="num m">30% of ₱5,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Birthday Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#26C6DA;color:#1A1A1E">BM</span><b>Braces Maintenance Fund</b></span></td><td class="m">Goal</td><td class="r num" style="font-weight:700">₱500.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:10%;background:#26C6DA"></i></div><span class="num m">10% of ₱5,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Braces Maintenance Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#4A4E55">SB</span><b>Savings Braces Fund</b></span></td><td class="m">Goal</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">0% of ₱60,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Savings Braces Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#4A4E55">TR</span><b>Travel Fund</b></span></td><td class="m">Goal</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">0% of ₱20,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Travel Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#4A4E55">BN</span><b>Buy Something Nice Fund</b></span></td><td class="m">Goal</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">0% of ₱5,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Buy Something Nice Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#4A4E55">MM</span><b>Motor Maintenance Fund</b></span></td><td class="m">Goal</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">0% of ₱1,500</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Motor Maintenance Fund"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+
+        <tr class="g"><td colspan="5">Credit · 6 · owe ₱18,852.04 · ₱216,148 available</td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#9B2C2C">BPI</span><span><b>Credit Card CC (BPI)</b><span class="sub">Statement 20th · due 5th</span></span></span></td><td class="m">Credit card</td><td class="r num" style="font-weight:700;color:#FF8A80">−₱7,684.79</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:10%;background:#2E90FA"></i></div><span class="num m">₱67,315 of ₱75,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Credit Card CC (BPI)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#2A2566;border:1px solid #2A2A2E">MB</span><b>Credit Card (Maribank)</b></span></td><td class="m">Credit card</td><td class="r num" style="font-weight:700;color:#FF8A80">−₱4,786.35</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:6%;background:#2E90FA"></i></div><span class="num m">₱70,214 of ₱75,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Credit Card (Maribank)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#1B7A4B">M</span><b>Maya Easy Credit</b></span></td><td class="m">Credit line</td><td class="r num" style="font-weight:700;color:#FF8A80">−₱6,006.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:60%;background:#FF8A4C"></i></div><span class="num m">₱3,994 of ₱10,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Maya Easy Credit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#1B7A4B">M</span><b>Credit Card (Maya)</b></span></td><td class="m">Credit card</td><td class="r num" style="font-weight:700;color:#FF8A80">−₱374.90</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:4%;background:#2E90FA"></i></div><span class="num m">₱9,625 of ₱10,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Credit Card (Maya)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#EE4D2D">SP</span><b>ShopeePay</b></span></td><td class="m">BNPL</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">₱75,000 of ₱75,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit ShopeePay"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#2A2566;border:1px solid #2A2A2E">MB</span><b>Maribank Loan</b></span></td><td class="m">Credit line</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">₱40,000 of ₱40,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Maribank Loan"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#9B2C2C">BPI</span><b>Madness Limit (BPI)</b></span></td><td class="m">Credit card</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td><span class="row" style="gap:8px"><div class="bar" style="flex:1"><i style="width:0%"></i></div><span class="num m">₱75,000 of ₱75,000</span></span></td><td class="r acts"><button class="kebab" aria-label="Edit Madness Limit (BPI)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+
+        <tr class="g"><td colspan="5">Investment · 1</td></tr>
+        <tr><td><span class="row" style="gap:10px"><span class="tile" style="background:#4A4E55">PI</span><b>Pagibig</b></span></td><td class="m">Investment</td><td class="r num" style="color:#9A9FA8">₱0.00</td><td></td><td class="r acts"><button class="kebab" aria-label="Edit Pagibig"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button><button class="kebab" aria-label="More actions">⋯</button></td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <p style="margin:0;max-width:720px;font-size:12.5px;color:#9A9FA8;line-height:1.5">Accounts and Categories are two tabs, so the page is not always long. The Credit Limit and Available columns collapse into one "Credit / target" column: a bar with the available amount for credit, and the goal progress for goals; liquid rows leave it empty instead of showing "—". The Categories tab keeps its table (name, type, color, exclude, delete) and the add row with the icon picker. Rows are your 23 real accounts.</p>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

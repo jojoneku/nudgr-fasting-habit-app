@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../app_colors.dart';
 import '../design/web_breakpoints.dart';
 
 /// Tone of a [WebBadge] — maps to a theme color, never a hardcoded one.
@@ -16,16 +18,16 @@ class WebBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // Warning is the domain orange (`bills`), not `colorScheme.secondary`:
+    // secondary is the teal accent, as on mobile.
+    final warning = context.appColors.bills;
     final (fg, bg) = switch (tone) {
       WebBadgeTone.neutral => (cs.onSurfaceVariant, cs.surfaceContainerHighest),
       WebBadgeTone.success => (
           cs.tertiary,
           cs.tertiary.withValues(alpha: 0.14)
         ),
-      WebBadgeTone.warning => (
-          cs.secondary,
-          cs.secondary.withValues(alpha: 0.14)
-        ),
+      WebBadgeTone.warning => (warning, warning.withValues(alpha: 0.14)),
       WebBadgeTone.danger => (cs.error, cs.error.withValues(alpha: 0.14)),
       WebBadgeTone.info => (cs.primary, cs.primary.withValues(alpha: 0.14)),
     };

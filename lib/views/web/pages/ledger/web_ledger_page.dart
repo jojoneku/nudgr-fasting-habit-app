@@ -17,10 +17,11 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_receipt_drop.dart';
 import '../../widgets/web_widgets.dart';
+import 'ledger_cells.dart';
+import 'ledger_filters.dart';
+import 'ledger_filters_popover.dart';
 
-/// Hoisted so the per-row date cells don't allocate a new [DateFormat] on
-/// every build. (Plan 052 P10)
-final DateFormat _kMonthDayFmt = DateFormat('MMM d');
+export 'ledger_filters.dart';
 
 /// Web Ledger page (Plan 051). A Google-Sheets-style, inline-editable
 /// transaction grid matching the Claude Design reference
@@ -43,110 +44,6 @@ class WebLedgerPage extends StatefulWidget {
   State<WebLedgerPage> createState() => _WebLedgerPageState();
 }
 
-/// Ledger table filters + sort + search.
-///
-/// Lives outside the page widget for two reasons: it survives navigation (page
-/// state did not), and accounts/categories are multi-select here just as they
-/// are on mobile — the web table used to allow exactly one of each, so the same
-/// filter could not be expressed on both platforms.
-class WebLedgerFilters extends ChangeNotifier {
-  final Set<String> accountIds = <String>{};
-  final Set<String> categoryIds = <String>{};
-  WebLedgerType type = WebLedgerType.all;
-  DateTime? fromDate;
-  DateTime? toDate;
-  WebLedgerSortKey? sortKey; // null = presenter default (newest first)
-  int sortDir = -1;
-  String query = '';
-
-  /// A search term or a date range asks a question about the whole ledger, not
-  /// about one month — the grid widens its scope to all history when either is
-  /// set, and says so.
-  bool get spansAllMonths =>
-      query.isNotEmpty || fromDate != null || toDate != null;
-
-  int get activeCount => [
-        accountIds.isNotEmpty,
-        categoryIds.isNotEmpty,
-        type != WebLedgerType.all,
-        fromDate != null || toDate != null,
-        sortKey != null,
-      ].where((b) => b).length;
-
-  /// True when anything at all is narrowing the grid — used to tell "you have
-  /// no transactions" apart from "your filters hid them".
-  bool get isNarrowed => activeCount > 0 || query.isNotEmpty;
-
-  void toggleAccount(String? id) {
-    if (id == null) {
-      accountIds.clear();
-    } else if (!accountIds.remove(id)) {
-      accountIds.add(id);
-    }
-    notifyListeners();
-  }
-
-  void toggleCategory(String? id) {
-    if (id == null) {
-      categoryIds.clear();
-    } else if (!categoryIds.remove(id)) {
-      categoryIds.add(id);
-    }
-    notifyListeners();
-  }
-
-  void setType(WebLedgerType v) {
-    type = v;
-    notifyListeners();
-  }
-
-  void setFromDate(DateTime? v) {
-    fromDate = v;
-    // Keep the range coherent rather than silently returning nothing.
-    if (v != null && toDate != null && toDate!.isBefore(v)) toDate = v;
-    notifyListeners();
-  }
-
-  void setToDate(DateTime? v) {
-    toDate = v;
-    if (v != null && fromDate != null && fromDate!.isAfter(v)) fromDate = v;
-    notifyListeners();
-  }
-
-  void setSort(WebLedgerSortOption? opt) {
-    sortKey = opt?.key;
-    sortDir = opt?.dir ?? -1;
-    notifyListeners();
-  }
-
-  void toggleHeaderSort(WebLedgerSortKey key) {
-    if (sortKey == key) {
-      sortDir = -sortDir;
-    } else {
-      sortKey = key;
-      sortDir = 1;
-    }
-    notifyListeners();
-  }
-
-  void setQuery(String v) {
-    if (v == query) return;
-    query = v;
-    notifyListeners();
-  }
-
-  void clear() {
-    accountIds.clear();
-    categoryIds.clear();
-    type = WebLedgerType.all;
-    fromDate = null;
-    toDate = null;
-    sortKey = null;
-    sortDir = -1;
-    notifyListeners();
-  }
-}
-
 /// One enriched, display-ready ledger row.
 typedef _Row = ({
   TransactionRecord txn,
@@ -154,96 +51,12 @@ typedef _Row = ({
   double accountBalance,
 });
 
-enum WebLedgerType { all, inflow, outflow }
-
-enum WebLedgerSortKey {
-  date,
-  account,
-  description,
-  category,
-  inflow,
-  outflow,
-  amount
-}
-
-/// Preset sort options shown in the Filters & Sort popover.
-class WebLedgerSortOption {
-  final String label;
-  final WebLedgerSortKey key;
-  final int dir; // 1 asc, -1 desc
-  const WebLedgerSortOption(this.label, this.key, this.dir);
-}
-
-const _kSortOptions = <WebLedgerSortOption>[
-  WebLedgerSortOption('Newest first', WebLedgerSortKey.date, -1),
-  WebLedgerSortOption('Oldest first', WebLedgerSortKey.date, 1),
-  WebLedgerSortOption('Highest outflow', WebLedgerSortKey.outflow, -1),
-  WebLedgerSortOption('Highest inflow', WebLedgerSortKey.inflow, -1),
-  WebLedgerSortOption('Largest amount', WebLedgerSortKey.amount, -1),
-];
-
-// Fixed, non-resizable column widths (px). The selection checkbox and the
-// hover-delete column never resize.
-const double _wCheck = 44;
-const double _wDelete = 48;
-
-/// Minimum width the flexible Description column is allowed to shrink to before
-/// the grid starts scrolling horizontally.
-const double _wDescMin = 200;
-
-/// Columns the user can drag-resize from the header.
-enum _ResizableCol { date, account, category, inflow, outflow, acctBal }
-
-/// Mutable per-column widths. The Description column is flexible (it stretches
-/// to fill leftover space) so it isn't tracked here. Defaults reclaim the space
-/// freed by removing the old Running + Notes columns and hand it to Account and
-/// Category, which were truncating long names. (Ledger UX overhaul PR1)
-class _ColWidths {
-  double date = 118;
-  double account = 210;
-  double category = 210;
-  double inflow = 124;
-  double outflow = 124;
-  double acctBal = 150;
-
-  double get fixedSum =>
-      _wCheck +
-      date +
-      account +
-      category +
-      inflow +
-      outflow +
-      acctBal +
-      _wDelete;
-
-  void resize(_ResizableCol col, double delta) {
-    switch (col) {
-      case _ResizableCol.date:
-        date = (date + delta).clamp(80.0, 360.0);
-      case _ResizableCol.account:
-        account = (account + delta).clamp(110.0, 420.0);
-      case _ResizableCol.category:
-        category = (category + delta).clamp(110.0, 420.0);
-      case _ResizableCol.inflow:
-        inflow = (inflow + delta).clamp(90.0, 260.0);
-      case _ResizableCol.outflow:
-        outflow = (outflow + delta).clamp(90.0, 260.0);
-      case _ResizableCol.acctBal:
-        acctBal = (acctBal + delta).clamp(100.0, 300.0);
-    }
-  }
-}
-
-/// Shared height for every toolbar control (Filters & Sort, search, Add
-/// Transaction, active chips) so they line up at exactly the same height.
-const double _kControlHeight = 40;
-
 class _WebLedgerPageState extends State<WebLedgerPage> {
   final _searchController = TextEditingController();
   final _gridHScroll = ScrollController(); // horizontal grid scroll (U8)
   final _gridVScroll =
       ScrollController(); // vertical rows scroll (sticky header)
-  final _col = _ColWidths(); // drag-resizable column widths
+  final _col = LedgerColWidths(); // drag-resizable column widths
 
   /// Filters & sort — View-side (never mutates presenter state), but owned
   /// above the page when the shell supplies one so they survive navigation.
@@ -815,13 +628,16 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final avail = constraints.maxWidth;
-                final descW = max(_wDescMin, avail - _col.fixedSum);
+                final descW = max(kLedgerDescMinWidth, avail - _col.fixedSum);
                 final gridW = _col.fixedSum + descW;
                 // Left edges of the two money columns, used to paint full-height
                 // green/red column washes that run continuously behind every row
                 // (header → draft → rows) instead of stopping inside each cell.
-                final inflowLeft =
-                    _wCheck + _col.date + _col.account + descW + _col.category;
+                final inflowLeft = kLedgerCheckWidth +
+                    _col.date +
+                    _col.account +
+                    descW +
+                    _col.category;
                 final outflowLeft = inflowLeft + _col.inflow;
                 return Scrollbar(
                   controller: _gridHScroll,
@@ -1079,7 +895,7 @@ class _Toolbar extends StatelessWidget {
   });
 
   WebLedgerSortOption? get _activeSortOption {
-    for (final o in _kSortOptions) {
+    for (final o in kLedgerSortOptions) {
       if (o.key == sortKey && o.dir == sortDir) return o;
     }
     return null;
@@ -1087,7 +903,7 @@ class _Toolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final df = _kMonthDayFmt;
+    final df = kLedgerMonthDayFmt;
     final dateLabel = fromDate != null && toDate != null
         ? '${df.format(fromDate!)} → ${df.format(toDate!)}'
         : fromDate != null
@@ -1102,22 +918,22 @@ class _Toolbar extends StatelessWidget {
       // One chip per selected account/category — picking a second no longer
       // replaces the first, matching mobile's multi-select filters.
       for (final id in accountIds)
-        _ActiveChip(
+        LedgerActiveChip(
           label: accountName(id),
           onClear: () => onAccount(id),
         ),
       for (final id in categoryIds)
-        _ActiveChip(
+        LedgerActiveChip(
           label: categoryName(id),
           onClear: () => onCategory(id),
         ),
       if (type != WebLedgerType.all)
-        _ActiveChip(
+        LedgerActiveChip(
           label: type == WebLedgerType.inflow ? 'Inflow only' : 'Outflow only',
           onClear: () => onType(WebLedgerType.all),
         ),
       if (dateLabel != null)
-        _ActiveChip(
+        LedgerActiveChip(
           label: dateLabel,
           icon: Icons.history,
           onClear: () {
@@ -1126,7 +942,7 @@ class _Toolbar extends StatelessWidget {
           },
         ),
       if (sortLabel != null)
-        _ActiveChip(
+        LedgerActiveChip(
           label: sortLabel,
           icon: Icons.swap_vert_rounded,
           onClear: () => onSort(null),
@@ -1178,7 +994,7 @@ class _Toolbar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: WebInsets.sm),
-        _FiltersAndSort(
+        LedgerFiltersPopover(
           accounts: accounts,
           categories: categories,
           accountIds: accountIds,
@@ -1246,7 +1062,7 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 220,
-      height: _kControlHeight,
+      height: kLedgerControlHeight,
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
@@ -1273,555 +1089,19 @@ class _AddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: _kControlHeight,
+      height: kLedgerControlHeight,
       child: FilledButton.icon(
         onPressed: onPressed,
         icon: const Icon(Icons.add_rounded, size: 18),
         label: const Text('Add Transaction'),
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: WebInsets.lg),
-          minimumSize: const Size(0, _kControlHeight),
+          minimumSize: const Size(0, kLedgerControlHeight),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The "Filters & Sort" trigger button + popover panel, anchored with an
-/// [OverlayPortal] so interacting with the inner controls never closes it.
-class _FiltersAndSort extends StatefulWidget {
-  final List<FinancialAccount> accounts;
-  final List<FinanceCategory> categories;
-  final Set<String> accountIds;
-  final Set<String> categoryIds;
-  final WebLedgerType type;
-  final DateTime? fromDate;
-  final DateTime? toDate;
-  final WebLedgerSortKey? sortKey;
-  final int sortDir;
-  final int activeCount;
-
-  /// Toggles one account/category in the multi-select; null clears that filter.
-  final ValueChanged<String?> onAccount;
-  final ValueChanged<String?> onCategory;
-  final ValueChanged<WebLedgerType> onType;
-  final ValueChanged<DateTime?> onFromDate;
-  final ValueChanged<DateTime?> onToDate;
-  final ValueChanged<WebLedgerSortOption?> onSort;
-  final VoidCallback onClear;
-
-  const _FiltersAndSort({
-    required this.accounts,
-    required this.categories,
-    required this.accountIds,
-    required this.categoryIds,
-    required this.type,
-    required this.fromDate,
-    required this.toDate,
-    required this.sortKey,
-    required this.sortDir,
-    required this.activeCount,
-    required this.onAccount,
-    required this.onCategory,
-    required this.onType,
-    required this.onFromDate,
-    required this.onToDate,
-    required this.onSort,
-    required this.onClear,
-  });
-
-  @override
-  State<_FiltersAndSort> createState() => _FiltersAndSortState();
-}
-
-class _FiltersAndSortState extends State<_FiltersAndSort> {
-  final _controller = OverlayPortalController();
-  final _link = LayerLink();
-
-  WebLedgerSortOption? get _activeSortOption {
-    for (final o in _kSortOptions) {
-      if (o.key == widget.sortKey && o.dir == widget.sortDir) return o;
-    }
-    return null;
-  }
-
-  Future<void> _pickDate(BuildContext context, bool isFrom) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: (isFrom ? widget.fromDate : widget.toDate) ?? DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-    );
-    if (picked == null) return;
-    isFrom ? widget.onFromDate(picked) : widget.onToDate(picked);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final active = widget.activeCount > 0;
-    return CompositedTransformTarget(
-      link: _link,
-      child: OverlayPortal(
-        controller: _controller,
-        overlayChildBuilder: _buildPanel,
-        child: SizedBox(
-          height: _kControlHeight,
-          child: OutlinedButton.icon(
-            onPressed: _controller.toggle,
-            icon: const Icon(Icons.tune_rounded, size: 16),
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Filters & Sort'),
-                if (active) ...[
-                  const SizedBox(width: WebInsets.sm),
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 18),
-                    height: 18,
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Text(
-                      '${widget.activeCount}',
-                      style: TextStyle(
-                        color: cs.onPrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(width: WebInsets.xs),
-                const Icon(Icons.expand_more_rounded, size: 16),
-              ],
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: active ? cs.onSurface : cs.onSurfaceVariant,
-              side: BorderSide(color: active ? cs.primary : cs.outlineVariant),
-              padding: const EdgeInsets.symmetric(horizontal: WebInsets.md),
-              minimumSize: const Size(0, _kControlHeight),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadii.sm),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPanel(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Stack(
-      children: [
-        // Outside-tap barrier. translucent so the tap that dismisses the
-        // panel also reaches the row cell the user intended to click. (fix)
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _controller.hide,
-          ),
-        ),
-        CompositedTransformFollower(
-          link: _link,
-          targetAnchor: Alignment.bottomLeft,
-          followerAnchor: Alignment.topLeft,
-          offset: const Offset(0, 6),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 340,
-                padding: const EdgeInsets.all(WebInsets.lg),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                  border: Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.6),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      // Theme shadow token, not literal black — black at 0.18
-                      // reads far too heavy over light-mode surfaces. (T5)
-                      color: cs.shadow.withValues(alpha: 0.18),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Multi-select: picking an entry toggles it rather than
-                    // replacing the previous pick, so several accounts (or
-                    // categories) can be filtered at once as on mobile. The
-                    // selection reads back as removable chips in the toolbar.
-                    _FilterRow(
-                      label: 'Accounts',
-                      child: WebSearchableDropdown<String?>(
-                        value: null,
-                        hintText: widget.accountIds.isEmpty
-                            ? 'All accounts'
-                            : '${widget.accountIds.length} selected — add another',
-                        entries: [
-                          const WebDropdownEntry<String?>(
-                            value: null,
-                            label: 'All accounts',
-                          ),
-                          ...widget.accounts.map(
-                            (a) => WebDropdownEntry<String?>(
-                              value: a.id,
-                              label: widget.accountIds.contains(a.id)
-                                  ? '✓ ${a.name}'
-                                  : a.name,
-                            ),
-                          ),
-                        ],
-                        onChanged: widget.onAccount,
-                      ),
-                    ),
-                    const SizedBox(height: WebInsets.md),
-                    _FilterRow(
-                      label: 'Categories',
-                      child: WebSearchableDropdown<String?>(
-                        value: null,
-                        hintText: widget.categoryIds.isEmpty
-                            ? 'All categories'
-                            : '${widget.categoryIds.length} selected — add another',
-                        entries: [
-                          const WebDropdownEntry<String?>(
-                            value: null,
-                            label: 'All categories',
-                          ),
-                          ...widget.categories.map(
-                            (c) => WebDropdownEntry<String?>(
-                              value: c.id,
-                              label: widget.categoryIds.contains(c.id)
-                                  ? '✓ ${c.name}'
-                                  : c.name,
-                            ),
-                          ),
-                        ],
-                        onChanged: widget.onCategory,
-                      ),
-                    ),
-                    const SizedBox(height: WebInsets.md),
-                    _FilterRow(
-                      label: 'Type',
-                      child: _TypeSegmented(
-                        value: widget.type,
-                        onChanged: widget.onType,
-                      ),
-                    ),
-                    const SizedBox(height: WebInsets.md),
-                    _FilterRow(
-                      label: 'Sort by',
-                      child: _PanelDropdown<int>(
-                        value: _activeSortOption == null
-                            ? -1
-                            : _kSortOptions.indexOf(_activeSortOption!),
-                        items: [
-                          const DropdownMenuItem(
-                            value: -1,
-                            child: Text('Default (date order)'),
-                          ),
-                          for (var i = 0; i < _kSortOptions.length; i++)
-                            DropdownMenuItem(
-                              value: i,
-                              child: Text(_kSortOptions[i].label),
-                            ),
-                        ],
-                        onChanged: (i) => widget.onSort(
-                          i == null || i < 0 ? null : _kSortOptions[i],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: WebInsets.md),
-                    _FilterRow(
-                      label: 'Date range',
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _DateButton(
-                              label: widget.fromDate == null
-                                  ? 'From'
-                                  : _kMonthDayFmt.format(widget.fromDate!),
-                              onTap: () => _pickDate(context, true),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: WebInsets.sm,
-                            ),
-                            child: Text(
-                              '→',
-                              style: TextStyle(color: cs.onSurfaceVariant),
-                            ),
-                          ),
-                          Expanded(
-                            child: _DateButton(
-                              label: widget.toDate == null
-                                  ? 'Until'
-                                  : _kMonthDayFmt.format(widget.toDate!),
-                              onTap: () => _pickDate(context, false),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: WebInsets.lg),
-                    Divider(
-                      height: 1,
-                      color: cs.outlineVariant.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: WebInsets.md),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: widget.onClear,
-                          child: const Text('Clear all'),
-                        ),
-                        FilledButton(
-                          onPressed: _controller.hide,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: WebInsets.lg,
-                            ),
-                          ),
-                          child: const Text('Done'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  final String label;
-  final Widget child;
-  const _FilterRow({required this.label, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: cs.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
-              ),
-        ),
-        const SizedBox(height: WebInsets.sm),
-        child,
-      ],
-    );
-  }
-}
-
-class _PanelDropdown<T> extends StatelessWidget {
-  final T value;
-  final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?> onChanged;
-  const _PanelDropdown({
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: WebInsets.md),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T>(
-          value: value,
-          items: items,
-          onChanged: onChanged,
-          isExpanded: true,
-          isDense: true,
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          style: Theme.of(context).textTheme.bodyMedium,
-          icon: const Icon(Icons.expand_more_rounded, size: 18),
-        ),
-      ),
-    );
-  }
-}
-
-class _TypeSegmented extends StatelessWidget {
-  final WebLedgerType value;
-  final ValueChanged<WebLedgerType> onChanged;
-  const _TypeSegmented({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      height: 40,
-      padding: const EdgeInsets.all(WebInsets.xs),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          _seg(context, WebLedgerType.all, 'All'),
-          _seg(context, WebLedgerType.inflow, 'Inflow'),
-          _seg(context, WebLedgerType.outflow, 'Outflow'),
-        ],
-      ),
-    );
-  }
-
-  Widget _seg(BuildContext context, WebLedgerType v, String label) {
-    final cs = Theme.of(context).colorScheme;
-    final sel = v == value;
-    return Expanded(
-      // MouseRegion for a pointer cursor — this was a bare GestureDetector with
-      // no hover affordance on desktop. (Plan 052 U9)
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () => onChanged(v),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            height: double.infinity,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: sel ? cs.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(AppRadii.sm - 2),
-            ),
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: sel ? cs.onPrimary : cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DateButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _DateButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadii.sm),
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: WebInsets.md),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadii.sm),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.calendar_today_outlined,
-              size: 14,
-              color: cs.onSurfaceVariant,
-            ),
-            const SizedBox(width: WebInsets.sm),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActiveChip extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final VoidCallback onClear;
-  const _ActiveChip({required this.label, this.icon, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      height: _kControlHeight,
-      padding: const EdgeInsets.only(left: WebInsets.md, right: WebInsets.xs),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 13, color: cs.onSurfaceVariant),
-            const SizedBox(width: WebInsets.sm),
-          ],
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: WebInsets.xs),
-          InkWell(
-            onTap: onClear,
-            borderRadius: BorderRadius.circular(AppRadii.sm),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.close_rounded,
-                size: 14,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1874,13 +1154,13 @@ class _SelectionBar extends StatelessWidget {
 
 class _GridHeader extends StatelessWidget {
   final double descWidth;
-  final _ColWidths widths;
+  final LedgerColWidths widths;
   final WebLedgerSortKey? sortKey;
   final int sortDir;
   final bool allSelected;
   final VoidCallback onToggleAll;
   final ValueChanged<WebLedgerSortKey> onSort;
-  final void Function(_ResizableCol, double) onResize;
+  final void Function(LedgerResizableCol, double) onResize;
   const _GridHeader({
     required this.descWidth,
     required this.widths,
@@ -1907,52 +1187,52 @@ class _GridHeader extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: _wCheck,
+            width: kLedgerCheckWidth,
             child: Center(
-              child: _Check(on: allSelected, onTap: onToggleAll),
+              child: LedgerCheck(on: allSelected, onTap: onToggleAll),
             ),
           ),
           _hCell(
             'Date',
             widths.date,
             WebLedgerSortKey.date,
-            resize: _ResizableCol.date,
+            resize: LedgerResizableCol.date,
           ),
           _hCell(
             'Account',
             widths.account,
             WebLedgerSortKey.account,
-            resize: _ResizableCol.account,
+            resize: LedgerResizableCol.account,
           ),
           _hCell('Description', descWidth, WebLedgerSortKey.description),
           _hCell(
             'Category',
             widths.category,
             WebLedgerSortKey.category,
-            resize: _ResizableCol.category,
+            resize: LedgerResizableCol.category,
           ),
           _hCell(
             'Inflow',
             widths.inflow,
             WebLedgerSortKey.inflow,
             right: true,
-            resize: _ResizableCol.inflow,
+            resize: LedgerResizableCol.inflow,
           ),
           _hCell(
             'Outflow',
             widths.outflow,
             WebLedgerSortKey.outflow,
             right: true,
-            resize: _ResizableCol.outflow,
+            resize: LedgerResizableCol.outflow,
           ),
           _hCell(
             'Acct. Balance',
             widths.acctBal,
             null,
             right: true,
-            resize: _ResizableCol.acctBal,
+            resize: LedgerResizableCol.acctBal,
           ),
-          const SizedBox(width: _wDelete),
+          const SizedBox(width: kLedgerTrailingWidth),
         ],
       ),
     );
@@ -1963,9 +1243,9 @@ class _GridHeader extends StatelessWidget {
     double width,
     WebLedgerSortKey? key, {
     bool right = false,
-    _ResizableCol? resize,
+    LedgerResizableCol? resize,
   }) {
-    return _HeaderCell(
+    return LedgerHeaderCell(
       label: label,
       width: width,
       sortKey: key,
@@ -1986,140 +1266,6 @@ Color _inflowTint(BuildContext context) =>
         .withValues(alpha: 0.06);
 Color _outflowTint(BuildContext context) =>
     Theme.of(context).colorScheme.error.withValues(alpha: 0.06);
-
-class _HeaderCell extends StatelessWidget {
-  final String label;
-  final double width;
-  final WebLedgerSortKey? sortKey;
-  final bool active;
-  final int dir;
-  final bool right;
-  final VoidCallback? onSort;
-
-  /// When non-null, a draggable divider on the cell's right edge resizes the
-  /// column by the horizontal drag delta.
-  final ValueChanged<double>? onResize;
-  const _HeaderCell({
-    required this.label,
-    required this.width,
-    required this.sortKey,
-    required this.active,
-    required this.dir,
-    required this.right,
-    required this.onSort,
-    this.onResize,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: active ? cs.onSurface : cs.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
-        );
-    final chevron = onSort == null
-        ? const SizedBox.shrink()
-        : Icon(
-            Icons.expand_more_rounded,
-            size: 13,
-            color: active
-                ? cs.onSurface
-                : cs.onSurfaceVariant.withValues(alpha: 0.35),
-          );
-    final content = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (right && onSort != null)
-          Transform.rotate(
-            angle: active && dir < 0 ? 3.14159 : 0,
-            child: chevron,
-          ),
-        Flexible(
-          child: Text(
-            label.toUpperCase(),
-            style: style,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (!right && onSort != null)
-          Transform.rotate(
-            angle: active && dir < 0 ? 3.14159 : 0,
-            child: chevron,
-          ),
-      ],
-    );
-    return SizedBox(
-      width: width,
-      child: Stack(
-        children: [
-          InkWell(
-            onTap: onSort,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: WebInsets.md,
-                vertical: WebInsets.md,
-              ),
-              child: Align(
-                alignment: right ? Alignment.centerRight : Alignment.centerLeft,
-                child: content,
-              ),
-            ),
-          ),
-          if (onResize != null)
-            Positioned(
-              top: 0,
-              bottom: 0,
-              right: 0,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeColumn,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onHorizontalDragUpdate: (d) => onResize!(d.delta.dx),
-                  child: Center(
-                    child: Container(
-                      width: 1,
-                      height: 16,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      color: cs.outlineVariant.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Check extends StatelessWidget {
-  final bool on;
-  final VoidCallback onTap;
-  const _Check({required this.on, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(5),
-      child: Container(
-        width: 16,
-        height: 16,
-        decoration: BoxDecoration(
-          color: on ? cs.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: on ? cs.primary : cs.outline, width: 1.5),
-        ),
-        child: on
-            ? Icon(Icons.check_rounded, size: 11, color: cs.onPrimary)
-            : null,
-      ),
-    );
-  }
-}
 
 class _EmptyGridHint extends StatelessWidget {
   final bool hasAccounts;
@@ -2181,7 +1327,7 @@ class _EmptyGridHint extends StatelessWidget {
 class _EditableRow extends StatefulWidget {
   final _Row row;
   final double descWidth;
-  final _ColWidths widths;
+  final LedgerColWidths widths;
   final bool selected;
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
@@ -2261,16 +1407,16 @@ class _EditableRowState extends State<_EditableRow> {
       child: Row(
         children: [
           SizedBox(
-            width: _wCheck,
+            width: kLedgerCheckWidth,
             child: Center(
-              child: _Check(
+              child: LedgerCheck(
                 on: widget.selected,
                 onTap: widget.onToggleSelect,
               ),
             ),
           ),
           // Date
-          _DateCell(
+          LedgerDateCell(
             width: w.date,
             date: t.date,
             enabled: !isTransfer,
@@ -2278,19 +1424,19 @@ class _EditableRowState extends State<_EditableRow> {
           ),
           // Account
           isTransfer
-              ? _TransferAccountCell(
+              ? LedgerTransferAccountCell(
                   width: w.account,
                   txn: t,
                   accounts: widget.accounts,
                 )
-              : _AccountCell(
+              : LedgerAccountCell(
                   width: w.account,
                   value: t.accountId,
                   accounts: widget.accounts,
                   onChanged: (id) => widget.onAccount(t, id),
                 ),
           // Description
-          _InlineText(
+          LedgerInlineText(
             // Key on the row id ONLY — embedding the value meant every commit
             // disposed+recreated the controller/FocusNode, breaking Tab/Enter
             // flow and dropping focus. didUpdateWidget syncs the text. (C3)
@@ -2304,7 +1450,7 @@ class _EditableRowState extends State<_EditableRow> {
           ),
           // Category
           isTransfer
-              ? _readCell(
+              ? ledgerReadCell(
                   width: w.category,
                   child: const Align(
                     alignment: Alignment.centerLeft,
@@ -2315,7 +1461,7 @@ class _EditableRowState extends State<_EditableRow> {
                     ),
                   ),
                 )
-              : _CategoryCell(
+              : LedgerCategoryCell(
                   width: w.category,
                   value: t.categoryId,
                   categories: widget.categories,
@@ -2323,7 +1469,7 @@ class _EditableRowState extends State<_EditableRow> {
                   onChanged: (id) => widget.onCategory(t, id),
                 ),
           // Inflow — sits over the green column wash painted behind the grid.
-          _AmountCell(
+          LedgerAmountCell(
             key: ValueKey('in_${t.id}'),
             width: w.inflow,
             value: t.type == TransactionType.inflow ? t.amount : 0,
@@ -2332,7 +1478,7 @@ class _EditableRowState extends State<_EditableRow> {
             onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
           ),
           // Outflow — sits over the red column wash painted behind the grid.
-          _AmountCell(
+          LedgerAmountCell(
             key: ValueKey('out_${t.id}'),
             width: w.outflow,
             value: t.type == TransactionType.outflow ? t.amount : 0,
@@ -2341,7 +1487,7 @@ class _EditableRowState extends State<_EditableRow> {
             onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
           ),
           // Acct. balance — brighter (onSurface) so it reads as the key figure.
-          _readCell(
+          ledgerReadCell(
             width: w.acctBal,
             right: true,
             child: Text(
@@ -2356,7 +1502,7 @@ class _EditableRowState extends State<_EditableRow> {
           ),
           // Delete
           SizedBox(
-            width: _wDelete,
+            width: kLedgerTrailingWidth,
             child: Center(
               // IgnorePointer when hidden — a 0-opacity button still hit-tests,
               // causing accidental deletes on non-hovered rows. (U4)
@@ -2401,31 +1547,12 @@ class _EditableRowState extends State<_EditableRow> {
   }
 }
 
-Widget _readCell({
-  required double width,
-  required Widget child,
-  bool right = false,
-}) =>
-    SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.md,
-          vertical: WebInsets.sm,
-        ),
-        child: Align(
-          alignment: right ? Alignment.centerRight : Alignment.centerLeft,
-          child: child,
-        ),
-      ),
-    );
-
 // ── Draft add-row ─────────────────────────────────────────────────────────────
 
 class _DraftRow extends StatelessWidget {
   final int epoch;
   final double descWidth;
-  final _ColWidths widths;
+  final LedgerColWidths widths;
   final DateTime date;
   final String? accountId;
   final String? categoryId;
@@ -2479,16 +1606,16 @@ class _DraftRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SizedBox(width: _wCheck),
-          _DateCell(
+          const SizedBox(width: kLedgerCheckWidth),
+          LedgerDateCell(
             width: w.date,
             date: date,
             enabled: true,
             onChanged: onDate,
           ),
           accounts.isEmpty
-              ? _readCell(width: w.account, child: const Text('—'))
-              : _AccountCell(
+              ? ledgerReadCell(width: w.account, child: const Text('—'))
+              : LedgerAccountCell(
                   width: w.account,
                   // Null until the user picks — shows the "Account" placeholder
                   // so the draft reads as an empty add-row, not a real entry.
@@ -2496,7 +1623,7 @@ class _DraftRow extends StatelessWidget {
                   accounts: accounts,
                   onChanged: onAccount,
                 ),
-          _InlineText(
+          LedgerInlineText(
             key: ValueKey('draft_desc_$epoch'),
             width: descWidth,
             initialValue: '',
@@ -2507,8 +1634,8 @@ class _DraftRow extends StatelessWidget {
             onSubmit: onCommit,
           ),
           categories.isEmpty
-              ? _readCell(width: w.category, child: const Text('—'))
-              : _CategoryCell(
+              ? ledgerReadCell(width: w.category, child: const Text('—'))
+              : LedgerCategoryCell(
                   width: w.category,
                   // Null until picked — shows the "Category" placeholder.
                   value: categoryId,
@@ -2516,7 +1643,7 @@ class _DraftRow extends StatelessWidget {
                   colorFor: colorFor,
                   onChanged: onCategory,
                 ),
-          _AmountCell(
+          LedgerAmountCell(
             key: ValueKey('draft_in_$epoch'),
             width: w.inflow,
             value: inflow,
@@ -2525,7 +1652,7 @@ class _DraftRow extends StatelessWidget {
             onChanged: onInflow,
             onSubmit: onCommit,
           ),
-          _AmountCell(
+          LedgerAmountCell(
             key: ValueKey('draft_out_$epoch'),
             width: w.outflow,
             value: outflow,
@@ -2534,7 +1661,7 @@ class _DraftRow extends StatelessWidget {
             onChanged: onOutflow,
             onSubmit: onCommit,
           ),
-          _readCell(
+          ledgerReadCell(
             width: w.acctBal,
             right: true,
             child: Text(
@@ -2545,7 +1672,7 @@ class _DraftRow extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: _wDelete,
+            width: kLedgerTrailingWidth,
             child: Center(
               child: IconButton(
                 onPressed: onCommit,
@@ -2557,533 +1684,6 @@ class _DraftRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Editable cell primitives ─────────────────────────────────────────────────────
-
-class _InlineText extends StatefulWidget {
-  final double width;
-  final String initialValue;
-  final String? hintText;
-  final bool bold;
-  final bool enabled;
-  final ValueChanged<String> onCommit;
-
-  /// Fired live on every keystroke (used by the draft row so its value is
-  /// current even if the field hasn't blurred when "Add row" is clicked).
-  final ValueChanged<String>? onChanged;
-  final VoidCallback? onSubmit;
-  const _InlineText({
-    super.key,
-    required this.width,
-    required this.initialValue,
-    this.hintText,
-    this.bold = false,
-    this.enabled = true,
-    required this.onCommit,
-    this.onChanged,
-    this.onSubmit,
-  });
-
-  @override
-  State<_InlineText> createState() => _InlineTextState();
-}
-
-class _InlineTextState extends State<_InlineText> {
-  late final TextEditingController _c;
-  late final FocusNode _f;
-  bool _focused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = TextEditingController(text: widget.initialValue);
-    _f = FocusNode()..addListener(_onFocus);
-  }
-
-  void _onFocus() {
-    if (!_f.hasFocus && _focused) widget.onCommit(_c.text);
-    setState(() => _focused = _f.hasFocus);
-  }
-
-  @override
-  void didUpdateWidget(_InlineText old) {
-    super.didUpdateWidget(old);
-    // The row now persists across commits (keyed on id), so sync the controller
-    // when the external value changes — but never clobber active typing. (C3)
-    if (!_focused && widget.initialValue != _c.text) {
-      _c.text = widget.initialValue;
-    }
-  }
-
-  @override
-  void dispose() {
-    _f.removeListener(_onFocus);
-    _f.dispose();
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final style = theme.textTheme.bodySmall?.copyWith(
-      fontWeight: widget.bold ? FontWeight.w600 : FontWeight.w400,
-      color: cs.onSurface,
-    );
-    if (!widget.enabled) {
-      return _readCell(
-        width: widget.width,
-        child: Text(
-          widget.initialValue.isEmpty
-              ? (widget.hintText ?? '')
-              : widget.initialValue,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: style,
-        ),
-      );
-    }
-    return SizedBox(
-      width: widget.width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm,
-          vertical: WebInsets.xs,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _focused
-                ? cs.surfaceContainerHighest.withValues(alpha: 0.7)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            // Border width is always reserved (transparent at rest) so focusing
-            // never shifts the row's layout; the focus ring is a softened
-            // primary rather than a hard solid box. (matches reference ring)
-            border: Border.all(
-              color: _focused
-                  ? cs.primary.withValues(alpha: 0.55)
-                  : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm,
-            vertical: 4,
-          ),
-          child: Focus(
-            canRequestFocus: false,
-            onKeyEvent: (_, event) {
-              // Esc reverts to the original value, then blurs (the blur commit
-              // becomes a no-op). (Plan 052 U5)
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.escape) {
-                _c.text = widget.initialValue;
-                _f.unfocus();
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: TextField(
-              controller: _c,
-              focusNode: _f,
-              style: style,
-              maxLines: 1,
-              textAlignVertical: TextAlignVertical.center,
-              onChanged: widget.onChanged,
-              onSubmitted: (_) {
-                widget.onCommit(_c.text);
-                widget.onSubmit?.call();
-              },
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: widget.hintText,
-                hintStyle: style?.copyWith(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AmountCell extends StatefulWidget {
-  final double width;
-  final double value;
-  final Color color;
-  final bool enabled;
-  final ValueChanged<double> onCommit;
-
-  /// Fired live on every keystroke (used by the draft row so its value is
-  /// current even if the field hasn't blurred when "Add row" is clicked).
-  final ValueChanged<double>? onChanged;
-  final VoidCallback? onSubmit;
-  const _AmountCell({
-    super.key,
-    required this.width,
-    required this.value,
-    required this.color,
-    this.enabled = true,
-    required this.onCommit,
-    this.onChanged,
-    this.onSubmit,
-  });
-
-  @override
-  State<_AmountCell> createState() => _AmountCellState();
-}
-
-class _AmountCellState extends State<_AmountCell> {
-  late final TextEditingController _c;
-  late final FocusNode _f;
-  bool _focused = false;
-
-  // Peso-prefixed, two-decimal, comma-grouped formatting so amounts line up
-  // like a ledger (e.g. ₱1,000.00). Blank when zero so empty cells stay clean.
-  String _display(double v) => v <= 0 ? '' : formatPeso(v);
-
-  @override
-  void initState() {
-    super.initState();
-    _c = TextEditingController(text: _display(widget.value));
-    _f = FocusNode()..addListener(_onFocus);
-  }
-
-  void _onFocus() {
-    if (_f.hasFocus) {
-      // Show raw editable number.
-      _c.text = widget.value <= 0 ? '' : _trimZeros(widget.value);
-      _c.selection = TextSelection(baseOffset: 0, extentOffset: _c.text.length);
-    } else {
-      final v = _parse();
-      widget.onCommit(v);
-      // If the parse came back as 0 (field cleared) the amount-edit rule
-      // ignores it — fall back to the current value instead of showing a blank
-      // cell. didUpdateWidget reconciles once the parent rebuilds. (C2)
-      _c.text = _display(v > 0 ? v : widget.value);
-    }
-    setState(() => _focused = _f.hasFocus);
-  }
-
-  @override
-  void didUpdateWidget(_AmountCell old) {
-    super.didUpdateWidget(old);
-    if (!_focused && old.value != widget.value) {
-      _c.text = _display(widget.value);
-    }
-  }
-
-  double _parse() {
-    final raw = _c.text.replaceAll(',', '').replaceAll('₱', '').trim();
-    return double.tryParse(raw) ?? 0;
-  }
-
-  String _trimZeros(double v) {
-    final s = v.toStringAsFixed(2);
-    return s.endsWith('.00') ? s.substring(0, s.length - 3) : s;
-  }
-
-  @override
-  void dispose() {
-    _f.removeListener(_onFocus);
-    _f.dispose();
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final style = theme.textTheme.bodySmall?.copyWith(
-      color: widget.color,
-      fontWeight: FontWeight.w600,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
-    if (!widget.enabled) {
-      return _readCell(
-        width: widget.width,
-        right: true,
-        child: Text(
-          widget.value <= 0 ? '—' : _display(widget.value),
-          textAlign: TextAlign.right,
-          style: style,
-        ),
-      );
-    }
-    return SizedBox(
-      width: widget.width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm,
-          vertical: WebInsets.xs,
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _focused
-                ? cs.surfaceContainerHighest.withValues(alpha: 0.7)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-            // Border width always reserved so focus never shifts layout;
-            // softened primary ring rather than a hard box.
-            border: Border.all(
-              color: _focused
-                  ? cs.primary.withValues(alpha: 0.55)
-                  : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm,
-            vertical: 4,
-          ),
-          child: Focus(
-            canRequestFocus: false,
-            onKeyEvent: (_, event) {
-              // Esc reverts to the current value, then blurs. (Plan 052 U5)
-              if (event is KeyDownEvent &&
-                  event.logicalKey == LogicalKeyboardKey.escape) {
-                _c.text = widget.value <= 0 ? '' : _trimZeros(widget.value);
-                _f.unfocus();
-                return KeyEventResult.handled;
-              }
-              return KeyEventResult.ignored;
-            },
-            child: TextField(
-              controller: _c,
-              focusNode: _f,
-              style: style,
-              textAlign: TextAlign.right,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-              ],
-              onChanged: (_) => widget.onChanged?.call(_parse()),
-              onSubmitted: (_) {
-                widget.onCommit(_parse());
-                widget.onSubmit?.call();
-              },
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: '—',
-                hintStyle: style?.copyWith(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AccountCell extends StatelessWidget {
-  final double width;
-  final String? value;
-  final List<FinancialAccount> accounts;
-  final ValueChanged<String> onChanged;
-  const _AccountCell({
-    required this.width,
-    required this.value,
-    required this.accounts,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    final entries = [
-      for (var i = 0; i < accounts.length; i++)
-        WebDropdownEntry<String>(
-          value: accounts[i].id,
-          label: accounts[i].name,
-          dotColor: resolveSliceColor(
-            accounts[i].colorHex,
-            i,
-            brightness: brightness,
-          ),
-        ),
-    ];
-    final hasValue = accounts.any((a) => a.id == value);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: WebInsets.sm,
-        vertical: WebInsets.xs,
-      ),
-      child: WebSearchableDropdown<String>(
-        width: width - WebInsets.sm * 2,
-        value: hasValue ? value : null,
-        entries: entries,
-        hintText: 'Account',
-        isDense: true,
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-class _TransferAccountCell extends StatelessWidget {
-  final double width;
-  final TransactionRecord txn;
-  final List<FinancialAccount> accounts;
-
-  const _TransferAccountCell({
-    required this.width,
-    required this.txn,
-    required this.accounts,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final brightness = theme.brightness;
-
-    // A transfer is stored as two legs sharing a [transferGroupId]. Each leg
-    // touches exactly one account: the outflow leg debits its [accountId], the
-    // inflow leg credits its [accountId]. So we show only the leg's own account
-    // — the row's inflow/outflow column already tells you the direction, and
-    // pairing the two rows shows the full "A → B" picture without cramming both
-    // accounts (and an arrow) into every cell.
-    final acct = accounts.where((a) => a.id == txn.accountId).firstOrNull;
-    final dot = acct == null
-        ? null
-        : resolveSliceColor(
-            acct.colorHex,
-            accounts.indexOf(acct),
-            brightness: brightness,
-          );
-
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.md,
-          vertical: WebInsets.xs,
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                if (dot != null) ...[
-                  WebDot(color: dot),
-                  const SizedBox(width: WebInsets.xs),
-                ],
-                Flexible(
-                  child: Text(
-                    acct?.name ?? '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryCell extends StatelessWidget {
-  final double width;
-  final String? value;
-  final List<FinanceCategory> categories;
-  final Color Function(FinanceCategory?) colorFor;
-  final ValueChanged<String> onChanged;
-  const _CategoryCell({
-    required this.width,
-    required this.value,
-    required this.categories,
-    required this.colorFor,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final entries = [
-      for (final c in categories)
-        WebDropdownEntry<String>(
-          value: c.id,
-          label: c.name,
-          dotColor: colorFor(c),
-        ),
-    ];
-    final hasValue = categories.any((c) => c.id == value);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: WebInsets.sm,
-        vertical: WebInsets.xs,
-      ),
-      child: WebSearchableDropdown<String>(
-        width: width - WebInsets.sm * 2,
-        value: hasValue ? value : null,
-        entries: entries,
-        hintText: 'Category',
-        isDense: true,
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-class _DateCell extends StatelessWidget {
-  final double width;
-  final DateTime date;
-  final bool enabled;
-  final ValueChanged<DateTime> onChanged;
-  const _DateCell({
-    required this.width,
-    required this.date,
-    required this.enabled,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final label = _kMonthDayFmt.format(date);
-    final text = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: theme.textTheme.bodySmall,
-    );
-    if (!enabled) return _readCell(width: width, child: text);
-    return SizedBox(
-      width: width,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(6),
-        onTap: () async {
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: date,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2035),
-          );
-          if (picked != null) onChanged(picked);
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.md,
-            vertical: WebInsets.sm,
-          ),
-          child: Align(alignment: Alignment.centerLeft, child: text),
-        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import '../design/web_breakpoints.dart';
+import 'web_dialog.dart';
 
 /// Desktop counterpart of the mobile category-icon picker. Same catalog, same
 /// "Auto" sentinel, so an icon chosen on either platform reads identically in
@@ -15,8 +16,8 @@ Future<String?> showWebCategoryIconPicker(
   BuildContext context, {
   required String current,
 }) {
-  return showDialog<String>(
-    context: context,
+  return showWebDialog<String>(
+    context,
     builder: (_) => _WebCategoryIconPickerDialog(current: current),
   );
 }
@@ -34,55 +35,50 @@ class _WebCategoryIconPickerDialog extends StatelessWidget {
     // both render via the name heuristic, so both highlight "Auto".
     final autoSelected = !kCategoryIconCatalog.containsKey(current);
 
-    return AlertDialog(
-      title: const Text('Choose an icon'),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _IconChoice(
-                icon: Icons.auto_awesome_rounded,
-                label: 'Auto',
-                selected: autoSelected,
-                onTap: () => Navigator.of(context).pop(kAutoCategoryIconKey),
-              ),
-              for (final group in kCategoryIconGroups) ...[
-                const SizedBox(height: WebInsets.lg),
-                Text(
-                  group.label.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: WebInsets.sm),
-                Wrap(
-                  spacing: WebInsets.sm,
-                  runSpacing: WebInsets.sm,
-                  children: [
-                    for (final key in group.keys)
-                      _IconChoice(
-                        icon: kCategoryIconCatalog[key]!,
-                        selected: key == current,
-                        onTap: () => Navigator.of(context).pop(key),
-                      ),
-                  ],
-                ),
-              ],
-            ],
+    return WebDialog(
+      title: 'Choose an icon',
+      subtitle: 'Auto picks one from the category name.',
+      primaryExpands: false,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _IconChoice(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Auto',
+            selected: autoSelected,
+            onTap: () => Navigator.of(context).pop(kAutoCategoryIconKey),
           ),
-        ),
+          for (final group in kCategoryIconGroups) ...[
+            const SizedBox(height: WebInsets.lg),
+            Text(
+              group.label.toUpperCase(),
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: WebInsets.sm),
+            Wrap(
+              spacing: WebInsets.sm,
+              runSpacing: WebInsets.sm,
+              children: [
+                for (final key in group.keys)
+                  _IconChoice(
+                    icon: kCategoryIconCatalog[key]!,
+                    selected: key == current,
+                    onTap: () => Navigator.of(context).pop(key),
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-      ],
+      primary: TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_budget_amount_field.dart';
 import 'web_manage_groups_dialog.dart';
 
 /// Web Budget page (Plan 050-D) — tabular, editable budget setup + an
@@ -87,7 +88,9 @@ class _Row {
         : (tone: WebBadgeTone.info, label: 'On track');
   }
   if (used >= 1) return (tone: WebBadgeTone.danger, label: 'Over');
-  if (used >= 0.75) return (tone: WebBadgeTone.warning, label: 'Watch');
+  if (used >= kBudgetWatchThreshold) {
+    return (tone: WebBadgeTone.warning, label: 'Watch');
+  }
   return (tone: WebBadgeTone.success, label: 'On track');
 }
 
@@ -96,7 +99,7 @@ Color _statusColor(BuildContext context, double used,
   final cs = Theme.of(context).colorScheme;
   if (isSavings) return cs.tertiary;
   if (used >= 1) return cs.error;
-  if (used >= 0.75) return cs.secondary;
+  if (used >= kBudgetWatchThreshold) return context.appColors.bills;
   return cs.tertiary;
 }
 
@@ -765,7 +768,7 @@ class _DataRow extends StatelessWidget {
           // Allocated (editable)
           SizedBox(
             width: _kAllocW,
-            child: _AmountField(
+            child: WebBudgetAmountField(
               value: row.allocated,
               onCommit: _commitAllocation,
             ),
@@ -997,117 +1000,12 @@ class _GroupDropdown extends StatelessWidget {
 /// Cycles through theme accent colors by index.
 Color _groupColorByIndex(BuildContext context, int index) {
   final cs = Theme.of(context).colorScheme;
-  return [cs.primary, cs.secondary, cs.tertiary, cs.error][index % 4];
-}
-
-/// Editable, right-aligned amount field. Shows formatted thousands when
-/// unfocused, raw digits when focused. Commits on submit / focus loss.
-class _AmountField extends StatefulWidget {
-  final double value;
-  final ValueChanged<double> onCommit;
-
-  const _AmountField({required this.value, required this.onCommit});
-
-  @override
-  State<_AmountField> createState() => _AmountFieldState();
-}
-
-class _AmountFieldState extends State<_AmountField> {
-  late final TextEditingController _controller;
-  late final FocusNode _focus;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: _display(widget.value));
-    _focus = FocusNode()..addListener(_onFocusChange);
-  }
-
-  @override
-  void didUpdateWidget(covariant _AmountField old) {
-    super.didUpdateWidget(old);
-    // Keep in sync with presenter when not actively editing.
-    if (!_focus.hasFocus && old.value != widget.value) {
-      _controller.text = _display(widget.value);
-    }
-  }
-
-  String _display(double v) {
-    final whole = v.round();
-    final s = whole.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
-
-  void _onFocusChange() {
-    if (_focus.hasFocus) {
-      // Show raw value for editing.
-      final v = widget.value;
-      _controller.text =
-          v == v.roundToDouble() ? v.round().toString() : v.toString();
-      _controller.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _controller.text.length,
-      );
-    } else {
-      _commit();
-    }
-  }
-
-  void _commit() {
-    final raw = _controller.text.replaceAll(RegExp(r'[^0-9.]'), '');
-    final parsed = double.tryParse(raw) ?? 0;
-    _controller.text = _display(parsed);
-    if (parsed != widget.value) widget.onCommit(parsed);
-  }
-
-  @override
-  void dispose() {
-    _focus.removeListener(_onFocusChange);
-    _focus.dispose();
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return TextField(
-      controller: _controller,
-      focusNode: _focus,
-      textAlign: TextAlign.right,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
-      onSubmitted: (_) {
-        _commit();
-        _focus.unfocus();
-      },
-      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm,
-          vertical: WebInsets.sm,
-        ),
-        filled: true,
-        fillColor: Colors.transparent,
-        hoverColor: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: AppRadii.smBorder,
-          borderSide: BorderSide(color: Colors.transparent),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadii.smBorder,
-          borderSide: BorderSide(color: cs.primary, width: 2),
-        ),
-      ),
-    );
-  }
+  return [
+    cs.primary,
+    context.appColors.bills,
+    cs.tertiary,
+    cs.error
+  ][index % 4];
 }
 
 // Sentinel value for the picker's "create a new category" entry.

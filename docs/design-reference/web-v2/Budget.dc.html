@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Treasury — Budget</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+body{margin:0;background:#131315;color:#F7F7F8;font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.4}
+*{box-sizing:border-box}
+a{color:#5BAAF5;text-decoration:none}a:hover{color:#8CC4F8}
+.num{font-variant-numeric:tabular-nums}
+.nav{width:232px;flex:none;background:#0E0E10;border-right:1px solid #1E1E22;padding:20px 12px 16px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px}
+.brand b{font-size:17px;font-weight:800;letter-spacing:-0.02em}
+.brand small{display:block;font-size:11px;color:#83878F;font-weight:500}
+.grp{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6A6E76;padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:12px;color:#C9CDD3;font-weight:500;font-size:13.5px}
+.ni:hover{background:#1C1C20;color:#F7F7F8}
+.ni.on{background:rgba(46,144,250,.14);color:#5BAAF5;font-weight:700}
+.ni svg{width:18px;height:18px;flex:none}
+.ni .ct{margin-left:auto;font-size:11px;font-weight:700;color:#FFB37A;background:rgba(255,138,76,.14);padding:2px 7px;border-radius:999px}
+.navfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid #1E1E22}
+.sync{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:#9A9FA8}
+.dot{width:7px;height:7px;border-radius:50%;background:#46BD6B;flex:none}
+.avatar{width:30px;height:30px;border-radius:10px;background:#1C1C20;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#5BAAF5}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wrap{flex:999 1 560px;min-width:0;max-width:1200px;padding:28px 40px 48px;display:flex;flex-direction:column;gap:20px}
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px}
+.hdr h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+.hdr .sub{margin:4px 0 0;color:#9A9FA8;font-size:13px}
+.actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{height:40px;padding:0 14px;border-radius:12px;border:1px solid #2A2A2E;background:#1C1C20;color:#F7F7F8;font:600 13.5px 'Plus Jakarta Sans',sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.btn:hover{background:#252628}
+.btn.pri{background:#2E90FA;border-color:#2E90FA;color:#fff}
+.btn.ghost{background:transparent;border-color:transparent;color:#C9CDD3}
+.btn.sm{height:30px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn svg{width:16px;height:16px}
+.stepper{display:inline-flex;align-items:center;height:40px;border:1px solid #2A2A2E;border-radius:12px;background:#1C1C20}
+.stepper button{height:38px;width:36px;border:0;background:transparent;color:#C9CDD3;cursor:pointer;font-size:16px}
+.stepper span{min-width:118px;text-align:center;font-weight:700;font-size:13.5px}
+.card{background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:20px}
+.chd{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chd h2{margin:0;font-size:15px;font-weight:700}
+.chd p{margin:2px 0 0;color:#9A9FA8;font-size:12.5px}
+.chd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8}
+.pill{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:999px;padding:3px 9px;font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(70,189,107,.14);color:#6FCB8A}
+.pill.warn{background:rgba(255,138,76,.14);color:#FFB37A}
+.pill.bad{background:rgba(255,138,76,.18);color:#FFB37A;border:1px solid rgba(255,138,76,.4)}
+.pill.info{background:rgba(46,144,250,.14);color:#5BAAF5}
+.pill.gold{background:rgba(255,202,40,.14);color:#FFCA28}
+.row{display:flex;align-items:center;gap:12px}
+.bar{height:6px;border-radius:999px;background:#26262A;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px}
+.tbl{width:100%;border-collapse:collapse;min-width:860px}
+.tbl th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#6A6E76;padding:10px 12px;border-bottom:1px solid #2A2A2E;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid #1E1E22;font-size:13.5px;vertical-align:middle}
+.tbl tr:hover td{background:#1F1F24}
+.tbl .r{text-align:right}
+.tbl .g td{background:#1A1A1E;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#9A9FA8;padding:8px 12px}
+.tbl .g td b{color:#C9CDD3}
+.tbl .g:hover td{background:#1A1A1E}
+.cat{display:inline-flex;align-items:center;gap:8px}
+.cat i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.cell{display:inline-block;min-width:88px;text-align:right;padding:5px 8px;border-radius:8px;border:1px dashed transparent}
+.cell:hover{border-color:#3A3A40;background:#252628}
+.kebab{width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#83878F;cursor:pointer;font-size:16px}
+.kebab:hover{background:#252628;color:#F7F7F8}
+.draft td{background:#1A1A1E;border-bottom:1px solid #2A2A2E}
+.draft input,.draft select{height:34px;width:100%;border-radius:9px;border:1px dashed #3A3A40;background:transparent;color:#F7F7F8;padding:0 10px;font:500 13px 'Plus Jakarta Sans',sans-serif}
+.seg{display:inline-flex;background:#131315;border:1px solid #2A2A2E;border-radius:9px;padding:2px;gap:2px}
+.seg span{padding:4px 9px;border-radius:7px;font-size:12px;font-weight:600;color:#9A9FA8}
+.seg span.on{background:#252628;color:#F7F7F8}
+</style>
+</helmet>
+<div style="display:flex;flex-wrap:wrap;min-height:100vh;align-items:stretch">
+
+<nav class="nav" aria-label="Treasury">
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#1C1C20"/><rect x="11" y="6" width="5" height="16" rx="2.5" fill="#2E90FA"/><circle cx="17" cy="10" r="3" fill="#26C6DA"/></svg><div><b>Treasury</b><small>Nudgr · web</small></div></div>
+  <div class="grp">Overview</div>
+  <a class="ni" href="Main.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+  <div class="grp">Money</div>
+  <a class="ni" href="Ledger.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Ledger</a>
+  <a class="ni" href="Bills.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Bills<span class="ct">3 due</span></a>
+  <a class="ni on" href="Budget.dc.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4v8h8"/></svg>Budget</a>
+  <div class="grp">Plan</div>
+  <a class="ni" href="Goals.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2 4 2 4H5"/></svg>Goals</a>
+  <div class="grp">Review</div>
+  <a class="ni" href="History.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>History</a>
+  <div class="navfoot">
+    <a class="ni" href="Setup.dc.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2 2M16.4 16.4l2 2M5.6 18.4l2-2M16.4 7.6l2-2"/></svg>Setup &amp; Accounts</a>
+    <div class="sync"><span class="dot"></span>Synced · 2 min ago</div>
+    <button class="btn ghost" style="height:auto;justify-content:flex-start;padding:8px 10px;gap:10px" aria-label="Account menu: eljon@example.com, sign out"><span class="avatar">E</span><span style="min-width:0;text-align:left"><span style="display:block;font-size:12.5px;font-weight:600;color:#F7F7F8">Eljon</span><span style="display:block;font-size:11px;color:#83878F">Sign out</span></span></button>
+  </div>
+</nav>
+
+<div class="main">
+<div class="wrap">
+  <header class="hdr">
+    <div><h1>Budget</h1><p class="sub">October 2026 · ₱30,749 allocated across 7 categories in 3 groups</p></div>
+    <div class="actions">
+      <div class="stepper"><button aria-label="Previous month">‹</button><span>October 2026</span><button aria-label="Next month">›</button></div>
+      <button class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Manage groups</button>
+      <button class="btn pri" style="width:40px;padding:0" aria-label="Ask Nudgy"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>
+    </div>
+  </header>
+
+  <!-- Hero: pace ring + the three numbers, with the donut beside it -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:20px">
+    <section class="card" style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+      <svg width="132" height="132" viewBox="0 0 132 132" aria-label="41 percent of the budget spent, ahead of pace"><g transform="rotate(-90 66 66)" fill="none" stroke-width="12" stroke-linecap="round"><circle cx="66" cy="66" r="56" stroke="#26262A"/><circle cx="66" cy="66" r="56" stroke="#2E90FA" stroke-dasharray="144 352"/><circle cx="66" cy="66" r="56" stroke="#5BAAF5" stroke-opacity=".5" stroke-dasharray="2 350" stroke-dashoffset="-113"/></g><text x="66" y="62" text-anchor="middle" font-size="26" font-weight="800" fill="#F7F7F8" font-family="Plus Jakarta Sans, sans-serif">41%</text><text x="66" y="80" text-anchor="middle" font-size="10.5" fill="#9A9FA8" font-family="Plus Jakarta Sans, sans-serif">SPENT</text></svg>
+      <div style="flex:1 1 200px;min-width:0;display:flex;flex-direction:column;gap:6px">
+        <div class="eyebrow">Spent</div>
+        <div class="num" style="font-size:34px;font-weight:800;letter-spacing:-0.03em;line-height:1">₱12,589.00 <span style="font-size:15px;font-weight:600;color:#9A9FA8">of ₱30,749</span></div>
+        <div class="num" style="font-size:14px;color:#C9CDD3"><b style="color:#6FCB8A">₱18,160 left</b> · 21 days to go</div>
+        <div class="row" style="gap:8px;margin-top:6px"><span class="pill ok"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Ahead of pace</span><span style="font-size:12px;color:#9A9FA8">32% of the month gone · 41% spent on Essentials front-load</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="chd" style="margin-bottom:8px"><div><h2>Allocation by group</h2><p>Updates as you edit the table</p></div></div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        <svg width="110" height="110" viewBox="0 0 110 110" aria-label="Allocation: Essentials 82 percent, Variable 8 percent, Savings 10 percent"><g transform="rotate(-90 55 55)" fill="none" stroke-width="14"><circle cx="55" cy="55" r="44" stroke="#26262A"/><circle cx="55" cy="55" r="44" stroke="#2E90FA" stroke-dasharray="226.7 276.5"/><circle cx="55" cy="55" r="44" stroke="#926AFA" stroke-dasharray="22.5 276.5" stroke-dashoffset="-226.7"/><circle cx="55" cy="55" r="44" stroke="#FFCA28" stroke-dasharray="27.3 276.5" stroke-dashoffset="-249.2"/></g></svg>
+        <div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div class="row"><span class="dot" style="background:#2E90FA"></span>Essentials<b class="num" style="margin-left:auto">₱25,249</b><span style="width:34px;text-align:right;color:#9A9FA8">82%</span></div>
+          <div class="row"><span class="dot" style="background:#926AFA"></span>Variable<b class="num" style="margin-left:auto">₱2,500</b><span style="width:34px;text-align:right;color:#9A9FA8">8%</span></div>
+          <div class="row"><span class="dot" style="background:#FFCA28"></span>Savings<b class="num" style="margin-left:auto">₱3,000</b><span style="width:34px;text-align:right;color:#9A9FA8">10%</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Grouped table -->
+  <section class="card" style="padding:0;overflow:hidden">
+    <div class="chd" style="margin:0;padding:16px 20px 12px"><div><h2>Budget setup</h2><p>Click an Allocated cell to edit · Enter on the last row adds a category · 7 categories · 3 groups</p></div><div class="r"><span class="num" style="font-size:12.5px;color:#9A9FA8">₱30,749 allocated · <b style="color:#6FCB8A">₱18,160 left</b></span></div></div>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr><th>Category</th><th style="width:150px">Group</th><th class="r" style="width:130px">Allocated</th><th class="r" style="width:110px">Spent</th><th class="r" style="width:120px">Remaining</th><th style="width:180px">Used</th><th style="width:136px">Status</th><th style="width:44px"></th></tr></thead>
+      <tbody>
+        <tr class="g"><td colspan="2"><span class="row" style="gap:8px"><span class="dot" style="background:#2E90FA"></span>Essentials · 4</span></td><td class="r num"><b>₱25,249</b></td><td class="r num"><b>₱10,737</b></td><td class="r num"><b>₱14,512</b></td><td colspan="3">43% used</td></tr>
+        <tr><td><span class="cat"><i style="background:#2E90FA"></i>Bills &amp; Utilities</span></td><td style="color:#9A9FA8">Essentials</td><td class="r num"><span class="cell">10,000</span></td><td class="r num">₱2,738</td><td class="r num">₱7,262</td><td><div class="bar"><i style="width:27%;background:#2E90FA"></i></div></td><td><span class="pill ok">On track</span></td><td><button class="kebab" aria-label="Remove Bills & Utilities from budget">×</button></td></tr>
+        <tr><td><span class="cat"><i style="background:#64748B"></i>Internet</span></td><td style="color:#9A9FA8">Essentials</td><td class="r num"><span class="cell">249</span></td><td class="r num">₱0</td><td class="r num">₱249</td><td><div class="bar"><i style="width:0%;background:#2E90FA"></i></div></td><td><span class="pill ok">On track</span></td><td><button class="kebab" aria-label="Remove Internet from budget">×</button></td></tr>
+        <tr><td><span class="cat"><i style="background:#926AFA"></i>Household Expenses</span></td><td style="color:#9A9FA8">Essentials</td><td class="r num"><span class="cell" style="border-color:#2E90FA;background:#252628">14,000</span></td><td class="r num">₱7,997</td><td class="r num">₱6,003</td><td><div class="bar"><i style="width:57%;background:#2E90FA"></i></div></td><td><span class="pill ok">On track</span></td><td><button class="kebab" aria-label="Remove Household Expenses from budget">×</button></td></tr>
+        <tr><td><span class="cat"><i style="background:#46BD6B"></i>Food &amp; Drinks</span></td><td style="color:#9A9FA8">Essentials</td><td class="r num"><span class="cell">1,000</span></td><td class="r num">₱804</td><td class="r num">₱196</td><td><div class="bar"><i style="width:80%;background:#FF8A4C"></i></div></td><td><span class="pill warn">Watch · 80%</span></td><td><button class="kebab" aria-label="Remove Food & Drinks from budget">×</button></td></tr>
+        <tr class="g"><td colspan="2"><span class="row" style="gap:8px"><span class="dot" style="background:#926AFA"></span>Variable · 2</span></td><td class="r num"><b>₱2,500</b></td><td class="r num"><b>₱1,852</b></td><td class="r num"><b>₱648</b></td><td colspan="3">74% used</td></tr>
+        <tr><td><span class="cat"><i style="background:#FFCA28"></i>Transportation</span></td><td style="color:#9A9FA8">Variable</td><td class="r num"><span class="cell">1,000</span></td><td class="r num">₱276</td><td class="r num">₱724</td><td><div class="bar"><i style="width:28%;background:#926AFA"></i></div></td><td><span class="pill ok">On track</span></td><td><button class="kebab" aria-label="Remove Transportation from budget">×</button></td></tr>
+        <tr><td><span class="cat"><i style="background:#EC4899"></i>Guilt-Free / Fun</span></td><td style="color:#9A9FA8">Variable</td><td class="r num"><span class="cell">1,500</span></td><td class="r num">₱1,576</td><td class="r num" style="color:#FFB37A">₱76 over</td><td><div class="bar"><i style="width:100%;background:#FF8A4C"></i></div></td><td><span class="pill bad">Over by ₱76</span></td><td><button class="kebab" aria-label="Remove Guilt-Free / Fun from budget">×</button></td></tr>
+        <tr class="g"><td colspan="2"><span class="row" style="gap:8px"><span class="dot" style="background:#FFCA28"></span>Savings · 1</span></td><td class="r num"><b>₱3,000</b></td><td class="r num"><b>₱3,000 in</b></td><td class="r num"><b>₱0</b></td><td colspan="3">funded</td></tr>
+        <tr><td><span class="cat"><i style="background:#1B7A4B"></i>Maya Savings</span></td><td style="color:#9A9FA8">Savings</td><td class="r num"><span class="cell">3,000</span></td><td class="r num">₱3,000 in · ₱0 out</td><td class="r num">₱0</td><td><div class="bar"><i style="width:100%;background:#FFCA28"></i></div></td><td><span class="pill gold">Funded</span></td><td><button class="kebab" aria-label="Remove Maya Savings from budget">×</button></td></tr>
+        <tr class="draft">
+          <td><span class="row" style="gap:8px"><span class="seg"><span class="on">Expense</span><span>Savings</span></span><select id="b-cat" aria-label="Choose a category" style="flex:1"><option>Choose a category…</option><option>Health &amp; Wellness</option><option>＋ New category…</option></select></span></td>
+          <td><select id="b-grp" aria-label="Group"><option>Essentials</option><option>Variable</option><option>Savings</option></select></td>
+          <td><input id="b-amt" value="0" style="text-align:right"></td><td colspan="4" style="color:#6A6E76;font-size:12.5px">Press Enter to add</td>
+          <td><button class="btn pri sm" style="width:30px;padding:0;justify-content:center" aria-label="Add category">✓</button></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <p style="margin:0;max-width:720px;font-size:12.5px;color:#9A9FA8;line-height:1.5">Rows sit under their group with a subtotal, so the table also answers "how much is Essentials". Over-budget rows use the amber warning tone with the words "Over by", not red alone. The Watch threshold is one number (75 %) on this page and on the Dashboard; today they differ. The 4-tile strip is gone because it repeated the hero; the category count moved into the table header.</p>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
