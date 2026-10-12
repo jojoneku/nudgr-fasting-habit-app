@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.103] - 2026-10-12
+
+### Fixed
+- fluid page width beside Nudgy; resizable Dashboard rail
+
 ## [1.1.102] - 2026-10-11
 
 ### Added
@@ -938,7 +943,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.102...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.103...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1042,3 +1047,4 @@ distributed via `manifest.json`.
 [1.1.100]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.100
 [1.1.101]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.101
 [1.1.102]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.102
+[1.1.103]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.103
