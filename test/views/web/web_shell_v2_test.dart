@@ -191,16 +191,35 @@ void main() {
     const rail = SizedBox(width: 200, child: Text('rail'));
     const dock = SizedBox(width: 56, child: Text('dock'));
 
-    testWidgets('at 1280 the right rail is a fixed 360 px column',
+    testWidgets('the right rail scales with the window, 340–440 px',
         (tester) async {
-      await pumpShell(tester,
-          width: WebBreakpoints.rightRail, rightRail: rail, dock: dock);
-      expect(find.text('rail'), findsOneWidget);
-      expect(find.text('dock'), findsNothing);
-      // The rail column, padding included, is 360 wide.
-      final railRect = tester.getRect(find.text('rail'));
-      final window = tester.getRect(find.byType(WebShellV2));
-      expect(window.right - railRect.left, WebShellV2.railWidth);
+      expect(WebShellV2.railWidthFor(1280), WebShellV2.minRailWidth);
+      expect(WebShellV2.railWidthFor(1600), closeTo(384, 0.01));
+      expect(WebShellV2.railWidthFor(2560), WebShellV2.maxRailWidth);
+
+      for (final w in [WebBreakpoints.rightRail, 1600.0, 2560.0]) {
+        await pumpShell(tester, width: w, rightRail: rail, dock: dock);
+        expect(find.text('rail'), findsOneWidget);
+        expect(find.text('dock'), findsNothing);
+        // The rail column, padding included, is railWidthFor(window) wide.
+        final railRect = tester.getRect(find.text('rail'));
+        final window = tester.getRect(find.byType(WebShellV2));
+        expect(window.right - railRect.left,
+            closeTo(WebShellV2.railWidthFor(w), 0.01),
+            reason: 'at $w px');
+      }
+    });
+
+    testWidgets('beside the rail the page fills the width — no dead strip',
+        (tester) async {
+      const w = 1848.0; // the owner's window
+      await pumpShell(tester, width: w, rightRail: rail, dock: dock);
+      final body = tester.getRect(find.text('page body'));
+      final railLeft = w - WebShellV2.railWidthFor(w);
+      // The page column runs nav edge + 40 → rail edge − 24; its centred
+      // body sits at that column's midpoint, not at a 1200 px cap's.
+      final columnMid = ((WebShellV2.navWidth + 40) + (railLeft - 24)) / 2;
+      expect(body.center.dx, closeTo(columnMid, 1));
     });
 
     testWidgets('at 1100 the rail folds away and the dock is used',
@@ -216,12 +235,16 @@ void main() {
       expect(find.text('dock'), findsOneWidget);
     });
 
-    testWidgets('the page is capped at the content width', (tester) async {
-      await pumpShell(tester, width: 1920);
+    testWidgets('past the content cap the page centres in the free width',
+        (tester) async {
+      const w = 2600.0;
+      await pumpShell(tester, width: w);
       final body = tester.getRect(find.text('page body'));
-      // Centred inside a 1200 px column that starts after the 232 px rail.
-      expect(body.center.dx,
-          lessThan(WebShellV2.navWidth + WebBreakpoints.content));
+      // 2600 − 232 nav = 2368 free > the 1600 cap, so the capped column is
+      // centred in the free width.
+      const freeMid = WebShellV2.navWidth + (w - WebShellV2.navWidth) / 2;
+      expect(body.center.dx, closeTo(freeMid, 1));
+      expect(WebBreakpoints.contentV2, 1600);
     });
   });
 
