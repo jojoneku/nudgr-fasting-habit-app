@@ -9,7 +9,9 @@ import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_nudgy_dock.dart';
+import 'package:intermittent_fasting/views/web/design/web_dest.dart';
 import 'package:intermittent_fasting/views/web/widgets/web_shell.dart';
+import 'package:intermittent_fasting/views/web/widgets/web_shell_v2.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 
 import '../../mocks.mocks.dart';
@@ -259,6 +261,72 @@ void main() {
             ]),
           ),
         );
+
+    testWidgets(
+        'dragging the rail edge sets a custom width from what is on screen; '
+        'a double-click returns it to automatic', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c));
+      await tester.pumpAndSettle();
+      expect(c.hasCustomWidth, isFalse);
+
+      // The rail card is 360 wide here; the shell's column is card + 40.
+      final rail = tester.getRect(find.byType(NudgyRail));
+      await tester.dragFrom(
+          Offset(rail.left + 2, rail.center.dy), const Offset(-60, 0));
+      await tester.pumpAndSettle();
+      expect(c.hasCustomWidth, isTrue);
+      // Seeded from the 400 px column on screen, not the 380 default.
+      expect(c.width,
+          closeTo(360 + WebShellV2.railRightPadding + 60, kDragSlopDefault));
+
+      final grip = Offset(rail.left + 2, rail.center.dy);
+      final first = await tester.startGesture(grip);
+      await first.up();
+      await tester.pump(const Duration(milliseconds: 80));
+      final second = await tester.startGesture(grip);
+      await second.up();
+      await tester.pumpAndSettle();
+      expect(c.hasCustomWidth, isFalse);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets('the shell uses a custom rail width and keeps the page room',
+        (tester) async {
+      Future<double> railColumn(double window, double? custom) async {
+        tester.view.physicalSize = Size(window, 900);
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(MaterialApp(
+          theme: buildWebDarkTheme(),
+          home: WebShellV2(
+            selected: WebDest.dashboard,
+            onSelect: (_) {},
+            billsDueCount: 0,
+            email: 'a@b.c',
+            onSignOut: () {},
+            isDark: true,
+            onToggleTheme: () {},
+            rightRail: const Text('rail'),
+            rightRailWidth: custom,
+            child: const SizedBox(),
+          ),
+        ));
+        await tester.pump();
+        final railLeft = tester.getRect(find.text('rail')).left;
+        return window - railLeft;
+      }
+
+      addTearDown(tester.view.reset);
+      expect(await railColumn(1600, 500), 500);
+      expect(await railColumn(1600, null), WebShellV2.railWidthFor(1600));
+      // 1440 − 232 nav − 640 page floor = 568: a 900 px drag is held there.
+      expect(await railColumn(1440, 900), 568);
+    });
 
     testWidgets('the rail draws one header row and the three quick actions',
         (tester) async {

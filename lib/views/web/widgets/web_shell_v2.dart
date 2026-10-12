@@ -10,7 +10,7 @@ import '../web_keys.dart';
 ///
 /// A 232 px nav rail grouped Overview · Money · Plan · Review, with Setup &
 /// Accounts, the sync line, the theme toggle and the account row in its foot;
-/// then the page, in a column capped at [WebBreakpoints.content]; then,
+/// then the page, in a column capped at [WebBreakpoints.contentV2]; then,
 /// optionally, a fixed right rail (the Dashboard's Nudgy) or the slide-over
 /// dock. There is no top bar: the page header is the only title on the page.
 ///
@@ -22,8 +22,16 @@ class WebShellV2 extends StatelessWidget {
   /// works out how much width the page can spare.
   static const double navWidth = 232;
 
-  /// Width of the fixed right rail column.
-  static const double railWidth = 360;
+  /// The page never gets narrower than this beside the right rail; a rail
+  /// dragged wider is clamped so the page keeps it.
+  static const double minPageWidthBesideRail = 640;
+
+  /// Right padding inside the rail column (the card sits inside it).
+  static const double railRightPadding = 40;
+
+  /// The rail column's width the user dragged to (Nudgy's saved width), or
+  /// null for the automatic [railWidthFor] the window.
+  final double? rightRailWidth;
 
   final WebDest selected;
   final ValueChanged<WebDest> onSelect;
@@ -62,6 +70,7 @@ class WebShellV2 extends StatelessWidget {
     required this.onSelect,
     required this.child,
     this.rightRail,
+    this.rightRailWidth,
     this.dock,
     this.billsDueCount = 0,
     this.sync,
@@ -72,11 +81,32 @@ class WebShellV2 extends StatelessWidget {
     required this.onToggleTheme,
   });
 
+  /// The Nudgy rail's width for a window [windowWidth] wide: about a quarter
+  /// of the window, so it grows on wide screens and never squeezes the page
+  /// on a laptop. Between [minRailWidth] and [maxRailWidth].
+  static double railWidthFor(double windowWidth) =>
+      (windowWidth * 0.24).clamp(minRailWidth, maxRailWidth).toDouble();
+
+  /// The rail column: the user's dragged width when there is one, else
+  /// automatic — and never so wide the page drops under
+  /// [minPageWidthBesideRail].
+  double _railWidth(double windowWidth) {
+    final most = windowWidth - navWidth - minPageWidthBesideRail;
+    final want = rightRailWidth ?? railWidthFor(windowWidth);
+    return want
+        .clamp(minRailWidth.clamp(0, most), most.clamp(0, double.infinity))
+        .toDouble();
+  }
+
+  static const double minRailWidth = 340;
+  static const double maxRailWidth = 440;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final showRail = rightRail != null &&
-        MediaQuery.sizeOf(context).width >= WebBreakpoints.rightRail;
+    final windowWidth = MediaQuery.sizeOf(context).width;
+    final showRail =
+        rightRail != null && windowWidth >= WebBreakpoints.rightRail;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -94,15 +124,19 @@ class WebShellV2 extends StatelessWidget {
             isDark: isDark,
             onToggleTheme: onToggleTheme,
           ),
+          // The page fills the width beside the rail (or the window edge) up
+          // to WebBreakpoints.contentV2, and centres past that on very wide
+          // screens — no dead strip between the page and Nudgy.
           Expanded(
             child: SafeArea(
               child: Align(
-                alignment: Alignment.topLeft,
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints:
-                      const BoxConstraints(maxWidth: WebBreakpoints.content),
+                      const BoxConstraints(maxWidth: WebBreakpoints.contentV2),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(40, 28, 40, 48),
+                    padding:
+                        EdgeInsets.fromLTRB(40, 28, showRail ? 24 : 40, 48),
                     child: child,
                   ),
                 ),
@@ -111,10 +145,11 @@ class WebShellV2 extends StatelessWidget {
           ),
           if (showRail)
             SizedBox(
-              width: railWidth,
+              width: _railWidth(windowWidth),
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 28, 40, 48),
+                  padding:
+                      const EdgeInsets.fromLTRB(0, 28, railRightPadding, 48),
                   child: rightRail,
                 ),
               ),
