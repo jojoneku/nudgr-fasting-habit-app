@@ -112,6 +112,12 @@ _MAX_PROFILE_LEN = 4000
 _MAX_IMAGE_B64_LEN = 8_000_000   # ~6 MB decoded image
 _ALLOWED_IMAGE_MIME = ("image/jpeg", "image/png", "image/webp")
 
+# Images one advisor turn may carry. Matches the app's own cap
+# (AiCoachPresenter.maxAttachments). Extras are dropped, not rejected: an
+# over-cap turn is a client bug, and the user's question still deserves an
+# answer. The 6 MB Lambda request limit is the real ceiling on the total.
+_MAX_ADVISOR_IMAGES = 5
+
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 
@@ -1526,24 +1532,25 @@ def _build_advisor_request(payload):
     if not bedrock_messages:
         return None, _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
 
-    # Optional attached photo (a bill, receipt, credit offer …). Attach it to the
-    # LAST user turn as a vision block so the advisor reads it in context — the
-    # same Bedrock image path the food vision op uses. The image is sent only on
-    # the turn it's attached (the client never replays it in history).
-    image_b64 = (payload.get("image_base64") or "").strip()
-    has_image = bool(image_b64)
+    # Optional attached photos (a bill, receipt, credit offer …). Attach them
+    # to the LAST user turn as vision blocks so the advisor reads them in
+    # context — the same Bedrock image path the food vision op uses. Images are
+    # sent only on the turn they are attached (the client never replays them in
+    # history).
+    images, err = _advisor_images(payload)
+    if err is not None:
+        return None, err
+    has_image = bool(images)
     if has_image:
-        if len(image_b64) > _MAX_IMAGE_B64_LEN:
-            return None, _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
-        mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
-        if mime not in _ALLOWED_IMAGE_MIME:
-            mime = "image/jpeg"
         for m in reversed(bedrock_messages):
             if m["role"] == "user":
                 text_content = m["content"] if isinstance(m["content"], str) else ""
-                m["content"] = [
-                    {"type": "image", "source": {"type": "base64", "media_type": mime, "data": image_b64}},
-                    {"type": "text", "text": text_content or "Please review this image."},
+                fallback = (
+                    "Please review this image." if len(images) == 1
+                    else "Please review these images."
+                )
+                m["content"] = _image_blocks(images) + [
+                    {"type": "text", "text": text_content or fallback},
                 ]
                 break
 
@@ -1566,6 +1573,60 @@ def _build_advisor_request(payload):
         "_has_summary": bool(summary),
         "_has_image": has_image,
     }, None
+
+
+def _advisor_images(payload):
+    """The images attached to an advisor turn, as `[(mime, base64)]`.
+
+    Returns `(images, None)`, or `(None, response)` when an image is too large.
+
+    Reads `images: [{base64, mime_type}]`, the multi-image field. Falls back to
+    the single `image_base64` + `mime_type` pair that app builds before
+    multi-image send, which still exist in the wild. A new client sends both —
+    the single field mirrors its first image so an older Lambda still sees one
+    — so when `images` is present the single field is ignored, or that first
+    image would be read twice.
+    """
+    raw = payload.get("images")
+    entries = []
+    if isinstance(raw, list) and raw:
+        for item in raw:
+            if isinstance(item, dict):
+                entries.append((item.get("mime_type"), item.get("base64")))
+    else:
+        entries.append((payload.get("mime_type"), payload.get("image_base64")))
+
+    images = []
+    for mime, data in entries:
+        data = (data or "").strip() if isinstance(data, str) else ""
+        if not data:
+            continue
+        if len(data) > _MAX_IMAGE_B64_LEN:
+            return None, _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+        mime = (mime or "image/jpeg").strip().lower() if isinstance(mime, str) else "image/jpeg"
+        if mime not in _ALLOWED_IMAGE_MIME:
+            mime = "image/jpeg"
+        images.append((mime, data))
+
+    if len(images) > _MAX_ADVISOR_IMAGES:
+        print(f"[advisor] images dropped: got {len(images)}, cap {_MAX_ADVISOR_IMAGES}")
+        images = images[:_MAX_ADVISOR_IMAGES]
+    return images, None
+
+
+def _image_blocks(images):
+    """Bedrock content blocks for `images`, in the order the user attached them.
+
+    One image is a bare image block. Several are each preceded by an
+    "Image N:" label, as Anthropic's vision guidance advises, so the model and
+    the user can both refer to "the second one" and mean the same picture.
+    """
+    blocks = []
+    for i, (mime, data) in enumerate(images, start=1):
+        if len(images) > 1:
+            blocks.append({"type": "text", "text": f"Image {i}:"})
+        blocks.append({"type": "image", "source": {"type": "base64", "media_type": mime, "data": data}})
+    return blocks
 
 
 def _cost_line(*, msgs, has_summary, has_image, usage, stop_reason,

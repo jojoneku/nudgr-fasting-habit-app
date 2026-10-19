@@ -303,6 +303,77 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  // ── Attachments ───────────────────────────────────────────────────────────
+
+  /// Images one advisor message may carry. Each is compressed to a ~1024px
+  /// JPEG before send (well under 1 MB, base64 adds a third), so five stay
+  /// comfortably inside the 6 MB Lambda request limit with the snapshot and
+  /// the legacy single-image mirror on top. The backend enforces the same cap.
+  static const int maxAttachments = 5;
+
+  /// Images staged for the next message, in the order they were added. Raw
+  /// bytes from the picker or the clipboard; compressed at send.
+  final List<Uint8List> _pendingImages = [];
+
+  List<Uint8List> get pendingImages => List.unmodifiable(_pendingImages);
+  bool get hasPendingImages => _pendingImages.isNotEmpty;
+  int get remainingAttachmentSlots => maxAttachments - _pendingImages.length;
+  bool get canAddAttachment => remainingAttachmentSlots > 0;
+
+  /// Shown when an add would pass [maxAttachments].
+  String get attachmentLimitMessage =>
+      'Up to $maxAttachments images per message.';
+
+  /// Stages [images] for the next message, up to [maxAttachments].
+  ///
+  /// Returns how many were left out because the cap was reached, so the view
+  /// can say so. Empty byte arrays are ignored: they are what a failed read or
+  /// an empty clipboard item produces, and sending one fails at the model.
+  int addAttachments(Iterable<Uint8List> images) {
+    var dropped = 0;
+    var added = false;
+    for (final image in images) {
+      if (image.isEmpty) continue;
+      if (!canAddAttachment) {
+        dropped++;
+        continue;
+      }
+      _pendingImages.add(image);
+      added = true;
+    }
+    if (added) safeNotify();
+    return dropped;
+  }
+
+  /// Unstages the image at [index]. Out-of-range indexes are ignored — a
+  /// double tap on a remove button must not throw.
+  void removeAttachment(int index) {
+    if (index < 0 || index >= _pendingImages.length) return;
+    _pendingImages.removeAt(index);
+    safeNotify();
+  }
+
+  void clearAttachments() {
+    if (_pendingImages.isEmpty) return;
+    _pendingImages.clear();
+    safeNotify();
+  }
+
+  /// Sends [text] with every staged image, and unstages them.
+  ///
+  /// The images leave the staging row at once, before the turn runs, so the
+  /// row empties the moment the user taps send — like the text field.
+  Future<void> sendWithAttachments(String text) async {
+    if (_isResponding) return;
+    if (text.trim().isEmpty && _pendingImages.isEmpty) return;
+    final images = List<Uint8List>.of(_pendingImages);
+    if (images.isNotEmpty) {
+      _pendingImages.clear();
+      safeNotify();
+    }
+    await send(text, images: images);
+  }
+
   // ── Send ──────────────────────────────────────────────────────────────────
 
   /// Re-runs the last turn after a failure, without making the user retype it.
@@ -329,7 +400,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _lastTurnRetryable = false;
     safeNotify();
 
-    await send(prompt.text, image: prompt.imageBytes);
+    await send(prompt.text, images: prompt.images);
   }
 
   /// Replaces a question already asked and answers the new one.
@@ -351,13 +422,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     if (!_isEditablePrompt(target)) return false;
     if (trimmed == target.text.trim()) return false; // nothing changed
 
-    final image = target.imageBytes;
+    final images = target.images;
     _messages.removeRange(index, _messages.length);
     _errorMessage = null;
     _lastTurnRetryable = false;
     safeNotify();
 
-    await send(trimmed, image: image);
+    await send(trimmed, images: images);
     return true;
   }
 
@@ -379,14 +450,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     return null;
   }
 
-  Future<void> send(String text, {Uint8List? image}) async {
+  Future<void> send(
+    String text, {
+    List<Uint8List> images = const [],
+  }) async {
     final trimmed = text.trim();
-    if ((trimmed.isEmpty && image == null) || _isResponding) return;
+    if ((trimmed.isEmpty && images.isEmpty) || _isResponding) return;
 
     // Logging intent — or any reply while the ledger is mid-clarify — goes
     // through the ledger's confirm-before-commit pipeline instead of the advice
     // model. The sheet renders the confirm card. An attached image is always
-    // advice, never an expense log, so routing is skipped for one.
+    // advice, never an expense log, so routing is skipped for a turn with any.
     //
     // Two tests, because they catch different things. [looksLikeExpenseLog]
     // reads the words alone (a spend verb, or a short "coffee 120"), which is
@@ -398,7 +472,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // is the exception, and stays with Nudgy — see [isAdvisorToolRequest].
     final ledger = _ledger;
     var promptShown = false;
-    if (image == null &&
+    if (images.isEmpty &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         _routesToLedger(trimmed, ledger)) {
@@ -424,23 +498,25 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       promptShown = true;
     }
 
-    // Compress an attached photo off the UI thread before building the turn.
-    Uint8List? compressed;
-    if (image != null) {
-      try {
-        compressed = await _imageCompressor.compressForUpload(image);
-      } catch (e) {
-        compressed = image; // fall back to the original bytes
-        debugPrint('AiCoachPresenter.send image compress failed: $e');
-      }
+    // Compress attached photos off the UI thread before building the turn.
+    // Past the cap is a caller bug; the extras are dropped rather than sent
+    // into a request the backend would trim anyway.
+    var compressed = const <Uint8List>[];
+    if (images.isNotEmpty) {
+      compressed = await Future.wait(
+          images.take(maxAttachments).map(_compressForUpload));
       if (isDisposed) return;
     }
 
     if (!promptShown) {
       // With an image but no caption, give the model a natural prompt to react
       // to.
-      final display = trimmed.isEmpty ? 'What do you make of this?' : trimmed;
-      _messages.add(AiChatMessage.user(display, imageBytes: compressed));
+      final display = trimmed.isNotEmpty
+          ? trimmed
+          : compressed.length > 1
+              ? 'What do you make of these?'
+              : 'What do you make of this?';
+      _messages.add(AiChatMessage.user(display, images: compressed));
     }
     _errorMessage = null;
     _isResponding = true;
@@ -452,7 +528,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     try {
-      final context = _buildContext(image: compressed);
+      final context = _buildContext(images: compressed);
       final buffer = StringBuffer();
 
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
@@ -1245,7 +1321,19 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  AiCoachContext _buildContext({Uint8List? image}) {
+  /// One image resized for the vision endpoint, or the original bytes when
+  /// the codec fails — a too-large image the server refuses is a clearer
+  /// failure than a silently missing one.
+  Future<Uint8List> _compressForUpload(Uint8List image) async {
+    try {
+      return await _imageCompressor.compressForUpload(image);
+    } catch (e) {
+      debugPrint('AiCoachPresenter.send image compress failed: $e');
+      return image;
+    }
+  }
+
+  AiCoachContext _buildContext({List<Uint8List> images = const []}) {
     final stats = _stats.stats;
     final n = _nutrition;
     final t = _treasury;
@@ -1503,8 +1591,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     return AiCoachContext(
       entryPoint: _entryPoint,
       today: isAdvisor ? DateTime.now() : null,
-      imageBytes: isAdvisor ? image : null,
-      imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
+      images: isAdvisor ? images : const [],
+      imageMimeType: isAdvisor && images.isNotEmpty ? 'image/jpeg' : null,
       // Absent on finance-only surfaces (web): report "not fasting" rather than
       // inventing a fast, and omit the goal entirely.
       isFasting: _fasting?.isFasting ?? false,

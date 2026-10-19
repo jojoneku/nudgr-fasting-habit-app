@@ -362,12 +362,13 @@ class AiCoachContext {
   /// the year. Null leaves the line out (tests, and the RPG coach).
   final DateTime? today;
 
-  // ── Attached image (advisor photo upload) ───────────────────────────────────
-  /// Compressed JPEG bytes the user attached this turn (a bill, receipt, credit
-  /// offer…), sent to the vision model once. Transient — never serialized.
-  final Uint8List? imageBytes;
+  // ── Attached images (advisor photo upload) ──────────────────────────────────
+  /// Compressed JPEG bytes of each image the user attached this turn (a bill,
+  /// receipt, credit offer…), in the order attached, sent to the vision model
+  /// once. Transient — never serialized. Empty when nothing is attached.
+  final List<Uint8List> images;
 
-  /// MIME type of [imageBytes] (e.g. 'image/jpeg').
+  /// MIME type of every entry in [images] (e.g. 'image/jpeg').
   final String? imageMimeType;
 
   // ── Nutrition ──────────────────────────────────────────────────────────────
@@ -516,7 +517,7 @@ class AiCoachContext {
   const AiCoachContext({
     required this.entryPoint,
     this.today,
-    this.imageBytes,
+    this.images = const [],
     this.imageMimeType,
     this.todayCalories,
     this.calorieGoal,

@@ -266,43 +266,24 @@ class CloudAiCoachService implements AiCoachService {
           'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
     }
 
-    final img = context.imageBytes;
     final body = jsonEncode({
       'op': 'adviseFinance',
-      'payload': {
-        'context': {
-          'summary': context.financeSnapshotSummary(),
-          if (profile != null && profile.trim().isNotEmpty)
-            'profile': profile.trim(),
-          if (historical != null && historical.trim().isNotEmpty)
-            'historical': historical.trim(),
-        },
-        if (img != null) 'image_base64': base64Encode(img),
-        if (img != null) 'mime_type': context.imageMimeType ?? 'image/jpeg',
-        if (tools.isNotEmpty)
-          'tools': [for (final t in tools) t.toRequestJson()],
-        // This client asks again for a tool call the server's time budget cut
-        // off mid-input, so the server may report it instead of ending the
-        // turn with a "stopped early" notice. See AdvisorReply.interruptedTools.
-        if (tools.isNotEmpty) 'resume_cut_tools': true,
-        // A turn is sent when it has text OR content blocks. The blocks path is
-        // the tool loop: an assistant turn holding a tool_use usually carries
-        // no text, and dropping it would orphan the tool_result answering it,
-        // which Bedrock rejects.
-        'messages': messages
-            .where((m) =>
-                m.role != AiChatRole.assistant ||
-                m.text.isNotEmpty ||
-                m.contentBlocks.isNotEmpty)
-            .map((m) => {
-                  'role': m.role == AiChatRole.user ? 'user' : 'assistant',
-                  'text': m.text,
-                  if (m.contentBlocks.isNotEmpty)
-                    'content_blocks': m.contentBlocks,
-                })
-            .toList(),
-      },
+      'payload': advisorPayload(
+        messages: messages,
+        context: context,
+        profile: profile,
+        historical: historical,
+        tools: tools,
+      ),
     });
+
+    // Lambda refuses a request over 6 MB before the handler runs, with an
+    // error that says nothing about images. Saying so here lets the user
+    // remove one and try again.
+    if (context.images.isNotEmpty && exceedsAdvisorRequestLimit(body)) {
+      throw const AiCoachException(
+          'Those images are too large to send together. Remove one and try again.');
+    }
 
     if (_advisorEndpoint.isEmpty) {
       yield* _adviseFinanceBuffered(body);
@@ -310,6 +291,69 @@ class CloudAiCoachService implements AiCoachService {
     }
     yield* _adviseFinanceStreamed(body);
   }
+
+  /// The `payload` of an `adviseFinance` request. Pure, so a test can check
+  /// what the backend receives without a network.
+  @visibleForTesting
+  static Map<String, Object?> advisorPayload({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+    List<AiTool> tools = const [],
+  }) {
+    final mime = context.imageMimeType ?? 'image/jpeg';
+    final images = [for (final img in context.images) base64Encode(img)];
+    return {
+      'context': {
+        'summary': context.financeSnapshotSummary(),
+        if (profile != null && profile.trim().isNotEmpty)
+          'profile': profile.trim(),
+        if (historical != null && historical.trim().isNotEmpty)
+          'historical': historical.trim(),
+      },
+      if (images.isNotEmpty)
+        'images': [
+          for (final b64 in images) {'base64': b64, 'mime_type': mime},
+        ],
+      // The single-image fields a Lambda from before multi-image send reads.
+      // Mirrors the first image so an app that updates before the backend
+      // deploys still sends a photo; a current backend ignores these whenever
+      // `images` is present. Drop once that deploy is out.
+      if (images.isNotEmpty) 'image_base64': images.first,
+      if (images.isNotEmpty) 'mime_type': mime,
+      if (tools.isNotEmpty) 'tools': [for (final t in tools) t.toRequestJson()],
+      // This client asks again for a tool call the server's time budget cut
+      // off mid-input, so the server may report it instead of ending the turn
+      // with a "stopped early" notice. See AdvisorReply.interruptedTools.
+      if (tools.isNotEmpty) 'resume_cut_tools': true,
+      // A turn is sent when it has text OR content blocks. The blocks path is
+      // the tool loop: an assistant turn holding a tool_use usually carries no
+      // text, and dropping it would orphan the tool_result answering it, which
+      // Bedrock rejects.
+      'messages': messages
+          .where((m) =>
+              m.role != AiChatRole.assistant ||
+              m.text.isNotEmpty ||
+              m.contentBlocks.isNotEmpty)
+          .map((m) => {
+                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+                'text': m.text,
+                if (m.contentBlocks.isNotEmpty)
+                  'content_blocks': m.contentBlocks,
+              })
+          .toList(),
+    };
+  }
+
+  /// Whether [body] is past [maxAdvisorRequestBytes] once UTF-8 encoded.
+  static bool exceedsAdvisorRequestLimit(String body) =>
+      utf8.encode(body).length > maxAdvisorRequestBytes;
+
+  /// Largest advisor request body sent, in bytes: the 6 MB Lambda invocation
+  /// limit (both the HTTP API and the Function URL invoke synchronously), less
+  /// headroom for headers and the event envelope.
+  static const int maxAdvisorRequestBytes = 5800000;
 
   /// Lowercase hex SHA-256 of the exact request body, for
   /// `x-amz-content-sha256`.

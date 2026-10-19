@@ -7,6 +7,7 @@ import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/ledger_presenter.dart';
+import '../../services/clipboard_image_paste.dart';
 import 'advisor_log_card.dart';
 import 'advisor_memory_sheet.dart';
 import 'chat_markdown.dart';
@@ -184,9 +185,9 @@ class _AiChatBodyState extends State<AiChatBody> {
 
   String? _lastLoggedSummary;
 
-  /// A photo the user has attached but not yet sent (shown as a preview chip
-  /// above the input). Advisor mode only.
-  Uint8List? _pendingImage;
+  /// Ctrl/Cmd+V of an image into the input. A no-op off the web. Advisor mode
+  /// only — the advisor op is the only one wired for vision.
+  ClipboardImagePaste? _paste;
 
   /// Whether the list should stay pinned to the newest message. Turned off the
   /// moment the user scrolls up to read history, back on when they return to
@@ -212,6 +213,12 @@ class _AiChatBodyState extends State<AiChatBody> {
         _presenter.messages.isEmpty ? 0 : _presenter.messages.last.text.length;
     _presenter.addListener(_onPresenterContentChanged);
     _scrollController.addListener(_onScroll);
+    if (_advisorMode) {
+      _paste = ClipboardImagePaste(
+        isActive: () => mounted && _focusNode.hasFocus,
+        onImages: _addImages,
+      )..start();
+    }
   }
 
   /// Bridge ledger commits back into the conversation: post a "✓ Logged …"
@@ -253,6 +260,7 @@ class _AiChatBodyState extends State<AiChatBody> {
     if (_advisorMode) _ledger!.removeListener(_onLedgerSideEffects);
     _presenter.removeListener(_onPresenterContentChanged);
     _scrollController.removeListener(_onScroll);
+    _paste?.dispose();
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -261,17 +269,15 @@ class _AiChatBodyState extends State<AiChatBody> {
 
   void _send() {
     final text = _controller.text.trim();
-    final image = _pendingImage;
-    if (text.isEmpty && image == null) return;
+    if (text.isEmpty && !_presenter.hasPendingImages) return;
     _controller.clear();
-    setState(() => _pendingImage = null);
     // Dismiss keyboard first so its animation starts before the rebuild.
     FocusScope.of(context).unfocus();
     // Sending a turn is an explicit request to follow the conversation again,
     // even if the user was reading back through history.
     _followTail = true;
     Future.delayed(Duration.zero, () {
-      _presenter.send(text, image: image);
+      _presenter.sendWithAttachments(text);
       _scrollToBottom();
     });
   }
@@ -304,7 +310,10 @@ class _AiChatBodyState extends State<AiChatBody> {
     _scrollToBottom();
   }
 
-  /// Pick a bill / receipt / statement photo (camera or gallery) to attach.
+  /// Pick bill / receipt / statement photos (camera or gallery) to attach.
+  ///
+  /// The gallery picks several at once, up to the slots left; the camera
+  /// takes one.
   Future<void> _attachPhoto() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -312,20 +321,43 @@ class _AiChatBodyState extends State<AiChatBody> {
       builder: (_) => const _PhotoSourceSheet(),
     );
     if (source == null || !mounted) return;
+    final slots = _presenter.remainingAttachmentSlots;
+    if (slots <= 0) return;
     try {
-      final picked = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 2048,
-        maxHeight: 2048,
-        imageQuality: 90,
-      );
-      if (picked == null || !mounted) return;
-      final bytes = await picked.readAsBytes();
-      if (!mounted) return;
-      setState(() => _pendingImage = bytes);
+      final picker = ImagePicker();
+      // `pickMultiImage` refuses a limit below 2, so one slot left is a
+      // single pick.
+      final List<XFile> picked;
+      if (source == ImageSource.gallery && slots > 1) {
+        picked = await picker.pickMultiImage(
+          maxWidth: 2048,
+          maxHeight: 2048,
+          imageQuality: 90,
+          limit: slots,
+        );
+      } else {
+        final one = await picker.pickImage(
+          source: source,
+          maxWidth: 2048,
+          maxHeight: 2048,
+          imageQuality: 90,
+        );
+        picked = [if (one != null) one];
+      }
+      if (picked.isEmpty || !mounted) return;
+      final images = await Future.wait(picked.map((f) => f.readAsBytes()));
+      _addImages(images);
     } catch (_) {
       // Permission denied / no camera — no-op.
     }
+  }
+
+  /// Stages picked, pasted or keyboard-inserted images, and says so when the
+  /// per-message cap left some out.
+  void _addImages(List<Uint8List> images) {
+    if (!mounted) return;
+    final dropped = _presenter.addAttachments(images);
+    if (dropped > 0) AppToast.show(context, _presenter.attachmentLimitMessage);
   }
 
   /// Re-evaluate whether the conversation grew, and follow it if the user is
@@ -507,10 +539,13 @@ class _AiChatBodyState extends State<AiChatBody> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_pendingImage != null)
-                _StagedImagePreview(
-                  bytes: _pendingImage!,
-                  onRemove: () => setState(() => _pendingImage = null),
+              if (_advisorMode)
+                ListenableBuilder(
+                  listenable: _presenter,
+                  builder: (_, __) => StagedImagesRow(
+                    images: _presenter.pendingImages,
+                    onRemove: _presenter.removeAttachment,
+                  ),
                 ),
               if (widget.aboveInput != null) widget.aboveInput!,
               ListenableBuilder(
@@ -530,6 +565,8 @@ class _AiChatBodyState extends State<AiChatBody> {
                     // Photo upload is an advisor-only capability (its op is
                     // the only one wired for vision).
                     onAttach: _advisorMode ? _attachPhoto : null,
+                    canAttach: _presenter.canAddAttachment,
+                    onImagesInserted: _advisorMode ? _addImages : null,
                   );
                 },
               ),
@@ -1055,17 +1092,8 @@ class _MessageBubble extends StatelessWidget {
                       : CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (message.imageBytes != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 220),
-                          child: Image.memory(
-                            message.imageBytes!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
+                    if (message.images.isNotEmpty) ...[
+                      MessageImages(images: message.images),
                       if (message.text.isNotEmpty) const SizedBox(height: 8),
                     ],
                     if (message.text.isNotEmpty)
@@ -1203,6 +1231,14 @@ class _InputBar extends StatelessWidget {
   /// When non-null, shows a camera button that attaches a photo (advisor only).
   final VoidCallback? onAttach;
 
+  /// False once the message holds as many images as it may; the camera
+  /// button greys out.
+  final bool canAttach;
+
+  /// When non-null, the field accepts images from the keyboard (Android's
+  /// content insertion: a screenshot from Gboard's clipboard, a sticker).
+  final ValueChanged<List<Uint8List>>? onImagesInserted;
+
   const _InputBar({
     required this.controller,
     required this.focusNode,
@@ -1210,7 +1246,15 @@ class _InputBar extends StatelessWidget {
     required this.hint,
     required this.onSend,
     this.onAttach,
+    this.canAttach = true,
+    this.onImagesInserted,
   });
+
+  void _onContentInserted(KeyboardInsertedContent content) {
+    final data = content.data;
+    if (data == null || data.isEmpty) return;
+    onImagesInserted?.call([data]);
+  }
 
   /// True where a physical keyboard is the norm. Desktop and web get
   /// Enter-to-send; phones and tablets keep the return key as a newline.
@@ -1254,7 +1298,7 @@ class _InputBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (onAttach != null) ...[
-            _AttachButton(enabled: enabled, onTap: onAttach!),
+            _AttachButton(enabled: enabled && canAttach, onTap: onAttach!),
             const SizedBox(width: 8),
           ],
           Expanded(
@@ -1271,6 +1315,13 @@ class _InputBar extends StatelessWidget {
                 maxLines: 4,
                 minLines: 1,
                 textInputAction: TextInputAction.newline,
+                // Only Android acts on this; elsewhere it is ignored. The
+                // default MIME list is images only.
+                contentInsertionConfiguration: onImagesInserted == null
+                    ? null
+                    : ContentInsertionConfiguration(
+                        onContentInserted: _onContentInserted,
+                      ),
                 style: TextStyle(
                   color: cs.onSurface,
                   fontSize: 14,
@@ -1555,45 +1606,157 @@ class _AttachButton extends StatelessWidget {
   }
 }
 
-/// The staged (not-yet-sent) photo shown just above the input bar, with a
-/// remove button.
-class _StagedImagePreview extends StatelessWidget {
+/// The staged (not-yet-sent) images shown just above the input bar, each with
+/// a remove button. Draws nothing when [images] is empty.
+class StagedImagesRow extends StatelessWidget {
+  final List<Uint8List> images;
+  final ValueChanged<int> onRemove;
+
+  const StagedImagesRow({
+    super.key,
+    required this.images,
+    required this.onRemove,
+  });
+
+  static const double thumbSize = 64;
+
+  /// How far the remove button's 44px target overhangs the thumbnail's
+  /// top-right corner, so the whole target sits inside the tile.
+  static const double _overhang = 18;
+
+  @override
+  Widget build(BuildContext context) {
+    if (images.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: thumbSize + _overhang + 4,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 4),
+        itemBuilder: (_, i) => _StagedImageTile(
+          bytes: images[i],
+          index: i,
+          count: images.length,
+          onRemove: () => onRemove(i),
+        ),
+      ),
+    );
+  }
+}
+
+class _StagedImageTile extends StatelessWidget {
   final Uint8List bytes;
+  final int index;
+  final int count;
   final VoidCallback onRemove;
-  const _StagedImagePreview({required this.bytes, required this.onRemove});
+
+  const _StagedImageTile({
+    required this.bytes,
+    required this.index,
+    required this.count,
+    required this.onRemove,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    const thumb = StagedImagesRow.thumbSize;
+    const overhang = StagedImagesRow._overhang;
+    return SizedBox(
+      width: thumb + overhang,
+      height: thumb + overhang,
       child: Stack(
-        clipBehavior: Clip.none,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child:
-                Image.memory(bytes, width: 64, height: 64, fit: BoxFit.cover),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                bytes,
+                width: thumb,
+                height: thumb,
+                fit: BoxFit.cover,
+                semanticLabel: 'Attached image ${index + 1} of $count',
+              ),
+            ),
           ),
           Positioned(
-            top: -6,
-            right: -6,
-            child: GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: cs.surface,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: cs.outlineVariant),
+            top: 0,
+            right: 0,
+            child: Semantics(
+              button: true,
+              label: 'Remove image ${index + 1}',
+              excludeSemantics: true,
+              child: InkResponse(
+                key: ValueKey('nudgy.removeImage.$index'),
+                onTap: onRemove,
+                radius: 22,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: cs.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 14,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 ),
-                child: Icon(Icons.close, size: 14, color: cs.onSurfaceVariant),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The images on a sent message. One image shows large, as before; several
+/// show as a wrap of square thumbnails.
+class MessageImages extends StatelessWidget {
+  final List<Uint8List> images;
+
+  const MessageImages({super.key, required this.images});
+
+  @override
+  Widget build(BuildContext context) {
+    if (images.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 220),
+          child: Image.memory(images.first, fit: BoxFit.cover),
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.end,
+      children: [
+        for (var i = 0; i < images.length; i++)
+          ClipRRect(
+            key: ValueKey('nudgy.messageImage.$i'),
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(
+              images[i],
+              width: 88,
+              height: 88,
+              fit: BoxFit.cover,
+              semanticLabel: 'Image ${i + 1} of ${images.length}',
+            ),
+          ),
+      ],
     );
   }
 }
