@@ -5,11 +5,13 @@ import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
@@ -71,6 +73,97 @@ class DashboardAccountRow {
   });
 }
 
+/// The next month's cash outlook, built from the same lines as the Month-End
+/// Outlook so the two cards compare row for row. See
+/// [TreasuryDashboardPresenter.nextMonthForecast] for where each figure comes
+/// from.
+@immutable
+class NextMonthForecast {
+  /// The 'YYYY-MM' key of the month forecast.
+  final String month;
+
+  /// The 'YYYY-MM' key of the current month — the month [startingCash] ends.
+  final String fromMonth;
+
+  /// This month's projected ending cash
+  /// ([TreasuryDashboardPresenter.forecastedNetBalance]).
+  final double startingCash;
+
+  /// Receivables expected next month, stored or still to be copied from a
+  /// recurring series.
+  final double toReceive;
+
+  /// Bills due next month: stored bills, recurring bills not copied yet, and
+  /// credit statements due next month — filed already, or estimated from the
+  /// cycle still open when the statement does not exist yet.
+  final double bills;
+
+  /// Installment months that bill next month and are not already inside a
+  /// statement counted in [bills].
+  final double installments;
+
+  /// Set-asides still to fund next month.
+  final double setAsides;
+
+  /// Budget still to spend next month, less the slice already reserved by a
+  /// bill or set-aside in the same category (as in the Month-End Outlook).
+  final double budget;
+
+  /// True when next month has no budget of its own yet, so [budget] repeats
+  /// the recurring rows of the latest month that has one.
+  final bool budgetCarriedForward;
+
+  const NextMonthForecast({
+    required this.month,
+    required this.fromMonth,
+    required this.startingCash,
+    required this.toReceive,
+    required this.bills,
+    required this.installments,
+    required this.setAsides,
+    required this.budget,
+    required this.budgetCarriedForward,
+  });
+
+  /// Projected cash at the end of [month].
+  double get ending =>
+      startingCash + toReceive - bills - installments - setAsides - budget;
+
+  /// [ending] against this month's projected end ([startingCash]).
+  double get change => ending - startingCash;
+
+  bool get endsNegative => ending < 0;
+
+  bool get changeIsNegative => change < -0.005;
+
+  /// "November 2026" — the month the card forecasts.
+  String get monthName => monthLabel(month);
+
+  /// "Projected end of Nov" — the label of the ending figure.
+  String get endingTitle => 'Projected end of ${monthShortLabel(month)}';
+
+  /// [startingCash] as shown: `₱X`, or `−₱X` below zero.
+  String get startingCashLabel => _signedPeso(startingCash);
+
+  /// [ending] as shown: `₱X`, or `−₱X` below zero.
+  String get endingLabel => _signedPeso(ending);
+
+  static String _signedPeso(double amount) =>
+      amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
+
+  /// "+₱1,200.00 vs Oct" / "−₱800.00 vs Oct".
+  String get changeLabel {
+    final sign = changeIsNegative ? '−' : '+';
+    return '$sign${formatPeso(change.abs())} vs ${monthShortLabel(fromMonth)}';
+  }
+
+  /// Caption under the budget line: next month's own budget, or a repeat of
+  /// this month's.
+  String get budgetCaption => budgetCarriedForward
+      ? "Repeats this month's budget"
+      : 'Still budgeted to spend';
+}
+
 class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   TreasuryDashboardPresenter(
     StorageService storage, [
@@ -78,15 +171,18 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     BudgetPresenter? budget,
     BillsReceivablesPresenter? bills,
     DateTime Function()? clock,
+    InstallmentPresenter? installments,
   ])  : _storage = storage,
         _ledger = ledger,
         _budget = budget,
         _billsPresenter = bills,
+        _installmentsOwner = installments,
         _clock = clock ?? DateTime.now {
     load();
     _ledger?.addListener(_syncFromLedger);
     _budget?.addListener(_syncFromBudget);
     _billsPresenter?.addListener(_syncFromBills);
+    _installmentsOwner?.addListener(_syncFromInstallments);
   }
 
   final StorageService _storage;
@@ -105,6 +201,11 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// reports on. Optional on the same terms as [_budget]. Named apart from the
   /// `_bills` list below, which is this presenter's mirrored copy.
   final BillsReceivablesPresenter? _billsPresenter;
+
+  /// The owner of the installment plans, which [nextMonthForecast] reads to
+  /// see which installment months bill next month. Optional on the same terms
+  /// as [_budget].
+  final InstallmentPresenter? _installmentsOwner;
 
   /// Mirror accounts/transactions/categories from LedgerPresenter so that
   /// dashboard summaries reflect ledger mutations without waiting for a tab
@@ -178,11 +279,23 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  /// Mirror installment plans from their owner, [InstallmentPresenter], on
+  /// the same terms as [_syncFromBills].
+  void _syncFromInstallments() {
+    final owner = _installmentsOwner;
+    if (owner == null) return;
+    final plans = owner.allInstallments;
+    if (listEquals(plans, _installmentPlans)) return;
+    _installmentPlans = plans;
+    safeNotify();
+  }
+
   @override
   void dispose() {
     _ledger?.removeListener(_syncFromLedger);
     _budget?.removeListener(_syncFromBudget);
     _billsPresenter?.removeListener(_syncFromBills);
+    _installmentsOwner?.removeListener(_syncFromInstallments);
     super.dispose();
   }
 
@@ -194,6 +307,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   List<Budget> _budgets = [];
   List<BudgetGroupDef> _budgetGroups = BudgetGroupDef.defaultGroups;
   List<BudgetedExpense> _budgetedExpenses = [];
+  List<Installment> _installmentPlans = [];
   List<FinanceCategory> _categories = [];
   List<MonthlySummary> _summaries = [];
   String _currentMonth = toMonthKey(DateTime.now());
@@ -602,14 +716,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Still owed on this month's unpaid bills. A credit statement paid in
   /// part counts only what is left on it.
-  double get monthUnpaidBills =>
-      _bills.where((b) => b.month == _currentMonth && !b.isPaid).fold(
-          0.0,
-          (sum, b) =>
-              sum +
-              (b.billType == BillType.creditCard
-                  ? creditStatementRemaining(b)
-                  : b.amount));
+  double get monthUnpaidBills => _bills
+      .where((b) => b.month == _currentMonth && !b.isPaid)
+      .fold(0.0, (sum, b) => sum + _billOwed(b));
+
+  /// What is still owed on unpaid bill [b]: the whole amount, or for a credit
+  /// statement paid in part, only what is left on it.
+  double _billOwed(Bill b) => b.billType == BillType.creditCard
+      ? creditStatementRemaining(b)
+      : b.amount;
 
   double get endingCash =>
       totalLiquidCash + pendingReceivables - monthUnpaidBills;
@@ -788,12 +903,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Bills already scheduled for NEXT month (recurring copies, credit-card
   /// statements filed forward). Powers the advisor's forward look — "what's
-  /// coming after this month". Unpaid only.
+  /// coming after this month". Unpaid only, and a statement paid in part
+  /// counts what is left on it, as in [monthUnpaidBills].
   double get nextMonthUnpaidBills {
     final nm = nextMonth(_currentMonth);
     return _bills
         .where((b) => b.month == nm && !b.isPaid)
-        .fold(0.0, (sum, b) => sum + b.amount);
+        .fold(0.0, (sum, b) => sum + _billOwed(b));
   }
 
   /// Receivables expected NEXT month (money owed to you), still outstanding.
@@ -1099,7 +1215,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       // grow" is a different question from "did I fund the plan".
       var total = 0.0;
       for (final t in _transactions) {
-        if (t.month != _currentMonth) continue;
+        if (t.month != b.month) continue;
         if (t.accountId != b.categoryId) continue;
         if (t.type != TransactionType.inflow) continue;
         if (_isInternalSavingsTransferLeg(t)) continue;
@@ -1114,7 +1230,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     return _transactions
         .where(
           (t) =>
-              t.month == _currentMonth &&
+              t.month == b.month &&
               t.categoryId == b.categoryId &&
               isSpendingOutflow(t, excluded),
         )
@@ -1249,6 +1365,279 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       budgetedExpensesRemaining -
       totalBudgetRemaining +
       _obligationBudgetOverlap;
+
+  // --- Next month forecast ---
+
+  /// Where cash stands at the end of NEXT month, starting from this month's
+  /// projected end ([forecastedNetBalance]) and using the same lines as the
+  /// Month-End Outlook, so the two cards compare row for row.
+  ///
+  /// Each line counts what is stored for next month, and otherwise what the
+  /// month generators will create — never both, so nothing counts twice:
+  ///   • receivables, bills and set-asides: next month's own rows once it has
+  ///     any; otherwise this month's recurring rows, copied the way the bills
+  ///     presenter's generator copies them (`nextMonthAmount` first; never a
+  ///     recurring credit-card bill; never a set-aside into a funded goal);
+  ///   • credit statements due next month: the bill when it is filed (a
+  ///     statement that closed already), else an estimate for a cycle still
+  ///     open — the card's charges not on a statement yet plus the installment
+  ///     months that bill at its close;
+  ///   • installments on accounts with no billing cycle: the month due next
+  ///     month, while it is not paid;
+  ///   • budget: next month's own rows, else the recurring rows of the latest
+  ///     month that has any (the budget presenter's carry-forward), less the
+  ///     overlap with next month's bills and set-asides.
+  NextMonthForecast get nextMonthForecast {
+    final nm = nextMonth(_currentMonth);
+    final bills = _nextMonthBillObligations(nm);
+    final setAsides = _nextMonthSetAsideObligations(nm);
+    final cards = _nextMonthCardCosts(nm);
+    final budget = _nextMonthBudgetLines(nm);
+    final budgetTotal = budget.lines
+        .fold(0.0, (sum, l) => sum + l.remaining)
+        .clamp(0.0, double.infinity);
+    final overlap = _nextMonthBudgetOverlap(
+      budget.lines,
+      bills,
+      setAsides,
+      cap: budgetTotal,
+    );
+    return NextMonthForecast(
+      month: nm,
+      fromMonth: _currentMonth,
+      startingCash: forecastedNetBalance,
+      toReceive: _nextMonthReceivablesTotal(nm),
+      bills:
+          bills.fold(0.0, (sum, b) => sum + b.amount) + cards.statementCharges,
+      installments: cards.installments,
+      setAsides: setAsides.fold(0.0, (sum, e) => sum + e.amount),
+      budget: budgetTotal - overlap,
+      budgetCarriedForward: budget.carried,
+    );
+  }
+
+  /// Receivables still expected in [nm]: its own rows once it has any, else
+  /// this month's recurring ones, as the generator would copy them.
+  double _nextMonthReceivablesTotal(String nm) {
+    if (_receivables.any((r) => r.month == nm)) {
+      return _receivables
+          .where((r) => r.month == nm && !r.isReceived)
+          .fold(0.0, (sum, r) => sum + r.amount);
+    }
+    return _receivables
+        .where((r) => r.month == _currentMonth && r.isRecurring)
+        .fold(0.0, (sum, r) => sum + (r.nextMonthAmount ?? r.amount));
+  }
+
+  /// Bills owed in [nm]: every unpaid bill filed there (credit statements
+  /// included), plus this month's recurring bills when [nm] has no bills of
+  /// its own yet. The generator seeds a month only while it holds nothing but
+  /// auto statements, and never copies a credit-card bill forward — the
+  /// statement generator files those — so the two sets cannot overlap.
+  List<({double amount, String categoryId})> _nextMonthBillObligations(
+    String nm,
+  ) {
+    final out = <({double amount, String categoryId})>[
+      for (final b in _bills)
+        if (b.month == nm && !b.isPaid && _billOwed(b) > 0)
+          (amount: _billOwed(b), categoryId: b.categoryId),
+    ];
+    final seeded = _bills.any((b) => b.month == nm && !b.isAutoStatement);
+    if (seeded) return out;
+    for (final b in _bills) {
+      if (b.month != _currentMonth ||
+          !b.isRecurring ||
+          b.billType == BillType.creditCard) {
+        continue;
+      }
+      out.add(
+          (amount: b.nextMonthAmount ?? b.amount, categoryId: b.categoryId));
+    }
+    return out;
+  }
+
+  /// Set-asides still to fund in [nm]: its own rows once it has any, else this
+  /// month's recurring ones — except a set-aside into a goal already funded or
+  /// redeemed, which the generator stops.
+  List<({double amount, String categoryId, String? destinationAccountId})>
+      _nextMonthSetAsideObligations(String nm) {
+    final own = _budgetedExpenses.where((e) => e.month == nm).toList();
+    if (own.isNotEmpty) {
+      return [
+        for (final e in own)
+          if (!e.isPaid && e.allocatedAmount - e.spentAmount > 0)
+            (
+              amount: e.allocatedAmount - e.spentAmount,
+              categoryId: e.categoryId,
+              destinationAccountId: e.destinationAccountId,
+            ),
+      ];
+    }
+    return [
+      for (final e in _budgetedExpenses)
+        if (e.month == _currentMonth &&
+            e.isRecurring &&
+            !_goalIsFunded(e.destinationAccountId))
+          (
+            amount: e.nextMonthAmount ?? e.allocatedAmount,
+            categoryId: e.categoryId,
+            destinationAccountId: e.destinationAccountId,
+          ),
+    ];
+  }
+
+  /// Whether [accountId] is a goal already funded or redeemed — the stamp the
+  /// set-aside generator reads to stop a recurring contribution.
+  bool _goalIsFunded(String? accountId) {
+    if (accountId == null) return false;
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    if (account == null) return false;
+    return account.goalStage == GoalStage.funded ||
+        account.goalStage == GoalStage.redeemed;
+  }
+
+  /// Card costs due in [nm] that no filed bill carries yet.
+  ///
+  /// On a card with a billing cycle, a statement due in [nm] that is already
+  /// filed is a bill, counted by [_nextMonthBillObligations]. Its installment
+  /// months were charged onto the card when it closed, so they are inside its
+  /// amount. Only a cycle due in [nm] that has not closed counts here:
+  ///   • `statementCharges`: when the cycle is the one open today, what the
+  ///     card owes beyond its filed statements — the charges this statement
+  ///     carries so far;
+  ///   • `installments`: the installment months that bill at its close, less
+  ///     the ones already charged or due on an earlier open cycle.
+  ///
+  /// On an account with no billing cycle, each installment month is paid on
+  /// its own, so the month due in [nm] counts while it is not paid.
+  ({double statementCharges, double installments}) _nextMonthCardCosts(
+    String nm,
+  ) {
+    final now = _clock();
+    final today = DateTime(now.year, now.month, now.day);
+    final current = DateTime.parse('$_currentMonth-01');
+    var charges = 0.0;
+    var installments = 0.0;
+
+    for (final a in _accounts) {
+      if (!a.isActive || !a.isLiability || !a.hasBillingCycle) continue;
+      final filed = _bills.any((b) =>
+          b.billType == BillType.creditCard &&
+          b.accountId == a.id &&
+          b.month == nm);
+      if (filed) continue;
+      // The cycles still open, oldest first. A statement falls due at most 45
+      // days after it closes, so a cycle due in [nm] closes no earlier than
+      // the month before this one.
+      final open = [
+        for (var k = -1; k <= 1; k++)
+          a.cycleClosingIn(current.year, current.month + k)!,
+      ].where((c) => today.isBefore(c.close)).toList();
+      final plans = _installmentPlans
+          .where((i) => i.isActive && i.accountId == a.id)
+          .toList();
+      CreditCycle? previous;
+      for (final cycle in open) {
+        if (cycle.dueMonthKey == nm) {
+          if (cycle.contains(today)) {
+            final onStatements = _bills
+                .where((b) =>
+                    b.billType == BillType.creditCard && b.accountId == a.id)
+                .fold(0.0, (sum, b) => sum + creditStatementRemaining(b));
+            final unbilled = a.currentPayable - onStatements;
+            if (unbilled > 0) charges += unbilled;
+          }
+          for (final plan in plans) {
+            final posted = plan.paidCount(_transactions);
+            final earlier = previous == null
+                ? 0
+                : installmentChargesDueAt(a, plan, previous);
+            final floor = posted > earlier ? posted : earlier;
+            final months = installmentChargesDueAt(a, plan, cycle) - floor;
+            if (months > 0) installments += months * plan.monthlyAmount;
+          }
+        }
+        previous = cycle;
+      }
+    }
+
+    for (final plan in _installmentPlans) {
+      if (!plan.isDueIn(nm)) continue;
+      final account =
+          _accounts.where((a) => a.id == plan.accountId).firstOrNull;
+      if (account != null && account.hasBillingCycle) continue;
+      if (plan.paidCount(_transactions) < plan.chargesDueBy(nm)) {
+        installments += plan.monthlyAmount;
+      }
+    }
+    return (statementCharges: charges, installments: installments);
+  }
+
+  /// Budget rows for [nm] with what is still to spend on each: its own rows
+  /// once it has any; else the recurring rows of the latest earlier month
+  /// that has budgets — the rows the budget presenter carries forward — at
+  /// their full allocation, since nothing is spent against them yet.
+  ({List<({Budget budget, double remaining})> lines, bool carried})
+      _nextMonthBudgetLines(String nm) {
+    final own = _budgets.where((b) => b.month == nm).toList();
+    if (own.isNotEmpty) {
+      return (
+        lines: [
+          for (final b in own)
+            (
+              budget: b,
+              remaining: (b.allocatedAmount - _budgetSpentFor(b))
+                  .clamp(0.0, double.infinity),
+            ),
+        ],
+        carried: false,
+      );
+    }
+    final earlier =
+        _budgets.map((b) => b.month).where((m) => m.compareTo(nm) < 0);
+    if (earlier.isEmpty) return (lines: const [], carried: false);
+    final source = earlier.reduce((a, b) => a.compareTo(b) > 0 ? a : b);
+    return (
+      lines: [
+        for (final b in _budgets)
+          if (b.month == source && b.isRecurring)
+            (budget: b, remaining: b.allocatedAmount),
+      ],
+      carried: true,
+    );
+  }
+
+  /// Next month's version of [_obligationBudgetOverlap]: the slice of the
+  /// budget already reserved by a bill or set-aside in the same category (or,
+  /// for a savings row, a set-aside into the same account), capped at what
+  /// the budget deducts.
+  double _nextMonthBudgetOverlap(
+    List<({Budget budget, double remaining})> lines,
+    List<({double amount, String categoryId})> bills,
+    List<({double amount, String categoryId, String? destinationAccountId})>
+        setAsides, {
+    required double cap,
+  }) {
+    final byCategory = <String, double>{};
+    for (final b in bills) {
+      if (b.categoryId.isEmpty) continue;
+      byCategory[b.categoryId] = (byCategory[b.categoryId] ?? 0) + b.amount;
+    }
+    for (final e in setAsides) {
+      if (e.categoryId.isEmpty) continue;
+      byCategory[e.categoryId] = (byCategory[e.categoryId] ?? 0) + e.amount;
+    }
+    var overlap = 0.0;
+    for (final line in lines) {
+      final owed = _isSavingsGroup(line.budget.group)
+          ? setAsides
+              .where((e) => e.destinationAccountId == line.budget.categoryId)
+              .fold(0.0, (sum, e) => sum + e.amount)
+          : byCategory[line.budget.categoryId] ?? 0.0;
+      overlap += owed < line.remaining ? owed : line.remaining;
+    }
+    return overlap < cap ? overlap : cap;
+  }
 
   Map<String, double> get budgetAllocatedByGroup {
     final result = <String, double>{};
@@ -1794,6 +2183,12 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     _budgetedExpenses = await _storage.loadBudgetedExpenses();
     _categories = await _storage.loadFinanceCategories();
     _summaries = await _storage.loadMonthlySummaries();
+    // Plans are read from storage only when no owner is wired (tests,
+    // single-screen mounts). With an owner, its list is the source — below,
+    // or through [_syncFromInstallments] once it finishes loading.
+    if (_installmentsOwner == null) {
+      _installmentPlans = await _storage.loadInstallments();
+    }
     _currentMonth = toMonthKey(_clock());
     // The ledger's slices win over the storage copies read above. Storage has
     // no installment holds (they are derived from the live plans), and this
@@ -1806,6 +2201,11 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       _accounts = ledger.accounts;
       _transactions = ledger.allTransactions;
       _categories = ledger.categories;
+    }
+    // Same rule for the plans: take the owner's live list when it is ready.
+    final plans = _installmentsOwner;
+    if (plans != null && !plans.isLoading) {
+      _installmentPlans = plans.allInstallments;
     }
 
     _isLoading = false;

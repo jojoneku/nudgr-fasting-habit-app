@@ -27,8 +27,17 @@ const double _gap = 20;
 /// Under this content width the hero row and the two card columns stack.
 const double _twoColMin = 900;
 
-/// Height of the net-worth hero when it stacks above the outlook card (the
-/// row height it has beside it at ≥ [_twoColMin]).
+/// From this content width the hero row holds all three cards: net worth
+/// beside the month-end outlook and the next-month forecast. Below it the
+/// net-worth hero takes its own row and the two outlook cards share the next.
+const double _heroThreeColMin = 1280;
+
+/// Under this content width the two outlook cards stack instead of sitting
+/// side by side.
+const double _outlookPairMin = 560;
+
+/// Height of the net-worth hero on a row of its own, above the outlook cards
+/// (about the row height it has beside them at ≥ [_heroThreeColMin]).
 const double _heroStackedHeight = 300;
 
 /// Web Dashboard, v2 (Plan 063 Phase 3) — the canvas layout in
@@ -140,7 +149,7 @@ class WebDashboardPageV2 extends StatelessWidget {
 }
 
 // ===========================================================================
-// Hero row — net worth (2/3) + month-end outlook (1/3)
+// Hero row — net worth + month-end outlook + next-month forecast
 // ===========================================================================
 
 class _HeroRow extends StatelessWidget {
@@ -153,30 +162,53 @@ class _HeroRow extends StatelessWidget {
       builder: (context, constraints) {
         final hero = _NetWorthHero(presenter: presenter);
         final outlook = _OutlookCard(presenter: presenter);
-        if (constraints.maxWidth < _twoColMin) {
-          // Stacked: the hero's inner Spacer needs a bounded height, so give
-          // it the row height it would have had beside the outlook card.
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(height: _heroStackedHeight, child: hero),
-              const SizedBox(height: _gap),
-              outlook,
-            ],
+        final nextMonth = _NextMonthCard(presenter: presenter);
+        if (constraints.maxWidth >= _heroThreeColMin) {
+          // Stretch all three to one height so the hero's sparkline can sit
+          // on its bottom edge while the statements decide the row height.
+          // Nothing inside this row may use a LayoutBuilder (IntrinsicHeight).
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(flex: 2, child: hero),
+                const SizedBox(width: _gap),
+                Expanded(flex: 1, child: outlook),
+                const SizedBox(width: _gap),
+                Expanded(flex: 1, child: nextMonth),
+              ],
+            ),
           );
         }
-        // Stretch both to one height so the hero's sparkline can sit on its
-        // bottom edge while the six-row statement decides the row height.
-        // Nothing inside this row may use a LayoutBuilder (IntrinsicHeight).
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(flex: 2, child: hero),
-              const SizedBox(width: _gap),
-              Expanded(flex: 1, child: outlook),
-            ],
-          ),
+        // The hero on a row of its own: its inner Spacer needs a bounded
+        // height. Then this month and next month side by side, or stacked
+        // when the content is too narrow for two statements.
+        final pair = constraints.maxWidth >= _outlookPairMin
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: outlook),
+                    const SizedBox(width: _gap),
+                    Expanded(child: nextMonth),
+                  ],
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  outlook,
+                  const SizedBox(height: _gap),
+                  nextMonth,
+                ],
+              );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: _heroStackedHeight, child: hero),
+            const SizedBox(height: _gap),
+            pair,
+          ],
         );
       },
     );
@@ -513,6 +545,94 @@ class _OutlookCard extends StatelessWidget {
               caption: 'After bills, budget & savings',
               amount: _signedNegative(projected),
               color: projectedTone,
+              emphasis: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// Next-month forecast — the outlook chain carried one month on
+// ===========================================================================
+
+/// [TreasuryDashboardPresenter.nextMonthForecast] as the same kind of
+/// statement as [_OutlookCard], so the two compare line for line:
+///   Starts at (this month's projected end) + To receive − Bills
+///     − Installments − Set-asides − Budget = Projected end of next month,
+/// with the change against this month's projected end under the total.
+class _NextMonthCard extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  const _NextMonthCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final appColors = context.appColors;
+    final f = presenter.nextMonthForecast;
+    final endingTone = f.endsNegative ? cs.error : appColors.success;
+
+    return WebCard(
+      key: WebKeys.dashboardNextMonth,
+      title: 'Next month forecast',
+      description: f.monthName,
+      padding: const EdgeInsets.fromLTRB(
+          WebInsets.xl, WebInsets.lg + 2, WebInsets.xl, WebInsets.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _OutlookRow(
+            label: 'Starts at',
+            caption: "This month's projected end",
+            amount: f.startingCashLabel,
+          ),
+          _OutlookRow(
+            label: 'To receive',
+            caption: 'Expected next month',
+            amount: '+${formatPeso(f.toReceive)}',
+            color: appColors.success,
+          ),
+          _OutlookRow(
+            label: 'Bills',
+            caption: 'Incl. card statements',
+            amount: '−${formatPeso(f.bills)}',
+            color: appColors.bills,
+          ),
+          _OutlookRow(
+            label: 'Installments',
+            caption: 'Not on a statement yet',
+            amount: '−${formatPeso(f.installments)}',
+            color: appColors.bills,
+          ),
+          _OutlookRow(
+            label: 'Set-asides',
+            caption: 'Still to fund',
+            amount: '−${formatPeso(f.setAsides)}',
+            color: appColors.bills,
+          ),
+          _OutlookRow(
+            label: 'Budget',
+            caption: f.budgetCaption,
+            amount: '−${formatPeso(f.budget)}',
+            color: appColors.bills,
+            divider: false,
+          ),
+          const SizedBox(height: WebInsets.sm),
+          Container(
+            padding: const EdgeInsets.all(WebInsets.md),
+            decoration: BoxDecoration(
+              color: endingTone.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: endingTone.withValues(alpha: 0.25)),
+            ),
+            child: _OutlookLine(
+              label: f.endingTitle,
+              caption: f.changeLabel,
+              amount: f.endingLabel,
+              color: endingTone,
               emphasis: true,
             ),
           ),
