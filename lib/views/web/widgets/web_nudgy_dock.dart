@@ -391,9 +391,18 @@ class _NudgyRailState extends State<NudgyRail> {
               compactHeader: true,
               allowModelDownload: false,
               inputHint: kNudgyWebInputHint,
-              aboveInput: _QuickActions(
-                presenter: presenter,
-                onScanReceipt: widget.onScanReceipt,
+              // Conversation starters: gone once the user has said something,
+              // back with a new conversation (see showsQuickActions).
+              aboveInput: ListenableBuilder(
+                listenable: presenter,
+                builder: (_, chips) => Visibility(
+                  visible: presenter.showsQuickActions,
+                  child: chips!,
+                ),
+                child: _QuickActions(
+                  presenter: presenter,
+                  onScanReceipt: widget.onScanReceipt,
+                ),
               ),
             ),
           ),
