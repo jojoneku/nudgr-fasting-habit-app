@@ -626,4 +626,188 @@ void main() {
       expect(AiCoachPresenter.looksLikeExpenseLog('about 5000'), isFalse);
     });
   });
+
+  group('financeSnapshotSummary — detail the advisor used to miss', () {
+    test('a credit line carries its statement balance and newer charges', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'BPI Credit Card',
+            owed: 9575,
+            minimumDue: 850,
+            dueLabel: 'Due in 17 days',
+            statementAmount: 6200,
+            statementPaid: 0,
+            statementRemaining: 6200,
+            statementCloseLabel: 'Oct 20',
+            sinceClose: 1200,
+            nextCloseLabel: 'Nov 20',
+            installmentsUnbilled: 2175,
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('pay the STATEMENT balance in full'));
+      expect(s, contains('BPI Credit Card: ₱9,575 owed, min due ₱850'));
+      expect(
+          s,
+          contains('Statement balance: ₱6,200 (closed Oct 20) — ₱0 paid, '
+              '₱6,200 left; pay this in full by the due date to avoid '
+              'interest'));
+      expect(
+          s,
+          contains('Not on that statement: ₱1,200 charged after it closed, '
+              'billed on the statement that closes Nov 20; ₱2,175 in '
+              'installment months not yet billed'));
+    });
+
+    test('a card with no statement owed says where its balance goes', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'Maribank',
+            owed: 3000,
+            sinceClose: 3000,
+            nextCloseLabel: 'Nov 2',
+            payInFull: true,
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(
+          s,
+          contains('No statement owed right now; ₱3,000 charged so far, '
+              'billed on the statement that closes Nov 2'));
+      expect(s, isNot(contains('Statement balance')));
+    });
+
+    test('a pay-in-full statement says so instead of the interest rule', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'SPayLater',
+            owed: 1500,
+            statementAmount: 1500,
+            statementPaid: 500,
+            statementRemaining: 1000,
+            payInFull: true,
+          ),
+        ],
+      );
+      expect(
+          ctx.financeSnapshotSummary(),
+          contains('Statement balance: ₱1,500 — ₱500 paid, ₱1,000 left; '
+              'this account must be paid in full'));
+    });
+
+    test('bills show what is left, where to pay from, and the note', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        outstandingBills: [
+          AdvisorBillLine(
+            name: 'Card statement',
+            amount: 4000,
+            fullAmount: 6200,
+            dueLabel: 'Due in 3 days',
+          ),
+          AdvisorBillLine(
+            name: 'Internet',
+            amount: 1699,
+            payFrom: 'GCash',
+            paymentNote: 'Acct 1234',
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(
+          s, contains('Card statement: ₱4,000 left of ₱6,200 (Due in 3 days)'));
+      expect(s, contains('Internet: ₱1,699; pay from GCash; note: Acct 1234'));
+    });
+
+    test('accounts: held money, savings, investments and pockets', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        totalLiquidCash: 15000,
+        liquidAccounts: [
+          AdvisorAccountLine(name: 'BPI', balance: 20000, held: 5000),
+        ],
+        heldForOthers: 5000,
+        heldForOthersLines: [
+          AdvisorHeldLine(name: 'Mom', amount: 5000, insideAccount: 'BPI'),
+        ],
+        savingsAccounts: [
+          AdvisorAccountLine(name: 'Maya Savings', balance: 30000)
+        ],
+        investmentAccounts: [AdvisorAccountLine(name: 'MP2', balance: 60000)],
+        subAccounts: [
+          AdvisorSubAccountLine(
+              name: 'Emergency', balance: 10000, parentName: 'Maya Savings'),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('BPI: ₱20,000 (₱5,000 of it held for someone else)'));
+      expect(s, contains('Mom: ₱5,000 (inside BPI)'));
+      expect(s, contains('Savings accounts (no target set):'));
+      expect(s, contains('Maya Savings: ₱30,000'));
+      expect(s, contains('Investments (counted in net worth'));
+      expect(s, contains('MP2: ₱60,000'));
+      expect(s, contains('never add them on top'));
+      expect(s, contains('Emergency: ₱10,000 (inside Maya Savings)'));
+    });
+
+    test('completed goals, installment cards and spending accounts', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        completedGoals: [
+          AdvisorCompletedGoalLine(
+            name: 'Phone',
+            target: 30000,
+            spent: 29500,
+            dateLabel: 'Aug 2026',
+          ),
+        ],
+        installments: [
+          AdvisorInstallmentLine(
+            name: 'MacBook',
+            monthlyAmount: 5000,
+            remainingMonths: 4,
+            remainingAmount: 20000,
+            account: 'BPI Credit Card',
+          ),
+        ],
+        recentTransactions: [
+          AdvisorTxnLine(
+            dateLabel: 'Oct 18',
+            description: 'Lazada',
+            amount: 1200,
+            category: 'Shopping',
+            account: 'BPI Credit Card',
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Goals already reached and spent'));
+      expect(
+          s,
+          contains(
+              'Phone: ₱30,000 target, ₱29,500 spent on it, completed Aug 2026'));
+      expect(s, contains('MacBook on BPI Credit Card: ₱5,000/mo'));
+      expect(
+          s, contains('Oct 18: Lazada — ₱1,200 (Shopping, BPI Credit Card)'));
+    });
+
+    test('a budgeted category with nothing spent still shows', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        topCategories: [
+          AdvisorCategoryLine(name: 'Gifts', target: 2000, actual: 0),
+        ],
+      );
+      expect(
+          ctx.financeSnapshotSummary(), contains('Gifts: ₱0 of ₱2,000 target'));
+    });
+  });
 }
