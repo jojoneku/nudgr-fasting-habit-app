@@ -324,6 +324,44 @@ void main() {
     test('creditCycleNote ignores non-liability accounts', () async {
       expect(presenter.creditCycleNote(_bank('bpi', 8000)), isNull);
     });
+
+    test('creditStatementBreakdown splits the statement from newer charges',
+        () async {
+      // cc1 owes 12000: a 9000 statement with 2000 paid toward it (7000 left)
+      // and 5000 charged since it closed.
+      final now = DateTime.now();
+      when(storage.loadBills()).thenAnswer((_) async => [
+            Bill(
+              id: 's1',
+              name: 'cc1 statement',
+              billType: BillType.creditCard,
+              amount: 9000,
+              paidAmount: 2000,
+              dueDay: 28,
+              month: toMonthKey(DateTime(now.year, now.month + 1)),
+              categoryId: '',
+              accountId: 'cc1',
+              paymentNote: Bill.autoStatementNote,
+            ),
+          ]);
+      await presenter.load();
+      final cc1 = presenter.creditAccounts.firstWhere((a) => a.id == 'cc1');
+      final s = presenter.creditStatementBreakdown(cc1)!;
+      expect(s.statementAmount, 9000);
+      expect(s.statementPaid, 2000);
+      expect(s.statementRemaining, 7000);
+      expect(s.sinceClose, 5000);
+    });
+
+    test('creditStatementBreakdown with no statement puts it all on the next',
+        () async {
+      await presenter.load();
+      final cc2 = presenter.creditAccounts.firstWhere((a) => a.id == 'cc2');
+      final s = presenter.creditStatementBreakdown(cc2)!;
+      expect(s.statementAmount, isNull);
+      expect(s.sinceClose, 3000);
+      expect(presenter.creditStatementBreakdown(_bank('bpi', 8000)), isNull);
+    });
   });
 
   group('LedgerPresenter.payableAsOf', () {

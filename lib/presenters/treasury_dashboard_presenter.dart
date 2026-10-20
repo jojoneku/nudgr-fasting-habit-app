@@ -354,6 +354,47 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     return left > 0 ? left : null;
   }
 
+  /// Where the debt on credit account [a] sits, for the advisor: the open
+  /// statement (its amount, what is paid toward it, what is left, the day it
+  /// closed), what was charged after that close and so waits for the next
+  /// statement, and when that next statement closes. Null for non-credit
+  /// accounts.
+  ///
+  /// The advisor used to see only the total owed and the minimum. It could
+  /// not say what to pay to avoid interest — the statement balance — and told
+  /// the user to go and look it up in the bank's app, though the app had it.
+  ///
+  /// [sinceClose] is the balance less every unpaid statement on the card, so
+  /// an older statement still open is not counted as new spending. It leaves
+  /// out installment months not yet billed; those are
+  /// [FinancialAccount.unbilledInstallments].
+  ({
+    double? statementAmount,
+    double? statementPaid,
+    double? statementRemaining,
+    DateTime? statementClose,
+    double sinceClose,
+    DateTime? nextClose,
+  })? creditStatementBreakdown(FinancialAccount a) {
+    if (!a.isLiability) return null;
+    final statement = openCreditStatement(a);
+    final progress =
+        statement == null ? null : CreditStatementProgress.ofBill(statement, a);
+    final billed = _bills
+        .where((b) => b.billType == BillType.creditCard && b.accountId == a.id)
+        .fold(0.0, (sum, b) => sum + creditStatementRemaining(b));
+    final since = a.balance - billed;
+    return (
+      statementAmount: progress?.amount,
+      statementPaid: progress?.paid,
+      statementRemaining: progress?.remaining,
+      statementClose:
+          statement == null ? null : cycleForStatement(a, statement)?.close,
+      sinceClose: since > 0.005 ? since : 0,
+      nextClose: a.cycleContaining(_clock())?.close,
+    );
+  }
+
   List<FinancialAccount> get goalAccounts => _accounts
       .where((a) => a.isActive && a.category == AccountCategory.goal)
       .toList();
@@ -446,6 +487,45 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
 
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
+
+  /// Top-level investment accounts. Counted in net worth, never in cash.
+  List<FinancialAccount> get investmentAccounts => _accounts
+      .where((a) =>
+          a.isActive &&
+          a.parentAccountId == null &&
+          a.category == AccountCategory.investment)
+      .toList();
+
+  /// Active pockets inside another account, each with its parent's name. The
+  /// parent's balance already holds them, so they are never added to a total.
+  List<({FinancialAccount account, String parentName})> get subAccounts {
+    final nameById = {for (final a in _accounts) a.id: a.name};
+    return [
+      for (final a in _accounts)
+        if (a.isActive && a.parentAccountId != null)
+          (
+            account: a,
+            parentName: nameById[a.parentAccountId] ?? 'another account',
+          ),
+    ];
+  }
+
+  /// Money held for someone else, one row per custodian account, with the
+  /// account it physically sits in (null when unlinked).
+  List<({String name, double amount, String? insideAccount})>
+      get heldForOthersLines {
+    final nameById = {for (final a in _accounts) a.id: a.name};
+    return [
+      for (final c in custodianAccounts)
+        if (c.balance.abs() > 0.005)
+          (
+            name: c.name,
+            amount: c.balance,
+            insideAccount:
+                c.linkedAccountId == null ? null : nameById[c.linkedAccountId],
+          ),
+    ];
+  }
 
   /// Every account the treasury knows about, bucketed by where the dashboard
   /// surfaces it — the data behind the "All accounts" dialog.
@@ -1375,14 +1455,21 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// and excluded categories filtered out), newest first, capped at [limit].
   /// Display-ready with the category name resolved so a caller (e.g. the AI
   /// advisor) can see where money actually went, not just monthly totals.
-  List<({DateTime date, String description, double amount, String category})>
-      recentSpending({int limit = 8}) {
+  List<
+      ({
+        DateTime date,
+        String description,
+        double amount,
+        String category,
+        String? account
+      })> recentSpending({int limit = 8}) {
     final excluded = _excludedCategoryIds;
     final txns = _transactions
         .where((t) => isSpendingOutflow(t, excluded))
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     final nameById = {for (final c in _categories) c.id: c.name};
+    final accountById = {for (final a in _accounts) a.id: a.name};
     return [
       for (final t in txns.take(limit))
         (
@@ -1390,6 +1477,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
           description: t.description,
           amount: t.amount,
           category: nameById[t.categoryId] ?? 'Uncategorized',
+          // Which card or account paid — "what is on my BPI card" needs it.
+          account: accountById[t.accountId],
         ),
     ];
   }
@@ -1551,14 +1640,20 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// Income vs expenses for the last [months] months, oldest → newest. The
   /// current month uses live totals; closed months come from their summary.
   /// Months with no summary are omitted.
-  List<({String label, double income, double expense})> incomeExpenseTrend({
+  ///
+  /// [month] is the 'YYYY-MM' key, so a caller can line other per-month
+  /// figures up against the row.
+  List<({String month, String label, double income, double expense})>
+      incomeExpenseTrend({
     int months = 6,
   }) {
-    final result = <({String label, double income, double expense})>[];
+    final result =
+        <({String month, String label, double income, double expense})>[];
     for (final key in _lastNMonthKeys(months)) {
       final label = monthShortLabel(key);
       if (key == _currentMonth) {
         result.add((
+          month: key,
           label: label,
           income: monthTotalInflow,
           expense: monthTotalOutflow,
@@ -1567,6 +1662,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
         final summary = _summaryFor(key);
         if (summary == null) continue;
         result.add((
+          month: key,
           label: label,
           income: summary.totalInflow,
           expense: summary.totalOutflow,
