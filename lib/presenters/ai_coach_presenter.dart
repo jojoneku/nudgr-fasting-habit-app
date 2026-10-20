@@ -203,6 +203,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   AiCoachTier get activeTier => _activeTier;
   AiCoachEntryPoint get entryPoint => _entryPoint;
 
+  /// Whether the quick-action chips above the input show: only until the
+  /// user says something in this conversation. They are conversation
+  /// starters; once a conversation is under way they only take room from it,
+  /// and they come back with a new conversation. A restored conversation
+  /// that already has the user's words in it starts without them.
+  bool get showsQuickActions =>
+      !_messages.any((m) => m.role == AiChatRole.user);
+
   /// Placeholder for the input bar, which is disabled for three quite
   /// different reasons and used to blame all of them on the model not being
   /// ready. Mid-turn that is simply untrue, and it is the reading that made a

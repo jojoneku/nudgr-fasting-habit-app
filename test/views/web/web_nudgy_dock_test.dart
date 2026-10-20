@@ -419,6 +419,42 @@ void main() {
       p.dispose();
     });
 
+    testWidgets(
+        'the chips leave once the user speaks, and a new conversation '
+        'brings them back', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'Sure.')));
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c));
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isTrue);
+      expect(find.byKey(WebKeys.nudgyChipPayCard), findsOneWidget);
+
+      await tester.tap(find.byKey(WebKeys.nudgyChipPayCard));
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isFalse);
+      expect(find.byKey(WebKeys.nudgyChipScanReceipt), findsNothing);
+      expect(find.byKey(WebKeys.nudgyChipPayCard), findsNothing);
+      expect(find.byKey(WebKeys.nudgyChipSpendToday), findsNothing);
+
+      p.startNewConversation();
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isTrue);
+      expect(find.byKey(WebKeys.nudgyChipScanReceipt), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      c.dispose();
+      p.dispose();
+    });
+
     testWidgets('the mobile sheet still shows its own header row',
         (tester) async {
       // compactHeader defaults off: the sheet keeps the label, the AI badge is
