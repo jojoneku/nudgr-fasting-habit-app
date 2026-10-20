@@ -499,8 +499,20 @@ void main() {
       final p = await seededPresenter(tester);
       await pumpPage(tester, p, dark: false);
 
+      // The seed dates its transfers early in the month and the grid is a
+      // lazy list sorted newest first, so late in the month they sit below
+      // the fold and are not built yet. Scroll the grid until one is.
       final badge = find.text('Transfer');
+      final grid = find
+          .ancestor(of: keyboardRow(), matching: find.byType(Scrollable))
+          .first;
+      for (var i = 0; i < 50 && badge.evaluate().isEmpty; i++) {
+        await tester.drag(grid, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
       expect(badge, findsWidgets);
+      await tester.ensureVisible(badge.first);
+      await tester.pumpAndSettle();
       await tester.tap(badge.first);
       await tester.pumpAndSettle();
 

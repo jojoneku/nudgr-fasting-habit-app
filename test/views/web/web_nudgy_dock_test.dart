@@ -354,6 +354,12 @@ void main() {
       expect(find.text('Pay a card'), findsOneWidget);
       expect(find.text('What can I spend today?'), findsOneWidget);
 
+      // Left-aligned with the chat content margin (16 px inside the rail's
+      // 1 px container border), not centered across the rail.
+      final rail = tester.getRect(find.byType(NudgyRail));
+      final chipRect = tester.getRect(find.byKey(WebKeys.nudgyChipScanReceipt));
+      expect(chipRect.left, rail.left + 17);
+
       // The web hint, and the session already open without a toggle.
       expect(find.text(kNudgyWebInputHint), findsOneWidget);
       expect(p.entryPoint, AiCoachEntryPoint.financeAdvisor);
