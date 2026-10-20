@@ -53,6 +53,7 @@ abstract final class WebKeys {
       ValueKey('web.dashboard.addTransaction');
   static const dashboardNetWorthHero = ValueKey('web.dashboard.netWorthHero');
   static const dashboardOutlook = ValueKey('web.dashboard.outlook');
+  static const dashboardNextMonth = ValueKey('web.dashboard.nextMonth');
   static const dashboardAllAccounts = ValueKey('web.dashboard.allAccounts');
   static const dashboardTrendsSwitch = ValueKey('web.dashboard.trendsSwitch');
   static const dashboardTrendNetWorth =

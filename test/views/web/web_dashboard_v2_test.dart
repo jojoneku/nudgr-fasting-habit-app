@@ -99,6 +99,7 @@ void main() {
     WebKeys.dashboardAddTransaction,
     WebKeys.dashboardNetWorthHero,
     WebKeys.dashboardOutlook,
+    WebKeys.dashboardNextMonth,
     WebKeys.dashboardAllAccounts,
     WebKeys.dashboardTrendsSwitch,
     WebKeys.dashboardTrendNetWorth,
@@ -158,6 +159,7 @@ void main() {
             'Where your money goes',
             'Savings goals',
             'Month-end outlook',
+            'Next month forecast',
           ]) {
             expect(find.text(title), findsOneWidget, reason: title);
           }
@@ -200,6 +202,41 @@ void main() {
       expect(dash.pendingReceivables, greaterThan(0));
       expect(dash.monthUnpaidBills, greaterThan(0));
     });
+  });
+
+  group('next month forecast', () {
+    for (final width in widths) {
+      testWidgets('renders the forecast chain and the change at $width px',
+          (tester) async {
+        final (dash, bills) = await seeded(tester);
+        await pumpPage(tester, presenter: dash, bills: bills, width: width);
+
+        final card = find.byKey(WebKeys.dashboardNextMonth);
+        Finder inCard(String text) =>
+            find.descendant(of: card, matching: find.text(text));
+
+        final f = dash.nextMonthForecast;
+        final expected = <String, String>{
+          'Starts at': f.startingCashLabel,
+          'To receive': '+${formatPeso(f.toReceive)}',
+          'Bills': '−${formatPeso(f.bills)}',
+          'Installments': '−${formatPeso(f.installments)}',
+          'Set-asides': '−${formatPeso(f.setAsides)}',
+          'Budget': '−${formatPeso(f.budget)}',
+          f.endingTitle: f.endingLabel,
+        };
+        for (final entry in expected.entries) {
+          expect(inCard(entry.key), findsOneWidget, reason: entry.key);
+          expect(inCard(entry.value), findsWidgets,
+              reason: '${entry.key} → ${entry.value}');
+        }
+        expect(inCard(f.changeLabel), findsOneWidget);
+        expect(inCard(f.monthName), findsOneWidget);
+        // It starts where this month's outlook ends.
+        expect(f.startingCash, dash.forecastedNetBalance);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 
   group('accounts', () {
