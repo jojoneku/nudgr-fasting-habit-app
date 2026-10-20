@@ -110,13 +110,15 @@ void main() {
       imageCompressor: _PassthroughCompressor(),
     );
     p.openSession(AiCoachEntryPoint.financeAdvisor);
-    await p.send('what is this?', image: Uint8List.fromList([1, 2, 3, 4]));
+    await p.send('what is this?', images: [
+      Uint8List.fromList([1, 2, 3, 4])
+    ]);
 
     expect(captured, isNotNull);
-    expect(captured!.imageBytes, isNotNull);
+    expect(captured!.images, hasLength(1));
     expect(captured!.imageMimeType, 'image/jpeg');
     // The attached image is shown on the user's message bubble.
-    expect(p.messages[p.messages.length - 2].imageBytes, isNotNull);
+    expect(p.messages[p.messages.length - 2].images, hasLength(1));
     expect(p.messages.last.text, 'Looks like an internet bill.');
     p.dispose();
   });
@@ -188,13 +190,125 @@ void main() {
       imageCompressor: _PassthroughCompressor(),
     );
     p.openSession(AiCoachEntryPoint.financeAdvisor);
-    await p.send('', image: Uint8List.fromList([9, 9, 9]));
+    await p.send('', images: [
+      Uint8List.fromList([9, 9, 9])
+    ]);
 
     // Empty caption is replaced with a default prompt so the turn isn't blank.
     final userMsg = p.messages[p.messages.length - 2];
     expect(userMsg.text, isNotEmpty);
-    expect(userMsg.imageBytes, isNotNull);
+    expect(userMsg.images, hasLength(1));
     expect(p.messages.last.text, 'A receipt.');
     p.dispose();
+  });
+
+  group('staged attachments', () {
+    Uint8List img(int b) => Uint8List.fromList([b, b, b]);
+
+    AiCoachPresenter advisor({Duration? retryHorizon}) {
+      final p = AiCoachPresenter(
+        stats: stats,
+        fasting: fasting,
+        service: service,
+        imageCompressor: _PassthroughCompressor(),
+        // Zero surfaces the first failure instead of retrying it, so the
+        // manual retry is what runs the second attempt.
+        retryHorizon: retryHorizon ?? AiCoachPresenter.defaultRetryHorizon,
+      );
+      p.openSession(AiCoachEntryPoint.financeAdvisor);
+      return p;
+    }
+
+    test('adds several images in order and removes one by index', () {
+      final p = advisor();
+      expect(p.addAttachments([img(1), img(2), img(3)]), 0);
+      expect(p.pendingImages.map((i) => i.first), [1, 2, 3]);
+
+      p.removeAttachment(1);
+      expect(p.pendingImages.map((i) => i.first), [1, 3]);
+      expect(p.remainingAttachmentSlots, AiCoachPresenter.maxAttachments - 2);
+
+      // A stale index (a double tap on a remove button) is ignored.
+      p.removeAttachment(5);
+      expect(p.pendingImages, hasLength(2));
+      p.dispose();
+    });
+
+    test('stops at the cap and reports how many were left out', () {
+      final p = advisor();
+      const cap = AiCoachPresenter.maxAttachments;
+      final dropped =
+          p.addAttachments([for (var i = 0; i < cap + 2; i++) img(i)]);
+
+      expect(dropped, 2);
+      expect(p.pendingImages, hasLength(cap));
+      expect(p.canAddAttachment, isFalse);
+      expect(p.addAttachments([img(99)]), 1);
+      expect(p.attachmentLimitMessage, contains('$cap'));
+      p.dispose();
+    });
+
+    test('ignores empty byte arrays', () {
+      final p = advisor();
+      expect(p.addAttachments([Uint8List(0), img(1)]), 0);
+      expect(p.pendingImages, hasLength(1));
+      p.dispose();
+    });
+
+    test('sendWithAttachments sends every staged image and unstages them',
+        () async {
+      AiCoachContext? captured;
+      when(service.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer((inv) {
+        captured = inv.namedArguments[#context] as AiCoachContext;
+        return advisorStreamOf(const AdvisorReply(text: 'Two bills.'));
+      });
+
+      final p = advisor();
+      p.addAttachments([img(1), img(2)]);
+      await p.sendWithAttachments('');
+
+      expect(captured!.images.map((i) => i.first), [1, 2]);
+      expect(captured!.imageMimeType, 'image/jpeg');
+      expect(p.pendingImages, isEmpty);
+      final userMsg = p.messages[p.messages.length - 2];
+      expect(userMsg.images, hasLength(2));
+      // An uncaptioned multi-image turn still asks something sensible.
+      expect(userMsg.text, 'What do you make of these?');
+      p.dispose();
+    });
+
+    test('retry resends the failed turn with all of its images', () async {
+      var calls = 0;
+      final seen = <int>[];
+      when(service.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer((inv) {
+        seen.add(
+            (inv.namedArguments[#context] as AiCoachContext).images.length);
+        calls++;
+        if (calls == 1) {
+          return Stream.error(
+              const AiCoachException('Dropped.', retryable: true));
+        }
+        return advisorStreamOf(const AdvisorReply(text: 'ok'));
+      });
+
+      final p = advisor(retryHorizon: Duration.zero);
+      p.addAttachments([img(1), img(2), img(3)]);
+      await p.sendWithAttachments('compare these');
+      expect(p.canRetryLastTurn, isTrue);
+      await p.retryLastTurn();
+
+      expect(seen, [3, 3]);
+      p.dispose();
+    });
   });
 }
