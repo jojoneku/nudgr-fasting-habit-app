@@ -354,6 +354,12 @@ void main() {
       expect(find.text('Pay a card'), findsOneWidget);
       expect(find.text('What can I spend today?'), findsOneWidget);
 
+      // Left-aligned with the chat content margin (16 px inside the rail's
+      // 1 px container border), not centered across the rail.
+      final rail = tester.getRect(find.byType(NudgyRail));
+      final chipRect = tester.getRect(find.byKey(WebKeys.nudgyChipScanReceipt));
+      expect(chipRect.left, rail.left + 17);
+
       // The web hint, and the session already open without a toggle.
       expect(find.text(kNudgyWebInputHint), findsOneWidget);
       expect(p.entryPoint, AiCoachEntryPoint.financeAdvisor);
@@ -409,6 +415,42 @@ void main() {
       expect(find.textContaining('What can I spend today?'),
           findsAtLeastNWidgets(1));
       expect(find.textContaining('About ₱400.'), findsOneWidget);
+      c.dispose();
+      p.dispose();
+    });
+
+    testWidgets(
+        'the chips leave once the user speaks, and a new conversation '
+        'brings them back', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'Sure.')));
+
+      final p = buildWebAdvisor();
+      final c = NudgyController(p);
+      await tester.pumpWidget(wrapRail(c));
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isTrue);
+      expect(find.byKey(WebKeys.nudgyChipPayCard), findsOneWidget);
+
+      await tester.tap(find.byKey(WebKeys.nudgyChipPayCard));
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isFalse);
+      expect(find.byKey(WebKeys.nudgyChipScanReceipt), findsNothing);
+      expect(find.byKey(WebKeys.nudgyChipPayCard), findsNothing);
+      expect(find.byKey(WebKeys.nudgyChipSpendToday), findsNothing);
+
+      p.startNewConversation();
+      await tester.pumpAndSettle();
+      expect(p.showsQuickActions, isTrue);
+      expect(find.byKey(WebKeys.nudgyChipScanReceipt), findsOneWidget);
+      expect(tester.takeException(), isNull);
       c.dispose();
       p.dispose();
     });

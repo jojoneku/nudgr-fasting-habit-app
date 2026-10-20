@@ -91,6 +91,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             .where((b) => b.month == month && matches(b.name))
             .map((b) => 'id=${b.id} "${b.name}" ${_peso(b.amount)} '
                 'due day ${b.dueDay}${b.isRecurring ? ' (recurring)' : ''}'
+                '${!b.isPaid && (b.paidAmount ?? 0) > 0 ? ' (${_peso(b.paidAmount!)} paid so far)' : ''}'
                 '${b.isPaid ? ' [paid]' : ''}');
         return _rows(call, rows, 'bills', month);
 
@@ -180,7 +181,14 @@ class FinanceActionsExecutor extends ChangeNotifier
             final limitStr = a.creditLimit != null
                 ? ' (limit ${_peso(a.creditLimit!)}, available ${_peso(a.availableCredit ?? 0)})'
                 : '';
-            details = 'owed $balanceStr$limitStr [${a.category.name}]';
+            // Total debt, as the snapshot and dashboard say it: the balance
+            // alone left out installment months not yet billed.
+            final instStr = a.unbilledInstallments > 0
+                ? ', incl. ${_peso(a.unbilledInstallments)} installment months '
+                    'not yet billed'
+                : '';
+            details = 'owed ${_peso(a.totalDebt)}$instStr$limitStr'
+                '${_statementSummary(a)} [${a.category.name}]';
           } else {
             details = 'balance $balanceStr [${a.category.name}]';
           }
@@ -253,6 +261,22 @@ class FinanceActionsExecutor extends ChangeNotifier
         return _findTransactions(call);
     }
     return AiToolResult.failed(call.id, 'Unknown read tool "${call.name}".');
+  }
+
+  /// The open statement of credit account [a] for a `findAccounts` row:
+  /// "; statement ₱6,200, ₱0 paid, ₱6,200 left, min ₱850, due 2026-11-05".
+  /// Says so when no statement is owed, so a balance is not read as due.
+  String _statementSummary(FinancialAccount a) {
+    final statement = findOpenCreditStatement(_bills.allBills, a.id);
+    if (statement == null) return '; no statement owed right now';
+    final p = CreditStatementProgress.ofBill(statement, a);
+    final due = creditStatementDueDate(statement);
+    final min = p.minimumRemaining > 0
+        ? ', min ${_peso(p.minimumRemaining)}'
+        : ', minimum paid';
+    return '; statement ${_peso(p.amount)}, ${_peso(p.paid)} paid, '
+        '${_peso(p.remaining)} left$min'
+        '${due == null ? '' : ', due ${_day(due)}'}';
   }
 
   /// Default and ceiling on rows returned by `findTransactions`. The totals

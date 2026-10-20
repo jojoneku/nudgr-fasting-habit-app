@@ -823,6 +823,28 @@ void main() {
       expect(result.summary, contains('BPI Credit Card'));
       expect(result.summary, contains('owed ₱8000'));
       expect(result.summary, contains('limit ₱50000'));
+      // No statement bill: the balance is not yet due.
+      expect(result.summary, contains('no statement owed right now'));
+
+      // With an open statement, the card row carries what it asks for.
+      when(bills.allBills).thenReturn([
+        Bill(
+          id: 's1',
+          name: 'BPI Credit Card statement',
+          billType: BillType.creditCard,
+          amount: 6200,
+          paidAmount: 1000,
+          dueDay: 5,
+          month: '2099-11',
+          categoryId: '',
+          accountId: 'a2',
+          paymentNote: Bill.autoStatementNote,
+        ),
+      ]);
+      final withStatement = await ex.runRead(call('findAccounts', {}));
+      expect(withStatement.summary,
+          contains('statement ₱6200, ₱1000 paid, ₱5200 left'));
+      expect(withStatement.summary, contains('due 2099-11-05'));
     });
   });
 

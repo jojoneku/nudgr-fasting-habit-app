@@ -391,9 +391,18 @@ class _NudgyRailState extends State<NudgyRail> {
               compactHeader: true,
               allowModelDownload: false,
               inputHint: kNudgyWebInputHint,
-              aboveInput: _QuickActions(
-                presenter: presenter,
-                onScanReceipt: widget.onScanReceipt,
+              // Conversation starters: gone once the user has said something,
+              // back with a new conversation (see showsQuickActions).
+              aboveInput: ListenableBuilder(
+                listenable: presenter,
+                builder: (_, chips) => Visibility(
+                  visible: presenter.showsQuickActions,
+                  child: chips!,
+                ),
+                child: _QuickActions(
+                  presenter: presenter,
+                  onScanReceipt: widget.onScanReceipt,
+                ),
               ),
             ),
           ),
@@ -421,28 +430,32 @@ class _QuickActions extends StatelessWidget {
         final canSend = presenter.isModelAvailable &&
             !presenter.isResponding &&
             !presenter.isInitializing;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _QuickChip(
-                key: WebKeys.nudgyChipScanReceipt,
-                label: 'Scan a receipt',
-                onTap: onScanReceipt,
-              ),
-              _QuickChip(
-                key: WebKeys.nudgyChipPayCard,
-                label: payCard,
-                onTap: canSend ? () => presenter.send(payCard) : null,
-              ),
-              _QuickChip(
-                key: WebKeys.nudgyChipSpendToday,
-                label: spendToday,
-                onTap: canSend ? () => presenter.send(spendToday) : null,
-              ),
-            ],
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.start,
+              children: [
+                _QuickChip(
+                  key: WebKeys.nudgyChipScanReceipt,
+                  label: 'Scan a receipt',
+                  onTap: onScanReceipt,
+                ),
+                _QuickChip(
+                  key: WebKeys.nudgyChipPayCard,
+                  label: payCard,
+                  onTap: canSend ? () => presenter.send(payCard) : null,
+                ),
+                _QuickChip(
+                  key: WebKeys.nudgyChipSpendToday,
+                  label: spendToday,
+                  onTap: canSend ? () => presenter.send(spendToday) : null,
+                ),
+              ],
+            ),
           ),
         );
       },

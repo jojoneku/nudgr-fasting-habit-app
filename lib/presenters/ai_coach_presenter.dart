@@ -11,7 +11,9 @@ import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
+import '../models/finance/bill.dart';
 import '../models/finance/finance_parse_result.dart';
+import '../models/finance/financial_account.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
 import '../presenters/budget_presenter.dart';
@@ -28,6 +30,7 @@ import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
+import '../utils/credit_cycle.dart';
 import '../utils/finance_tool_catalogue.dart';
 import '../utils/safe_notifier.dart';
 
@@ -199,6 +202,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   bool get isInitializing => _isInitializing;
   AiCoachTier get activeTier => _activeTier;
   AiCoachEntryPoint get entryPoint => _entryPoint;
+
+  /// Whether the quick-action chips above the input show: only until the
+  /// user says something in this conversation. They are conversation
+  /// starters; once a conversation is under way they only take room from it,
+  /// and they come back with a new conversation. A restored conversation
+  /// that already has the user's words in it starts without them.
+  bool get showsQuickActions =>
+      !_messages.any((m) => m.role == AiChatRole.user);
 
   /// Placeholder for the input bar, which is disabled for three quite
   /// different reasons and used to blame all of them on the model not being
@@ -1261,7 +1272,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var netWorthTrend = const <AdvisorNetWorthPoint>[];
     var incomeExpenseTrend = const <AdvisorMonthFlow>[];
     var goals = const <AdvisorGoalLine>[];
+    var completedGoals = const <AdvisorCompletedGoalLine>[];
     var liquidAccounts = const <AdvisorAccountLine>[];
+    var savingsAccounts = const <AdvisorAccountLine>[];
+    var investmentAccounts = const <AdvisorAccountLine>[];
+    var subAccounts = const <AdvisorSubAccountLine>[];
+    var heldLines = const <AdvisorHeldLine>[];
     var budgetGroups = const <AdvisorBudgetGroupLine>[];
     var installmentLines = const <AdvisorInstallmentLine>[];
     var maturities = const <AdvisorMaturityLine>[];
@@ -1277,26 +1293,56 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var savingsHistory = const <AdvisorSavingsHistoryRow>[];
     var spendingByMonth = const <AdvisorMonthSpendingDigest>[];
     if (isAdvisor && t != null) {
+      final accountNames = {for (final a in t.accounts) a.id: a.name};
       // Every category with spend, not the dashboard's top 10: the advisor is
       // asked about specific line items, and a category outside the top 10 was
       // simply invisible to it — indistinguishable from one with no spend.
       final trailing = t.categoryTrailingAverage(months: 3);
-      topCategories = t.allCategorySpendThisMonth
-          .map((e) => AdvisorCategoryLine(
-                name: e.$1.name,
-                target: b?.budgetFor(e.$1.id)?.allocatedAmount,
-                actual: e.$2,
-                trailingAverage: trailing.averages[e.$1.id],
+      final spent = t.allCategorySpendThisMonth;
+      final spentIds = {for (final e in spent) e.$1.id};
+      topCategories = [
+        for (final e in spent)
+          AdvisorCategoryLine(
+            name: e.$1.name,
+            target: b?.budgetFor(e.$1.id)?.allocatedAmount,
+            actual: e.$2,
+            trailingAverage: trailing.averages[e.$1.id],
+            trailingMonths: trailing.months,
+          ),
+        // Budgeted with nothing spent yet. Built from spending alone, the list
+        // left these out, so a ₱2,000 Gifts budget did not exist to Nudgy
+        // until the first gift was bought.
+        if (b != null)
+          for (final c in b.categoriesByGroup.values.expand((cs) => cs))
+            if (!spentIds.contains(c.id) &&
+                (b.budgetFor(c.id)?.allocatedAmount ?? 0) > 0)
+              AdvisorCategoryLine(
+                name: c.name,
+                target: b.budgetFor(c.id)!.allocatedAmount,
+                actual: 0,
+                trailingAverage: trailing.averages[c.id],
                 trailingMonths: trailing.months,
-              ))
-          .toList();
-      outstandingBills = t.upcomingBills
-          .map((bill) => AdvisorBillLine(
-                name: bill.name,
-                amount: bill.amount,
-                dueLabel: _billDueLabel(bill.dueDay),
-              ))
-          .toList();
+              ),
+      ];
+      outstandingBills = t.upcomingBills.map((bill) {
+        final isStatement = bill.billType == BillType.creditCard;
+        // A part-paid statement owes only what is left — the figure the
+        // total under these lines already uses.
+        final left = isStatement ? creditStatementRemaining(bill) : bill.amount;
+        final note = bill.paymentNote?.trim();
+        return AdvisorBillLine(
+          name: bill.name,
+          amount: left,
+          dueLabel: _billDueLabel(bill.dueDay),
+          fullAmount: left < bill.amount - 0.005 ? bill.amount : null,
+          // On a statement the account is the card itself, not where the
+          // payment comes from.
+          payFrom: isStatement ? null : accountNames[bill.accountId],
+          paymentNote: bill.isAutoStatement || note == null || note.isEmpty
+              ? null
+              : note,
+        );
+      }).toList();
       pendingReceivables = t.outstandingReceivables
           .map((r) => AdvisorReceivableLine(
                 name: r.name,
@@ -1307,6 +1353,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       creditLines = t.creditAccounts.map((a) {
+        final s = t.creditStatementBreakdown(a);
         return AdvisorCreditLine(
           name: a.name,
           // Total debt, installments included — the figure the dashboard
@@ -1320,22 +1367,45 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           minimumDue: t.creditMinimumDue(a),
           aprMonthly: a.financeChargeRate,
           utilization: a.utilization,
+          // The statement balance is what avoids interest. Without it Nudgy
+          // had only the total and the minimum, and sent the user to the
+          // bank's app for a figure this app already held.
+          statementAmount: s?.statementAmount,
+          statementPaid: s?.statementPaid,
+          statementRemaining: s?.statementRemaining,
+          statementCloseLabel: s?.statementClose == null
+              ? null
+              : DateFormat('MMM d').format(s!.statementClose!),
+          sinceClose: s?.sinceClose,
+          nextCloseLabel: s?.nextClose == null
+              ? null
+              : DateFormat('MMM d').format(s!.nextClose!),
+          installmentsUnbilled:
+              a.unbilledInstallments > 0 ? a.unbilledInstallments : null,
+          payInFull: a.effectiveMinimumRule == CreditMinimumRule.payInFull,
         );
       }).toList();
       netWorthTrend = t
           .netWorthTrend(months: 12)
           .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
           .toList();
-      incomeExpenseTrend = t
-          // A year, so a seasonal month reads as seasonal.
-          .incomeExpenseTrend(months: 12)
-          .map((m) => AdvisorMonthFlow(
-                label: m.label,
-                income: m.income,
-                expense: m.expense,
-              ))
-          .toList();
-      goals = t.goalAccounts.map((a) {
+      // A year, so a seasonal month reads as seasonal.
+      var cumulative = 0.0;
+      incomeExpenseTrend = [
+        for (final m in t.incomeExpenseTrend(months: 12))
+          AdvisorMonthFlow(
+            label: m.label,
+            income: m.income,
+            expense: m.expense,
+            // The history owner's figure, the one closed months are filed
+            // with, so the current month is measured the same way.
+            savingsContribution: _history?.monthlySavingsContribution(m.month),
+            cumulativeNet: cumulative += m.income - m.expense,
+          ),
+      ];
+      // Savings accounts with a target are goals too (the dashboard's goal
+      // cards show both); spent goals have their own list below.
+      goals = t.activeGoalAccounts.map((a) {
         // A savings budget on the goal account IS its recurring monthly plan
         // (e.g. ₱2,500/mo into "Braces") — lets the advisor project a timeline.
         final plan =
@@ -1347,9 +1417,48 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           monthlyContribution: plan?.budget.allocatedAmount,
         );
       }).toList();
+      completedGoals = [
+        for (final a in t.completedGoalAccounts)
+          AdvisorCompletedGoalLine(
+            name: a.name,
+            target: a.goalTarget,
+            spent: a.goalRedeemedAmount,
+            dateLabel: DateFormat('MMM yyyy').format(a.goalRedeemedAt!),
+          ),
+      ];
+      final held = t.heldAmountByAccountId;
       liquidAccounts = t.liquidAccounts
-          .map((a) => AdvisorAccountLine(name: a.name, balance: a.balance))
+          .map((a) => AdvisorAccountLine(
+                name: a.name,
+                balance: a.balance,
+                held: held[a.id],
+              ))
           .toList();
+      savingsAccounts = [
+        for (final a in t.savingsAccounts)
+          if ((a.goalTarget ?? 0) <= 0 && a.parentAccountId == null)
+            AdvisorAccountLine(name: a.name, balance: a.balance),
+      ];
+      investmentAccounts = [
+        for (final a in t.investmentAccounts)
+          AdvisorAccountLine(name: a.name, balance: a.balance),
+      ];
+      subAccounts = [
+        for (final e in t.subAccounts)
+          AdvisorSubAccountLine(
+            name: e.account.name,
+            balance: e.account.balance,
+            parentName: e.parentName,
+          ),
+      ];
+      heldLines = [
+        for (final h in t.heldForOthersLines)
+          AdvisorHeldLine(
+            name: h.name,
+            amount: h.amount,
+            insideAccount: h.insideAccount,
+          ),
+      ];
       budgetGroups = b == null
           ? const []
           : b.groupBars
@@ -1368,6 +1477,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                   monthlyAmount: i.monthlyAmount,
                   remainingMonths: inst.remainingMonths(i.id),
                   remainingAmount: inst.remainingAmount(i.id),
+                  account: accountNames[i.accountId],
                 ))
             .toList();
       }
@@ -1392,6 +1502,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 description: r.description,
                 amount: r.amount,
                 category: r.category,
+                account: r.account,
               ))
           .toList();
       recurringCommitments = t.recurringCommitments
@@ -1559,6 +1670,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       goals: goals,
       liquidAccounts: liquidAccounts,
       heldForOthers: isAdvisor ? t?.totalHeldForOthers : null,
+      heldForOthersLines: heldLines,
+      savingsAccounts: savingsAccounts,
+      investmentAccounts: investmentAccounts,
+      subAccounts: subAccounts,
+      completedGoals: completedGoals,
       budgetGroups: budgetGroups,
       setAsidesRemaining: isAdvisor ? t?.budgetedExpensesRemaining : null,
       installments: installmentLines,

@@ -420,8 +420,9 @@ const List<AiTool> kFinanceTools = [
     description:
         'Find the user\'s financial accounts (cash, bank accounts, e-wallets, '
         'credit cards, savings pockets) with their current balances, available credit, '
-        'and types. Call this when the user asks about an account balance or to find '
-        'which account to pay a credit card from.',
+        'and types. A credit card row also gives its open statement: amount, '
+        'paid, left, minimum and due date. Call this when the user asks about '
+        'an account balance or to find which account to pay a credit card from.',
     inputSchema: {
       'type': 'object',
       'properties': {

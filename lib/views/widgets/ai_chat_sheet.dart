@@ -506,6 +506,7 @@ class _AiChatBodyState extends State<AiChatBody> {
           padding: EdgeInsets.only(bottom: bottomInset),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_pendingImage != null)
                 _StagedImagePreview(
