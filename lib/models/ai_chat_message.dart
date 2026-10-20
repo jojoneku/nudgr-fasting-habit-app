@@ -12,11 +12,11 @@ class AiChatMessage {
   /// True while the assistant is still streaming tokens into this message.
   final bool isStreaming;
 
-  /// Optional attached image, shown in the user's bubble. In-memory only —
-  /// deliberately NOT persisted (raw bytes would bloat storage) and never
-  /// re-sent to the model on later turns; the image is sent once, on the turn
-  /// it's attached.
-  final Uint8List? imageBytes;
+  /// Images attached to this turn, in the order attached, shown in the user's
+  /// bubble. In-memory only — deliberately NOT persisted (raw bytes would
+  /// bloat storage) and never re-sent to the model on later turns; images are
+  /// sent once, on the turn they are attached. Empty when there are none.
+  final List<Uint8List> images;
 
   /// Raw provider content blocks for this turn, used only by the tool loop:
   /// an assistant turn holding a `tool_use`, or a user turn carrying the
@@ -35,7 +35,7 @@ class AiChatMessage {
     required this.text,
     required this.timestamp,
     this.isStreaming = false,
-    this.imageBytes,
+    this.images = const [],
     this.contentBlocks = const [],
   });
 
@@ -66,13 +66,16 @@ class AiChatMessage {
   static String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
-  factory AiChatMessage.user(String text, {Uint8List? imageBytes}) =>
+  factory AiChatMessage.user(
+    String text, {
+    List<Uint8List> images = const [],
+  }) =>
       AiChatMessage(
         id: _generateId(),
         role: AiChatRole.user,
         text: text,
         timestamp: DateTime.now(),
-        imageBytes: imageBytes,
+        images: images,
       );
 
   factory AiChatMessage.assistantStreaming() => AiChatMessage(
@@ -103,7 +106,7 @@ class AiChatMessage {
         text: text ?? this.text,
         timestamp: timestamp,
         isStreaming: isStreaming ?? this.isStreaming,
-        imageBytes: imageBytes,
+        images: images,
         contentBlocks: contentBlocks,
       );
 

@@ -154,8 +154,10 @@ class TreasuryPresenters {
       bills,
     );
 
-    final dashboard =
-        TreasuryDashboardPresenter(storage, ledger, budget, bills);
+    // The dashboard also reads the installment plans, for the installment
+    // months its next-month forecast counts.
+    final dashboard = TreasuryDashboardPresenter(
+        storage, ledger, budget, bills, null, installments);
 
     return TreasuryPresenters._(
       monthScope: scope,

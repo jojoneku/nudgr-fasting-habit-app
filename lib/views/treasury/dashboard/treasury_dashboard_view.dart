@@ -13,6 +13,7 @@ import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card
 import 'package:intermittent_fasting/views/treasury/dashboard/goals_savings_screen.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/next_month_forecast_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
@@ -174,6 +175,10 @@ class _DashboardScrollBody extends StatelessWidget {
           // Ending Cash / Forecast, which the hero + strip summarize but don't
           // enumerate. Kept per the "don't drop existing features" rule.
           MetricCardsGrid(presenter: presenter),
+          const SizedBox(height: 16),
+          // Directly under the outlook, so this month's end and next month's
+          // read as a pair.
+          NextMonthForecastCard(presenter: presenter),
           const SizedBox(height: 16),
           SpendingAnalyticsCard(presenter: presenter),
           const SizedBox(height: 16),

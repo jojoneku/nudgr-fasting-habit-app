@@ -131,6 +131,46 @@ void main() {
     expect(find.text('MONTH OUT'), findsNothing);
   });
 
+  testWidgets('Next Month Forecast sits under the outlook with its chain',
+      (tester) async {
+    final presenter = TreasuryDashboardPresenter(buildStorage());
+    await tester.pumpWidget(
+      MaterialApp(home: TreasuryDashboardView(presenter: presenter)),
+    );
+    await tester.pumpAndSettle();
+
+    final title = find.text('Next Month Forecast', skipOffstage: false);
+    expect(title, findsOneWidget);
+    await tester.ensureVisible(title);
+    await tester.pumpAndSettle();
+
+    final f = presenter.nextMonthForecast;
+    expect(find.text(f.monthName), findsOneWidget);
+    for (final label in [
+      'Starts at',
+      'To Receive',
+      'Bills',
+      'Installments',
+      'Set-asides',
+      'Budget',
+      f.endingTitle.toUpperCase(),
+      f.changeLabel,
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    // It starts where this month's outlook ends.
+    expect(f.startingCash, presenter.forecastedNetBalance);
+    expect(find.text(f.endingLabel), findsWidgets);
+    // Directly under the Month-End Outlook, so the two read as a pair.
+    expect(
+      tester.getTopLeft(title).dy,
+      greaterThan(tester
+          .getTopLeft(find.text('Month-End Outlook', skipOffstage: false))
+          .dy),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('projection tile renders even with no budgets set',
       (tester) async {
     // buildStorage() seeds no budgets and no budgeted expenses, so

@@ -150,7 +150,8 @@ void main() {
     final seen = <int>[];
     await pumpModule(tester, onTabChanged: seen.add);
 
-    await tester.tap(find.text('Budget'));
+    // The tab, not the dashboard's "Budget" line in the Next Month Forecast.
+    await tester.tap(find.widgetWithText(Tab, 'Budget'));
     await tester.pumpAndSettle();
 
     expect(seen, contains(3));
