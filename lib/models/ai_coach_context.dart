@@ -51,8 +51,24 @@ class AdvisorBillLine {
   /// when the bill has no meaningful due date to surface.
   final String? dueLabel;
 
-  const AdvisorBillLine(
-      {required this.name, required this.amount, this.dueLabel});
+  /// The bill's full amount, set only when part of it is already paid — then
+  /// [amount] is what is left. Null when nothing is paid yet.
+  final double? fullAmount;
+
+  /// The account the user pays this bill from, or null when none is set.
+  final String? payFrom;
+
+  /// The user's payment note ("Gcash 0917…", a reference number), or null.
+  final String? paymentNote;
+
+  const AdvisorBillLine({
+    required this.name,
+    required this.amount,
+    this.dueLabel,
+    this.fullAmount,
+    this.payFrom,
+    this.paymentNote,
+  });
 }
 
 /// One expected receivable (money owed TO the user) for the advisor snapshot.
@@ -93,6 +109,33 @@ class AdvisorCreditLine {
   /// Owed / limit as a 0..1 ratio, or null when no limit is set.
   final double? utilization;
 
+  /// The open statement's full amount, or null when no statement is owed.
+  /// Paying this in full by the due date is what avoids interest.
+  final double? statementAmount;
+
+  /// Paid toward the open statement so far.
+  final double? statementPaid;
+
+  /// Still owed on the open statement.
+  final double? statementRemaining;
+
+  /// When the open statement closed ("Oct 20"), or null when unknown.
+  final String? statementCloseLabel;
+
+  /// Charged after the open statement closed (or, with no statement owed,
+  /// everything charged so far): it is billed on the next statement.
+  final double? sinceClose;
+
+  /// When the next statement closes ("Nov 20"), or null with no billing cycle.
+  final String? nextCloseLabel;
+
+  /// Installment months not yet billed, already inside [owed].
+  final double? installmentsUnbilled;
+
+  /// True when the account must be paid in full each statement (no revolving
+  /// minimum) — a credit line or BNPL plan, or a card set up that way.
+  final bool payInFull;
+
   const AdvisorCreditLine({
     required this.name,
     required this.owed,
@@ -101,6 +144,14 @@ class AdvisorCreditLine {
     this.minimumDue,
     this.aprMonthly,
     this.utilization,
+    this.statementAmount,
+    this.statementPaid,
+    this.statementRemaining,
+    this.statementCloseLabel,
+    this.sinceClose,
+    this.nextCloseLabel,
+    this.installmentsUnbilled,
+    this.payInFull = false,
   });
 }
 
@@ -111,11 +162,16 @@ class AdvisorTxnLine {
   final String description;
   final double amount;
   final String category;
+
+  /// The account or card it was paid from, or null when unknown.
+  final String? account;
+
   const AdvisorTxnLine({
     required this.dateLabel,
     required this.description,
     required this.amount,
     required this.category,
+    this.account,
   });
 }
 
@@ -228,7 +284,63 @@ class AdvisorGoalLine {
 class AdvisorAccountLine {
   final String name;
   final double balance;
-  const AdvisorAccountLine({required this.name, required this.balance});
+
+  /// Part of [balance] held for someone else, or null when none.
+  final double? held;
+
+  const AdvisorAccountLine({
+    required this.name,
+    required this.balance,
+    this.held,
+  });
+}
+
+/// One pocket inside another account (a sub-account). Its balance is already
+/// part of the parent's, so it must never be added on top.
+class AdvisorSubAccountLine {
+  final String name;
+  final double balance;
+  final String parentName;
+  const AdvisorSubAccountLine({
+    required this.name,
+    required this.balance,
+    required this.parentName,
+  });
+}
+
+/// Money held for someone else (one custodian account).
+class AdvisorHeldLine {
+  final String name;
+  final double amount;
+
+  /// The account the money physically sits in, or null when unlinked.
+  final String? insideAccount;
+
+  const AdvisorHeldLine({
+    required this.name,
+    required this.amount,
+    this.insideAccount,
+  });
+}
+
+/// A goal the user reached and confirmed they spent — an achievement, not
+/// money still saved.
+class AdvisorCompletedGoalLine {
+  final String name;
+  final double? target;
+
+  /// What left the account when the goal was spent, or null when unrecorded.
+  final double? spent;
+
+  /// When it was marked spent ("Aug 2026").
+  final String dateLabel;
+
+  const AdvisorCompletedGoalLine({
+    required this.name,
+    this.target,
+    this.spent,
+    required this.dateLabel,
+  });
 }
 
 /// One budget group's allocated-vs-spent line (Needs / Wants / Savings, etc.).
@@ -342,11 +454,16 @@ class AdvisorInstallmentLine {
   final double monthlyAmount;
   final int remainingMonths;
   final double remainingAmount;
+
+  /// The card or account it is billed to, or null when unknown.
+  final String? account;
+
   const AdvisorInstallmentLine({
     required this.name,
     required this.monthlyAmount,
     required this.remainingMonths,
     required this.remainingAmount,
+    this.account,
   });
 }
 
@@ -482,6 +599,21 @@ class AiCoachContext {
   /// Money held for someone else (custodian) — excluded from "your" cash.
   final double? heldForOthers;
 
+  /// [heldForOthers] by custodian account.
+  final List<AdvisorHeldLine> heldForOthersLines;
+
+  /// Savings accounts with no target (those with one are in [goals]).
+  final List<AdvisorAccountLine> savingsAccounts;
+
+  /// Investment accounts — in net worth, never in cash.
+  final List<AdvisorAccountLine> investmentAccounts;
+
+  /// Pockets inside another account; already counted in the parent.
+  final List<AdvisorSubAccountLine> subAccounts;
+
+  /// Goals reached and spent.
+  final List<AdvisorCompletedGoalLine> completedGoals;
+
   /// Budget allocated vs spent per group.
   final List<AdvisorBudgetGroupLine> budgetGroups;
 
@@ -566,6 +698,11 @@ class AiCoachContext {
     this.goals = const [],
     this.liquidAccounts = const [],
     this.heldForOthers,
+    this.heldForOthersLines = const [],
+    this.savingsAccounts = const [],
+    this.investmentAccounts = const [],
+    this.subAccounts = const [],
+    this.completedGoals = const [],
     this.budgetGroups = const [],
     this.setAsidesRemaining,
     this.installments = const [],
@@ -627,12 +764,40 @@ class AiCoachContext {
     if (liquidAccounts.isNotEmpty) {
       buf.writeln('  Cash by account:');
       for (final a in liquidAccounts) {
-        buf.writeln('    - ${a.name}: ${_peso(a.balance)}');
+        final held = a.held != null && a.held! > 0
+            ? ' (${_peso(a.held!)} of it held for someone else)'
+            : '';
+        buf.writeln('    - ${a.name}: ${_peso(a.balance)}$held');
       }
     }
     if (heldForOthers != null && heldForOthers! > 0) {
       buf.writeln('  Of which held for someone else (not yours to spend): '
           '${_peso(heldForOthers!)}');
+      for (final h in heldForOthersLines) {
+        final inside =
+            h.insideAccount != null ? ' (inside ${h.insideAccount})' : '';
+        buf.writeln('    - ${h.name}: ${_peso(h.amount)}$inside');
+      }
+    }
+    if (savingsAccounts.isNotEmpty) {
+      buf.writeln('Savings accounts (no target set):');
+      for (final a in savingsAccounts) {
+        buf.writeln('  - ${a.name}: ${_peso(a.balance)}');
+      }
+    }
+    if (investmentAccounts.isNotEmpty) {
+      buf.writeln('Investments (counted in net worth, not spendable cash):');
+      for (final a in investmentAccounts) {
+        buf.writeln('  - ${a.name}: ${_peso(a.balance)}');
+      }
+    }
+    if (subAccounts.isNotEmpty) {
+      buf.writeln('Pockets inside another account (already part of that '
+          'account\'s balance, so never add them on top):');
+      for (final p in subAccounts) {
+        buf.writeln(
+            '  - ${p.name}: ${_peso(p.balance)} (inside ${p.parentName})');
+      }
     }
     if (forecastedNetBalance != null) {
       buf.writeln('Forecasted ending cash this month (after bills & budgets): '
@@ -708,10 +873,25 @@ class AiCoachContext {
         buf.writeln(line.toString());
       }
     }
+    if (completedGoals.isNotEmpty) {
+      buf.writeln('Goals already reached and spent (achievements — this money '
+          'is no longer saved):');
+      for (final g in completedGoals) {
+        final parts = <String>[
+          if (g.target != null) '${_peso(g.target!)} target',
+          if (g.spent != null) '${_peso(g.spent!)} spent on it',
+        ];
+        final detail = parts.isEmpty ? '' : '${parts.join(', ')}, ';
+        buf.writeln('  - ${g.name}: ${detail}completed ${g.dateLabel}');
+      }
+    }
     // Credit: prefer the per-card breakdown; fall back to totals when the
     // caller only supplied aggregates.
     if (creditLines.isNotEmpty) {
-      buf.writeln('Credit cards / lines (owed vs available capacity):');
+      buf.writeln('Credit cards / lines. "Owed" is the whole debt: the open '
+          'statement, charges made after it closed, and installment months '
+          'not yet billed. To avoid interest, pay the STATEMENT balance in '
+          'full by its due date; the minimum only avoids a late fee:');
       for (final c in creditLines) {
         final parts = <String>['${_peso(c.owed)} owed'];
         if (c.available != null) {
@@ -728,6 +908,7 @@ class AiCoachContext {
         }
         if (c.dueLabel != null) parts.add(c.dueLabel!);
         buf.writeln('  - ${c.name}: ${parts.join(', ')}');
+        _writeCreditStatement(buf, c);
       }
       if (totalCreditOwed != null) {
         buf.writeln('  Total owed: ${_peso(totalCreditOwed!)}'
@@ -740,7 +921,8 @@ class AiCoachContext {
     if (installments.isNotEmpty) {
       buf.writeln('Installment / BNPL plans (fixed monthly commitments):');
       for (final i in installments) {
-        buf.writeln('  - ${i.name}: ${_peso(i.monthlyAmount)}/mo, '
+        final on = i.account != null ? ' on ${i.account}' : '';
+        buf.writeln('  - ${i.name}$on: ${_peso(i.monthlyAmount)}/mo, '
             '${i.remainingMonths} mo left (${_peso(i.remainingAmount)} remaining)');
       }
       if (installmentsMonthlyLoad != null) {
@@ -754,8 +936,16 @@ class AiCoachContext {
     if (outstandingBills.isNotEmpty) {
       buf.writeln('Outstanding bills this month (money going OUT):');
       for (final b in outstandingBills) {
+        final amount = b.fullAmount != null
+            ? '${_peso(b.amount)} left of ${_peso(b.fullAmount!)}'
+            : _peso(b.amount);
         final due = b.dueLabel != null ? ' (${b.dueLabel})' : '';
-        buf.writeln('  - ${b.name}: ${_peso(b.amount)}$due');
+        final how = [
+          if (b.payFrom != null) 'pay from ${b.payFrom}',
+          if (b.paymentNote != null) 'note: ${b.paymentNote}',
+        ];
+        final howText = how.isEmpty ? '' : '; ${how.join('; ')}';
+        buf.writeln('  - ${b.name}: $amount$due$howText');
       }
       if (outstandingBillsTotal != null) {
         buf.writeln('  Total outstanding: ${_peso(outstandingBillsTotal!)}');
@@ -866,14 +1056,54 @@ class AiCoachContext {
       for (final tx in recentTransactions) {
         final desc =
             tx.description.trim().isEmpty ? tx.category : tx.description;
+        final via = tx.account != null ? ', ${tx.account}' : '';
         buf.writeln('  - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
-            '(${tx.category})');
+            '(${tx.category}$via)');
       }
     }
 
     final s = buf.toString().trim();
     final body = s.isEmpty ? '(no financial data available)' : s;
     return dateLine == null ? body : '$dateLine\n$body';
+  }
+
+  /// The statement detail under a credit line: what the open statement asks
+  /// for, and what is owed but not on it. Writes nothing when the caller gave
+  /// no statement data.
+  static void _writeCreditStatement(StringBuffer buf, AdvisorCreditLine c) {
+    final amount = c.statementAmount;
+    if (amount != null) {
+      final closed = c.statementCloseLabel != null
+          ? ' (closed ${c.statementCloseLabel})'
+          : '';
+      final paid = c.statementPaid ?? 0;
+      final left = c.statementRemaining ?? amount;
+      final rule = c.payInFull
+          ? 'this account must be paid in full'
+          : 'pay this in full by the due date to avoid interest';
+      buf.writeln('      Statement balance: ${_peso(amount)}$closed — '
+          '${_peso(paid)} paid, ${_peso(left)} left; $rule');
+    }
+    final notOnIt = <String>[];
+    final next = c.nextCloseLabel != null
+        ? 'the statement that closes ${c.nextCloseLabel}'
+        : 'the next statement';
+    final since = c.sinceClose;
+    if (since != null && since > 0) {
+      notOnIt.add(amount != null
+          ? '${_peso(since)} charged after it closed, billed on $next'
+          : '${_peso(since)} charged so far, billed on $next');
+    }
+    final inst = c.installmentsUnbilled;
+    if (inst != null && inst > 0) {
+      notOnIt.add('${_peso(inst)} in installment months not yet billed');
+    }
+    if (amount == null && (since != null || inst != null)) {
+      final rest = notOnIt.isEmpty ? '' : '; ${notOnIt.join('; ')}';
+      buf.writeln('      No statement owed right now$rest');
+    } else if (notOnIt.isNotEmpty) {
+      buf.writeln('      Not on that statement: ${notOnIt.join('; ')}');
+    }
   }
 
   /// "TODAY: Sunday, 4 Oct 2026 (2026-10-04)", plus the rule that comes with
@@ -986,8 +1216,9 @@ class AiCoachContext {
         for (final tx in d.items) {
           final desc =
               tx.description.trim().isEmpty ? tx.category : tx.description;
+          final via = tx.account != null ? ', ${tx.account}' : '';
           buf.writeln('    - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
-              '(${tx.category})');
+              '(${tx.category}$via)');
         }
       }
     }
