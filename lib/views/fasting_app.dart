@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/alarm_notification.dart';
+import '../models/app_lock/app_lock_policy.dart';
+import '../presenters/app_lock_presenter.dart';
+import '../services/app_lock/app_lock_remote.dart';
+import '../services/app_lock/local_auth_biometric_authenticator.dart';
+import '../services/app_lock/pin_verifier_cache.dart';
 import '../utils/app_scroll_behavior.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/update_presenter.dart';
 import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/update_service.dart';
+import 'app_lock/app_lock_gate.dart';
 import 'app_theme.dart';
 import 'home_screen.dart';
 import 'quests/quest_alarm_screen.dart';
@@ -21,6 +27,11 @@ class _FastingAppState extends State<FastingApp> {
   late final LocalStorageService _storage;
   late final SettingsPresenter _settingsPresenter;
   late final UpdatePresenter _updatePresenter;
+
+  /// Gates the whole app, so the root owns it (not the Treasury graph).
+  late final AppLockPresenter _appLock;
+  late final AppLockBackGuard _appLockBackGuard;
+  late final AppLifecycleListener _appLockLifecycle;
   late final ThemeData _cachedDarkTheme;
   late final ThemeData _cachedLightTheme;
 
@@ -42,6 +53,21 @@ class _FastingAppState extends State<FastingApp> {
     _storage = LocalStorageService();
     _settingsPresenter = SettingsPresenter(_storage);
     _settingsPresenter.init();
+    // The only importer of local_auth: keeps it out of the web bundle.
+    _appLock = AppLockPresenter(
+      storage: _storage,
+      cache: SecurePinVerifierCache(),
+      remote: SupabaseAppLockRemote(),
+      policy: AppLockPolicy.mobile,
+      biometrics: LocalAuthBiometricAuthenticator(),
+    );
+    _appLock.init();
+    // Before MaterialApp is built, so Back is asked here before the Navigator.
+    _appLockBackGuard = AppLockBackGuard(_appLock)..attach();
+    _appLockLifecycle = AppLifecycleListener(
+      onHide: _appLock.onBackgrounded,
+      onShow: _appLock.onForegrounded,
+    );
     _cachedDarkTheme = buildDarkTheme();
     _cachedLightTheme = buildLightTheme();
 
@@ -85,12 +111,18 @@ class _FastingAppState extends State<FastingApp> {
       return;
     }
     _alarmRouteOpen = true;
+    // A live alarm is never covered by the app lock; the lock (if due) shows
+    // again once the alarm route closes.
+    _appLock.suspend('alarm');
     navigator
         .push(MaterialPageRoute<void>(
-          builder: (_) => QuestAlarmScreen(alarm: alarm),
-          fullscreenDialog: true,
-        ))
-        .whenComplete(() => _alarmRouteOpen = false);
+      builder: (_) => QuestAlarmScreen(alarm: alarm),
+      fullscreenDialog: true,
+    ))
+        .whenComplete(() {
+      _alarmRouteOpen = false;
+      _appLock.resume('alarm');
+    });
   }
 
   @override
@@ -98,6 +130,9 @@ class _FastingAppState extends State<FastingApp> {
     NotificationService.onAlarmNotification = null;
     _settingsPresenter.dispose();
     _updatePresenter.dispose();
+    _appLockLifecycle.dispose();
+    _appLockBackGuard.detach();
+    _appLock.dispose();
     super.dispose();
   }
 
@@ -115,9 +150,13 @@ class _FastingAppState extends State<FastingApp> {
         theme: _cachedLightTheme,
         darkTheme: _cachedDarkTheme,
         themeMode: _settingsPresenter.themeMode,
+        // Above the Navigator: every route, dialog, and sheet sits under it.
+        builder: (context, child) =>
+            AppLockGate(presenter: _appLock, child: child!),
         home: HomeScreen(
           settingsPresenter: _settingsPresenter,
           updatePresenter: _updatePresenter,
+          appLockPresenter: _appLock,
         ),
       ),
     );

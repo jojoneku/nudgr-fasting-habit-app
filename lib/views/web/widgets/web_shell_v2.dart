@@ -61,6 +61,10 @@ class WebShellV2 extends StatelessWidget {
   final String? displayName;
   final VoidCallback onSignOut;
 
+  /// Extra footer row above the account (the app lock's Security / Lock
+  /// now). Null shows nothing.
+  final Widget? footerExtra;
+
   final bool isDark;
   final VoidCallback onToggleTheme;
 
@@ -77,6 +81,7 @@ class WebShellV2 extends StatelessWidget {
     this.email,
     this.displayName,
     required this.onSignOut,
+    this.footerExtra,
     required this.isDark,
     required this.onToggleTheme,
   });
@@ -121,6 +126,7 @@ class WebShellV2 extends StatelessWidget {
             email: email,
             displayName: displayName,
             onSignOut: onSignOut,
+            footerExtra: footerExtra,
             isDark: isDark,
             onToggleTheme: onToggleTheme,
           ),
@@ -170,6 +176,10 @@ class _NavRail extends StatelessWidget {
   final String? email;
   final String? displayName;
   final VoidCallback onSignOut;
+
+  /// Extra footer row above the account (the app lock's Security / Lock
+  /// now). Null shows nothing.
+  final Widget? footerExtra;
   final bool isDark;
   final VoidCallback onToggleTheme;
 
@@ -181,6 +191,7 @@ class _NavRail extends StatelessWidget {
     required this.email,
     required this.displayName,
     required this.onSignOut,
+    this.footerExtra,
     required this.isDark,
     required this.onToggleTheme,
   });
@@ -227,6 +238,7 @@ class _NavRail extends StatelessWidget {
                 email: email,
                 displayName: displayName,
                 onSignOut: onSignOut,
+                footerExtra: footerExtra,
                 isDark: isDark,
                 onToggleTheme: onToggleTheme,
               ),
@@ -451,6 +463,10 @@ class _NavFoot extends StatelessWidget {
   final String? email;
   final String? displayName;
   final VoidCallback onSignOut;
+
+  /// Extra footer row above the account (the app lock's Security / Lock
+  /// now). Null shows nothing.
+  final Widget? footerExtra;
   final bool isDark;
   final VoidCallback onToggleTheme;
 
@@ -461,6 +477,7 @@ class _NavFoot extends StatelessWidget {
     required this.email,
     required this.displayName,
     required this.onSignOut,
+    this.footerExtra,
     required this.isDark,
     required this.onToggleTheme,
   });
@@ -488,6 +505,10 @@ class _NavFoot extends StatelessWidget {
             isDark: isDark,
             onToggleTheme: onToggleTheme,
           ),
+          if (footerExtra != null) ...[
+            const SizedBox(height: 6),
+            footerExtra!,
+          ],
           const SizedBox(height: 6),
           _AccountRow(
             email: email,

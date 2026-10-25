@@ -5,7 +5,9 @@ import '../../utils/app_scroll_behavior.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+import '../../models/app_lock/app_lock_policy.dart';
 import '../../presenters/ai_coach_presenter.dart';
+import '../../presenters/app_lock_presenter.dart';
 import '../../presenters/auth_presenter.dart';
 import '../../presenters/bills_receivables_presenter.dart';
 import '../../presenters/budget_presenter.dart';
@@ -17,6 +19,8 @@ import '../../presenters/sync_presenter.dart';
 import '../../presenters/treasury_dashboard_presenter.dart';
 import '../../presenters/treasury_history_presenter.dart';
 import '../../presenters/treasury_presenters.dart';
+import '../../services/app_lock/app_lock_remote.dart';
+import '../../services/app_lock/pin_verifier_cache.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
@@ -25,6 +29,9 @@ import '../../services/realtime_sync_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
+import '../app_lock/app_lock_activity_detector.dart';
+import '../app_lock/app_lock_gate.dart';
+import '../app_lock/app_lock_settings.dart';
 import '../treasury/dashboard/goals_savings_screen.dart';
 import '../treasury/grocery/grocery_cart_view.dart';
 import '../treasury/treasury_module_view.dart';
@@ -55,8 +62,46 @@ import 'widgets/web_widgets.dart';
 /// Root of the Treasury web companion (Plan 042). Reuses the mobile dark/light
 /// identity from [buildDarkTheme]/[buildLightTheme]; defaults to the dark
 /// Solo-Leveling theme on web, toggleable from the shell topbar.
-class TreasuryWebApp extends StatelessWidget {
+class TreasuryWebApp extends StatefulWidget {
   const TreasuryWebApp({super.key});
+
+  @override
+  State<TreasuryWebApp> createState() => _TreasuryWebAppState();
+}
+
+class _TreasuryWebAppState extends State<TreasuryWebApp> {
+  /// Gates the whole app, so the root owns it. No biometrics on web: a PIN
+  /// only, and no `local_auth` import anywhere in this graph.
+  late final AppLockPresenter _appLock;
+  late final AppLockBackGuard _appLockBackGuard;
+  late final AppLifecycleListener _appLockLifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    final storage = LocalStorageService();
+    _appLock = AppLockPresenter(
+      storage: storage,
+      cache: StoragePinVerifierCache(storage),
+      remote: SupabaseAppLockRemote(),
+      policy: AppLockPolicy.web,
+    );
+    _appLock.init();
+    _appLockBackGuard = AppLockBackGuard(_appLock)..attach();
+    // On web these map to tab visibility: hidden time counts as idle.
+    _appLockLifecycle = AppLifecycleListener(
+      onHide: _appLock.onBackgrounded,
+      onShow: _appLock.onForegrounded,
+    );
+  }
+
+  @override
+  void dispose() {
+    _appLockLifecycle.dispose();
+    _appLockBackGuard.detach();
+    _appLock.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +114,12 @@ class TreasuryWebApp extends StatelessWidget {
         theme: buildWebLightTheme(),
         darkTheme: buildWebDarkTheme(),
         themeMode: mode,
-        home: const TreasuryWebShell(),
+        // Above the Navigator: every route, dialog, and sheet sits under it.
+        builder: (context, child) => AppLockActivityDetector(
+          presenter: _appLock,
+          child: AppLockGate(presenter: _appLock, child: child!),
+        ),
+        home: TreasuryWebShell(appLockPresenter: _appLock),
       ),
     );
   }
@@ -81,7 +131,11 @@ class TreasuryWebApp extends StatelessWidget {
 /// food-db, gemma, and nutrition wiring that web doesn't have. Shows the web
 /// login when signed out, the treasury module when signed in.
 class TreasuryWebShell extends StatefulWidget {
-  const TreasuryWebShell({super.key});
+  const TreasuryWebShell({super.key, this.appLockPresenter});
+
+  /// Owned by [TreasuryWebApp]; the shell binds it to auth once the session
+  /// is restored and hands it to the Security controls.
+  final AppLockPresenter? appLockPresenter;
 
   @override
   State<TreasuryWebShell> createState() => _TreasuryWebShellState();
@@ -211,6 +265,8 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       await _syncQueue.load(); // restore persisted queue before auth
       await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
+      widget.appLockPresenter
+          ?.bindAuth(AppLockAuth.fromPresenter(_authPresenter));
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
       }
@@ -415,6 +471,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
           authPresenter: _authPresenter,
           advisorPresenter: _advisorPresenter,
           nudgy: _nudgy,
+          appLockPresenter: widget.appLockPresenter,
         );
       },
     );
@@ -436,6 +493,9 @@ class _TreasuryWebHome extends StatefulWidget {
   final AiCoachPresenter advisorPresenter;
   final NudgyController nudgy;
 
+  /// Null in preview-seed mode (no auth, so nothing to lock).
+  final AppLockPresenter? appLockPresenter;
+
   /// Null until the sync stack is up (or when it failed) — the dashboard's
   /// status pill reports that instead of claiming everything is synced.
   final SyncPresenter? syncPresenter;
@@ -452,6 +512,7 @@ class _TreasuryWebHome extends StatefulWidget {
     required this.authPresenter,
     required this.advisorPresenter,
     required this.nudgy,
+    this.appLockPresenter,
   });
 
   @override
@@ -494,6 +555,12 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
   ];
 
   static const int _setupIndex = 7;
+
+  /// Security + Lock now for the desktop sidebar footers (v1 and v2).
+  Widget? get _appLockActions {
+    final lock = widget.appLockPresenter;
+    return lock == null ? null : AppLockSidebarActions(presenter: lock);
+  }
 
   /// Reload the focused page's presenter so cross-page mutations show up
   /// without a refresh (mirrors TreasuryModuleView._onTabChanged).
@@ -714,6 +781,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           email: widget.authPresenter.userEmail,
           displayName: widget.authPresenter.userDisplayName,
           onSignOut: widget.authPresenter.signOut,
+          footerExtra: _appLockActions,
           isDark: mode == ThemeMode.dark,
           onToggleTheme: () => webThemeMode.value =
               mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
@@ -776,6 +844,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
               advisorPresenter: widget.advisorPresenter,
               dashPresenter: widget.dashPresenter,
               ledgerPresenter: widget.ledgerPresenter,
+              appLockPresenter: widget.appLockPresenter,
               isDark: mode == ThemeMode.dark,
               onToggleTheme: () => webThemeMode.value =
                   mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
@@ -818,6 +887,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
           footer: _SignOutFooter(
             authPresenter: widget.authPresenter,
             syncPresenter: widget.syncPresenter,
+            appLockActions: _appLockActions,
           ),
           topBar: Row(
             children: [
@@ -892,8 +962,13 @@ class _ThemeToggle extends StatelessWidget {
 class _SignOutFooter extends StatelessWidget {
   final AuthPresenter authPresenter;
   final SyncPresenter? syncPresenter;
+  final Widget? appLockActions;
 
-  const _SignOutFooter({required this.authPresenter, this.syncPresenter});
+  const _SignOutFooter({
+    required this.authPresenter,
+    this.syncPresenter,
+    this.appLockActions,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -946,6 +1021,11 @@ class _SignOutFooter extends StatelessWidget {
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: cs.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis),
+          ),
+        if (appLockActions != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: WebInsets.sm),
+            child: appLockActions,
           ),
         OutlinedButton.icon(
           onPressed: authPresenter.signOut,

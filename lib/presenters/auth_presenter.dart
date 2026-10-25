@@ -18,6 +18,7 @@ class AuthPresenter extends ChangeNotifier {
 
   StreamSubscription<AuthState>? _authSub;
   String? _lastKnownUserId;
+  AuthChangeEvent? _lastEvent;
   bool _isLoading = false;
   String? _error;
 
@@ -33,6 +34,12 @@ class AuthPresenter extends ChangeNotifier {
   String? get userAvatarUrl => _auth.currentUserAvatarUrl;
   String? get userDisplayName => _auth.currentUserDisplayName;
 
+  /// The event behind the latest notification. The app lock reads it to tell
+  /// a real sign-in ([AuthChangeEvent.signedIn], which proved identity and may
+  /// start unlocked) from a restored session (`initialSession` /
+  /// `tokenRefreshed`, which must stay locked). Null before the first event.
+  AuthChangeEvent? get lastEvent => _lastEvent;
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   /// Call from AppShell.initState (after Supabase.initialize) to silently
@@ -42,6 +49,7 @@ class AuthPresenter extends ChangeNotifier {
     // existing user don't look like a new sign-in.
     _lastKnownUserId = _auth.currentUserId;
     _authSub = _auth.authStateChanges.listen((state) {
+      _lastEvent = state.event;
       final newUserId =
           state.event == AuthChangeEvent.signedOut ? null : _auth.currentUserId;
       if (newUserId != null && newUserId != _lastKnownUserId) {
