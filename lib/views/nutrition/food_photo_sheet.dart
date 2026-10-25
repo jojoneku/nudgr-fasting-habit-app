@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../app_colors.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
+import '../app_lock/app_lock_exemption.dart';
 
 /// Plan 029 — photo food logging entry point (restyled to Nudgr "More" spec).
 ///
@@ -28,7 +29,9 @@ Future<void> showFoodPhotoSheet(
     );
     if (source == null || !context.mounted) return;
 
-    final XFile? picked = await _pick(source);
+    // Exempt from the app lock: the picker backgrounds the app on purpose.
+    final XFile? picked =
+        await AppLockExemption.run(context, () => _pick(source));
     if (picked == null || !context.mounted) return;
 
     final bytes = await picked.readAsBytes();

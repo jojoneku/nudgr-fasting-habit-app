@@ -116,6 +116,16 @@ class MainActivity : FlutterFragmentActivity() {
                         result.success(null)
                     }
                     "isShowingOverLockScreen" -> result.success(showingOverLockScreen)
+                    // App lock: blank the recent-apps preview without
+                    // FLAG_SECURE, so screenshots keep working. API 33+ only;
+                    // older versions keep the normal preview.
+                    "setRecentsPrivacy" -> {
+                        val enabled = call.arguments as? Boolean ?: false
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            setRecentsScreenshotEnabled(!enabled)
+                        }
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }

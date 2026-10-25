@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
+import 'package:intermittent_fasting/presenters/app_lock_presenter.dart';
 import 'package:intermittent_fasting/presenters/auth_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/views/app_lock/app_lock_settings.dart';
 import 'package:intermittent_fasting/views/web/pages/setup/web_setup_page.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
@@ -27,6 +29,9 @@ class WebMorePage extends StatelessWidget {
   final TreasuryDashboardPresenter dashPresenter;
   final LedgerPresenter ledgerPresenter;
 
+  /// The app lock (owned by the web app root). Null hides the Security card.
+  final AppLockPresenter? appLockPresenter;
+
   /// Current theme mode and its toggle, threaded from the web app root.
   final bool isDark;
   final VoidCallback onToggleTheme;
@@ -37,6 +42,7 @@ class WebMorePage extends StatelessWidget {
     required this.advisorPresenter,
     required this.dashPresenter,
     required this.ledgerPresenter,
+    this.appLockPresenter,
     required this.isDark,
     required this.onToggleTheme,
   });
@@ -153,6 +159,17 @@ class WebMorePage extends StatelessWidget {
                   ),
                 ),
               ),
+              if (appLockPresenter != null) ...[
+                const SizedBox(height: 16),
+                AppSection(
+                  title: 'Security',
+                  child: AppCard(
+                    variant: AppCardVariant.elevated,
+                    padding: EdgeInsets.zero,
+                    child: AppLockSettingsTiles(presenter: appLockPresenter!),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               AppSection(
                 title: 'Account',

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../presenters/ai_coach_presenter.dart';
+import '../presenters/app_lock_presenter.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
@@ -16,6 +17,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_spacing.dart';
 import '../utils/hub_hero_slots.dart';
+import 'app_lock/app_lock_settings.dart';
 import 'auth/login_view.dart';
 import 'onboarding/onboarding_flow.dart';
 import 'settings/notification_settings_sheet.dart';
@@ -38,6 +40,7 @@ class SettingsScreen extends StatelessWidget {
     this.notificationService,
     this.localStorage,
     this.onboardingPresenter,
+    this.appLockPresenter,
   });
 
   final FastingPresenter fastingPresenter;
@@ -57,6 +60,9 @@ class SettingsScreen extends StatelessWidget {
 
   /// Drives the "Replay the Awakening" entry — reused instance owned by AppShell.
   final OnboardingPresenter? onboardingPresenter;
+
+  /// The app lock (owned by FastingApp). Null hides the Security section.
+  final AppLockPresenter? appLockPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +86,7 @@ class SettingsScreen extends StatelessWidget {
               builder: (context, _) => AppGroupedList(
                 sections: [
                   _accountGroupSection(context),
+                  if (appLockPresenter != null) _securitySection(),
                   _hubRingsSection(context),
                   if (authPresenter.isSignedIn) _cloudAiSection(context),
                   if (nutritionPresenter != null) _foodLearningSection(context),
@@ -270,6 +277,12 @@ class SettingsScreen extends StatelessWidget {
       children: children,
     );
   }
+
+  AppGroupedListSection _securitySection() => AppGroupedListSection(
+        title: 'Security',
+        footer: AppLockSettingsTiles.footer,
+        children: [AppLockSettingsTiles(presenter: appLockPresenter!)],
+      );
 
   AppGroupedListSection _hubRingsSection(BuildContext context) {
     final theme = Theme.of(context);

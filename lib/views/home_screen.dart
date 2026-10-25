@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../presenters/app_lock_presenter.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
@@ -49,10 +50,15 @@ class AppShell extends StatefulWidget {
     super.key,
     required this.settingsPresenter,
     this.updatePresenter,
+    this.appLockPresenter,
   });
 
   final SettingsPresenter settingsPresenter;
   final UpdatePresenter? updatePresenter;
+
+  /// Owned by [FastingApp] (it gates the whole app); the shell binds it to
+  /// auth once the session is restored, and forwards it to Settings.
+  final AppLockPresenter? appLockPresenter;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -214,6 +220,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _syncQueue!.load(); // restore persisted queue before auth
       await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
+      widget.appLockPresenter
+          ?.bindAuth(AppLockAuth.fromPresenter(_authPresenter));
       final onboarded = await _storage.loadOnboardingComplete();
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
@@ -554,6 +562,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           deepLinkRoute: _deepLinkRoute,
           localStorage: _storage,
           onboardingPresenter: _onboardingPresenter,
+          appLockPresenter: widget.appLockPresenter,
         ),
         if (widget.updatePresenter != null)
           Positioned(

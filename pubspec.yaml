@@ -75,6 +75,7 @@ dependencies:
   # (lib/services/clipboard_image_paste_web.dart). Already in the tree through
   # Flutter's own web plugins; listed so the import is a declared dependency.
   web: ^1.1.0
+  local_auth: ^3.0.2
 
 
 dev_dependencies:

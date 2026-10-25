@@ -5,6 +5,7 @@ import '../models/ai_coach_context.dart';
 import '../models/chat_message.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/quest.dart';
+import '../presenters/app_lock_presenter.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
@@ -83,6 +84,7 @@ class HubScreen extends StatefulWidget {
     this.deepLinkRoute,
     this.localStorage,
     this.onboardingPresenter,
+    this.appLockPresenter,
   });
 
   final HubPresenter hubPresenter;
@@ -105,6 +107,9 @@ class HubScreen extends StatefulWidget {
   final SettingsPresenter settingsPresenter;
   final UpdatePresenter? updatePresenter;
   final OnboardingPresenter? onboardingPresenter;
+
+  /// The app lock, forwarded to Settings for its Security section.
+  final AppLockPresenter? appLockPresenter;
 
   /// Set by [AppShell] when a home-screen widget is tapped; the hub consumes it
   /// and navigates to the matching screen.
@@ -586,6 +591,7 @@ class _HubScreenState extends State<HubScreen> {
           updatePresenter: widget.updatePresenter,
           localStorage: widget.localStorage,
           onboardingPresenter: widget.onboardingPresenter,
+          appLockPresenter: widget.appLockPresenter,
         ),
       ),
     );
