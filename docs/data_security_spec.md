@@ -196,3 +196,21 @@ The only change that can break cross-device restore if rushed (constraint #2).
    before merge** (no Flutter SDK in CI-only env).
 3. **PR C:** Phase 2 cloud snapshot E2E (after key-escrow design review).
 4. **PR D / tickets:** Phase 3–4 items.
+
+## 7. App lock (openspec/changes/add-app-lock)
+
+The app lock is a **privacy gate, not encryption**. It covers the app with a
+PIN screen (biometrics first on Android) after a per-device idle or background
+timeout. It stops a person who borrows an unlocked laptop or phone. It does not
+stop someone with browser developer tools, root access, or the device storage.
+
+- **One PIN per account.** The `app_lock` table (migration 058, user-scoped RLS)
+  holds a salted PBKDF2-HMAC-SHA256 verifier, never the PIN. Each device keeps a
+  copy (Android keystore; web prefs) so unlock works offline.
+- **The hash is brute-forceable.** A 4–6 digit PIN has at most 10⁶ values, so a
+  person who can read a verifier can crack it in seconds. The real protection is
+  the per-device wrong-PIN throttle (30 s after 5 misses, doubling to 15 min;
+  web signs out at 10).
+- **Out of scope:** web at-rest encryption (unchanged from Phase 1 above), home
+  widgets and notification content (Phase 4 data minimization), and lock state
+  shared across browser tabs.

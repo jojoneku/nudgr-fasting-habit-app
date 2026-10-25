@@ -1886,6 +1886,38 @@ class LocalStorageService extends StorageService {
     return prefs.getBool(StorageService.kOnboardingComplete) ?? false;
   }
 
+  // ── App lock (device-level, unscoped, never synced) ──────────────────────────
+  // Bypasses [_k] and is absent from [_kUserDataKeys] for the same reason as the
+  // onboarding gate: a cold start must read it before any user attaches.
+
+  @override
+  Future<String?> loadAppLockDevice() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(StorageService.kAppLockDevice);
+  }
+
+  @override
+  Future<void> saveAppLockDevice(String json) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.kAppLockDevice, json);
+  }
+
+  @override
+  Future<String?> loadAppLockVerifier() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(StorageService.kAppLockVerifier);
+  }
+
+  @override
+  Future<void> saveAppLockVerifier(String? json) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (json == null) {
+      await prefs.remove(StorageService.kAppLockVerifier);
+    } else {
+      await prefs.setString(StorageService.kAppLockVerifier, json);
+    }
+  }
+
   // ── Home-screen widget bridge (device-level, unscoped, never synced) ─────────
 
   @override

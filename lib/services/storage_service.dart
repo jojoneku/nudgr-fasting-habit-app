@@ -111,6 +111,13 @@ abstract class StorageService {
   // is excluded from user-data scoping and from every SyncDomain. See
   // openspec/changes/redesign-onboarding-awakening.
   static const String kOnboardingComplete = 'onboardingComplete';
+  // App lock — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]. The per-device lock
+  // state (timeout, biometrics, wrong-PIN throttle) and, on web, the local copy
+  // of the account's PIN verifier. Never synced; must be readable before the
+  // user namespace attaches so a cold start can lock first.
+  // See openspec/changes/add-app-lock.
+  static const String kAppLockDevice = 'appLock.device';
+  static const String kAppLockVerifier = 'appLock.verifier';
   // Home-screen widget bridge — DEVICE-LEVEL / UNSCOPED keys. They must survive
   // without a userId so the headless isolate (which has no auth session) can
   // re-scope storage and queue inline actions. See docs/android_widgets_spec.md.
@@ -327,6 +334,15 @@ abstract class StorageService {
   //  First-run onboarding gate (device-level / unscoped)
   Future<void> saveOnboardingComplete(bool value);
   Future<bool> loadOnboardingComplete();
+
+  //  App lock (device-level / unscoped). Raw JSON — the models own the shape.
+  Future<String?> loadAppLockDevice() async => null;
+  Future<void> saveAppLockDevice(String json) async {}
+
+  //  Local copy of the account PIN verifier. Web only — mobile keeps it in the
+  //  keystore (SecurePinVerifierCache). Null clears it.
+  Future<String?> loadAppLockVerifier() async => null;
+  Future<void> saveAppLockVerifier(String? json) async {}
 
   //  Settings flags
   Future<void> saveUseCloudAi(bool value);

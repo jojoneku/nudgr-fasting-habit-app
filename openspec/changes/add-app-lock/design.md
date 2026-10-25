@@ -41,6 +41,10 @@ The lock overlay goes in `MaterialApp.builder`, so it sits above the root `Navig
 - **Mobile:** `_FastingAppState` creates the presenter next to `SettingsPresenter` and passes it to `HomeScreen` for Settings.
 - **Web:** `TreasuryWebApp` becomes stateful, creates the presenter, and passes it to `TreasuryWebShell`.
 - **Alternative considered:** a lock route pushed on the navigator. It was rejected because dialogs pushed later would stack above it, and the back button or `Navigator.pop` could dismiss it.
+- **Consequences of sitting above the Navigator:**
+  - The gate has no Overlay or Navigator. So the lock screen and the reset flow use no dialogs, snack bars, or tooltips, and the web Forgot PIN confirmation is inline.
+  - A `PopScope` there has no route to register with. Android Back and the predictive back gesture are held instead by `AppLockBackGuard`, a `WidgetsBindingObserver`. The binding asks observers in the order they were added, so the root attaches the guard in `initState`, before `MaterialApp` (and its Navigator observer) exists.
+  - An Escape `Shortcuts` override on the cover stops a key-driven pop.
 - **Alternative considered:** the Treasury presenter graph (`TreasuryPresenters`). It was rejected because the lock is app-wide, not a Treasury concern.
 
 The presenter's public surface:
@@ -65,13 +69,13 @@ The mobile root imports `LocalAuthBiometricAuthenticator`. That file is the only
 
 ### 3. The account PIN lives in its own table, not in a sync domain
 New table `app_lock`, shipped as `docs/supabase_migration_058_app_lock.sql`:
-- Columns: `user_id uuid primary key references auth.users on delete cascade`, `verifier jsonb not null`, `updated_at timestamptz not null default now()`.
+- Columns: `user_id uuid primary key references auth.users on delete cascade`, `verifier jsonb` (null means no PIN), `updated_at timestamptz not null default now()`.
 - RLS: select, insert, update, and delete only where `auth.uid() = user_id`.
 - The table is added to the `supabase_realtime` publication.
 
 `AppLockRemote` (`fetch()`, `put(verifier)`, `delete()`, `changes` stream) talks to this table directly. Writes are **write-through**: the presenter calls `put`/`delete`, waits for success, and only then updates the cache and notifies listeners. That is why PIN changes need a connection.
 
-Turning the lock off is a real `DELETE`. A missing row means "no PIN". This is safe because the table is not part of the last-write-wins pull, so no stale device can bring the row back.
+Turning the lock off writes `verifier = null`. It does not delete the row. Realtime does not deliver a `DELETE` to a filtered subscriber, but it does deliver an `UPDATE`, so other devices hear about the change. A missing row and a null verifier both mean "no PIN".
 
 - **Alternative considered:** a field inside the `user_profile` blob through `SyncDomain.userProfile`. It was rejected for 3 reasons:
   1. The blob is last-write-wins as a whole, so an offline stats edit could overwrite a newer PIN. This is the clobber risk in the 2026-07-04 audit.
@@ -104,7 +108,8 @@ The rules:
 - Use a 16-byte random salt from `Random.secure()` and a 256-bit output.
 - Store the iteration count with the hash, so a later change re-hashes on the next PIN set.
 - Compare in constant time.
-- Tune the iteration count so that one verify takes about 150–300 ms on the web release build (dart2js, pure-Dart PBKDF2) and on a mid-range Android phone. The starting value is 100 000; a task measures it.
+- The iteration count is 40 000. On the desktop Dart VM, 50 000 took about 300 ms and 100 000 took 600–700 ms per derive, so 100 000 was too slow for a keypad. On web, `cryptography` derives through WebCrypto, which is much faster.
+- On native, the derive runs in a background isolate (`compute`), so the keypad does not freeze. Tests pass `offThread: false`, because `fake_async` cannot wait for an isolate.
 - **Alternative considered:** Argon2id. It is stronger, but it is much slower in pure Dart on web, and it gives little gain for a 4–6 digit keyspace (see Risks).
 
 ### 7. Lock timing
@@ -117,14 +122,17 @@ The rules:
   - `AppLifecycleListener` maps `visibilitychange`. When the tab shows, the presenter runs the same check, so hidden time counts as idle.
   - `lastActivityAt` is written at most once every 30 s. On cold start, the presenter locks if there is no stored value or if the stored value is older than `lockAfter`.
 - **Fresh sign-in starts unlocked.** A Google sign-in in this session proves identity, so the presenter does not lock right after `bindAuth` reports a new sign-in. Session restore at cold start is not a fresh sign-in.
+- **How a fresh sign-in is detected:** `AuthPresenter.lastEvent == AuthChangeEvent.signedIn`. Supabase (`gotrue` 2.20) reports a restored session as `initialSession` or `tokenRefreshed`, never as `signedIn`. The web OAuth redirect reports `signedIn`. The auth state seen at `bindAuth` time always counts as a restore. A misread in the safe direction (a sign-in read as a restore) only shows the lock once.
 
 ### 8. Exemptions: `runExempt` and `suspend`
-- `runExempt(fn)` sets an exempt counter for the duration of `fn`. While the counter is above 0, `onBackgrounded`/`onForegrounded` do nothing. The callers that leave the app wrap their call in `runExempt`:
-  - image picker in `food_photo_sheet.dart` and `photo_log_sheet.dart`
-  - Google sign-in in the login views and onboarding
-  - `open_filex` / `url_launcher` in Settings and the onboarding flow
-  - the biometric and device-credential prompts
-- These call sites get the presenter through constructor injection.
+- `runExempt(fn)` sets an exempt counter for the duration of `fn`. While the counter is above 0, `onBackgrounded`/`onForegrounded` do nothing. These calls are exempt:
+  - the image picker and camera in `food_photo_sheet.dart`, `photo_log_sheet.dart`, and `ai_chat_sheet.dart`
+  - the biometric and device-credential prompts (inside the presenter)
+- These calls are not exempt, by decision:
+  - Google sign-in, because the lock is never on while the user is signed out.
+  - Opening a URL or a file (the update APK, links in Settings), because that is leaving the app for another app. The timeout applies as usual.
+  - The web file picker, because web locks on idle input, not on background events.
+- The pickers reach `runExempt` through `AppLockExemption`, an `InheritedWidget` that `AppLockGate` places above the Navigator. It carries only the exemption function, not the presenter, so views still get presenters by constructor injection (rule 6). The other option was to thread the presenter through about 6 constructors (AppShell → HubScreen → ledger, nutrition, and chat sheets) only for 3 picker calls, and it was rejected. Without a gate above it (tests, previews), `AppLockExemption.run` just runs the action.
 - `suspend('alarm')` / `resume('alarm')`: `FastingApp._showAlarm` calls them around the alarm route. While suspended, the overlay does not render, but `isLocked` stays the same.
 - **Alternative considered:** a short grace window after resume. It was rejected because it is timing-based and flaky, and the photo picker can stay open for minutes.
 
@@ -168,7 +176,10 @@ The rules:
   - Signed out: "Sign in to use app lock".
   - Signed in: App lock (switch), Lock after (picker), Use biometrics (only when available), Change PIN, and Lock now.
   - A subtitle states "Your PIN works on all your devices."
-- **Web:** add a "Security" card on `web_more_page.dart` with the same rows minus biometrics. Also add a "Lock now" icon button in the sidebar footer next to sign-out.
+- **Web:**
+  - Narrow layout: a "Security" card on `web_more_page.dart`.
+  - Desktop layout: a "Security" button in the sidebar footer (v1 `_SignOutFooter` and v2 `_NavFoot` through `WebShellV2.footerExtra`). It opens the same rows in a dialog. Beside it is a "Lock now" icon button.
+- One widget, `AppLockSettingsTiles`, renders the rows on every surface, so the platforms cannot drift.
 - Each row reads presenter getters. No logic goes in `build()`.
 
 ## Risks / Trade-offs

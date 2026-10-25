@@ -7,6 +7,7 @@ import '../../../presenters/nutrition_presenter.dart';
 import '../../../services/image_compressor.dart';
 import '../../nutrition/food_photo_sheet.dart';
 import '../../widgets/system/system.dart';
+import '../../app_lock/app_lock_exemption.dart';
 
 /// Unified "snap a photo to log" entry point shared by the ledger and the hub
 /// quick-log bar. Step 1 asks what the photo is: a **receipt** (→ a ledger
@@ -57,7 +58,8 @@ Future<void> _runReceiptFlow(
     );
     if (source == null || !context.mounted) return;
 
-    final result = await _pick(source);
+    // Exempt from the app lock: the picker backgrounds the app on purpose.
+    final result = await AppLockExemption.run(context, () => _pick(source));
     if (!context.mounted) return;
     if (result.error != null) {
       // A denied permission, a missing camera, or (on mobile web) no picker

@@ -159,7 +159,7 @@ After 5 wrong PINs in a row on a device, the system SHALL block PIN entry on tha
 - **THEN** the system signs the user out and shows the login screen
 
 ### Requirement: Exempt in-app external activities
-The system SHALL NOT lock because the app went to the background for an action the user started from inside the app. These actions are the photo picker, the camera, Google sign-in, opening a file, launching a URL, and the biometric prompt itself. The exemption SHALL end when that action returns.
+The system SHALL NOT lock because the app went to the background for an in-app step the user started. These steps are the photo picker, the camera, the biometric prompt, and the device-credential prompt. The exemption SHALL end when that step returns. Opening a URL or a file in another app SHALL count as leaving the app.
 
 #### Scenario: Pick a food photo
 - **WHEN** "Lock after" is Immediately and the user opens the photo picker from the food log and picks a photo

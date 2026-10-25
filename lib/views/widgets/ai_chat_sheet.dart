@@ -8,6 +8,7 @@ import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/ledger_presenter.dart';
 import '../../services/clipboard_image_paste.dart';
+import '../app_lock/app_lock_exemption.dart';
 import 'advisor_log_card.dart';
 import 'advisor_memory_sheet.dart';
 import 'chat_markdown.dart';
@@ -327,23 +328,24 @@ class _AiChatBodyState extends State<AiChatBody> {
       final picker = ImagePicker();
       // `pickMultiImage` refuses a limit below 2, so one slot left is a
       // single pick.
-      final List<XFile> picked;
-      if (source == ImageSource.gallery && slots > 1) {
-        picked = await picker.pickMultiImage(
-          maxWidth: 2048,
-          maxHeight: 2048,
-          imageQuality: 90,
-          limit: slots,
-        );
-      } else {
+      // Exempt from the app lock: the picker backgrounds the app on purpose.
+      final List<XFile> picked = await AppLockExemption.run(context, () async {
+        if (source == ImageSource.gallery && slots > 1) {
+          return picker.pickMultiImage(
+            maxWidth: 2048,
+            maxHeight: 2048,
+            imageQuality: 90,
+            limit: slots,
+          );
+        }
         final one = await picker.pickImage(
           source: source,
           maxWidth: 2048,
           maxHeight: 2048,
           imageQuality: 90,
         );
-        picked = [if (one != null) one];
-      }
+        return [if (one != null) one];
+      });
       if (picked.isEmpty || !mounted) return;
       final images = await Future.wait(picked.map((f) => f.readAsBytes()));
       _addImages(images);
