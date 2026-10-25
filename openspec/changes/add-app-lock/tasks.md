@@ -1,6 +1,6 @@
 ## 1. Backend
 
-- [ ] 1.1 Write `docs/supabase_migration_058_app_lock.sql`. It creates the `app_lock` table (`user_id` primary key referencing `auth.users` on delete cascade, `verifier jsonb not null`, `updated_at timestamptz not null default now()`), enables RLS with select/insert/update/delete policies on `auth.uid() = user_id`, and adds the table to `supabase_realtime`. Verify by applying it to a Supabase branch: a second user cannot read the first user's row. **Status:** Written. Not yet applied to any Supabase project, so the RLS check is still open.
+- [x] 1.1 Write `docs/supabase_migration_058_app_lock.sql`. It creates the `app_lock` table (`user_id` primary key referencing `auth.users` on delete cascade, `verifier jsonb not null`, `updated_at timestamptz not null default now()`), enables RLS with select/insert/update/delete policies on `auth.uid() = user_id`, and adds the table to `supabase_realtime`. Verify by applying it to a Supabase branch: a second user cannot read the first user's row. **Status:** Applied 2026-10-25 to Nudgr AppDB as migration `058_app_lock`. Checked: RLS on, the `user_owns_row` policy is in place, the table is in `supabase_realtime`, and a probe as a signed-in user was blocked (42501) from writing another user's row and saw 0 rows.
 
 ## 2. Storage and crypto foundation
 
