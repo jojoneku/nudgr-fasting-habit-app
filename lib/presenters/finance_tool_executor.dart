@@ -15,6 +15,7 @@ class PendingFinanceAction {
     required this.isRecurring,
     this.confirmLabel,
     this.isDestructive = false,
+    this.ledgerChoice,
   });
 
   final AiToolCall call;
@@ -36,6 +37,45 @@ class PendingFinanceAction {
 
   /// True when this proposal removes or deletes an existing entity.
   final bool isDestructive;
+
+  /// Set on a settlement that can also write the ledger entry for the money
+  /// (mark a bill paid, a receivable received). Null on everything else.
+  final LedgerEntryChoice? ledgerChoice;
+}
+
+/// Whether settling a bill or receivable also records the money in the
+/// ledger, or only flags it — because the user already logged it by hand.
+///
+/// A card control, like recurrence scope. Recording a payment the ledger
+/// already holds counts it twice, and the model cannot see the ledger well
+/// enough to know; the user can, so the card asks.
+class LedgerEntryChoice {
+  const LedgerEntryChoice({
+    required this.alreadyLogged,
+    required this.canRecord,
+    this.match,
+  });
+
+  /// The card's starting answer: true when the model said the user already
+  /// logged it, or when [match] was found.
+  final bool alreadyLogged;
+
+  /// False when no account resolves to record the money against. The card
+  /// then offers "already logged" only, since recording needs an account.
+  final bool canRecord;
+
+  /// A ledger entry that looks like this payment, e.g.
+  /// "Meralco ₱3500 on 2026-09-12", shown so the user can tell.
+  final String? match;
+
+  /// The line under the checkbox: what was found, or what each answer does.
+  String get hint {
+    final found = match;
+    if (found != null) return 'Found in the ledger: $found';
+    return canRecord
+        ? 'Leave off to record a new ledger entry.'
+        : 'No account to record it in, so it is only marked.';
+  }
 }
 
 /// The half of the executor a confirm card talks to.
@@ -48,8 +88,10 @@ abstract class FinanceProposalHost implements Listenable {
   /// The change awaiting confirmation, or null when nothing is pending.
   PendingFinanceAction? get pending;
 
-  /// The user said yes. [applyToFuture] comes from the card, never the model.
-  Future<void> confirm({bool applyToFuture});
+  /// The user said yes. [applyToFuture] and [alreadyLogged] come from the
+  /// card, never the model. A null [alreadyLogged] keeps the card's starting
+  /// answer ([LedgerEntryChoice.alreadyLogged]).
+  Future<void> confirm({bool applyToFuture, bool? alreadyLogged});
 
   /// The user said no.
   void decline();
