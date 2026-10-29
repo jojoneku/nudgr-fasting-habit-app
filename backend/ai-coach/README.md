@@ -40,7 +40,7 @@ The model IDs are env vars on the live function (`BEDROCK_MODEL_ID`, `ADVISOR_MO
 
 1. Merge the code first and let CI deploy it.
 2. Grant the function `bedrock:InvokeModel` on the new global profile and on `arn:aws:bedrock:*::foundation-model/<model>` (a global profile can run in any Region).
-3. Set the env var with `aws lambda update-function-configuration`. **That call replaces the whole environment map** — read the current one first and put every key back.
+3. Set the env var with `aws lambda update-function-configuration --profile ifast-dev --region ap-southeast-1` (the `ifast-dev` profile is the account that runs `food-coach-handler`). **That call replaces the whole environment map** — read the current one first and put every key back.
 4. Watch the CloudWatch `cost_line` entries and the `Bedrock error` lines for an hour.
 
 ## Flutter integration

@@ -1968,8 +1968,9 @@ def advise_finance_stream(payload, request):
 # output tokens. None of our ops benefit from it, so it goes off -- but the
 # spelling differs by model, and the wrong one is a 400.
 #
-# A model not listed here gets no extra fields, which is what Claude 3 Haiku
-# and Sonnet 4.5 require (both reject `thinking: disabled` and `output_config`).
+# A model not listed here gets no extra fields, which is what the models live
+# before Plan 064 require: Haiku 4.5 and Sonnet 4.5 both reject
+# `output_config.effort`.
 # That is what lets this code deploy BEFORE the env var flips, and lets the
 # flip be rolled back with the env var alone.
 _THINKING_OFF = {

@@ -5,8 +5,13 @@ downtime and an env-var-only rollback.
 
 | Route | Today | Target | Price (Singapore, per 1M in/out) |
 |---|---|---|---|
-| `BEDROCK_MODEL_ID` — respond, food ops, image parsers, classifyFinance | `anthropic.claude-3-haiku-20240307-v1:0` (in-region) | `global.anthropic.claude-haiku-5-5` | $0.25/$1.25 → $0.10/$0.50 |
+| `BEDROCK_MODEL_ID` — respond, food ops, image parsers, classifyFinance | `global.anthropic.claude-haiku-4-5-20251001-v1:0` | `global.anthropic.claude-haiku-5-5` | $1/$5 → $0.10/$0.50 |
 | `ADVISOR_MODEL_ID` — adviseFinance (Nudgy) | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` | `global.anthropic.claude-sonnet-5-5` | $3/$15 → $2/$10 (cache read $0.30 → $0.10) |
+
+The live IDs were read from `food-coach-handler` with the `ifast-dev` AWS profile on
+2026-10-29. The template and docs said Claude 3 Haiku; production ran Haiku 4.5.
+Haiku 5.5 counts the same text as about 30% more tokens than Haiku 4.5, so the
+real Haiku-tier saving is about 85-87%, not 90%.
 
 Global routing was accepted for all ops on 2026-10-29. Neither 5.5 model has a geo
 row in ap-southeast-1.
@@ -32,7 +37,7 @@ row in ap-southeast-1.
 `_generation_params(model_id, effort)` returns the extra body fields for the
 model, and `{}` for any model it does not know. So:
 
-- Code deploys first and is a no-op on Claude 3 Haiku / Sonnet 4.5.
+- Code deploys first and is a no-op on Haiku 4.5 / Sonnet 4.5 (and Claude 3 Haiku).
 - The switch is an env-var change on `food-coach-handler`.
 - Rollback is the same env-var change in reverse.
 
@@ -47,7 +52,7 @@ Effort is env-configurable: `BEDROCK_EFFORT` (default `low`), `ADVISOR_EFFORT`
   `_parse_receipt_from_image`, `_respond`, `_classify_finance`.
 - `_respond`: a refusal (no text) returns a short fallback line, not an empty reply.
 - Raise the 128-token caps to 256 (newer tokenizer; output is billed as emitted).
-- Template, README, `docs/ai_coach_spec.md`: new model ID, the real Claude 3 Haiku ID.
+- Template, README, `docs/ai_coach_spec.md`: new model ID, and the model production really ran.
 - Tests: params per model, text-by-type, refusal fallback.
 
 ## PR 2 — Advisor (`feat/bedrock-sonnet-5-5`, stacked on PR 1, base `dev`)
@@ -60,7 +65,7 @@ Effort is env-configurable: `BEDROCK_EFFORT` (default `low`), `ADVISOR_EFFORT`
 - Template default + description.
 - Tests: stripping, refusal, stream with a thinking block.
 
-## Manual steps (need AWS login — not done by CI)
+## Manual steps (AWS profile `ifast-dev` — not done by CI)
 
 1. Bedrock console (ap-southeast-1): confirm access to Haiku 5.5 and Sonnet 5.5.
 2. IAM: add the two global profiles to the live function's inline policy
