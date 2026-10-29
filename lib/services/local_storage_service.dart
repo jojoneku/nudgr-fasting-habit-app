@@ -1127,6 +1127,30 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<void> saveAdvisorOpenBatch(Map<String, dynamic>? batch) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _k(StorageService.keyAdvisorOpenBatch);
+    if (batch == null) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, jsonEncode(batch));
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>?> loadAdvisorOpenBatch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyAdvisorOpenBatch));
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading open batch: $e');
+      return null;
+    }
+  }
+
+  @override
   Future<void> clearAdvisorHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_k(StorageService.keyAdvisorHistory));

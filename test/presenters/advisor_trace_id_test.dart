@@ -15,6 +15,7 @@ import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
 import '../support/advisor_events.dart';
+import '../support/proposal_fakes.dart';
 
 /// The advisor trace id (Plan 065, phase 2): one id per user message, sent
 /// with every hop of it, and a new one for the next message. The server
@@ -27,7 +28,7 @@ class _PassthroughCompressor implements ImageCompressor {
   Future<Uint8List> makeThumbnail(Uint8List bytes) async => bytes;
 }
 
-class _ReadExecutor implements FinanceToolExecutor {
+class _ReadExecutor with ProposeBatchOneByOne implements FinanceToolExecutor {
   @override
   Future<AiToolResult> runRead(AiToolCall call) async =>
       AiToolResult(toolUseId: call.id, ok: true, summary: 'found 1 match');
