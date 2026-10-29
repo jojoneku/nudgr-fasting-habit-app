@@ -20,9 +20,15 @@ class AdvisorLogCard extends StatelessWidget {
     required this.ledger,
     this.proposals,
     this.maxRowsHeight,
+    this.onAskNudgy,
   });
 
   final LedgerPresenter ledger;
+
+  /// Drops the log card and lets Nudgy answer the same message. Null hides the
+  /// "Not a log — ask Nudgy" button — when the card did not come from a
+  /// message this chat routed, there is nothing to hand back.
+  final VoidCallback? onAskNudgy;
 
   /// Where a change Nudgy proposed waits for an answer. Null when this build
   /// has no tool executor, in which case the card behaves exactly as before.
@@ -46,6 +52,7 @@ class AdvisorLogCard extends StatelessWidget {
     final pending = proposals?.pending;
 
     Widget? body;
+    var isLogReview = false;
     if (pending != null) {
       // A pending proposal outranks everything else here, the ledger's error
       // included: the tool loop is blocked on this answer, and nothing else in
@@ -74,7 +81,9 @@ class AdvisorLogCard extends StatelessWidget {
         state: state,
         maxRowsHeight: maxRowsHeight,
       );
+      isLogReview = true;
     } else if (step is StepResolved) {
+      isLogReview = true;
       body = _Resolved(
         ledger: ledger,
         step: step,
@@ -82,7 +91,15 @@ class AdvisorLogCard extends StatelessWidget {
         maxRowsHeight: maxRowsHeight,
       );
     } else if (step is StepClarify) {
+      isLogReview = true;
       body = _Clarify(ledger: ledger, step: step);
+    }
+    if (isLogReview && onAskNudgy != null) {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [body!, _AskNudgy(onPressed: onAskNudgy!)],
+      );
     }
 
     return AnimatedSize(
@@ -335,6 +352,23 @@ class _Clarify extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The way out when quick log misread a plan or a question as an entry.
+class _AskNudgy extends StatelessWidget {
+  const _AskNudgy({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: TextButton.icon(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+          icon: const Icon(Icons.chat_bubble_outline, size: 18),
+          label: const Text('Not a log — ask Nudgy'),
+        ),
+      );
 }
 
 class _Chip extends StatelessWidget {

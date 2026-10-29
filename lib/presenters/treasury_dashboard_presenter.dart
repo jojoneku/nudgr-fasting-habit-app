@@ -879,28 +879,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// This month's income minus expenses.
   double get monthNetCashFlow => monthTotalInflow - monthTotalOutflow;
 
-  /// Money actually saved this month: net flow INTO locked accounts
-  /// (savings / goal / time-deposit / investment). A transfer from a spending
-  /// account into savings lands as an inflow leg on the locked account (+);
-  /// spending out of savings is an outflow leg on it (−); a transfer between
-  /// two locked accounts nets to zero. Negative when you net-withdrew savings.
-  double get monthSavingsContributions {
-    final lockedIds = {
-      for (final a in _accounts)
-        if (a.isLocked) a.id,
-    };
-    var net = 0.0;
-    for (final t in _transactions) {
-      if (t.month != _currentMonth) continue;
-      if (!lockedIds.contains(t.accountId)) continue;
-      if (t.type == TransactionType.inflow) {
-        net += t.amount;
-      } else if (t.type == TransactionType.outflow) {
-        net -= t.amount;
-      }
-    }
-    return net;
-  }
+  /// Money set aside this month: transfers into savings pockets, less
+  /// transfers out of them ([savingsContribution], the one rule the History
+  /// grid and Nudgy use too). Negative when you net-withdrew. It used to net
+  /// every flow on time deposits and investments as well, so the savings rate
+  /// here and the History grid's "set aside" were two different numbers.
+  double get monthSavingsContributions => savingsContribution(
+        _transactions.where((t) => t.month == _currentMonth),
+        savingsPocketIds(_accounts),
+      );
 
   /// Share of this month's income that you moved into savings accounts
   /// ([monthSavingsContributions] / [monthTotalInflow]). [monthTotalInflow]
@@ -1035,6 +1022,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   List<
       ({
         String label,
+        String month,
         double billed,
         double billsPaid,
         double receivablesExpected,
@@ -1043,6 +1031,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       })> historicalLedger({int months = 6}) {
     final out = <({
       String label,
+      String month,
       double billed,
       double billsPaid,
       double receivablesExpected,
@@ -1055,6 +1044,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       if (s == null) continue;
       out.add((
         label: monthShortLabel(key),
+        month: key,
         billed: s.totalBills,
         billsPaid: s.totalBillsPaid,
         receivablesExpected: s.totalReceivables,
@@ -1973,12 +1963,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// reconstructed from their stored snapshots. Months without a usable
   /// snapshot are omitted, so an account with little history yields a short
   /// (or single-point) series the UI can choose to render as an empty state.
-  List<({String label, double value})> netWorthTrend({int months = 6}) {
-    final result = <({String label, double value})>[];
+  List<({String label, String month, double value})> netWorthTrend(
+      {int months = 6}) {
+    final result = <({String label, String month, double value})>[];
     for (final key in _lastNMonthKeys(months)) {
       final label = monthShortLabel(key);
       if (key == _currentMonth) {
-        result.add((label: label, value: netWorth));
+        result.add((label: label, month: key, value: netWorth));
       } else {
         final summary = _summaryFor(key);
         if (summary == null) continue;
@@ -1989,7 +1980,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
                 ? null
                 : _netWorthFromSnapshot(summary.accountSnapshots));
         if (value == null) continue;
-        result.add((label: label, value: value));
+        result.add((label: label, month: key, value: value));
       }
     }
     return result;

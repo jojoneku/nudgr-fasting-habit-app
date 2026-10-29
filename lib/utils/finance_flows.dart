@@ -1,4 +1,5 @@
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 
 /// Predicates that decide what counts as real spending and real income.
@@ -65,3 +66,28 @@ bool isIncomeInflow(TransactionRecord t, Set<String> reimbursementIds,
     t.transferGroupId == null &&
     !(t.receivableId != null && reimbursementIds.contains(t.receivableId)) &&
     !excludedCategoryIds.contains(t.categoryId);
+
+/// Ids of the savings pockets — plain savings, goals, sinking funds — that
+/// [savingsContribution] measures. Time deposits and investments are not
+/// pockets: money parked there is invested, not set aside for a purpose.
+Set<String> savingsPocketIds(Iterable<FinancialAccount> accounts) =>
+    {for (final a in accounts.where((a) => a.isSavingsPocket)) a.id};
+
+/// Net money set aside into savings pockets across [txns]: the inflow leg of
+/// a transfer that lands in a pocket counts, an outflow leg that leaves one
+/// counts against it, and a move between two pockets nets to zero. Only
+/// transfer legs count — interest or spending never does.
+///
+/// The one "set aside" rule (Plan 065): the dashboard's savings rate, the
+/// History grid and Nudgy's trend all read it, so they cannot disagree.
+double savingsContribution(
+    Iterable<TransactionRecord> txns, Set<String> pocketIds) {
+  var total = 0.0;
+  for (final t in txns) {
+    if (t.transferGroupId == null || !pocketIds.contains(t.accountId)) {
+      continue;
+    }
+    total += t.type == TransactionType.inflow ? t.amount : -t.amount;
+  }
+  return total;
+}

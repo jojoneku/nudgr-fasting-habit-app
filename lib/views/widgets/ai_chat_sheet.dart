@@ -524,9 +524,11 @@ class _AiChatBodyState extends State<AiChatBody> {
         if (_advisorMode)
           ListenableBuilder(
             // Both drive this one card: the ledger for logging, the proposal
-            // host for a change Nudgy asked to make.
+            // host for a change Nudgy asked to make. The presenter decides
+            // whether the card can hand its message back to Nudgy.
             listenable: Listenable.merge([
               _ledger!,
+              _presenter,
               if (_presenter.financeProposals != null)
                 _presenter.financeProposals!,
             ]),
@@ -534,6 +536,9 @@ class _AiChatBodyState extends State<AiChatBody> {
               ledger: _ledger!,
               proposals: _presenter.financeProposals,
               maxRowsHeight: cardRowsCap,
+              onAskNudgy: _presenter.canAskNudgyInstead
+                  ? _presenter.askNudgyInstead
+                  : null,
             ),
           ),
         Padding(
