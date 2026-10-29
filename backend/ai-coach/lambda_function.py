@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import re
@@ -1670,32 +1671,128 @@ def _image_blocks(images):
     return blocks
 
 
-def _cost_line(*, msgs, has_summary, has_image, usage, stop_reason,
-               tools, calls, payload, latency_ms, ttft_ms=None):
+# ── Trace (Plan 065, phase 2) ────────────────────────────────────────────────────
+#
+# A minimal trace on the cost_line: the client's trace_id (one per user
+# message, shared by every hop), the tools the reply asked for, how each tool
+# result this hop answers came out, and short hashes of the cached prefix
+# parts. Ids, names, statuses and hashes only -- never message text or finance
+# figures, which would put the user's ledger in CloudWatch.
+#
+# The hashes answer "why did the cache miss": the same three hashes as the hop
+# before and still no cache_read means routing (global. profiles) sent it to a
+# cold cache; a new snapshot hash means a ledger edit did.
+
+_TRACE_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+# AiToolResult.declined (lib/models/ai_tool.dart) starts its summary with this.
+# A declined change is is_error on the wire, but it is the user's answer, not
+# a fault, so the trace tells the two apart.
+_DECLINED_PREFIX = "The user declined"
+
+
+def _short_hash(text):
+    """First 8 hex of the sha256 of `text`: enough to compare, nothing to read."""
+    return hashlib.sha256((text or "").encode("utf-8")).hexdigest()[:8]
+
+
+def _trace_id(payload):
+    """The client's trace_id, or "-" when it is missing or not a plain id.
+
+    Checked rather than trusted: it goes into a log line, so anything that is
+    not a short run of id characters could forge or split a cost_line.
+    """
+    raw = payload.get("trace_id")
+    if isinstance(raw, str) and _TRACE_ID_RE.fullmatch(raw):
+        return raw
+    return "-"
+
+
+def _result_status(block):
+    """ok, error or declined for one tool_result block."""
+    if not block.get("is_error"):
+        return "ok"
+    content = block.get("content")
+    if isinstance(content, list):
+        content = "".join(
+            b.get("text") or "" for b in content if isinstance(b, dict))
+    if isinstance(content, str) and content.startswith(_DECLINED_PREFIX):
+        return "declined"
+    return "error"
+
+
+def _tool_results_by_turn(payload):
+    """The tool_result blocks of each user turn that carries any, in order."""
+    turns = []
+    for m in payload.get("messages") or []:
+        if not isinstance(m, dict) or m.get("role") != "user":
+            continue
+        results = [
+            b for b in (m.get("content_blocks") or [])
+            if isinstance(b, dict) and b.get("type") == "tool_result"
+        ]
+        if results:
+            turns.append(results)
+    return turns
+
+
+def _trace_fields(*, request, calls, payload):
+    """The trace part of a cost_line, as `key=value` pairs."""
+    turns = _tool_results_by_turn(payload)
+    # Only the newest results: earlier hops already logged theirs.
+    statuses = [_result_status(b) for b in turns[-1]] if turns else []
+    names = [re.sub(r"[^A-Za-z0-9_]", "", str(c.get("name") or ""))[:64]
+             for c in calls]
+
+    # The rules are _ADVISOR_SYSTEM_PREFIX; the snapshot part is everything
+    # the system carries after them (snapshot, profile, historical record).
+    system_text = "\n\n".join(b.get("text") or "" for b in request["system"])
+    context_text = system_text[len(_ADVISOR_SYSTEM_PREFIX):].lstrip("\n")
+    tools = request["tools"]
+
+    return (
+        f"trace={_trace_id(payload)} "
+        f"tool_names={','.join(n for n in names if n) or '-'} "
+        f"results={','.join(statuses) or '-'} "
+        f"hops={len(turns)} "
+        f"h_rules={_short_hash(_ADVISOR_SYSTEM_PREFIX)} "
+        f"h_snapshot={_short_hash(context_text)} "
+        # json.dumps with its defaults, as the request body serialises them, so
+        # the hash changes exactly when the bytes Bedrock caches do.
+        f"h_tools={_short_hash(json.dumps(tools)) if tools else '-'}"
+    )
+
+
+def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
+               ttft_ms=None):
     """The one place an advisor turn's economics get logged.
 
     latency_ms and out_tokens are what decide what _ADVISOR_MAX_TOKENS can
     safely be. cache_read + cache_write are how you tell whether prompt caching
     is working: cache_read climbing while in_tokens stays small is the win, and
     both sitting at 0 on a long conversation means the prefix is being
-    invalidated every turn -- check whether the snapshot text is stable before
+    invalidated every turn -- compare the h_* hashes with the hop before before
     blaming the model.
 
     ttft_ms is streaming-only, and is the number that matters most there. Total
     latency no longer decides whether the user sees an answer at all, so time to
     first token is what "fast" now means.
     """
+    tools = request["tools"]
     print(
-        f"cost_line op=adviseFinance msgs={msgs} "
-        f"snapshot={'y' if has_summary else 'n'} image={'y' if has_image else 'n'} "
+        f"cost_line op=adviseFinance msgs={len(request['messages'])} "
+        f"snapshot={'y' if request['_has_summary'] else 'n'} "
+        f"image={'y' if request['_has_image'] else 'n'} "
         f"in_tokens={usage.get('input_tokens', -1)} "
         f"out_tokens={usage.get('output_tokens', -1)} "
         f"cache_read={usage.get('cache_read_input_tokens', 0)} "
         f"cache_write={usage.get('cache_creation_input_tokens', 0)} "
         f"latency_ms={latency_ms} "
         + (f"ttft_ms={ttft_ms} " if ttft_ms is not None else "")
-        + f"stop={stop_reason} tools={tools} calls={calls} "
-        f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'}"
+        + f"stop={stop_reason} tools={len(tools) if tools else 0} "
+        f"calls={len(calls)} "
+        f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
+        + _trace_fields(request=request, calls=calls, payload=payload)
     )
 
 
@@ -1762,10 +1859,8 @@ def _advise_finance(payload):
         if truncated:
             response_text += _TRUNCATION_NOTICE
         _cost_line(
-            msgs=len(request["messages"]),
-            has_summary=request["_has_summary"], has_image=request["_has_image"],
-            usage=result.get("usage") or {}, stop_reason=stop_reason,
-            tools=len(tools) if tools else 0, calls=len(tool_calls),
+            request=request, usage=result.get("usage") or {},
+            stop_reason=stop_reason, calls=tool_calls,
             payload=payload, latency_ms=elapsed_ms,
         )
         return _resp(200, {
@@ -1936,10 +2031,8 @@ def advise_finance_stream(payload, request):
                                   else _TRUNCATION_NOTICE)
 
         _cost_line(
-            msgs=len(request["messages"]),
-            has_summary=request["_has_summary"], has_image=request["_has_image"],
-            usage=usage, stop_reason=stop_reason,
-            tools=len(tools) if tools else 0, calls=len(tool_calls),
+            request=request, usage=usage,
+            stop_reason=stop_reason, calls=tool_calls,
             payload=payload,
             latency_ms=int((time.monotonic() - started) * 1000),
             ttft_ms=ttft_ms if ttft_ms is not None else -1,
