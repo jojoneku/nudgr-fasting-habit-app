@@ -13,6 +13,7 @@ import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
 import '../support/advisor_events.dart';
+import '../support/proposal_fakes.dart';
 
 class _PassthroughCompressor implements ImageCompressor {
   @override
@@ -23,7 +24,9 @@ class _PassthroughCompressor implements ImageCompressor {
 
 /// Records what it was asked to do and answers from a script, so a test can
 /// tell a read (executed) from a mutation (proposed) without a real presenter.
-class _RecordingExecutor implements FinanceToolExecutor {
+class _RecordingExecutor
+    with ProposeBatchOneByOne
+    implements FinanceToolExecutor {
   _RecordingExecutor({this.declineProposals = false});
 
   final bool declineProposals;

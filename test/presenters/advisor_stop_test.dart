@@ -16,6 +16,7 @@ import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
 import '../support/advisor_events.dart';
+import '../support/proposal_fakes.dart';
 
 class _PassthroughCompressor implements ImageCompressor {
   @override
@@ -28,6 +29,7 @@ class _PassthroughCompressor implements ImageCompressor {
 /// `FinanceActionsExecutor` does, so a test can stop the turn while the card
 /// is open.
 class _CardExecutor extends ChangeNotifier
+    with ProposeBatchOneByOne, SingleProposalBatch
     implements FinanceToolExecutor, FinanceProposalHost {
   PendingFinanceAction? _pending;
   Completer<AiToolResult>? _decision;

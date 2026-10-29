@@ -559,9 +559,9 @@ class _AiChatBodyState extends State<AiChatBody> {
               ListenableBuilder(
                 listenable: _presenter,
                 builder: (_, __) {
-                  final enabled = _presenter.isModelAvailable &&
-                      !_presenter.isResponding &&
-                      !_presenter.isInitializing;
+                  // Open while Nudgy's batch waits, so a typed reply can
+                  // answer it (Plan 065 phase 4).
+                  final enabled = _presenter.canType;
                   return _InputBar(
                     controller: _controller,
                     focusNode: _focusNode,
@@ -572,6 +572,7 @@ class _AiChatBodyState extends State<AiChatBody> {
                     onSend: _send,
                     working: _presenter.isWorking,
                     canStop: _presenter.canStop,
+                    draftAnswersBatch: _presenter.isAwaitingBatch,
                     onStop: _presenter.stop,
                     // Photo upload is an advisor-only capability (its op is
                     // the only one wired for vision).
@@ -1242,6 +1243,10 @@ class _InputBar extends StatelessWidget {
   final bool canStop;
   final VoidCallback? onStop;
 
+  /// While Nudgy's batch waits, typed text answers it, so the button sends
+  /// whenever there is a draft and stops only when the field is empty.
+  final bool draftAnswersBatch;
+
   /// Placeholder text, decided by the presenter — the bar is disabled for
   /// several different reasons and the user is owed the right one.
   final String hint;
@@ -1266,6 +1271,7 @@ class _InputBar extends StatelessWidget {
     this.working = false,
     this.canStop = false,
     this.onStop,
+    this.draftAnswersBatch = false,
     this.onAttach,
     this.canAttach = true,
     this.onImagesInserted,
@@ -1382,12 +1388,16 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _SendButton(
-            enabled: enabled,
-            onSend: onSend,
-            working: working,
-            canStop: canStop,
-            onStop: onStop,
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: controller,
+            builder: (_, value, __) => _SendButton(
+              enabled: enabled,
+              onSend: onSend,
+              working: working &&
+                  !(draftAnswersBatch && value.text.trim().isNotEmpty),
+              canStop: canStop,
+              onStop: onStop,
+            ),
           ),
         ],
       ),

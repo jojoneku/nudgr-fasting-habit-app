@@ -276,11 +276,12 @@ void main() {
     AiToolCall logCall(List<Map<String, Object?>> entries) =>
         call('logTransactions', {'entries': entries});
 
-    test('the rows land on the review card and nothing is written', () async {
+    test('the rows wait in the batch; Approve all logs them and says so',
+        () async {
       final led = await ledger();
       final executor = FinanceActionsExecutor(bills: bills, ledger: led);
 
-      final result = await executor.propose(logCall([
+      final answer = executor.propose(logCall([
         {
           'amount': 295,
           'description': 'Motor Oil Change - Oil',
@@ -296,18 +297,25 @@ void main() {
           'category': 'Transportation',
         },
       ]));
+      await Future<void>.delayed(Duration.zero);
 
-      expect(result.ok, isTrue);
-      // The model must not narrate a save: the card is still waiting.
-      expect(result.summary, contains('NOT SAVED YET'));
+      // Waiting on the user: the rows are on the card, nothing is written.
+      expect(executor.batch, isNotNull);
       expect(led.chatState.entries.length, 2);
       expect(led.chatState.entries.first.txn.amount, 295);
       expect(led.chatState.entries.first.txn.accountId, 'cash');
       expect(led.chatState.entries.first.txn.categoryId, 'transpo');
       expect(led.chatState.entries.every((e) => e.isReady), isTrue);
-      // No proposal card: the review card is this tool's confirm surface.
-      expect(executor.pending, isNull);
       expect(led.allTransactions, isEmpty);
+
+      await executor.approveAll();
+      final result = await answer;
+
+      // The result says what was saved, after it was saved (design D3).
+      expect(result.ok, isTrue);
+      expect(result.summary, contains('Logged 2 entries'));
+      expect(led.allTransactions, hasLength(2));
+      expect(executor.batch, isNull);
     });
 
     test('an account name the model invented becomes a gap, not an id',
@@ -315,7 +323,7 @@ void main() {
       final led = await ledger();
       final executor = FinanceActionsExecutor(bills: bills, ledger: led);
 
-      final result = await executor.propose(logCall([
+      final answer = executor.propose(logCall([
         {
           'amount': 130,
           'description': 'Lunch At Alvas',
@@ -323,11 +331,15 @@ void main() {
           'category': 'Transportation',
         },
       ]));
+      await Future<void>.delayed(Duration.zero);
 
       final entry = led.chatState.entries.single;
       expect(entry.txn.accountId, isNull);
       expect(entry.missing, contains(EntryField.account));
-      expect(result.summary, contains('still needs'));
+
+      executor.decline();
+      expect((await answer).summary, contains('declined'));
+      expect(led.allTransactions, isEmpty);
     });
 
     test('entries with nothing usable are reported as unreadable', () async {

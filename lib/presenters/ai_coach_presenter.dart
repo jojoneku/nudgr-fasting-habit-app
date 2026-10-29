@@ -254,6 +254,19 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// while the turn unwinds, so a second tap is not taken as a second stop.
   bool get canStop => _advisorRunning && !_stopRequested;
 
+  /// True while a batch of Nudgy's changes waits for the user. The input
+  /// takes text then, and a message sent now answers the batch "not
+  /// approved" with the user's words (Plan 065 phase 4, decision 3). Stop
+  /// still works: it answers the batch "not approved" and ends the turn.
+  bool get isAwaitingBatch =>
+      _advisorRunning && financeProposals?.batch != null;
+
+  /// Whether the input accepts text now.
+  bool get canType =>
+      isModelAvailable &&
+      !isInitializing &&
+      (!_isResponding || isAwaitingBatch);
+
   // ── Session ───────────────────────────────────────────────────────────────
 
   /// Open a chat session scoped to [entryPoint].
@@ -328,6 +341,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       ..addAll(_currentConversation?.messages ?? const []);
     _advisorProfile = profile ?? AdvisorProfile.empty();
     safeNotify();
+    // A batch an app restart interrupted is shown again (Plan 065 phase 4).
+    unawaited(resumeOpenBatch());
   }
 
   // ── Attachments ───────────────────────────────────────────────────────────
@@ -528,6 +543,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final bypassRouter = _bypassRouterOnce;
     _bypassRouterOnce = false;
     final trimmed = text.trim();
+    if (trimmed.isNotEmpty && isAwaitingBatch) {
+      _reviseOpenBatch(trimmed);
+      return;
+    }
     if ((trimmed.isEmpty && images.isEmpty) || _isResponding) return;
 
     // Logging intent — or any reply while the ledger is mid-clarify — goes
@@ -711,7 +730,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _cancelHop?.call();
     _cancelHop = null;
     final proposals = financeProposals;
-    if (proposals?.pending != null) proposals!.decline();
+    if (proposals?.batch != null) proposals!.decline();
     _advisorStatus = null;
     _advisorAttempt = 1;
     if (_messages.isNotEmpty && _messages.last.role == AiChatRole.assistant) {
@@ -768,10 +787,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// plumbing. They also must not be persisted — a resumed conversation
   /// replaying a half-finished tool loop would carry tool ids that mean
   /// nothing to a later turn.
-  Future<void> _runAdvisorTurn(
-      AiCoachService cloud, AiCoachContext context) async {
+  Future<void> _runAdvisorTurn(AiCoachService cloud, AiCoachContext context,
+      {List<AiChatMessage>? resumeFrom}) async {
     final historical = context.financeHistoricalSummary();
-    final transcript = _userVisibleMessages();
+    // A resumed turn carries on from the protocol transcript saved with its
+    // batch, which already ends in that batch's results.
+    final transcript = resumeFrom ?? _userVisibleMessages();
     // Tools are offered only when something can actually run them. Declaring
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
@@ -853,25 +874,219 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         contentBlocks: reply.assistantContent,
       ));
 
-      final results = <Map<String, Object?>>[];
-      for (final call in reply.toolCalls) {
-        // Named before the call, not after: this is the stretch with nothing
-        // else on screen, and the whole point is to say what is taking time
-        // while it takes it.
-        _advisorStatus = _statusFor(call);
-        safeNotify();
-        final result = await _runTool(call);
-        // A stop while a card was open declines it, which is what completes
-        // this await. The decline is not sent anywhere: no next hop starts.
-        if (_turnOver) return;
-        results.add(result.toContentBlock());
-      }
-      transcript.add(AiChatMessage.toolResults(results));
+      if (!await _runToolStep(reply.toolCalls, transcript)) return;
       // Tools are done; the next hop is another round trip of silence.
       _advisorStatus = _workingStatus;
       safeNotify();
     }
   }
+
+  /// Runs one model step's tool calls and adds their results to [transcript].
+  /// Returns false when the turn ended meanwhile.
+  ///
+  /// Reads run first, one by one, each named while it runs. Every write of
+  /// the step then opens as ONE batch the user reviews in one list (Plan 065
+  /// phase 4). While it is open the batch is saved, so an app restart finds it
+  /// again ([resumeOpenBatch]); every tool_use still gets its tool_result.
+  ///
+  /// If the user typed instead of answering, their words ride in the same
+  /// user turn as the "not approved" results, so Nudgy reads both at once and
+  /// proposes a new batch in one hop.
+  Future<bool> _runToolStep(
+      List<AiToolCall> calls, List<AiChatMessage> transcript) async {
+    final results = <String, Map<String, Object?>>{};
+    final writes = <AiToolCall>[];
+    for (final call in calls) {
+      final tool = financeToolNamed(call.name);
+      if (tool != null && tool.mutates && _toolExecutor != null) {
+        writes.add(call);
+        continue;
+      }
+      // Named before the call, not after: this is the stretch with nothing
+      // else on screen, and the whole point is to say what is taking time
+      // while it takes it.
+      _advisorStatus = _statusFor(call);
+      safeNotify();
+      final result = await _runTool(call);
+      if (_turnOver) return false;
+      results[call.id] = result.toContentBlock();
+    }
+    if (writes.isNotEmpty) {
+      _advisorStatus = null;
+      safeNotify();
+      _saveOpenBatch(transcript, writes);
+      final answers = await _proposeBatch(writes);
+      // A stop while the batch was open declines it, which is what completes
+      // this await. The decline is not sent anywhere: no next hop starts.
+      _clearOpenBatch();
+      if (_turnOver) return false;
+      for (final r in answers) {
+        results[r.toolUseId] = r.toContentBlock();
+      }
+    }
+    final revision = _revisionText;
+    _revisionText = null;
+    transcript.add(AiChatMessage.toolResults([
+      for (final c in calls) results[c.id]!,
+      if (revision != null) {'type': 'text', 'text': revision},
+    ]));
+    return true;
+  }
+
+  Future<List<AiToolResult>> _proposeBatch(List<AiToolCall> writes) async {
+    final executor = _toolExecutor;
+    if (executor == null) {
+      return [
+        for (final c in writes)
+          AiToolResult.failed(c.id, 'Tools are unavailable in this session.'),
+      ];
+    }
+    try {
+      return await executor.proposeBatch(writes);
+    } catch (e) {
+      debugPrint('AiCoachPresenter batch failed: $e');
+      return [
+        for (final c in writes)
+          AiToolResult.failed(
+              c.id, 'That did not go through. Nothing was changed.'),
+      ];
+    }
+  }
+
+  /// Words the user typed while a batch was open, waiting to go to the model
+  /// with the batch's "not approved" results.
+  String? _revisionText;
+
+  /// The user typed while Nudgy's batch waited: their message answers it.
+  /// Nothing in the batch is saved, and the turn goes on to read what they
+  /// wrote — no sub-session, and Nudgy keeps the whole context.
+  void _reviseOpenBatch(String text) {
+    final proposals = financeProposals;
+    if (proposals == null) return;
+    // The prose that introduced the batch is finished; the next hop writes a
+    // new bubble below the user's message.
+    if (_messages.isNotEmpty && _messages.last.role == AiChatRole.assistant) {
+      final last = _messages.last;
+      if (last.text.trim().isEmpty) {
+        _messages.removeLast();
+      } else {
+        _updateLastMessage(last.text, isStreaming: false);
+      }
+    }
+    _messages
+      ..add(AiChatMessage.user(text))
+      ..add(AiChatMessage.assistantStreaming());
+    _revisionText = text;
+    proposals.reviseAll(text);
+    _persistAdvisor();
+    safeNotify();
+  }
+
+  // ── An open batch across a restart ─────────────────────────────────────────
+
+  /// How long a saved batch may wait for the user. After this the app does
+  /// not show it again; Nudgy is told it was not reviewed.
+  static const openBatchLifetime = Duration(hours: 24);
+
+  void _saveOpenBatch(List<AiChatMessage> transcript, List<AiToolCall> writes) {
+    final storage = _storage;
+    final conversation = _currentConversationId;
+    if (storage == null || conversation == null) return;
+    storage.saveAdvisorOpenBatch({
+      'conversationId': conversation,
+      'savedAt': DateTime.now().toIso8601String(),
+      'transcript': [for (final m in transcript) m.toJson()],
+      'calls': [
+        for (final c in writes) {'id': c.id, 'name': c.name, 'input': c.input},
+      ],
+    });
+  }
+
+  void _clearOpenBatch() => _storage?.saveAdvisorOpenBatch(null);
+
+  /// Picks up a batch an app restart interrupted, in the conversation it
+  /// belongs to. The batch is shown again; the user's answer then finishes
+  /// the turn exactly as it would have. A batch that cannot be shown — too
+  /// old, no tools in this build, no network to finish the turn — is
+  /// answered "not reviewed", so its tool_use never goes without a result.
+  Future<void> resumeOpenBatch() async {
+    final storage = _storage;
+    if (storage == null || _isResponding) return;
+    final saved = await storage.loadAdvisorOpenBatch();
+    if (saved == null || isDisposed) return;
+    if (saved['conversationId'] != _currentConversationId) return;
+    final List<AiChatMessage> transcript;
+    final List<AiToolCall> writes;
+    try {
+      transcript = [
+        for (final m in saved['transcript'] as List)
+          AiChatMessage.fromJson(Map<String, dynamic>.from(m as Map)),
+      ];
+      writes = [
+        for (final c in saved['calls'] as List)
+          AiToolCall(
+            id: (c as Map)['id'] as String,
+            name: c['name'] as String,
+            input: Map<String, Object?>.from(c['input'] as Map),
+          ),
+      ];
+    } catch (e) {
+      debugPrint('AiCoachPresenter: unreadable open batch dropped: $e');
+      _clearOpenBatch();
+      return;
+    }
+    final savedAt = DateTime.tryParse(saved['savedAt'] as String? ?? '');
+    final stale = savedAt == null ||
+        DateTime.now().difference(savedAt) > openBatchLifetime;
+    final cloud = _advisorService;
+
+    _messages.add(AiChatMessage.assistantStreaming());
+    _isResponding = true;
+    _advisorRunning = true;
+    _stopRequested = false;
+    safeNotify();
+    try {
+      final List<AiToolResult> answers;
+      if (stale || cloud == null || _toolExecutor == null) {
+        answers = [for (final c in writes) _notReviewed(c.id)];
+        _clearOpenBatch();
+      } else {
+        _saveOpenBatch(transcript, writes);
+        answers = await _proposeBatch(writes);
+        _clearOpenBatch();
+      }
+      if (_turnOver) return;
+      final revision = _revisionText;
+      _revisionText = null;
+      transcript.add(AiChatMessage.toolResults([
+        for (final r in answers) r.toContentBlock(),
+        if (revision != null) {'type': 'text', 'text': revision},
+      ]));
+      if (cloud == null) {
+        _messages.removeLast();
+        return;
+      }
+      await _runAdvisorTurn(cloud, _buildContext(), resumeFrom: transcript);
+    } finally {
+      _advisorRunning = false;
+      _isResponding = false;
+      _cancelHop = null;
+      if (_messages.isNotEmpty &&
+          _messages.last.isStreaming &&
+          _messages.last.text.isEmpty) {
+        _messages.removeLast();
+      }
+      _persistAdvisor();
+      safeNotify();
+    }
+  }
+
+  static AiToolResult _notReviewed(String id) => AiToolResult(
+        toolUseId: id,
+        ok: false,
+        summary: 'Not reviewed: the app closed before the user answered, so '
+            'nothing was saved. Ask if they still want it.',
+      );
 
   /// Shown between hops, when the model is being asked again and has not yet
   /// started writing.

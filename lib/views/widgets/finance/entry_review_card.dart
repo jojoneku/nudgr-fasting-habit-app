@@ -94,7 +94,7 @@ class _EntryReviewCardState extends State<EntryReviewCard> {
               itemCount: entries.length,
               itemBuilder: (_, i) => Padding(
                 padding: EdgeInsets.only(top: i == 0 ? 0 : 6),
-                child: _ReviewRow(
+                child: LedgerReviewRow(
                   ledger: ledger,
                   entry: entries[i],
                   index: i,
@@ -199,8 +199,9 @@ class _StatusLine extends StatelessWidget {
 /// One reviewable row: what it was for, how much, and a chip per field. A chip
 /// for a field the model resolved is informational; one for a field in
 /// [ExtractedEntry.missing] is tinted and opens its picker.
-class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({
+class LedgerReviewRow extends StatelessWidget {
+  const LedgerReviewRow({
+    super.key,
     required this.ledger,
     required this.entry,
     required this.index,
@@ -278,7 +279,7 @@ class _ReviewRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _TapTarget(
+              ReviewTapTarget(
                 onTap: () => _editAmount(context),
                 child: Text(
                   amountText,
@@ -310,14 +311,14 @@ class _ReviewRow extends StatelessWidget {
             spacing: 6,
             runSpacing: 2,
             children: [
-              _FieldChip(
+              ReviewFieldChip(
                 icon: Icons.account_balance_wallet_outlined,
                 label: _accountName(txn.accountId) ?? 'Add account',
                 needed: _needs(EntryField.account),
                 onTap: () => _pickAccount(context, EntryField.account),
               ),
               if (type == TransactionType.transfer)
-                _FieldChip(
+                ReviewFieldChip(
                   icon: Icons.arrow_forward,
                   label: _accountName(txn.transferToAccountId) ??
                       'Add destination',
@@ -325,20 +326,20 @@ class _ReviewRow extends StatelessWidget {
                   onTap: () => _pickAccount(context, EntryField.transferTo),
                 )
               else
-                _FieldChip(
+                ReviewFieldChip(
                   icon: Icons.label_outline,
                   label: _categoryName(txn.categoryId) ?? 'Add category',
                   needed: _needs(EntryField.category),
                   onTap: () => _pickCategory(context),
                 ),
-              _FieldChip(
+              ReviewFieldChip(
                 icon: Icons.event_outlined,
                 label: _dateLabel(txn.date),
                 needed: false,
                 onTap: () => _pickDate(context),
               ),
               if (entry.isLowConfidence)
-                const _FieldChip(
+                const ReviewFieldChip(
                   icon: Icons.help_outline,
                   label: 'Check this',
                   needed: true,
@@ -384,7 +385,7 @@ class _ReviewRow extends StatelessWidget {
     final chosen = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (_) => _PickerSheet(
+      builder: (_) => ReviewPickerSheet(
         title: field == EntryField.transferTo ? 'Transfer to' : 'Account',
         options: [
           for (final a in ledger.accounts)
@@ -409,7 +410,7 @@ class _ReviewRow extends StatelessWidget {
     final chosen = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (_) => _PickerSheet(
+      builder: (_) => ReviewPickerSheet(
         title: 'Category',
         options: [
           for (final c in ledger.categories)
@@ -434,7 +435,7 @@ class _ReviewRow extends StatelessWidget {
   Future<void> _editAmount(BuildContext context) async {
     final value = await showDialog<double>(
       context: context,
-      builder: (_) => _AmountDialog(initial: entry.txn.amount),
+      builder: (_) => ReviewAmountDialog(initial: entry.txn.amount),
     );
     if (value != null) ledger.setEntryAmount(index, value);
   }
@@ -443,8 +444,9 @@ class _ReviewRow extends StatelessWidget {
 /// A chip that either reports a resolved field or invites the user to fill it.
 /// Painted tight (a 30px pill) inside a 44px tap target, so the row reads as a
 /// dense strip of metadata while still clearing the touch minimum.
-class _FieldChip extends StatelessWidget {
-  const _FieldChip({
+class ReviewFieldChip extends StatelessWidget {
+  const ReviewFieldChip({
+    super.key,
     required this.icon,
     required this.label,
     required this.needed,
@@ -460,7 +462,7 @@ class _FieldChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final fg = needed ? cs.onPrimaryContainer : cs.onSurfaceVariant;
-    return _TapTarget(
+    return ReviewTapTarget(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -495,8 +497,8 @@ class _FieldChip extends StatelessWidget {
 
 /// Keeps a small chip tappable at the 44px minimum without inflating its
 /// painted size.
-class _TapTarget extends StatelessWidget {
-  const _TapTarget({required this.onTap, required this.child});
+class ReviewTapTarget extends StatelessWidget {
+  const ReviewTapTarget({super.key, required this.onTap, required this.child});
   final VoidCallback? onTap;
   final Widget child;
 
@@ -511,13 +513,14 @@ class _TapTarget extends StatelessWidget {
       );
 }
 
-typedef _PickerOption = ({String id, String label, IconData icon});
+typedef ReviewPickerOption = ({String id, String label, IconData icon});
 
-class _PickerSheet extends StatelessWidget {
-  const _PickerSheet({required this.title, required this.options});
+class ReviewPickerSheet extends StatelessWidget {
+  const ReviewPickerSheet(
+      {super.key, required this.title, required this.options});
 
   final String title;
-  final List<_PickerOption> options;
+  final List<ReviewPickerOption> options;
 
   @override
   Widget build(BuildContext context) {
@@ -558,15 +561,15 @@ class _PickerSheet extends StatelessWidget {
   }
 }
 
-class _AmountDialog extends StatefulWidget {
-  const _AmountDialog({required this.initial});
+class ReviewAmountDialog extends StatefulWidget {
+  const ReviewAmountDialog({super.key, required this.initial});
   final double? initial;
 
   @override
-  State<_AmountDialog> createState() => _AmountDialogState();
+  State<ReviewAmountDialog> createState() => _ReviewAmountDialogState();
 }
 
-class _AmountDialogState extends State<_AmountDialog> {
+class _ReviewAmountDialogState extends State<ReviewAmountDialog> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.initial == null ? '' : widget.initial!.toStringAsFixed(2),
   );

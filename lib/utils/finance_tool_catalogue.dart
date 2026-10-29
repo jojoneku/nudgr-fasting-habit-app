@@ -324,14 +324,15 @@ const List<AiTool> kFinanceTools = [
         'accounts). Call it whenever the user asks you to log, record, add or '
         're-log spending, including when the amounts come from earlier in this '
         'conversation ("log the oil change again"): listing the entries in '
-        'prose logs nothing. Every entry lands on a review card where the user '
-        'fixes anything wrong and taps Log, so nothing is saved by this call '
-        'and you must not say it was. Use the exact account and category NAMES '
-        'from the snapshot; leave a field out rather than inventing one and '
-        'the card gives the user a picker for it. Amounts are separate entries '
-        'when they were separate charges (₱295 oil and ₱50 labour are two). '
-        'This does NOT edit or delete anything already in the ledger — for a '
-        'correction, tell the user to open the entry in the Ledger.',
+        'prose logs nothing. Every entry joins the review list with the other '
+        'changes of this step, where the user fixes anything wrong and '
+        'approves; the result comes back after they answer and says exactly '
+        'what was logged. Use the exact account and category NAMES from the '
+        'snapshot; leave a field out rather than inventing one and the row '
+        'gives the user a picker for it. Amounts are separate entries when '
+        'they were separate charges (₱295 oil and ₱50 labour are two). This '
+        'does NOT change entries already in the ledger — use editTransaction '
+        'or deleteTransaction for that.',
     inputSchema: {
       'type': 'object',
       'required': ['entries'],

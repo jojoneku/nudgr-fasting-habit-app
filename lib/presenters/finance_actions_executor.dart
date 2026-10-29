@@ -9,6 +9,7 @@ import '../models/finance/bill.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
 import '../models/finance/finance_category.dart';
+import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/receivable.dart';
@@ -18,6 +19,7 @@ import '../utils/finance_entry_extraction.dart';
 import '../utils/finance_flows.dart';
 import '../utils/finance_format.dart';
 import '../utils/finance_query.dart';
+import '../utils/finance_tool_catalogue.dart';
 import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
@@ -34,15 +36,15 @@ import 'treasury_dashboard_presenter.dart';
 /// writes only through the owning presenter's mutators (CLAUDE.md #8) — bills
 /// owns set-asides and receivables, budget owns budgets.
 ///
-/// A read runs immediately. A mutation does not: [propose] parks a
-/// [PendingFinanceAction] and returns a future that only completes when the
-/// user answers, so there is no code path from a model reply to a write.
+/// A read runs immediately. A mutation does not: [proposeBatch] parks every
+/// write of one model step as one [PendingBatch] and returns a future that
+/// only completes when the user answers, so there is no code path from a
+/// model reply to a write (Plan 065 phase 4: one list, Approve all).
 ///
-/// `logTransactions` is the one mutation that does not park a
-/// [PendingFinanceAction], because transactions already have a confirm
-/// surface: the ledger's review card, where every gap is a picker. It hands
-/// the rows there and returns immediately, and the card — not this class —
-/// commits when the user taps Log.
+/// `logTransactions` joins the batch through the ledger's own review rows,
+/// where every gap is a picker: its rows show in the same list, and Approve
+/// all commits them through the ledger. Its result, like every other, says
+/// what was actually saved.
 class FinanceActionsExecutor extends ChangeNotifier
     implements FinanceToolExecutor, FinanceProposalHost {
   FinanceActionsExecutor({
@@ -72,16 +74,43 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// owners: a build without every screen fails the call plainly.
   final FinanceViewReader? _views;
 
-  PendingFinanceAction? _pending;
-  Completer<AiToolResult>? _decision;
+  PendingBatch? _batch;
+  int _batchSeq = 0;
 
-  /// The bound installment behind [_pending], when it is an `addInstallment`.
-  /// The card is drawn from it and [confirm] writes it, so the account the
-  /// user approved is the account that gets the plan.
-  _InstallmentPlan? _pendingPlan;
+  /// One completer per open call of [_batch], keyed by tool call id. A call
+  /// leaves this map the moment it is answered.
+  final Map<String, Completer<AiToolResult>> _open = {};
+
+  /// The bound installment behind an `addInstallment` row, by call id. The
+  /// row is drawn from it and the write saves it, so the account the user
+  /// approved is the account that gets the plan.
+  final Map<String, _InstallmentPlan> _plans = {};
+
+  /// The `logTransactions` call whose rows wait on the ledger's review card,
+  /// or null.
+  String? _ledgerCallId;
+
+  /// True while [approveAll] commits the ledger rows, so the ledger emptying
+  /// its card is not mistaken for the user removing them.
+  bool _approving = false;
 
   @override
-  PendingFinanceAction? get pending => _pending;
+  PendingBatch? get batch => _batch;
+
+  @override
+  PendingFinanceAction? get pending => _batch?.actions.firstOrNull;
+
+  @override
+  bool get batchHasLedgerRows => _batch != null && _ledgerCallId != null;
+
+  @override
+  int get openRowCount =>
+      (_batch?.actions.length ?? 0) +
+      (batchHasLedgerRows ? _ledger?.chatState.entries.length ?? 0 : 0);
+
+  @override
+  bool get canApproveAll =>
+      !batchHasLedgerRows || (_ledger?.chatState.isReadyToCommit ?? false);
 
   // ── Reads ─────────────────────────────────────────────────────────────────
 
@@ -459,101 +488,399 @@ class FinanceActionsExecutor extends ChangeNotifier
   // ── Proposals ─────────────────────────────────────────────────────────────
 
   @override
-  Future<AiToolResult> propose(AiToolCall call) {
-    // A second proposal while one is pending would strand the first future
-    // forever. Refuse rather than silently dropping it.
-    if (_decision != null) {
-      return Future.value(AiToolResult.failed(
-          call.id, 'Another change is still waiting to be confirmed.'));
+  Future<AiToolResult> propose(AiToolCall call) async =>
+      (await proposeBatch([call])).single;
+
+  @override
+  Future<List<AiToolResult>> proposeBatch(List<AiToolCall> calls) async {
+    // A second batch while one is open would strand the first one's futures.
+    // Refuse rather than silently dropping it.
+    if (_batch != null) {
+      return [
+        for (final c in calls)
+          AiToolResult.failed(
+              c.id, 'Another set of changes is still waiting to be confirmed.'),
+      ];
     }
-    // Transactions have their own confirm surface — the ledger's review card,
-    // the same one the extractor fills — so they do not become a
-    // [PendingFinanceAction]. Handing them to that card IS the proposal.
-    if (call.name == 'logTransactions') {
-      return Future.value(_handOffToLedger(call));
+    final immediate = <String, AiToolResult>{};
+    final actions = <PendingFinanceAction>[];
+    String? ledgerCall;
+    for (final call in calls) {
+      if (call.name == 'logTransactions') {
+        if (ledgerCall != null) {
+          immediate[call.id] = AiToolResult.failed(call.id,
+              'Put every entry in one logTransactions call, not several.');
+          continue;
+        }
+        final handed = _handOffToLedger(call);
+        if (!handed.ok) {
+          immediate[call.id] = handed;
+          continue;
+        }
+        ledgerCall = call.id;
+        continue;
+      }
+      // Checked and bound before any row is shown: a change the user cannot
+      // sensibly confirm is sent back to the model with the reason, instead
+      // of being parked behind a row that would save something else.
+      final built = _build(call);
+      final error = built.error;
+      if (error != null) {
+        immediate[call.id] = AiToolResult.failed(call.id, error);
+        continue;
+      }
+      actions.add(built.action!);
     }
-    // An installment is checked and bound before any card is shown: a plan
-    // the user cannot sensibly confirm (no amount, no months, an account that
-    // is not credit) is sent back to the model with the reason, instead of
-    // being parked behind a card that would save something else.
+    if (actions.isEmpty && ledgerCall == null) {
+      return [for (final c in calls) immediate[c.id]!];
+    }
+
+    final waiting = <String, Future<AiToolResult>>{};
+    for (final a in actions) {
+      final c = Completer<AiToolResult>();
+      _open[a.call.id] = c;
+      waiting[a.call.id] = c.future;
+    }
+    if (ledgerCall != null) {
+      final c = Completer<AiToolResult>();
+      _open[ledgerCall] = c;
+      waiting[ledgerCall] = c.future;
+      _ledgerCallId = ledgerCall;
+      _ledger?.addListener(_onLedgerChanged);
+    }
+    _batch = PendingBatch(id: 'batch_${++_batchSeq}', actions: actions);
+    notifyListeners();
+
+    final answered = <String, AiToolResult>{};
+    for (final e in waiting.entries) {
+      answered[e.key] = await e.value;
+    }
+    return [for (final c in calls) immediate[c.id] ?? answered[c.id]!];
+  }
+
+  /// The single-proposal answer, kept for a batch of one.
+  @override
+  Future<void> confirm({bool applyToFuture = false, bool? alreadyLogged}) {
+    final ids = [for (final a in _batch?.actions ?? const []) a.call.id];
+    return approveAll(
+      applyToFuture: {for (final id in ids) id: applyToFuture},
+      alreadyLogged: {
+        if (alreadyLogged != null)
+          for (final id in ids) id: alreadyLogged,
+      },
+    );
+  }
+
+  /// The user said yes to every row still open. Scope and "already in the
+  /// ledger" come from the card, per row, never from the model: they spread a
+  /// change across later months or skip a ledger entry, and no chat sentence
+  /// reliably asks for either.
+  @override
+  Future<void> approveAll({
+    Map<String, bool> applyToFuture = const {},
+    Map<String, bool> alreadyLogged = const {},
+  }) async {
+    final batch = _batch;
+    if (batch == null) return;
+    // The rows leave the screen at once; each result follows its write.
+    _batch = PendingBatch(id: batch.id, actions: const []);
+    notifyListeners();
+
+    for (final action in batch.actions) {
+      final id = action.call.id;
+      try {
+        final summary = await _write(
+          action,
+          applyToFuture: applyToFuture[id] ?? false,
+          alreadyLogged:
+              alreadyLogged[id] ?? action.ledgerChoice?.alreadyLogged ?? false,
+          plan: _plans[id],
+        );
+        _answer(id, AiToolResult(toolUseId: id, ok: true, summary: summary));
+      } catch (e) {
+        debugPrint('FinanceActionsExecutor write failed: $e');
+        _answer(
+            id,
+            AiToolResult.failed(
+                id, 'Saving that failed, so nothing was changed.'));
+      }
+    }
+    final ledgerCall = _ledgerCallId;
+    if (ledgerCall != null) {
+      _answer(ledgerCall, await _commitLedgerRows(ledgerCall));
+    }
+    notifyListeners();
+  }
+
+  /// The user said no to everything still open. Reported as a decline, never
+  /// as a quiet success.
+  @override
+  void decline() => _answerAll((id) => AiToolResult.declined(id));
+
+  @override
+  void reviseAll(String userText) => _answerAll((id) => AiToolResult(
+        toolUseId: id,
+        ok: false,
+        summary: 'Not approved, and nothing was saved. Instead of answering '
+            'the card, the user wrote: "$userText". Read it and, if they '
+            'still want changes, propose the whole new set in one step.',
+      ));
+
+  @override
+  void removeAction(String callId) {
+    final batch = _batch;
+    if (batch == null || !batch.actions.any((a) => a.call.id == callId)) {
+      return;
+    }
+    _batch = PendingBatch(
+      id: batch.id,
+      actions: [
+        for (final a in batch.actions)
+          if (a.call.id != callId) a
+      ],
+    );
+    _answer(
+        callId,
+        AiToolResult(
+          toolUseId: callId,
+          ok: false,
+          summary: 'The user removed this change from the list, so it was '
+              'not saved.',
+        ));
+    notifyListeners();
+  }
+
+  @override
+  String? editAction(String callId, Map<String, Object?> patch) {
+    final batch = _batch;
+    final index = batch?.actions.indexWhere((a) => a.call.id == callId) ?? -1;
+    if (batch == null || index < 0) return 'That change is no longer open.';
+    final old = batch.actions[index].call;
+    final edited = AiToolCall(
+      id: old.id,
+      name: old.name,
+      input: {...old.input, ...patch},
+    );
+    final built = _build(edited);
+    final error = built.error;
+    if (error != null) return error;
+    _batch = PendingBatch(
+      id: batch.id,
+      actions: [...batch.actions]..[index] = built.action!,
+    );
+    notifyListeners();
+    return null;
+  }
+
+  /// Answers every open call with [result] and closes the batch.
+  void _answerAll(AiToolResult Function(String id) result) {
+    if (_batch == null) return;
+    final ledgerCall = _ledgerCallId;
+    for (final id in [..._open.keys]) {
+      _answer(id, result(id));
+    }
+    if (ledgerCall != null) _ledger?.cancelChat();
+    notifyListeners();
+  }
+
+  /// Completes call [id] with [result] and drops it from the batch. The batch
+  /// closes when its last call is answered.
+  void _answer(String id, AiToolResult result) {
+    final c = _open.remove(id);
+    if (c == null) return;
+    _plans.remove(id);
+    if (id == _ledgerCallId) {
+      _ledger?.removeListener(_onLedgerChanged);
+      _ledgerCallId = null;
+    }
+    c.complete(result);
+    final batch = _batch;
+    if (batch != null) {
+      _batch = PendingBatch(
+        id: batch.id,
+        actions: [
+          for (final a in batch.actions)
+            if (a.call.id != id) a
+        ],
+      );
+    }
+    if (_open.isEmpty) _batch = null;
+  }
+
+  /// The user emptied the ledger rows (Remove on each, or Cancel) while the
+  /// batch was open: that call is reported as not saved.
+  void _onLedgerChanged() {
+    final id = _ledgerCallId;
+    final ledger = _ledger;
+    if (id == null || ledger == null || _approving) return;
+    final state = ledger.chatState;
+    if (state.phase == ChatPhase.reviewing && state.entries.isNotEmpty) return;
+    _answer(
+        id,
+        AiToolResult(
+          toolUseId: id,
+          ok: false,
+          summary: 'The user removed these entries from the list, so nothing '
+              'was logged.',
+        ));
+    notifyListeners();
+  }
+
+  /// Commits the ledger rows of the batch and says exactly which were saved.
+  Future<AiToolResult> _commitLedgerRows(String id) async {
+    final ledger = _ledger;
+    if (ledger == null) {
+      return AiToolResult.failed(id, 'Logging is not available here.');
+    }
+    final rows = ledger.chatState.entries;
+    final ready = rows.where((e) => e.isReady).toList();
+    if (ready.isEmpty) {
+      return AiToolResult.failed(
+          id, 'Nothing was logged: every entry still needed a field.');
+    }
+    _approving = true;
+    try {
+      await ledger.confirmEntries();
+    } finally {
+      _approving = false;
+    }
+    final left = rows.length - ready.length;
+    final lines = [
+      for (final e in ready)
+        '- ${e.txn.description.isEmpty ? "entry" : e.txn.description} '
+            '${_peso(e.txn.amount ?? 0)}'
+            '${e.txn.date == null ? ' (today)' : ' (${_day(e.txn.date!)})'}',
+    ];
+    return AiToolResult(
+      toolUseId: id,
+      ok: true,
+      summary: 'Logged ${ready.length} '
+          '${ready.length == 1 ? "entry" : "entries"} to the ledger:\n'
+          '${lines.join('\n')}'
+          '${left == 0 ? '' : '\n$left still need a field and wait on the card.'}',
+    );
+  }
+
+  /// Checks [call], binds it, and draws its row — or says why it cannot be
+  /// shown. Used when a batch opens and again on every in-place edit.
+  ({PendingFinanceAction? action, String? error}) _build(AiToolCall call) {
     final problem = _proposalProblem(call);
-    if (problem != null) {
-      return Future.value(AiToolResult.failed(call.id, problem));
-    }
+    if (problem != null) return (action: null, error: problem);
     _InstallmentPlan? plan;
     if (call.name == 'addInstallment') {
       final resolved = _resolveInstallment(call.input);
       final error = resolved.error;
-      if (error != null) {
-        return Future.value(AiToolResult.failed(call.id, error));
-      }
+      if (error != null) return (action: null, error: error);
       plan = resolved.plan;
     }
-    final action =
+    final described =
         plan != null ? _describeInstallment(call, plan) : _describe(call);
-    if (action == null) {
-      return Future.value(
-          AiToolResult.failed(call.id, 'Unknown tool "${call.name}".'));
+    if (described == null) {
+      return (action: null, error: 'Unknown tool "${call.name}".');
     }
-    _pending = action;
-    _pendingPlan = plan;
-    _decision = Completer<AiToolResult>();
-    notifyListeners();
-    return _decision!.future;
-  }
-
-  /// The user said yes. [applyToFuture] comes from the card, never the model:
-  /// it spreads the change across later months of the series, and no chat
-  /// sentence reliably asks for that.
-  @override
-  Future<void> confirm(
-      {bool applyToFuture = false, bool? alreadyLogged}) async {
-    final action = _pending;
-    final decision = _decision;
-    if (action == null || decision == null) return;
-    final plan = _pendingPlan;
-    _pending = null;
-    _pendingPlan = null;
-    _decision = null;
-
-    try {
-      final summary = await _write(action,
-          applyToFuture: applyToFuture,
-          alreadyLogged:
-              alreadyLogged ?? action.ledgerChoice?.alreadyLogged ?? false,
-          plan: plan);
-      decision.complete(
-          AiToolResult(toolUseId: action.call.id, ok: true, summary: summary));
-    } catch (e) {
-      debugPrint('FinanceActionsExecutor write failed: $e');
-      decision.complete(AiToolResult.failed(
-          action.call.id, 'Saving that failed, so nothing was changed.'));
+    if (plan != null) {
+      _plans[call.id] = plan;
+    } else {
+      _plans.remove(call.id);
     }
-    notifyListeners();
+    return (
+      action: described.withReview(
+        tier: _tierFor(call.name),
+        editable: _editableFor(call.name),
+      ),
+      error: null,
+    );
   }
 
-  /// The user said no. Reported as a decline, never as a quiet success.
-  @override
-  void decline() {
-    final action = _pending;
-    final decision = _decision;
-    if (action == null || decision == null) return;
-    _pending = null;
-    _pendingPlan = null;
-    _decision = null;
-    decision.complete(AiToolResult.declined(action.call.id));
-    notifyListeners();
+  /// Plan 065 tiers: a delete is T3; an edit, a settlement, a card payment or
+  /// an installment (it holds credit and books months ahead) is T2; any other
+  /// create is T1. A recurring row becomes T3 on the card when the user
+  /// widens it to later months.
+  static ProposalTier _tierFor(String tool) {
+    final kind = financeToolNamed(tool)?.kind;
+    if (kind == AiToolKind.destroy) return ProposalTier.destructive;
+    if (kind == AiToolKind.update) return ProposalTier.change;
+    if (tool == 'payCredit' || tool == 'addInstallment') {
+      return ProposalTier.change;
+    }
+    return ProposalTier.create;
   }
+
+  /// The fields each row edits in place, mapped to the input key they write.
+  static Map<ProposalField, String> _editableFor(String tool) => switch (tool) {
+        'addBill' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.day: 'dueDay',
+            ProposalField.account: 'account',
+            ProposalField.category: 'category',
+          },
+        'addReceivable' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.day: 'expectedDay',
+          },
+        'addSetAside' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'destinationAccount',
+          },
+        'addInstallment' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'account',
+            ProposalField.category: 'category',
+            ProposalField.date: 'date',
+          },
+        'payCredit' => const {
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'fromAccount',
+            ProposalField.date: 'date',
+          },
+        'markBillPaid' => const {
+            ProposalField.amount: 'paidAmount',
+            ProposalField.account: 'account',
+            ProposalField.date: 'paidDate',
+          },
+        'markReceivableReceived' => const {
+            ProposalField.amount: 'receivedAmount',
+            ProposalField.account: 'account',
+            ProposalField.date: 'receivedDate',
+          },
+        'editBill' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.day: 'dueDay',
+            ProposalField.category: 'category',
+          },
+        'editReceivable' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.day: 'expectedDay',
+          },
+        'editSetAside' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'destinationAccount',
+          },
+        'editTransaction' => const {
+            ProposalField.name: 'description',
+            ProposalField.amount: 'amount',
+            ProposalField.date: 'date',
+            ProposalField.account: 'account',
+            ProposalField.category: 'category',
+          },
+        _ => const {},
+      };
 
   // ── Transactions ──────────────────────────────────────────────────────────
 
   /// Binds the model's entries against the user's real accounts and categories
-  /// and puts them on the ledger's review card.
+  /// and puts them on the ledger's review rows, which join the open batch.
   ///
-  /// Nothing is written here, and the result says so in as many words: the
-  /// model is told the rows are waiting on a tap, because a summary that reads
-  /// like a save is how the user ends up believing money was logged when it was
-  /// not (advisor rule 8).
+  /// Nothing is written here. A failure comes back as the call's result; on
+  /// success the batch answers the call later, after Approve all, with what
+  /// was actually logged (design D3).
   ///
   /// The binding is the extractor's own, reused verbatim — an account or
   /// category name the model invented is dropped to a picker on the row rather

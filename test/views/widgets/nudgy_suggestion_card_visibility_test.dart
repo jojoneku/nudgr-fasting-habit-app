@@ -15,10 +15,12 @@ import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 import 'package:mockito/mockito.dart';
 
 import '../../mocks.mocks.dart';
+import '../../support/proposal_fakes.dart';
 
 /// A tool executor with a card already waiting, the way the real one sits
 /// while the user is looking at a suggestion.
 class _WaitingHost extends ChangeNotifier
+    with ProposeBatchOneByOne, SingleProposalBatch
     implements FinanceToolExecutor, FinanceProposalHost {
   _WaitingHost(this._pending);
 

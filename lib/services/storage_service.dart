@@ -82,6 +82,7 @@ abstract class StorageService {
   static const String keyAdvisorHistory = 'advisorChatHistory';
   static const String keyAdvisorConversations = 'advisorConversations';
   static const String keyAdvisorProfile = 'advisorProfile';
+  static const String keyAdvisorOpenBatch = 'advisorOpenBatch';
   static const String keyFinancialAccounts = 'finance_accounts';
   static const String keyTransactions = 'finance_transactions';
   static const String keyFinanceCategories = 'finance_categories';
@@ -226,6 +227,12 @@ abstract class StorageService {
   Future<List<AiChatMessage>> loadAdvisorHistory();
   Future<void> saveAdvisorProfile(AdvisorProfile profile);
   Future<AdvisorProfile?> loadAdvisorProfile();
+
+  /// Nudgy's batch of changes still waiting for the user, so an app restart
+  /// can show it again (Plan 065 phase 4). Null clears it. Device-only: it is
+  /// a moment of one chat, never synced.
+  Future<void> saveAdvisorOpenBatch(Map<String, dynamic>? batch);
+  Future<Map<String, dynamic>?> loadAdvisorOpenBatch();
   Future<void> clearAdvisorHistory();
 
   /// Saved Nudgy conversations (ChatGPT-style history browser). Stored

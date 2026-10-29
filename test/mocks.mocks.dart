@@ -1041,6 +1041,28 @@ class MockStorageService extends _i1.Mock implements _i14.StorageService {
       ) as _i15.Future<_i23.AdvisorProfile?>);
 
   @override
+  _i15.Future<void> saveAdvisorOpenBatch(Map<String, dynamic>? batch) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveAdvisorOpenBatch,
+          [batch],
+        ),
+        returnValue: _i15.Future<void>.value(),
+        returnValueForMissingStub: _i15.Future<void>.value(),
+      ) as _i15.Future<void>);
+
+  @override
+  _i15.Future<Map<String, dynamic>?> loadAdvisorOpenBatch() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadAdvisorOpenBatch,
+          [],
+        ),
+        returnValue: _i15.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i15.Future<Map<String, dynamic>?>.value(),
+      ) as _i15.Future<Map<String, dynamic>?>);
+
+  @override
   _i15.Future<void> clearAdvisorHistory() => (super.noSuchMethod(
         Invocation.method(
           #clearAdvisorHistory,
