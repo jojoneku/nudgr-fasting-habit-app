@@ -551,6 +551,49 @@ void main() {
       expect(result.ok, isFalse);
       expect(result.summary, contains('not available'));
     });
+
+    test('queryFinance totals a month with the ledger spending rule', () async {
+      final ex = await withLedger();
+
+      final result = await ex.runRead(call('queryFinance', {
+        'metric': 'spend',
+        'groupBy': 'category',
+        'month': '2026-09',
+      }));
+
+      // Groceries + Grab ride. The transfer and the reimbursable lunch are
+      // not spending.
+      expect(result.ok, isTrue);
+      expect(
+          result.summary,
+          contains('spend by category, 2026-09-01 to '
+              '2026-09-30'));
+      expect(result.summary, contains('Food: ₱1,200.00 (1 entry)'));
+      expect(result.summary, contains('Total: ₱1,445.00 over 2 entries.'));
+      expect(result.summary, contains('Definition: spend = '));
+    });
+
+    test('queryFinance refuses an unknown metric or a bad date', () async {
+      final ex = await withLedger();
+
+      final metric =
+          await ex.runRead(call('queryFinance', {'metric': 'profit'}));
+      final date = await ex.runRead(
+          call('queryFinance', {'metric': 'spend', 'from': 'last week'}));
+
+      expect(metric.ok, isFalse);
+      expect(metric.summary, contains('metric must be one of'));
+      expect(date.ok, isFalse);
+      expect(date.summary, contains('from must be YYYY-MM-DD'));
+    });
+
+    test('queryFinance with no ledger says so', () async {
+      final result =
+          await executor.runRead(call('queryFinance', {'metric': 'spend'}));
+
+      expect(result.ok, isFalse);
+      expect(result.summary, contains('not available'));
+    });
   });
 
   group('addInstallment', () {

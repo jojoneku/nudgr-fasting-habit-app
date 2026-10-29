@@ -115,7 +115,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final InstallmentPresenter? _installments;
 
   /// "Now" for the credit-statement paths (generation, reconciliation, due
-  /// reminders). Injected so tests can pin a date; [DateTime.now] otherwise.
+  /// reminders) and the `createdAt` stamp on new rows. Injected so tests can
+  /// pin a date; [DateTime.now] otherwise.
   final DateTime Function() _clock;
 
   /// Shared "month being read" across the Treasury tabs; null when unshared.
@@ -848,7 +849,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// empty, so without this a bill added today would silently never appear in a
   /// future month the user had already opened.
   Future<void> addBill(Bill bill, {bool applyToFuture = false}) async {
-    final seeded = _withBillSeries(bill);
+    final seeded = _withBillSeries(
+        bill.createdAt != null ? bill : bill.copyWith(createdAt: _clock()));
     _allBills = [..._allBills, seeded];
     final spread = applyToFuture
         ? _propagateBillToFuture(seeded)
@@ -872,7 +874,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// recurred, and the user has just said it no longer does.
   Future<void> updateBill(Bill bill, {bool applyToFuture = false}) async {
     final previous = _allBills.where((b) => b.id == bill.id).firstOrNull;
-    final saved = _withBillSeries(bill, previous: previous);
+    // An edit never changes when the bill was created. The forms build a fresh
+    // Bill, so the stored stamp is carried over here.
+    final saved = _withBillSeries(
+        previous == null ? bill : bill.copyWith(createdAt: previous.createdAt),
+        previous: previous);
     _allBills = [for (final b in _allBills) b.id == saved.id ? saved : b];
     final spread = applyToFuture
         ? _propagateBillToFuture(saved)
@@ -1675,7 +1681,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     Receivable receivable, {
     bool applyToFuture = false,
   }) async {
-    final seeded = _withReceivableSeries(receivable);
+    final seeded = _withReceivableSeries(receivable.createdAt != null
+        ? receivable
+        : receivable.copyWith(createdAt: _clock()));
     _allReceivables = [..._allReceivables, seeded];
     if (applyToFuture) _propagateReceivableToFuture(seeded);
     safeNotify();
@@ -1773,7 +1781,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }) async {
     final previous =
         _allReceivables.where((r) => r.id == receivable.id).firstOrNull;
-    final saved = _withReceivableSeries(receivable, previous: previous);
+    final saved = _withReceivableSeries(
+        previous == null
+            ? receivable
+            : receivable.copyWith(createdAt: previous.createdAt),
+        previous: previous);
     _allReceivables = [
       for (final r in _allReceivables) r.id == saved.id ? saved : r,
     ];
@@ -1869,7 +1881,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     BudgetedExpense expense, {
     bool applyToFuture = false,
   }) async {
-    final seeded = _withExpenseSeries(expense);
+    final seeded = _withExpenseSeries(expense.createdAt != null
+        ? expense
+        : expense.copyWith(createdAt: _clock()));
     _allExpenses = [..._allExpenses, seeded];
     if (applyToFuture) _propagateExpenseToFuture(seeded);
     safeNotify();
@@ -1884,7 +1898,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     bool applyToFuture = false,
   }) async {
     final previous = _allExpenses.where((e) => e.id == expense.id).firstOrNull;
-    final saved = _withExpenseSeries(expense, previous: previous);
+    final saved = _withExpenseSeries(
+        previous == null
+            ? expense
+            : expense.copyWith(createdAt: previous.createdAt),
+        previous: previous);
     _allExpenses = [
       for (final e in _allExpenses) e.id == saved.id ? saved : e,
     ];
@@ -2725,6 +2743,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         paidDate: target.paidDate,
         paidAmount: target.paidAmount,
         transactionId: target.transactionId,
+        createdAt: target.createdAt,
       );
 
   Receivable _rewriteReceivableFrom(Receivable target, Receivable template) =>
@@ -2751,6 +2770,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // Rank is the user's arrangement of *that* month's list, not a property
         // of the series, so it stays where they put it.
         sortIndex: target.sortIndex,
+        createdAt: target.createdAt,
       );
 
   BudgetedExpense _rewriteExpenseFrom(
@@ -2773,6 +2793,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         isPaid: target.isPaid,
         spentAmount: target.spentAmount,
         transactionId: target.transactionId,
+        createdAt: target.createdAt,
       );
 
   /// A fresh copy of [template] for [month]. Nothing settlement-related is
@@ -2791,6 +2812,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         recurrenceType: template.recurrenceType,
         seriesId: template.seriesId,
         reminderDaysBefore: template.reminderDaysBefore,
+        createdAt: _clock(),
       );
 
   Receivable _receivableForMonth(Receivable template, String month) =>
@@ -2809,6 +2831,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         recurrenceType: template.recurrenceType,
         seriesId: template.seriesId,
         sortIndex: template.sortIndex,
+        createdAt: _clock(),
       );
 
   BudgetedExpense _expenseForMonth(BudgetedExpense template, String month) =>
@@ -2825,6 +2848,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         isRecurring: true,
         recurrenceType: template.recurrenceType,
         seriesId: template.seriesId,
+        createdAt: _clock(),
       );
 
   /// Later months that already hold bills. [_autoGenerateRecurringBills] only
@@ -3269,6 +3293,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             categoryId: categoryId,
             accountId: a.id,
             paymentNote: Bill.autoStatementNote,
+            createdAt: _clock(),
           ),
         ];
         changed = true;
@@ -3562,6 +3587,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .toList();
     if (recurringFromPrev.isEmpty) return;
 
+    // A copy is created now: it gets its own stamp, not the source's.
+    final now = _clock();
     final copies = recurringFromPrev.map((b) => Bill(
           id: _generateId(),
           name: b.name,
@@ -3579,6 +3606,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           // not been through the backfill yet.
           seriesId: b.seriesId ?? b.id,
           reminderDaysBefore: b.reminderDaysBefore,
+          createdAt: now,
         ));
     _allBills = [..._allBills, ...copies];
     await _storage.saveBills(_allBills);
@@ -3597,6 +3625,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final year = int.parse(parts[0]);
     final monthNum = int.parse(parts[1]);
     final lastDay = DateTime(year, monthNum + 1, 0).day;
+    // A copy is created now: it gets its own stamp, not the source's.
+    final now = _clock();
     final copies = recurringFromPrev.map((r) {
       // Clamp the day to the target month's length so a 31st-of-the-month
       // receivable copied into February doesn't silently drift into March.
@@ -3618,6 +3648,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // Carry the hand-set rank forward so a grouping the user arranged last
         // month isn't shuffled the moment the new month seeds itself.
         sortIndex: r.sortIndex,
+        createdAt: now,
       );
     });
     _allReceivables = [..._allReceivables, ...copies];
@@ -3665,6 +3696,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .toList();
     if (recurringFromPrev.isEmpty) return;
 
+    // A copy is created now: it gets its own stamp, not the source's.
+    final now = _clock();
     final copies = recurringFromPrev.map((e) => BudgetedExpense(
           id: _generateId(),
           name: e.name,
@@ -3681,6 +3714,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           isRecurring: e.isRecurring,
           recurrenceType: e.recurrenceType,
           seriesId: e.seriesId ?? e.id,
+          createdAt: now,
         ));
     _allExpenses = [..._allExpenses, ...copies];
     await _storage.saveBudgetedExpenses(_allExpenses);

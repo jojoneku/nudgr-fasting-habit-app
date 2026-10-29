@@ -68,6 +68,12 @@ class Bill {
   /// no reminder. Additive/null-tolerant — bills saved before this field load
   /// with no reminder.
   final int? reminderDaysBefore;
+
+  /// When the record was first created on a device. Set once by the owning
+  /// presenter's create path and never changed by an edit. Null on records
+  /// saved before this field shipped ("added before this release"). It is not
+  /// [updatedAt], which is a sync stamp.
+  final DateTime? createdAt;
   final DateTime updatedAt;
 
   Bill({
@@ -89,6 +95,7 @@ class Bill {
     this.paidAmount,
     this.transactionId,
     this.reminderDaysBefore,
+    this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -129,6 +136,11 @@ class Bill {
       paidAmount: (json['paidAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
       reminderDaysBefore: (json['reminderDaysBefore'] as num?)?.toInt(),
+      // Tolerant: a record saved before this field shipped (or a bad value)
+      // loads as null rather than failing the pull.
+      createdAt: json['createdAt'] is String
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -153,6 +165,7 @@ class Bill {
         'paidAmount': paidAmount,
         'transactionId': transactionId,
         'reminderDaysBefore': reminderDaysBefore,
+        'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -179,6 +192,9 @@ class Bill {
     Object? paidAmount = _kUnset,
     Object? transactionId = _kUnset,
     Object? reminderDaysBefore = _kUnset,
+    // Sentinel-guarded so a presenter can carry the stored value onto an
+    // edited record exactly, null included. Omitting it keeps the current one.
+    Object? createdAt = _kUnset,
     DateTime? updatedAt,
   }) {
     return Bill(
@@ -213,6 +229,9 @@ class Bill {
       reminderDaysBefore: identical(reminderDaysBefore, _kUnset)
           ? this.reminderDaysBefore
           : reminderDaysBefore as int?,
+      createdAt: identical(createdAt, _kUnset)
+          ? this.createdAt
+          : createdAt as DateTime?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
