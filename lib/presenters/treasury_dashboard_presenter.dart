@@ -960,6 +960,20 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     return result;
   }
 
+  /// What the Accounts list shows for each account: the balance less the money
+  /// held in it for others ("yours"), or the plain balance when nothing is
+  /// held or the account is a liability. Here, not in the row's `build`, so
+  /// Nudgy's `getView` reads the figure the row shows.
+  Map<String, double> get yoursByAccountId {
+    final held = heldAmountByAccountId;
+    return {
+      for (final a in _accounts)
+        a.id: (held[a.id] ?? 0.0) > 0 && !a.isLiability
+            ? a.balance - held[a.id]!
+            : a.balance,
+    };
+  }
+
   // --- Bills ---
 
   List<Bill> get upcomingBills =>

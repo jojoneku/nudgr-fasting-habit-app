@@ -13,6 +13,9 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class DashboardAccountsList extends StatefulWidget {
   final List<FinancialAccount> accounts;
   final Map<String, double> heldByAccountId;
+
+  /// The amount each row shows: the balance less what is held for others.
+  final Map<String, double> yoursByAccountId;
   final double totalLiquidCash;
   final ValueChanged<FinancialAccount> onEdit;
 
@@ -23,6 +26,7 @@ class DashboardAccountsList extends StatefulWidget {
     super.key,
     required this.accounts,
     required this.heldByAccountId,
+    required this.yoursByAccountId,
     required this.totalLiquidCash,
     required this.onEdit,
     this.collapsedCount = 3,
@@ -61,6 +65,7 @@ class _DashboardAccountsListState extends State<DashboardAccountsList> {
               child: _AccountRow(
                 account: account,
                 heldAmount: widget.heldByAccountId[account.id] ?? 0.0,
+                yours: widget.yoursByAccountId[account.id] ?? account.balance,
                 onTap: () {
                   HapticFeedback.selectionClick();
                   widget.onEdit(account);
@@ -82,11 +87,13 @@ class _DashboardAccountsListState extends State<DashboardAccountsList> {
 class _AccountRow extends StatelessWidget {
   final FinancialAccount account;
   final double heldAmount;
+  final double yours;
   final VoidCallback onTap;
 
   const _AccountRow({
     required this.account,
     required this.heldAmount,
+    required this.yours,
     required this.onTap,
   });
 
@@ -95,7 +102,6 @@ class _AccountRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final hasHeld = heldAmount > 0 && !account.isLiability;
-    final shown = hasHeld ? account.balance - heldAmount : account.balance;
 
     return AppCard(
       variant: AppCardVariant.elevated,
@@ -135,7 +141,7 @@ class _AccountRow extends StatelessWidget {
           AppNumberDisplay(
             value: account.isLiability
                 ? 'Owed: ${formatPeso(account.balance)}'
-                : formatPeso(shown),
+                : formatPeso(yours),
             size: AppNumberSize.body,
             color: account.isLiability ? cs.error : cs.onSurface,
           ),

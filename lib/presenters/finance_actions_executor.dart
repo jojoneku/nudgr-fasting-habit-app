@@ -25,6 +25,7 @@ import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
 import 'finance_finder.dart';
 import 'finance_tool_executor.dart';
+import 'finance_view_reader.dart';
 import 'installment_presenter.dart';
 import 'ledger_presenter.dart';
 import 'treasury_dashboard_presenter.dart';
@@ -52,11 +53,13 @@ class FinanceActionsExecutor extends ChangeNotifier
     LedgerPresenter? ledger,
     InstallmentPresenter? installments,
     TreasuryDashboardPresenter? dashboard,
+    FinanceViewReader? views,
   })  : _bills = bills,
         _budget = budget,
         _ledger = ledger,
         _installments = installments,
-        _dashboard = dashboard;
+        _dashboard = dashboard,
+        _views = views;
 
   final BillsReceivablesPresenter _bills;
   final BudgetPresenter? _budget;
@@ -66,6 +69,10 @@ class FinanceActionsExecutor extends ChangeNotifier
   final LedgerPresenter? _ledger;
   final InstallmentPresenter? _installments;
   final TreasuryDashboardPresenter? _dashboard;
+
+  /// Reads a whole screen's figures for `getView`. Nullable like the other
+  /// owners: a build without every screen fails the call plainly.
+  final FinanceViewReader? _views;
 
   PendingBatch? _batch;
   int _batchSeq = 0;
@@ -167,6 +174,10 @@ class FinanceActionsExecutor extends ChangeNotifier
 
       case 'findTransactions':
         return _findTransactions(call);
+
+      case 'getView':
+        return _views?.run(call) ??
+            AiToolResult.failed(call.id, 'Screens are not available here.');
 
       case 'queryFinance':
         return _queryFinance(call);

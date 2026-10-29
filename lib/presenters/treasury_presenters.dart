@@ -1,6 +1,7 @@
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
+import 'package:intermittent_fasting/presenters/finance_view_reader.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -62,8 +63,9 @@ class TreasuryPresenters {
   final GroceryCartPresenter groceryCart;
 
   /// Runs the tools Nudgy calls. Owns nothing: reads come off [bills] and
-  /// [budget], transactions go to [ledger]'s review card, and every write goes
-  /// back through their mutators.
+  /// [budget], `getView` reads every screen's presenter through a
+  /// [FinanceViewReader], transactions go to [ledger]'s review card, and every
+  /// write goes back through their mutators.
   ///
   /// Assembled here rather than in a shell because it needs two owners at once,
   /// and building it by hand in each shell is how mobile and web drift apart.
@@ -159,15 +161,18 @@ class TreasuryPresenters {
     final dashboard = TreasuryDashboardPresenter(
         storage, ledger, budget, bills, null, installments);
 
+    final history = TreasuryHistoryPresenter(storage, ledger);
+    final groceryCart = GroceryCartPresenter(storage, ledger: ledger);
+
     return TreasuryPresenters._(
       monthScope: scope,
       ledger: ledger,
       budget: budget,
       dashboard: dashboard,
       bills: bills,
-      history: TreasuryHistoryPresenter(storage, ledger),
+      history: history,
       installments: installments,
-      groceryCart: GroceryCartPresenter(storage, ledger: ledger),
+      groceryCart: groceryCart,
       financeActions: FinanceActionsExecutor(
         bills: bills,
         budget: budget,
@@ -176,6 +181,17 @@ class TreasuryPresenters {
         ledger: ledger,
         installments: installments,
         dashboard: dashboard,
+        // getView reads each screen off the presenter that renders it, so
+        // Nudgy quotes the figure the user sees.
+        views: FinanceViewReader(
+          ledger: ledger,
+          budget: budget,
+          bills: bills,
+          dashboard: dashboard,
+          history: history,
+          installments: installments,
+          groceryCart: groceryCart,
+        ),
       ),
     );
   }

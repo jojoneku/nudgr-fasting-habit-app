@@ -7597,11 +7597,14 @@ class MockBillsReceivablesPresenter extends _i1.Mock
 
   @override
   List<_i75.ComingUpItem> comingUpItems(
-          _i76.InstallmentPresenter? installments) =>
+    _i76.InstallmentPresenter? installments, {
+    String? month,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #comingUpItems,
           [installments],
+          {#month: month},
         ),
         returnValue: <_i75.ComingUpItem>[],
         returnValueForMissingStub: <_i75.ComingUpItem>[],

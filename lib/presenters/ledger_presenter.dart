@@ -336,28 +336,47 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Set<String> get _excludedCategoryIds =>
       excludedCashFlowCategoryIds(_categories);
 
-  double get filteredMonthInflow {
+  double get filteredMonthInflow => _inflowOf(_filteredTransactions);
+
+  double get filteredMonthOutflow => _outflowOf(_filteredTransactions);
+
+  double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
+
+  /// Income for [month] across every account, with no filter — the figure the
+  /// filtered totals show when nothing is filtered, for a reader that must not
+  /// page the tab or touch its filters.
+  double monthInflowIn(String month) => _inflowOf(_transactionsIn(month));
+
+  /// Spending for [month] across every account, with no filter.
+  double monthOutflowIn(String month) => _outflowOf(_transactionsIn(month));
+
+  /// [filteredMonthNet] for [month] across every account, with no filter.
+  double monthNetIn(String month) =>
+      monthInflowIn(month) - monthOutflowIn(month);
+
+  double _inflowOf(Iterable<TransactionRecord> txns) {
     final reimb = _reimbursementIds;
     final excluded = _excludedCategoryIds;
-    return _filteredTransactions
+    return txns
         .where((t) => isIncomeInflow(t, reimb, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  double get filteredMonthOutflow {
+  double _outflowOf(Iterable<TransactionRecord> txns) {
     final excluded = _excludedCategoryIds;
-    return _filteredTransactions
+    return txns
         .where((t) => isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
-
   /// Map of 'yyyy-MM-dd' → total outflow for that day (respects account filter).
-  Map<String, double> get dailyOutflowMap {
+  Map<String, double> get dailyOutflowMap =>
+      _dailyOutflowMapOf(_filteredTransactions);
+
+  Map<String, double> _dailyOutflowMapOf(Iterable<TransactionRecord> txns) {
     final excluded = _excludedCategoryIds;
     final map = <String, double>{};
-    for (final t in _filteredTransactions) {
+    for (final t in txns) {
       if (!isSpendingOutflow(t, excluded)) continue;
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
@@ -383,8 +402,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Average daily outflow for the selected month (excludes zero-spend days).
-  double get averageDailyOutflow {
-    final values = dailyOutflowMap.values;
+  double get averageDailyOutflow => _averageOf(dailyOutflowMap.values);
+
+  /// [averageDailyOutflow] for [month] across every account, with no filter.
+  double averageDailyOutflowIn(String month) =>
+      _averageOf(_dailyOutflowMapOf(_transactionsIn(month)).values);
+
+  static double _averageOf(Iterable<double> values) {
     if (values.isEmpty) return 0.0; // no spend this month → genuinely ₱0
     return values.reduce((a, b) => a + b) / values.length;
   }
@@ -827,8 +851,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Total still owed to you this month across outstanding reimbursables.
-  double get outstandingOwedTotal => _allTransactions
-      .where((t) => t.month == _selectedMonth && isOutstandingReimbursable(t))
+  double get outstandingOwedTotal => outstandingOwedTotalIn(_selectedMonth);
+
+  /// [outstandingOwedTotal] for any [month].
+  double outstandingOwedTotalIn(String month) => _transactionsIn(month)
+      .where(isOutstandingReimbursable)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   bool get hasOutstandingOwed => outstandingOwedTotal > 0;
@@ -3410,9 +3437,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     ]);
   }
 
+  List<TransactionRecord> _transactionsIn(String month) =>
+      _allTransactions.where((t) => t.month == month).toList();
+
   List<TransactionRecord> get _filteredTransactions {
-    final inMonth =
-        _allTransactions.where((t) => t.month == _selectedMonth).toList();
+    final inMonth = _transactionsIn(_selectedMonth);
 
     if (_selectedAccountIds.isNotEmpty) {
       return inMonth
