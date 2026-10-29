@@ -17,6 +17,9 @@ _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
 # Effort for models that take one (see _generation_params). Every Haiku-tier op
 # is short extraction or a 2-3 sentence chat reply, which is what `low` is for.
 _EFFORT = os.environ.get("BEDROCK_EFFORT", "low")
+# The advisor runs multi-step tool use over real money, which is `medium` work.
+# Must stay `high` or below while Sonnet 5.5 runs with `between_tools`.
+_ADVISOR_EFFORT = os.environ.get("ADVISOR_EFFORT", "medium")
 # Longer than chat's 512 — the "financial position" diagnostic is multi-section.
 # 900 was too tight to answer a real question well: a full financial-position
 # walkthrough is five sections, and the model had to choose between covering
@@ -1207,6 +1210,30 @@ _TIME_NOTICE = (
     "carry on from this point, or for a shorter version.*"
 )
 
+# Sonnet 5.5 can decline (`stop_reason: "refusal"`) with no text at all. Benign
+# finance questions can trip a classifier too, so the user gets a line that
+# invites a rephrase rather than an empty bubble.
+_ADVISOR_REFUSAL = (
+    "I can't help with that one as asked. Try putting the question another way."
+)
+
+
+def _without_thinking(blocks):
+    """`blocks` minus any thinking blocks (Plan 064).
+
+    Sonnet 5.5 runs with `thinking: between_tools`, which returns the short
+    notes it writes between tool calls as `thinking` blocks. They carry no
+    reasoning the next hop needs, and a replayed one is only valid while the
+    system prompt and every earlier message are unchanged -- which the
+    snapshot in our system prompt never is from turn to turn. So they are
+    dropped on the way out to the client and again on the way back in.
+    """
+    return [
+        b for b in blocks
+        if not (isinstance(b, dict)
+                and b.get("type") in ("thinking", "redacted_thinking"))
+    ]
+
 # Stable, cache-friendly system prefix: persona + knowledge-base principles +
 # anti-hallucination contract + the "financial position" diagnostic structure.
 # Only distilled principles — never copyrighted book text.
@@ -1535,6 +1562,8 @@ def _build_advisor_request(payload):
     raw_messages = []
     for m in messages:
         blocks = m.get("content_blocks")
+        if isinstance(blocks, list):
+            blocks = _without_thinking(blocks)
         if isinstance(blocks, list) and blocks:
             raw_messages.append({"role": m["role"], "content": blocks})
         elif (m.get("text") or "").strip():
@@ -1713,6 +1742,7 @@ def _advise_finance(payload):
                 "system": request["system"],
                 "messages": request["messages"],
                 **({"tools": tools} if tools else {}),
+                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
@@ -1720,11 +1750,14 @@ def _advise_finance(payload):
 
         # `assistant_content` goes back verbatim so the client can replay this
         # exact turn on the next hop -- a reconstructed one would not carry the
-        # tool_use ids the results have to pair with.
-        content = result.get("content") or []
+        # tool_use ids the results have to pair with. Verbatim minus thinking
+        # blocks: see _without_thinking.
+        content = _without_thinking(result.get("content") or [])
         response_text, tool_calls = _split_reply(content)
 
         stop_reason = result.get("stop_reason")
+        if stop_reason == "refusal" and not response_text:
+            response_text = _ADVISOR_REFUSAL
         truncated = stop_reason == "max_tokens"
         if truncated:
             response_text += _TRUNCATION_NOTICE
@@ -1793,9 +1826,14 @@ def advise_finance_stream(payload, request):
                 "system": request["system"],
                 "messages": request["messages"],
                 **({"tools": tools} if tools else {}),
+                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
             }),
         )
 
+        # A `thinking` block (Sonnet 5.5's notes between tool calls) is stored by
+        # content_block_start like any other, its thinking_delta / signature_delta
+        # events fall through every branch below, and _without_thinking drops it
+        # at the end -- so it never reaches the user or the next hop.
         for event in raw["body"]:
             # Checked per event rather than per token: this is the only place
             # the turn can stop itself in a way the client can read. See
@@ -1880,8 +1918,10 @@ def advise_finance_stream(payload, request):
                     content[idx] = None
         resumable = bool(cut_tools) and payload.get("resume_cut_tools") is True
 
-        content = [b for b in content if b]
+        content = _without_thinking([b for b in content if b])
         response_text, tool_calls = _split_reply(content)
+        if stop_reason == "refusal" and not response_text:
+            response_text = _ADVISOR_REFUSAL
         if stop_reason == "time_budget" and (tool_calls or resumable):
             # Tool calls survived the cut, or the client will ask again for
             # the one that was cut, so the turn is not over: the next hop is a
@@ -1934,6 +1974,9 @@ def advise_finance_stream(payload, request):
 # flip be rolled back with the env var alone.
 _THINKING_OFF = {
     "claude-haiku-5-5": {"type": "disabled"},
+    # Sonnet 5.5 rejects `disabled`; `between_tools` is its lowest setting and
+    # accepts only effort `high` or below.
+    "claude-sonnet-5-5": {"type": "between_tools"},
 }
 
 
