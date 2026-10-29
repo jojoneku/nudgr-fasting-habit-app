@@ -390,7 +390,7 @@ void main() {
     });
 
     test(
-        'FinanceActionsExecutor (Nudgy chat) proposes, executes addInstallment and queries findInstallments',
+        'FinanceActionsExecutor (Nudgy chat) proposes, executes addInstallment and queries find',
         () async {
       await ledger.load();
       await installments.load();
@@ -413,14 +413,14 @@ void main() {
           '${purchased.month.toString().padLeft(2, '0')}-'
           '${purchased.day.toString().padLeft(2, '0')}';
 
-      // 1. Querying findInstallments before adding returns empty
+      // 1. Finding the plan before adding it returns not_found
       final emptyRead = await executor.runRead(const AiToolCall(
         id: 'read-1',
-        name: 'findInstallments',
-        input: {'query': 'laptop'},
+        name: 'find',
+        input: {'entity': 'installment', 'query': 'laptop'},
       ));
       expect(emptyRead.ok, isTrue);
-      expect(emptyRead.summary.contains('No installments matched'), isTrue);
+      expect(emptyRead.summary, startsWith('status: not_found'));
 
       // 2. Propose addInstallment via chat
       final proposeFuture = executor.propose(AiToolCall(
@@ -484,17 +484,18 @@ void main() {
       final acct = ledger.accounts.firstWhere((a) => a.id == 'shopeepay');
       expect(acct.unbilledInstallments, 32700.0); // 6 * 5450
 
-      // 7. Querying findInstallments after adding returns the row
+      // 7. Finding it after adding returns every field of the one plan
       final foundRead = await executor.runRead(const AiToolCall(
         id: 'read-2',
-        name: 'findInstallments',
-        input: {'query': 'laptop'},
+        name: 'find',
+        input: {'entity': 'installment', 'query': 'laptop'},
       ));
       expect(foundRead.ok, isTrue);
-      expect(foundRead.summary, contains('Gaming Laptop'));
-      expect(foundRead.summary, contains('5450/mo'));
-      // Plans are not scoped to a month, so the summary must not claim one.
-      expect(foundRead.summary, startsWith('1 installments in any month'));
+      expect(foundRead.summary, startsWith('status: found'));
+      expect(foundRead.summary, contains('name: Gaming Laptop'));
+      expect(foundRead.summary, contains('monthly payment: ₱5450'));
+      // Plans are not scoped to a month, so the reply must not claim one.
+      expect(foundRead.summary, contains('month: all'));
 
       // 8. The purchase record is listed but not counted as spending: the
       // plan's monthly payments are. Counting it would add the principal on

@@ -798,7 +798,7 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// What budget row [b] has used in its own month: funded in for a savings
   /// row (whose "categoryId" is the target account's id), real spending for
   /// an expense row. The one rule behind [spentFor], public so a reader that
-  /// asks about another month (Nudgy's `findBudgets`) uses it too.
+  /// asks about another month (Nudgy's `find`) uses it too.
   double spentForBudget(Budget b) => isSavingsGroup(b.group)
       ? fundedInto(b.categoryId, month: b.month)
       : _spentInCategory(b.categoryId, b.month);

@@ -87,8 +87,8 @@ void main() {
       'every hop of one message shares one id; the next message gets a new one',
       () async {
     scriptReplies([
-      _toolTurn('findBills'),
-      _toolTurn('findSetAsides'),
+      _toolTurn('find'),
+      _toolTurn('findTransactions'),
       const AdvisorReply(text: 'Two bills are due.'),
       const AdvisorReply(text: 'You are fine.'),
     ]);

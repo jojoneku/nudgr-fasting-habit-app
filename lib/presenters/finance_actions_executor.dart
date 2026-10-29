@@ -17,9 +17,11 @@ import '../utils/credit_cycle.dart';
 import '../utils/finance_entry_extraction.dart';
 import '../utils/finance_flows.dart';
 import '../utils/finance_format.dart';
+import '../utils/finance_query.dart';
 import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
+import 'finance_finder.dart';
 import 'finance_tool_executor.dart';
 import 'installment_presenter.dart';
 import 'ledger_presenter.dart';
@@ -78,139 +80,15 @@ class FinanceActionsExecutor extends ChangeNotifier
 
   @override
   Future<AiToolResult> runRead(AiToolCall call) async {
-    final query = _str(call.input['query']).toLowerCase();
-    final month = _readMonth(call.input);
-
-    bool matches(String name) =>
-        query.isEmpty || name.toLowerCase().contains(query);
-
     switch (call.name) {
-      case 'findBills':
-        final rows = _bills.allBills
-            .where((b) => b.month == month && matches(b.name))
-            .map((b) => 'id=${b.id} "${b.name}" ${_peso(b.amount)} '
-                'due day ${b.dueDay}${b.isRecurring ? ' (recurring)' : ''}'
-                '${!b.isPaid && (b.paidAmount ?? 0) > 0 ? ' (${_peso(b.paidAmount!)} paid so far)' : ''}'
-                '${b.isPaid ? ' [paid]' : ''}');
-        return _rows(call, rows, 'bills', month);
-
-      case 'findReceivables':
-        final rows = _bills.allReceivables
-            .where((r) => r.month == month && matches(r.name))
-            .map((r) => 'id=${r.id} "${r.name}" ${_peso(r.amount)}'
-                '${r.isRecurring ? ' (recurring)' : ''}'
-                '${r.isReceived ? ' [received]' : ''}');
-        return _rows(call, rows, 'receivables', month);
-
-      case 'findSetAsides':
-        final rows = _bills.allBudgetedExpenses
-            .where((e) => e.month == month && matches(e.name))
-            .map((e) => 'id=${e.id} "${e.name}" ${e.budgetedType.name} '
-                'allocated ${_peso(e.allocatedAmount)} '
-                'funded ${_peso(e.spentAmount)}'
-                '${e.isRecurring ? ' (recurring)' : ''}');
-        return _rows(call, rows, 'set-asides', month);
-
-      case 'findBudgets':
-        final budget = _budget;
-        if (budget == null) {
-          return AiToolResult.failed(
-              call.id, 'Budgets are not available here.');
-        }
-        // A savings row's "categoryId" is the id of the account it funds, so
-        // it is named from the accounts; matching on the raw id found nothing.
-        final names = {
-          for (final a in _ledger?.accounts ?? const <FinancialAccount>[])
-            a.id: a.name,
-          for (final c in budget.allCategories) c.id: c.name,
-        };
-        final groups = {for (final g in budget.groups) g.id: g.name};
-        final rows = budget.allBudgets
-            .where(
-                (b) => b.month == month && matches(names[b.categoryId] ?? ''))
-            .map((b) {
-          final name = names[b.categoryId] ?? 'unknown';
-          final group = groups[b.group] ?? b.group;
-          final limit = _peso(b.allocatedAmount);
-          if (budget.isCategoryIncome(b.categoryId)) {
-            return 'id=${b.id} "$name" [$group] income target $limit — '
-                'not spending';
-          }
-          // The Budget tab's own rule for this row and month.
-          final used = budget.spentForBudget(b);
-          final verb = budget.isSavingsGroup(b.group) ? 'funded' : 'spent';
-          return 'id=${b.id} "$name" [$group] limit $limit, $verb '
-              '${_peso(used)}, left ${_peso(b.allocatedAmount - used)}';
-        });
-        return _rows(call, rows, 'budgets', month);
-
-      case 'findInstallments':
-        final installments = _installments;
-        if (installments == null) {
-          return AiToolResult.failed(
-              call.id, 'Installments are not available here.');
-        }
-        final accountQuery = _str(call.input['account']).toLowerCase();
-        final accounts = {
-          for (final a in _ledger?.accounts ?? const <FinancialAccount>[])
-            a.id: a.name
-        };
-        final txns = _ledger?.allTransactions ?? const <TransactionRecord>[];
-        final rows = installments.allInstallments.where((inst) {
-          if (!matches(inst.name)) return false;
-          if (accountQuery.isNotEmpty) {
-            final accName = (accounts[inst.accountId] ?? '').toLowerCase();
-            if (!accName.contains(accountQuery)) return false;
-          }
-          return true;
-        }).map((inst) {
-          final accName = accounts[inst.accountId] ?? inst.accountId;
-          final unbilled = inst.remainingAmount(txns);
-          final paid = inst.paidCount(txns);
-          final interest =
-              inst.hasInterest ? ' (+${inst.interestRate}%/mo int)' : '';
-          return 'id=${inst.id} "${inst.name}" on $accName: '
-              '${_peso(inst.monthlyAmount)}/mo ($paid/${inst.totalMonths} paid)$interest, '
-              'unbilled ${_peso(unbilled)}, original ${_peso(inst.totalAmount)}';
-        });
-        // Plans span many months and this list is not scoped to one, so the
-        // summary must not name a month the model would then repeat.
-        return _rows(call, rows, 'installments', 'any month');
-
-      case 'findAccounts':
-        final ledger = _ledger;
-        if (ledger == null) {
-          return AiToolResult.failed(
-              call.id, 'Accounts are not available here.');
-        }
-        final typeFilter = _str(call.input['type']).toLowerCase();
-        final accounts = ledger.accounts.where((a) {
-          if (!matches(a.name)) return false;
-          if (typeFilter == 'liquid' && !a.isLiquid) return false;
-          if (typeFilter == 'liability' && !a.isLiability) return false;
-          if (typeFilter == 'savings' && !a.isSavingsPocket) return false;
-          return true;
-        }).map((a) {
-          final balanceStr = _peso(a.balance);
-          final String details;
-          if (a.isLiability) {
-            final limitStr = a.creditLimit != null
-                ? ' (limit ${_peso(a.creditLimit!)}, available ${_peso(a.availableCredit ?? 0)})'
-                : '';
-            // Total debt, as the snapshot and dashboard say it: the balance
-            // alone left out installment months not yet billed.
-            final instStr = a.unbilledInstallments > 0
-                ? ', incl. ${_peso(a.unbilledInstallments)} installment months '
-                    'not yet billed'
-                : '';
-            details = 'owed ${_peso(a.totalDebt)}$instStr$limitStr'
-                '${_statementSummary(a)} [${a.category.name}]';
-          } else {
-            details = 'balance $balanceStr [${a.category.name}]';
-          }
-          return 'id=${a.id} "${a.name}" $details';
-        });
-        return _rows(call, accounts, 'accounts', 'active accounts');
+      case 'find':
+        return FinanceFinder(
+          bills: _bills,
+          budget: _budget,
+          ledger: _ledger,
+          installments: _installments,
+          dashboard: _dashboard,
+        ).find(call);
 
       case 'checkAffordability':
         final dashboard = _dashboard;
@@ -258,51 +136,13 @@ class FinanceActionsExecutor extends ChangeNotifier
               'Affordability check for ${_peso(amount)}: [$tier] $verdict (Current liquid cash: ${_peso(liquid)}, Projected spare: ${_peso(forecast)}).',
         );
 
-      case 'findBudgetGroups':
-        final budget = _budget;
-        if (budget == null) {
-          return AiToolResult.failed(
-              call.id, 'Budgets are not available here.');
-        }
-        // Built from the rows of the month asked for. The group totals the
-        // Budget tab shows follow the month that tab is on, which is not
-        // necessarily this one.
-        final rows = <String>[];
-        for (final g in budget.groups) {
-          final inGroup = budget.allBudgets
-              .where((b) => b.month == month && b.group == g.id)
-              .toList();
-          if (inGroup.isEmpty) continue;
-          final allocated =
-              inGroup.fold(0.0, (sum, b) => sum + b.allocatedAmount);
-          final spent =
-              inGroup.fold(0.0, (sum, b) => sum + budget.spentForBudget(b));
-          final verb = budget.isSavingsGroup(g.id) ? 'funded' : 'spent';
-          rows.add('"${g.name}": allocated ${_peso(allocated)}, $verb '
-              '${_peso(spent)}, remaining ${_peso(allocated - spent)}');
-        }
-        return _rows(call, rows, 'budget groups', month);
-
       case 'findTransactions':
         return _findTransactions(call);
+
+      case 'queryFinance':
+        return _queryFinance(call);
     }
     return AiToolResult.failed(call.id, 'Unknown read tool "${call.name}".');
-  }
-
-  /// The open statement of credit account [a] for a `findAccounts` row:
-  /// "; statement ₱6,200, ₱0 paid, ₱6,200 left, min ₱850, due 2026-11-05".
-  /// Says so when no statement is owed, so a balance is not read as due.
-  String _statementSummary(FinancialAccount a) {
-    final statement = findOpenCreditStatement(_bills.allBills, a.id);
-    if (statement == null) return '; no statement owed right now';
-    final p = CreditStatementProgress.ofBill(statement, a);
-    final due = creditStatementDueDate(statement);
-    final min = p.minimumRemaining > 0
-        ? ', min ${_peso(p.minimumRemaining)}'
-        : ', minimum paid';
-    return '; statement ${_peso(p.amount)}, ${_peso(p.paid)} paid, '
-        '${_peso(p.remaining)} left$min'
-        '${due == null ? '' : ', due ${_day(due)}'}';
   }
 
   /// Default and ceiling on rows returned by `findTransactions`. The totals
@@ -533,27 +373,77 @@ class FinanceActionsExecutor extends ChangeNotifier
     );
   }
 
-  static String _day(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
+  /// A sum or group-by over the ledger, computed by [runFinanceQuery] with the
+  /// screens' own rules. This only reads the inputs and words the result: the
+  /// range, the months covered and the metric's definition are always said,
+  /// so the model never has to work out a figure or guess what one means.
+  AiToolResult _queryFinance(AiToolCall call) {
+    final ledger = _ledger;
+    if (ledger == null) {
+      return AiToolResult.failed(
+          call.id, 'Transactions are not available here.');
+    }
+    final i = call.input;
+    final metric = FinanceMetric.values
+        .where((m) => m.name == _str(i['metric']))
+        .firstOrNull;
+    if (metric == null) {
+      return AiToolResult.failed(call.id,
+          'metric must be one of spend, income, net, count, setAside.');
+    }
+    final groupByRaw = _str(i['groupBy']);
+    final groupBy = groupByRaw.isEmpty
+        ? FinanceGroupBy.none
+        : FinanceGroupBy.values.where((g) => g.name == groupByRaw).firstOrNull;
+    if (groupBy == null) {
+      return AiToolResult.failed(call.id,
+          'groupBy must be one of none, category, account, month, description.');
+    }
+    DateTime? date(String key) {
+      final raw = _str(i[key]);
+      return raw.isEmpty ? null : DateTime.tryParse(raw);
+    }
 
-  /// A search that found nothing says so plainly. Returning an empty list with
-  /// no explanation invites the model to invent an id and carry on.
-  ///
-  /// [scope] is a month key, or a phrase such as "any month" for a list that
-  /// is not scoped to one.
-  AiToolResult _rows(
-      AiToolCall call, Iterable<String> rows, String kind, String scope) {
-    final list = rows.toList();
+    for (final key in ['from', 'to']) {
+      if (_str(i[key]).isNotEmpty && date(key) == null) {
+        return AiToolResult.failed(call.id, '$key must be YYYY-MM-DD.');
+      }
+    }
+    final rawTop = _numOrNull(i['top']);
+    final rawAverage = i['average'];
+    final now = DateTime.now();
+
+    final result = runFinanceQuery(
+      FinanceQuery(
+        metric: metric,
+        groupBy: groupBy,
+        category: _str(i['category']),
+        account: _str(i['account']),
+        query: _str(i['query']),
+        type: _str(i['type']),
+        from: date('from'),
+        to: date('to'),
+        month: _str(i['month']),
+        top: rawTop == null || rawTop <= 0 ? 10 : rawTop.toInt(),
+        average: rawAverage == true || _str(rawAverage) == 'true',
+      ),
+      transactions: ledger.allTransactions,
+      accounts: ledger.accounts,
+      categories: ledger.categories,
+      today: now,
+    );
+    final error = result.error;
+    if (error != null) return AiToolResult.failed(call.id, error);
     return AiToolResult(
       toolUseId: call.id,
       ok: true,
-      summary: list.isEmpty
-          ? 'No $kind matched in $scope. Do not guess an id — say you could '
-              'not find it.'
-          : '${list.length} $kind in $scope:\n${list.join('\n')}',
+      summary: describeFinanceQuery(result, now),
     );
   }
+
+  static String _day(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   // ── Proposals ─────────────────────────────────────────────────────────────
 
@@ -1837,17 +1727,17 @@ class FinanceActionsExecutor extends ChangeNotifier
     final (String kind, String finder, bool exists) = switch (call.name) {
       'markBillPaid' || 'editBill' || 'deleteBill' => (
           'bill',
-          'findBills',
+          'find (entity bill)',
           _bills.allBills.any((b) => b.id == id),
         ),
       'markReceivableReceived' || 'editReceivable' || 'deleteReceivable' => (
           'receivable',
-          'findReceivables',
+          'find (entity receivable)',
           _bills.allReceivables.any((r) => r.id == id),
         ),
       'editSetAside' || 'deleteSetAside' => (
           'set-aside',
-          'findSetAsides',
+          'find (entity setAside)',
           _bills.allBudgetedExpenses.any((e) => e.id == id),
         ),
       'editTransaction' || 'deleteTransaction' => (
@@ -1920,17 +1810,6 @@ class FinanceActionsExecutor extends ChangeNotifier
       if (c.name.toLowerCase().startsWith(lower)) return c;
     }
     return null;
-  }
-
-  /// The month a find tool reads: the one asked for, else today's. Not the
-  /// month a tab is showing — a question asked from the Bills tab parked on
-  /// August is still about now unless it names August.
-  static String _readMonth(Map<String, Object?> input) {
-    final given = _str(input['month']);
-    final now = DateTime.now();
-    return RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
-        ? rebaseStaleMonthKey(given, now)
-        : toMonthKey(now);
   }
 
   /// The month a proposal lands in. A year the model slipped back to its own

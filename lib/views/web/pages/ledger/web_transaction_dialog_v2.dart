@@ -397,6 +397,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
           description: description.isEmpty ? 'Transfer' : description,
           date: _date,
           note: note.isEmpty ? null : note,
+          replacing: existing,
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
@@ -453,7 +454,7 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
             // Converting a transfer into a normal income/expense: remove the
             // whole transfer group, then add the single replacement record.
             await _p.deleteTransactionOrGroup(existing.id);
-            await _p.addTransaction(txn);
+            await _p.addTransaction(txn, replacing: existing);
           } else if (existing.isInstallment) {
             // Split turned off, or moved off a credit account: the plan goes
             // and the record takes its full balance effect, exactly once.
