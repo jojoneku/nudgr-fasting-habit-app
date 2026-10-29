@@ -917,6 +917,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         return 'Going through your transactions…';
       case 'checkAffordability':
         return 'Checking affordability…';
+      case 'getView':
+        return 'Reading your ${call.input['view'] ?? 'finance'} screen…';
     }
     return 'Looking that up…';
   }
