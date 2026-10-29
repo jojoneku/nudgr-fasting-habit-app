@@ -54,8 +54,10 @@ class _CardExecutor extends ChangeNotifier
   }
 
   @override
-  Future<void> confirm({bool applyToFuture = false}) async => _answer(
-      AiToolResult(toolUseId: _pending!.call.id, ok: true, summary: 'saved'));
+  Future<void> confirm(
+          {bool applyToFuture = false, bool? alreadyLogged}) async =>
+      _answer(AiToolResult(
+          toolUseId: _pending!.call.id, ok: true, summary: 'saved'));
 
   @override
   void decline() => _answer(AiToolResult.declined(_pending!.call.id));
