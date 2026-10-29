@@ -3410,6 +3410,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     required String fromAccountId,
     required double amount,
     DateTime? date,
+    String? note,
   }) async {
     final account =
         _ledger.accounts.where((a) => a.id == accountId).firstOrNull;
@@ -3424,6 +3425,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       amount: amount,
       description: '${account.name} payment',
       date: when,
+      note: note,
       billId: statement?.id,
     );
 

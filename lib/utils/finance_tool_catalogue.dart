@@ -227,9 +227,12 @@ const List<AiTool> kFinanceTools = [
       'type': 'object',
       'required': ['name', 'amount'],
       'properties': {
-        'name': {'type': 'string'},
+        'name': {
+          'type': 'string',
+          'description': 'Say who owes it in the name, e.g. "Mark - concert '
+              'ticket". A receivable has no separate debtor field.',
+        },
         'amount': {'type': 'number', 'description': 'In pesos.'},
-        'owedBy': {'type': 'string', 'description': 'Who owes it.'},
         'expectedDay': {
           'type': 'integer',
           'description': 'Day of the month it is expected, 1-31.',
@@ -549,6 +552,12 @@ const List<AiTool> kFinanceTools = [
           'type': 'string',
           'description': 'Account NAME it was paid from, if named by user.',
         },
+        'alreadyLogged': {
+          'type': 'boolean',
+          'description': 'True when the user says they already logged this '
+              'payment in the Ledger, so no second entry is recorded. The '
+              'card lets them change it.',
+        },
       },
     },
   ),
@@ -582,6 +591,12 @@ const List<AiTool> kFinanceTools = [
           'type': 'string',
           'description':
               'Account NAME the money landed in, e.g. "GCash", "BPI".',
+        },
+        'alreadyLogged': {
+          'type': 'boolean',
+          'description': 'True when the user says they already logged this '
+              'income in the Ledger, so no second entry is recorded. The '
+              'card lets them change it.',
         },
       },
     },
@@ -618,7 +633,7 @@ const List<AiTool> kFinanceTools = [
     name: 'editReceivable',
     kind: AiToolKind.update,
     description:
-        'Propose an edit to an existing receivable (name, amount, expected day, or debtor). '
+        'Propose an edit to an existing receivable (name, amount or expected day). '
         'Call ONLY after findReceivables returns the receivable id. '
         'Nothing is saved until confirmed on the card.',
     inputSchema: {

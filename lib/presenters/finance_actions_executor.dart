@@ -556,7 +556,8 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// it spreads the change across later months of the series, and no chat
   /// sentence reliably asks for that.
   @override
-  Future<void> confirm({bool applyToFuture = false}) async {
+  Future<void> confirm(
+      {bool applyToFuture = false, bool? alreadyLogged}) async {
     final action = _pending;
     final decision = _decision;
     if (action == null || decision == null) return;
@@ -566,8 +567,11 @@ class FinanceActionsExecutor extends ChangeNotifier
     _decision = null;
 
     try {
-      final summary =
-          await _write(action, applyToFuture: applyToFuture, plan: plan);
+      final summary = await _write(action,
+          applyToFuture: applyToFuture,
+          alreadyLogged:
+              alreadyLogged ?? action.ledgerChoice?.alreadyLogged ?? false,
+          plan: plan);
       decision.complete(
           AiToolResult(toolUseId: action.call.id, ok: true, summary: summary));
     } catch (e) {
@@ -682,23 +686,26 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Amount', value: _peso(amount)),
             (label: 'Due day', value: '${_int(i['dueDay'])}'),
             (label: 'Month', value: _month(i)),
-            if (_str(i['category']).isNotEmpty)
-              (label: 'Category', value: _str(i['category'])),
-            if (_str(i['account']).isNotEmpty)
-              (label: 'Pay from', value: _str(i['account'])),
+            // Every row below shows what is saved: the resolved name, not the
+            // model's words. A name that does not resolve never reaches here
+            // (_proposalProblem refuses it).
+            if (_categoryFor(_str(i['category'])) case final c?)
+              (label: 'Category', value: c.name),
+            if (_accountFor(_str(i['account'])) case final a?)
+              (label: 'Pay from', value: a.name),
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
           ],
         );
       case 'addReceivable':
+        final expected = _expectedDate(_month(i), i['expectedDay']);
         return PendingFinanceAction(
           call: call,
           title: 'Add receivable: $name, ${_peso(amount)}',
           isRecurring: recurring,
           details: [
             (label: 'Amount', value: _peso(amount)),
-            if (_str(i['owedBy']).isNotEmpty)
-              (label: 'Owed by', value: _str(i['owedBy'])),
             (label: 'Month', value: _month(i)),
+            if (expected != null) (label: 'Expected', value: _day(expected)),
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
           ],
         );
@@ -710,8 +717,8 @@ class FinanceActionsExecutor extends ChangeNotifier
           details: [
             (label: 'Amount', value: _peso(amount)),
             (label: 'Type', value: _setAsideType(i['type']).name),
-            if (_str(i['destinationAccount']).isNotEmpty)
-              (label: 'Into', value: _str(i['destinationAccount'])),
+            if (_accountFor(_str(i['destinationAccount'])) case final a?)
+              (label: 'Into', value: a.name),
             (label: 'Month', value: _month(i)),
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
           ],
@@ -740,51 +747,42 @@ class FinanceActionsExecutor extends ChangeNotifier
           ],
         );
       case 'markBillPaid':
-        final id = _str(i['id']);
-        final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
-        final billName = bill?.name ?? 'Bill';
-        final billAmt = _num(i['paidAmount']) > 0
-            ? _num(i['paidAmount'])
-            : (bill?.amount ?? 0);
+        final s = _billSettlement(i);
+        if (s == null) return null;
         return PendingFinanceAction(
           call: call,
-          title: 'Mark bill paid: $billName (${_peso(billAmt)})',
+          title: 'Mark bill paid: ${s.name} (${_peso(s.amount)})',
           isRecurring: false,
           confirmLabel: 'Mark Paid',
+          ledgerChoice: s.choice,
           details: [
-            (label: 'Bill', value: billName),
-            (label: 'Amount', value: _peso(billAmt)),
-            if (_str(i['account']).isNotEmpty)
-              (label: 'Paid from', value: _str(i['account'])),
-            if (_str(i['paidDate']).isNotEmpty)
-              (label: 'Paid date', value: _str(i['paidDate'])),
+            (label: 'Bill', value: s.name),
+            (label: 'Amount', value: _peso(s.amount)),
+            if (s.account case final a?) (label: 'Paid from', value: a.name),
+            (label: 'Paid date', value: _day(s.date)),
           ],
         );
       case 'markReceivableReceived':
-        final id = _str(i['id']);
-        final rec = _bills.allReceivables.where((r) => r.id == id).firstOrNull;
-        final recName = rec?.name ?? 'Receivable';
-        final recAmt = _num(i['receivedAmount']) > 0
-            ? _num(i['receivedAmount'])
-            : (rec?.amount ?? 0);
+        final s = _receivableSettlement(i);
+        if (s == null) return null;
         return PendingFinanceAction(
           call: call,
-          title: 'Mark received: $recName (${_peso(recAmt)})',
+          title: 'Mark received: ${s.name} (${_peso(s.amount)})',
           isRecurring: false,
           confirmLabel: 'Mark Received',
+          ledgerChoice: s.choice,
           details: [
-            (label: 'Receivable', value: recName),
-            (label: 'Amount', value: _peso(recAmt)),
-            if (_str(i['account']).isNotEmpty)
-              (label: 'Deposit into', value: _str(i['account'])),
-            if (_str(i['receivedDate']).isNotEmpty)
-              (label: 'Date received', value: _str(i['receivedDate'])),
+            (label: 'Receivable', value: s.name),
+            (label: 'Amount', value: _peso(s.amount)),
+            if (s.account case final a?) (label: 'Deposit into', value: a.name),
+            (label: 'Date received', value: _day(s.date)),
           ],
         );
       case 'editBill':
         final id = _str(i['id']);
         final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
         final billName = bill?.name ?? 'Bill';
+        final newCategory = _categoryFor(_str(i['category']));
         return PendingFinanceAction(
           call: call,
           title: 'Update bill: $billName',
@@ -793,19 +791,22 @@ class FinanceActionsExecutor extends ChangeNotifier
           details: [
             if (_str(i['name']).isNotEmpty)
               (label: 'Name', value: '${bill?.name} → ${_str(i['name'])}'),
-            if (i['amount'] != null)
+            if (_amountOrNull(i['amount']) case final amt?)
               (
                 label: 'Amount',
-                value:
-                    '${_peso(bill?.amount ?? 0)} → ${_peso(_num(i['amount']))}'
+                value: '${_peso(bill?.amount ?? 0)} → ${_peso(amt)}'
               ),
             if (i['dueDay'] != null)
               (
                 label: 'Due day',
                 value: '${bill?.dueDay} → ${_int(i['dueDay'])}'
               ),
-            if (_str(i['category']).isNotEmpty)
-              (label: 'Category', value: _str(i['category'])),
+            if (newCategory != null)
+              (
+                label: 'Category',
+                value: '${_categoryName(bill?.categoryId)} → '
+                    '${newCategory.name}'
+              ),
           ],
         );
       case 'deleteBill':
@@ -829,6 +830,8 @@ class FinanceActionsExecutor extends ChangeNotifier
         final id = _str(i['id']);
         final rec = _bills.allReceivables.where((r) => r.id == id).firstOrNull;
         final recName = rec?.name ?? 'Receivable';
+        final expected =
+            rec == null ? null : _expectedDate(rec.month, i['expectedDay']);
         return PendingFinanceAction(
           call: call,
           title: 'Update receivable: $recName',
@@ -837,17 +840,17 @@ class FinanceActionsExecutor extends ChangeNotifier
           details: [
             if (_str(i['name']).isNotEmpty)
               (label: 'Name', value: '${rec?.name} → ${_str(i['name'])}'),
-            if (i['amount'] != null)
+            if (_amountOrNull(i['amount']) case final amt?)
               (
                 label: 'Amount',
-                value:
-                    '${_peso(rec?.amount ?? 0)} → ${_peso(_num(i['amount']))}'
+                value: '${_peso(rec?.amount ?? 0)} → ${_peso(amt)}'
               ),
-            if (i['expectedDay'] != null)
+            if (expected != null)
               (
-                label: 'Expected day',
+                label: 'Expected',
                 value:
-                    '${rec?.expectedDate?.day ?? "-"} → ${_int(i['expectedDay'])}'
+                    '${rec?.expectedDate == null ? "-" : _day(rec!.expectedDate!)}'
+                        ' → ${_day(expected)}'
               ),
           ],
         );
@@ -881,16 +884,15 @@ class FinanceActionsExecutor extends ChangeNotifier
           details: [
             if (_str(i['name']).isNotEmpty)
               (label: 'Name', value: '${e?.name} → ${_str(i['name'])}'),
-            if (i['amount'] != null)
+            if (_amountOrNull(i['amount']) case final amt?)
               (
                 label: 'Amount',
-                value:
-                    '${_peso(e?.allocatedAmount ?? 0)} → ${_peso(_num(i['amount']))}'
+                value: '${_peso(e?.allocatedAmount ?? 0)} → ${_peso(amt)}'
               ),
             if (_str(i['type']).isNotEmpty)
               (label: 'Type', value: _setAsideType(i['type']).name),
-            if (_str(i['destinationAccount']).isNotEmpty)
-              (label: 'Into', value: _str(i['destinationAccount'])),
+            if (_accountFor(_str(i['destinationAccount'])) case final a?)
+              (label: 'Into', value: a.name),
           ],
         );
       case 'deleteSetAside':
@@ -926,20 +928,26 @@ class FinanceActionsExecutor extends ChangeNotifier
                 label: 'Description',
                 value: '${t?.description} → ${_str(i['description'])}'
               ),
-            if (i['amount'] != null)
+            if (_amountOrNull(i['amount']) case final amt?)
               (
                 label: 'Amount',
-                value: '${_peso(t?.amount ?? 0)} → ${_peso(_num(i['amount']))}'
+                value: '${_peso(t?.amount ?? 0)} → ${_peso(amt)}'
               ),
             if (_str(i['date']).isNotEmpty)
               (
                 label: 'Date',
                 value: '${t != null ? _day(t.date) : ""} → ${_str(i['date'])}'
               ),
-            if (_str(i['category']).isNotEmpty)
-              (label: 'Category', value: _str(i['category'])),
-            if (_str(i['account']).isNotEmpty)
-              (label: 'Account', value: _str(i['account'])),
+            if (_categoryFor(_str(i['category'])) case final c?)
+              (
+                label: 'Category',
+                value: '${_categoryName(t?.categoryId)} → ${c.name}'
+              ),
+            if (_accountFor(_str(i['account'])) case final a?)
+              (
+                label: 'Account',
+                value: '${_accountName(t?.accountId)} → ${a.name}'
+              ),
             if (_str(i['note']).isNotEmpty)
               (label: 'Note', value: _str(i['note'])),
           ],
@@ -947,21 +955,21 @@ class FinanceActionsExecutor extends ChangeNotifier
       case 'deleteTransaction':
         final id = _str(i['id']);
         final t = _ledger?.allTransactions.where((t) => t.id == id).firstOrNull;
-        final tDesc = t?.description ?? 'Transaction';
-        final tAmt = t?.amount ?? 0;
+        if (t == null) return null;
         return PendingFinanceAction(
           call: call,
-          title: 'Delete transaction: $tDesc (${_peso(tAmt)})',
+          title: 'Delete transaction: ${t.description} (${_peso(t.amount)})',
           isRecurring: false,
           confirmLabel: 'Delete Entry',
           isDestructive: true,
           details: [
-            (label: 'Transaction', value: tDesc),
-            (label: 'Amount', value: _peso(tAmt)),
-            if (t != null) (label: 'Date', value: _day(t.date)),
+            (label: 'Transaction', value: t.description),
+            (label: 'Amount', value: _peso(t.amount)),
+            (label: 'Date', value: _day(t.date)),
+            ..._deleteCascade(t),
             (
               label: 'Warning',
-              value: 'Permanently removes this transaction and adjusts balances'
+              value: 'Permanently removes this and adjusts balances'
             ),
           ],
         );
@@ -1199,7 +1207,9 @@ class FinanceActionsExecutor extends ChangeNotifier
       : '${rate.toStringAsFixed(2)}%';
 
   Future<String> _write(PendingFinanceAction action,
-      {required bool applyToFuture, _InstallmentPlan? plan}) async {
+      {required bool applyToFuture,
+      required bool alreadyLogged,
+      _InstallmentPlan? plan}) async {
     final call = action.call;
     final i = call.input;
     final name = _str(i['name']);
@@ -1223,52 +1233,45 @@ class FinanceActionsExecutor extends ChangeNotifier
         final dateStr = _str(i['date']);
         final date = (dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null) ??
             DateTime.now();
+        final note = _str(i['note']);
         await _bills.quickPayCard(
           accountId: card.id,
           fromAccountId: from.id,
           amount: amount,
           date: date,
+          note: note.isEmpty ? null : note,
         );
         return 'Paid ${_peso(amount)} on ${card.name} from ${from.name}.';
 
       case 'markBillPaid':
-        final id = _str(i['id']);
-        final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
-        if (bill == null) throw StateError('Bill "$id" not found');
-        final paidAmt =
-            _num(i['paidAmount']) > 0 ? _num(i['paidAmount']) : bill.amount;
-        final dateStr = _str(i['paidDate']);
-        final date = dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null;
-        final acc = _str(i['account']).isNotEmpty
-            ? _accountFor(_str(i['account']))
-            : null;
+        final s = _billSettlement(i);
+        if (s == null) throw StateError('Bill "${_str(i['id'])}" not found');
+        final record = _recordsInLedger(s, alreadyLogged);
         await _bills.markBillPaid(
-          bill.id,
-          paidAmount: paidAmt,
-          paidDate: date,
-          accountId: acc?.id,
+          s.id,
+          paidAmount: s.amount,
+          paidDate: s.date,
+          accountId: record ? s.account!.id : null,
+          recordInLedger: record,
         );
-        return 'Marked bill "${bill.name}" as paid (${_peso(paidAmt)}).';
+        return 'Marked bill "${s.name}" as paid (${_peso(s.amount)}'
+            '${record ? ' from ${s.account!.name}' : ', already in the ledger, so no new entry'}).';
 
       case 'markReceivableReceived':
-        final id = _str(i['id']);
-        final rec = _bills.allReceivables.where((r) => r.id == id).firstOrNull;
-        if (rec == null) throw StateError('Receivable "$id" not found');
-        final recAmt = _num(i['receivedAmount']) > 0
-            ? _num(i['receivedAmount'])
-            : rec.amount;
-        final dateStr = _str(i['receivedDate']);
-        final date = dateStr.isNotEmpty ? DateTime.tryParse(dateStr) : null;
-        final acc = _str(i['account']).isNotEmpty
-            ? _accountFor(_str(i['account']))
-            : null;
+        final s = _receivableSettlement(i);
+        if (s == null) {
+          throw StateError('Receivable "${_str(i['id'])}" not found');
+        }
+        final record = _recordsInLedger(s, alreadyLogged);
         await _bills.markReceivableReceived(
-          rec.id,
-          receivedAmount: recAmt,
-          receivedDate: date,
-          accountId: acc?.id,
+          s.id,
+          receivedAmount: s.amount,
+          receivedDate: s.date,
+          accountId: record ? s.account!.id : null,
+          recordInLedger: record,
         );
-        return 'Marked receivable "${rec.name}" as received (${_peso(recAmt)}).';
+        return 'Marked receivable "${s.name}" as received (${_peso(s.amount)}'
+            '${record ? ' into ${s.account!.name}' : ', already in the ledger, so no new entry'}).';
 
       case 'editBill':
         final id = _str(i['id']);
@@ -1276,11 +1279,11 @@ class FinanceActionsExecutor extends ChangeNotifier
         if (bill == null) throw StateError('Bill "$id" not found');
         final updated = bill.copyWith(
           name: _str(i['name']).isNotEmpty ? _str(i['name']) : null,
-          amount: i['amount'] != null ? _num(i['amount']) : null,
+          amount: _amountOrNull(i['amount']),
           dueDay: i['dueDay'] != null ? _int(i['dueDay']).clamp(1, 31) : null,
-          categoryId: _str(i['category']).isNotEmpty
-              ? _categoryIdFor(_str(i['category']))
-              : null,
+          // Null keeps the bill's category: an unknown name was refused before
+          // the card, so it can never clear one here.
+          categoryId: _categoryFor(_str(i['category']))?.id,
         );
         await _bills.updateBill(updated, applyToFuture: applyToFuture);
         return 'Updated bill "${updated.name}" ($month$scope).';
@@ -1297,10 +1300,10 @@ class FinanceActionsExecutor extends ChangeNotifier
         if (rec == null) throw StateError('Receivable "$id" not found');
         final updated = rec.copyWith(
           name: _str(i['name']).isNotEmpty ? _str(i['name']) : null,
-          expectedDate: i['expectedDay'] != null
-              ? DateTime(DateTime.now().year, DateTime.now().month,
-                  _int(i['expectedDay']).clamp(1, 31))
-              : null,
+          amount: _amountOrNull(i['amount']),
+          // In the receivable's own month, the one the card showed — not the
+          // calendar month the user happens to be chatting in.
+          expectedDate: _expectedDate(rec.month, i['expectedDay']),
         );
         await _bills.updateReceivable(updated, applyToFuture: applyToFuture);
         return 'Updated receivable "${updated.name}"$scope.';
@@ -1321,7 +1324,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             : null;
         final updated = e.copyWith(
           name: _str(i['name']).isNotEmpty ? _str(i['name']) : null,
-          allocatedAmount: i['amount'] != null ? _num(i['amount']) : null,
+          allocatedAmount: _amountOrNull(i['amount']),
           budgetedType:
               _str(i['type']).isNotEmpty ? _setAsideType(i['type']) : null,
           destinationAccountId: destAcc?.id,
@@ -1344,20 +1347,18 @@ class FinanceActionsExecutor extends ChangeNotifier
         final txn = ledger.allTransactions.where((t) => t.id == id).firstOrNull;
         if (txn == null) throw StateError('Transaction "$id" not found');
         final newDesc = _str(i['description']);
-        final newAmt = i['amount'] != null ? _num(i['amount']) : null;
+        final newAmt = _amountOrNull(i['amount']);
         final newDateStr = _str(i['date']);
         final newDate =
             newDateStr.isNotEmpty ? DateTime.tryParse(newDateStr) : null;
-        final newCategory = _str(i['category']).isNotEmpty
-            ? _categoryIdFor(_str(i['category']))
-            : null;
+        final newCategory = _categoryFor(_str(i['category']))?.id;
         final newAcc = _str(i['account']).isNotEmpty
             ? _accountFor(_str(i['account']))
             : null;
         final newNote = _str(i['note']);
         final updated = txn.copyWith(
           description: newDesc.isNotEmpty ? newDesc : null,
-          amount: newAmt != null && newAmt > 0 ? newAmt : null,
+          amount: newAmt,
           date: newDate,
           month: newDate != null ? toMonthKey(newDate) : null,
           categoryId: newCategory,
@@ -1388,6 +1389,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             dueDay: _int(i['dueDay']).clamp(1, 31),
             month: month,
             categoryId: _categoryIdFor(_str(i['category'])),
+            accountId: _accountFor(_str(i['account']))?.id,
             isRecurring: recurring,
             recurrenceType: recurring ? RecurrenceType.monthly : null,
           ),
@@ -1403,6 +1405,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             receivableType: ReceivableType.other,
             amount: amount,
             month: month,
+            expectedDate: _expectedDate(month, i['expectedDay']),
             categoryId: '',
             isRecurring: recurring,
             recurrenceType: recurring ? RecurrenceType.monthly : null,
@@ -1424,6 +1427,8 @@ class FinanceActionsExecutor extends ChangeNotifier
             // is never spending and carries no expense category — the same
             // empty value the Bills sheet saves.
             categoryId: '',
+            destinationAccountId:
+                _accountFor(_str(i['destinationAccount']))?.id,
             isRecurring: recurring,
             recurrenceType: recurring ? RecurrenceType.monthly : null,
           ),
@@ -1466,6 +1471,177 @@ class FinanceActionsExecutor extends ChangeNotifier
             'on ${p.account.name}.';
     }
     throw StateError('no writer for ${call.name}');
+  }
+
+  // ── Settlements ───────────────────────────────────────────────────────────
+
+  /// A `markBillPaid` call bound against the live bill and accounts. The card
+  /// is drawn from it, and the write binds the call again the same way, so
+  /// the account the card named is the account the payment comes from.
+  _Settlement? _billSettlement(Map<String, Object?> i) {
+    final bill =
+        _bills.allBills.where((b) => b.id == _str(i['id'])).firstOrNull;
+    if (bill == null) return null;
+    final amount = _amountOrNull(i['paidAmount']) ?? bill.amount;
+    final date = _settleDate(i['paidDate']);
+    // The named account, else the bill's own "pay from" account. A liability
+    // is never the default: a statement is paid FROM a bank or wallet, and
+    // the presenter refuses one paid from the card it belongs to.
+    final named = _str(i['account']);
+    final from = named.isNotEmpty
+        ? _accountFor(named)
+        : _activeAccounts
+            .where((a) => a.id == bill.accountId && !a.isLiability)
+            .firstOrNull;
+    final match = _ledgerMatch(
+      type: TransactionType.outflow,
+      amount: amount,
+      months: {bill.month, toMonthKey(date)},
+      name: bill.name,
+    );
+    return _Settlement(
+      id: bill.id,
+      name: bill.name,
+      amount: amount,
+      date: date,
+      account: from,
+      choice: LedgerEntryChoice(
+        alreadyLogged: i['alreadyLogged'] == true || match != null,
+        canRecord: from != null,
+        match: match == null ? null : _matchLabel(match),
+      ),
+    );
+  }
+
+  /// The receivable twin of [_billSettlement].
+  _Settlement? _receivableSettlement(Map<String, Object?> i) {
+    final rec =
+        _bills.allReceivables.where((r) => r.id == _str(i['id'])).firstOrNull;
+    if (rec == null) return null;
+    final amount = _amountOrNull(i['receivedAmount']) ?? rec.amount;
+    final date = _settleDate(i['receivedDate']);
+    final named = _str(i['account']);
+    final into = named.isNotEmpty
+        ? _accountFor(named)
+        : _activeAccounts.where((a) => a.id == rec.accountId).firstOrNull;
+    final match = _ledgerMatch(
+      type: TransactionType.inflow,
+      amount: amount,
+      months: {rec.month, toMonthKey(date)},
+      name: rec.name,
+    );
+    return _Settlement(
+      id: rec.id,
+      name: rec.name,
+      amount: amount,
+      date: date,
+      account: into,
+      choice: LedgerEntryChoice(
+        alreadyLogged: i['alreadyLogged'] == true || match != null,
+        canRecord: into != null,
+        match: match == null ? null : _matchLabel(match),
+      ),
+    );
+  }
+
+  /// Whether a confirmed settlement writes a ledger entry. Recording needs an
+  /// account; the card cannot offer it without one, so reaching here without
+  /// one is a bug, not a choice.
+  static bool _recordsInLedger(_Settlement s, bool alreadyLogged) {
+    if (alreadyLogged) return false;
+    if (s.account == null) {
+      throw StateError('"${s.name}" has no account to record the money in');
+    }
+    return true;
+  }
+
+  /// A ledger entry that is probably this settlement, already logged by hand:
+  /// same direction and amount, in the month due or the month settled, and
+  /// not linked to another bill or receivable. One whose text names the item
+  /// wins; otherwise only a single candidate counts — two lookalikes are not
+  /// evidence of either.
+  TransactionRecord? _ledgerMatch({
+    required TransactionType type,
+    required double amount,
+    required Set<String> months,
+    required String name,
+  }) {
+    final candidates = (_ledger?.allTransactions ?? const <TransactionRecord>[])
+        .where((t) =>
+            t.type == type &&
+            months.contains(t.month) &&
+            (t.amount - amount).abs() < 0.005 &&
+            t.billId == null &&
+            t.receivableId == null &&
+            !t.isInstallment)
+        .toList();
+    if (candidates.isEmpty) return null;
+    final word = name.trim().toLowerCase().split(RegExp(r'\s+')).first;
+    if (word.length >= 3) {
+      final named = candidates.where((t) =>
+          '${t.description} ${t.note ?? ''}'.toLowerCase().contains(word));
+      if (named.isNotEmpty) return named.first;
+    }
+    return candidates.length == 1 ? candidates.single : null;
+  }
+
+  String _matchLabel(TransactionRecord t) =>
+      '"${t.description}" ${_peso(t.amount)} on ${_day(t.date)}';
+
+  /// A settlement date from the model, or today. A year the model slipped is
+  /// rebased, as everywhere else a model date lands.
+  static DateTime _settleDate(Object? raw) {
+    final now = DateTime.now();
+    final given = DateTime.tryParse(_str(raw));
+    final d = given == null ? now : rebaseStaleDate(given, now);
+    return DateTime(d.year, d.month, d.day);
+  }
+
+  // ── Delete warnings ───────────────────────────────────────────────────────
+
+  /// What else goes when transaction [t] is deleted, named on the card:
+  /// [LedgerPresenter.deleteTransactionOrGroup] takes a transfer's other leg
+  /// and an installment purchase's plan and payments with it, and retires a
+  /// reimbursable's "owed back" entry.
+  List<({String label, String value})> _deleteCascade(TransactionRecord t) {
+    final txns = _ledger?.allTransactions ?? const <TransactionRecord>[];
+    final rows = <({String label, String value})>[];
+    final group = t.transferGroupId;
+    if (group != null) {
+      final partner = txns
+          .where((o) => o.transferGroupId == group && o.id != t.id)
+          .firstOrNull;
+      if (partner != null) {
+        final direction =
+            partner.type == TransactionType.inflow ? 'into' : 'out of';
+        rows.add((
+          label: 'Also deletes',
+          value: 'the other side of this transfer: ${_peso(partner.amount)} '
+              '$direction ${_accountName(partner.accountId)}',
+        ));
+      }
+    }
+    final planId = t.installmentId;
+    if (t.isInstallment && planId != null) {
+      final plan = _installments?.allInstallments
+          .where((p) => p.id == planId)
+          .firstOrNull;
+      final payments =
+          txns.where((o) => o.installmentId == planId && o.id != t.id).length;
+      rows.add((
+        label: 'Also deletes',
+        value: 'the installment plan "${plan?.name ?? t.description}"'
+            '${payments == 0 ? '' : ' and its $payments recorded '
+                '${payments == 1 ? 'payment' : 'payments'}'}',
+      ));
+    }
+    if (t.reimbursable && t.reimbursementReceivableId != null) {
+      rows.add((
+        label: 'Also deletes',
+        value: 'the "owed back" receivable for this expense',
+      ));
+    }
+    return rows;
   }
 
   // ── Small helpers ─────────────────────────────────────────────────────────
@@ -1531,8 +1707,15 @@ class FinanceActionsExecutor extends ChangeNotifier
       return '$what. Choices: ${list(pool)}. Ask the user which one.';
     }
 
+    final unknown = _unknownIdProblem(call);
+    if (unknown != null) return unknown;
+
     final active = _activeAccounts;
     switch (call.name) {
+      case 'addBill':
+        return check('account', active, 'active') ?? _categoryProblem(i);
+      case 'addSetAside':
+        return check('destinationAccount', active, 'active');
       case 'payCredit':
         return check(
                 'creditAccount', active.where((a) => a.isLiability), 'credit',
@@ -1557,10 +1740,35 @@ class FinanceActionsExecutor extends ChangeNotifier
           return 'That record is an installment purchase; it can only move to '
               'another credit account. Ask the user to change it in the Ledger.';
         }
-        return check('account', active, 'active');
+        return check('account', active, 'active') ?? _categoryProblem(i);
       case 'markBillPaid':
+        final bill = _bills.allBills.firstWhere((b) => b.id == _str(i['id']));
+        if (bill.isPaid) {
+          return 'The bill "${bill.name}" is already marked paid'
+              '${bill.paidDate == null ? '' : ' on ${_day(bill.paidDate!)}'}. '
+              'Nothing to change — tell the user.';
+        }
+        final named = _accountFor(_str(i['account']));
+        if (named != null && named.isLiability && named.id == bill.accountId) {
+          return '"${bill.name}" is the statement of ${named.name}, so it '
+              'cannot be paid from ${named.name} itself. Ask the user which '
+              'bank, e-wallet or cash account paid it.';
+        }
+        return check('account', active, 'active') ??
+            _settlementProblem(_billSettlement(i)!, 'paid from', active);
       case 'markReceivableReceived':
+        final rec =
+            _bills.allReceivables.firstWhere((r) => r.id == _str(i['id']));
+        if (rec.isReceived) {
+          return 'The receivable "${rec.name}" is already marked received'
+              '${rec.receivedDate == null ? '' : ' on ${_day(rec.receivedDate!)}'}. '
+              'Nothing to change — tell the user.';
+        }
+        return check('account', active, 'active') ??
+            _settlementProblem(
+                _receivableSettlement(i)!, 'deposited into', active);
       case 'editBill':
+        return _categoryProblem(i);
       case 'editReceivable':
         return check('account', active, 'active');
       case 'editSetAside':
@@ -1568,6 +1776,84 @@ class FinanceActionsExecutor extends ChangeNotifier
     }
     return null;
   }
+
+  /// Why an id-taking call names no real row, or null when it does.
+  ///
+  /// Refused before any card. A card for an id that matches nothing showed
+  /// "Delete transaction: Transaction (₱0)", and approving it did nothing —
+  /// the user approved a change that was never going to happen (design D2:
+  /// an id only ever comes from a find result).
+  String? _unknownIdProblem(AiToolCall call) {
+    final id = _str(call.input['id']);
+    final (String kind, String finder, bool exists) = switch (call.name) {
+      'markBillPaid' || 'editBill' || 'deleteBill' => (
+          'bill',
+          'findBills',
+          _bills.allBills.any((b) => b.id == id),
+        ),
+      'markReceivableReceived' || 'editReceivable' || 'deleteReceivable' => (
+          'receivable',
+          'findReceivables',
+          _bills.allReceivables.any((r) => r.id == id),
+        ),
+      'editSetAside' || 'deleteSetAside' => (
+          'set-aside',
+          'findSetAsides',
+          _bills.allBudgetedExpenses.any((e) => e.id == id),
+        ),
+      'editTransaction' || 'deleteTransaction' => (
+          'transaction',
+          'findTransactions',
+          _ledger?.allTransactions.any((t) => t.id == id) ?? false,
+        ),
+      _ => ('', '', true),
+    };
+    if (exists) return null;
+    return 'No $kind has the id "$id". Call $finder and use an id from its '
+        'result — never one you made up. If it is not there, tell the user '
+        'you could not find it.';
+  }
+
+  /// Why a category NAME in the call matches no category, or null.
+  ///
+  /// Refused rather than saved as "no category": an edit that could not bind
+  /// the name used to clear the row's category while the card still showed
+  /// the typed name.
+  String? _categoryProblem(Map<String, Object?> i) {
+    final name = _str(i['category']);
+    if (name.isEmpty || _categoryFor(name) != null) return null;
+    final names = _categories.map((c) => '"${c.name}"').join(', ');
+    return 'No category is named "$name". Categories: $names. Use one of '
+        'these names, or leave the category out.';
+  }
+
+  /// Why settlement [s] cannot be shown: the user would have to record the
+  /// money, and no account resolves to record it against.
+  static String? _settlementProblem(
+      _Settlement s, String verb, List<FinancialAccount> active) {
+    if (s.choice.alreadyLogged || s.choice.canRecord) return null;
+    final choices = active.map((a) => '"${a.name}"').join(', ');
+    return 'Which account was "${s.name}" $verb? Choices: $choices. Ask the '
+        'user. If they already logged this money in the Ledger, call again '
+        'with alreadyLogged true instead.';
+  }
+
+  /// Every category the user has. The budget owns the list; a build without
+  /// a budget presenter reads the ledger's copy.
+  List<FinanceCategory> get _categories =>
+      _budget?.allCategories ??
+      _ledger?.categories ??
+      const <FinanceCategory>[];
+
+  String _categoryName(String? id) =>
+      _categories.where((c) => c.id == id).firstOrNull?.name ?? 'none';
+
+  String _accountName(String? id) =>
+      (_ledger?.accounts ?? const <FinancialAccount>[])
+          .where((a) => a.id == id)
+          .firstOrNull
+          ?.name ??
+      'unknown account';
 
   /// Resolve a category NAME to its id. The model never sees ids, so it sends
   /// names and the client binds them — the same contract the expense extractor
@@ -1577,7 +1863,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   FinanceCategory? _categoryFor(String name) {
     if (name.isEmpty) return null;
     final lower = name.toLowerCase();
-    final categories = _budget?.allCategories ?? const <FinanceCategory>[];
+    final categories = _categories;
     for (final c in categories) {
       if (c.name.toLowerCase() == lower) return c;
     }
@@ -1613,10 +1899,53 @@ class FinanceActionsExecutor extends ChangeNotifier
   static int _int(Object? v) =>
       v is num ? v.toInt() : (v is String ? int.tryParse(v) ?? 1 : 1);
 
+  /// A new amount from an edit, or null to keep the old one. Zero and below
+  /// are not amounts, so they keep it too — on the card and in the write.
+  static double? _amountOrNull(Object? v) {
+    final n = _numOrNull(v);
+    return n == null || !n.isFinite || n <= 0 ? null : n.toDouble();
+  }
+
+  /// The expected date for day [rawDay] of [monthKey] ("YYYY-MM"), clamped to
+  /// the month's length; null when no day was given. Built in the row's own
+  /// month, never the calendar month the chat happens in.
+  static DateTime? _expectedDate(String monthKey, Object? rawDay) {
+    if (rawDay == null) return null;
+    final parts = monthKey.split('-');
+    final year = int.tryParse(parts.first);
+    final month = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    if (year == null || month == null) return null;
+    final last = DateTime(year, month + 1, 0).day;
+    return DateTime(year, month, _int(rawDay).clamp(1, last));
+  }
+
   static String _peso(double v) => '₱${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)}';
 
   static String _id() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+}
+
+/// A `markBillPaid` or `markReceivableReceived` call bound against the live
+/// row and accounts. Both the card and the write are drawn from one.
+class _Settlement {
+  const _Settlement({
+    required this.id,
+    required this.name,
+    required this.amount,
+    required this.date,
+    required this.account,
+    required this.choice,
+  });
+
+  final String id;
+  final String name;
+  final double amount;
+  final DateTime date;
+
+  /// Where the money goes from or into. Null when none resolves; the card
+  /// then offers "already in the ledger" only.
+  final FinancialAccount? account;
+  final LedgerEntryChoice choice;
 }
 
 /// An `addInstallment` call checked and bound against the user's real
