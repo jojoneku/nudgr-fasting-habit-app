@@ -488,6 +488,11 @@ class AiCoachContext {
   /// MIME type of every entry in [images] (e.g. 'image/jpeg').
   final String? imageMimeType;
 
+  /// One id per user message, sent with every advisor hop and retry of it so
+  /// the server's cost lines for that message can be grouped (Plan 065,
+  /// phase 2). Transient — never serialized. Null outside the advisor.
+  final String? traceId;
+
   // ── Nutrition ──────────────────────────────────────────────────────────────
   final int? todayCalories;
   final int? calorieGoal;
@@ -651,6 +656,7 @@ class AiCoachContext {
     this.today,
     this.images = const [],
     this.imageMimeType,
+    this.traceId,
     this.todayCalories,
     this.calorieGoal,
     this.todayProtein,
