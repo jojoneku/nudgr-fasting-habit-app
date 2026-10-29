@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/finance/entry_review_card.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -29,7 +32,15 @@ class LedgerView extends StatefulWidget {
   /// When present, the quick-log photo button also offers meal logging.
   final NutritionPresenter? nutrition;
 
-  const LedgerView({super.key, required this.presenter, this.nutrition});
+  /// When present, the input bar's sparkle opens Nudgy over the Ledger.
+  final AiCoachPresenter? aiCoach;
+
+  const LedgerView({
+    super.key,
+    required this.presenter,
+    this.nutrition,
+    this.aiCoach,
+  });
 
   @override
   State<LedgerView> createState() => _LedgerViewState();
@@ -152,6 +163,7 @@ class _LedgerViewState extends State<LedgerView> {
                 _LedgerChatInputBar(
                   presenter: presenter,
                   nutrition: widget.nutrition,
+                  aiCoach: widget.aiCoach,
                   onOpenForm: _showAddTransactionSheet,
                   onOpenCategories: _showManageCategoriesSheet,
                 ),
@@ -380,6 +392,7 @@ class _ChatHardErrorChip extends StatelessWidget {
 class _LedgerChatInputBar extends StatefulWidget {
   final LedgerPresenter presenter;
   final NutritionPresenter? nutrition;
+  final AiCoachPresenter? aiCoach;
   final void Function({ParsedTransaction? prefill}) onOpenForm;
   final VoidCallback onOpenCategories;
 
@@ -388,6 +401,7 @@ class _LedgerChatInputBar extends StatefulWidget {
     required this.onOpenForm,
     required this.onOpenCategories,
     this.nutrition,
+    this.aiCoach,
   });
 
   @override
@@ -404,6 +418,19 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  /// Open Nudgy as a sheet over the Ledger, the same way the Hub's quick-log
+  /// bar does. Nudgy is not tied to today, so this stays enabled on past days.
+  void _openAdvisor() {
+    final coach = widget.aiCoach;
+    if (coach == null) return;
+    _focus.unfocus();
+    AiChatSheet.show(
+      context,
+      presenter: coach,
+      entryPoint: AiCoachEntryPoint.financeAdvisor,
+    );
   }
 
   Future<void> _send() async {
@@ -473,11 +500,14 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           // Reference-style input pill: a sparkle glyph hinting at AI parsing +
-          // the free-text field, inside a single rounded container.
+          // the free-text field, inside a single rounded container. With Nudgy
+          // wired in, the sparkle is the button that opens it — no extra slot
+          // in a row that already holds four 44px targets.
           Expanded(
             child: Container(
               height: 52,
-              padding: const EdgeInsets.only(left: 14, right: 8),
+              padding: EdgeInsets.only(
+                  left: widget.aiCoach == null ? 14 : 4, right: 8),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(26),
@@ -487,8 +517,17 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.auto_awesome, size: 16, color: blue),
-                  const SizedBox(width: 8),
+                  if (widget.aiCoach == null) ...[
+                    Icon(Icons.auto_awesome, size: 16, color: blue),
+                    const SizedBox(width: 8),
+                  ] else
+                    IconButton(
+                      icon: Icon(Icons.auto_awesome, size: 20, color: blue),
+                      onPressed: busy ? null : _openAdvisor,
+                      tooltip: 'Ask Nudgy',
+                      constraints:
+                          const BoxConstraints(minWidth: 44, minHeight: 44),
+                    ),
                   Expanded(
                     child: TextField(
                       controller: _ctrl,
