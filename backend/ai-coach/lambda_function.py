@@ -14,6 +14,9 @@ _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 # The financial advisor (op=adviseFinance) reasons better on a stronger model.
 # Falls back to the base model when unset so the op still works pre-config.
 _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
+# Effort for models that take one (see _generation_params). Every Haiku-tier op
+# is short extraction or a 2-3 sentence chat reply, which is what `low` is for.
+_EFFORT = os.environ.get("BEDROCK_EFFORT", "low")
 # Longer than chat's 512 — the "financial position" diagnostic is multi-section.
 # 900 was too tight to answer a real question well: a full financial-position
 # walkthrough is five sections, and the model had to choose between covering
@@ -429,7 +432,7 @@ def _disambiguate_food(payload):
 
     return _invoke_bedrock(
         prompt=prompt,
-        max_tokens=128,
+        max_tokens=256,  # headroom for the 5.x tokenizer; billed as emitted
         parse_fn=lambda parsed: _resp(200, {
             "foodId": parsed.get("foodId"),
             "confidence": float(parsed.get("confidence", 0.0)),
@@ -712,10 +715,11 @@ def _parse_food_from_image(payload):
                         {"type": "text", "text": prompt},
                     ],
                 }],
+                **_generation_params(_MODEL_ID, _EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
-        text = result["content"][0]["text"].strip()
+        text = _reply_text(result)
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text).strip()
         parsed = json.loads(text)
@@ -835,10 +839,11 @@ def _parse_receipt_from_image(payload):
                         {"type": "text", "text": prompt},
                     ],
                 }],
+                **_generation_params(_MODEL_ID, _EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
-        text = result["content"][0]["text"].strip()
+        text = _reply_text(result)
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text).strip()
         parsed = json.loads(text)
@@ -1014,7 +1019,7 @@ def _estimate_macros(payload):
 
     return _invoke_bedrock(
         prompt=prompt,
-        max_tokens=128,
+        max_tokens=256,  # headroom for the 5.x tokenizer; billed as emitted
         parse_fn=lambda parsed: _resp(200, {
             "calories": float(parsed.get("calories", 0)),
             "protein_g": float(parsed.get("protein_g", 0)),
@@ -1065,6 +1070,9 @@ def _as_blocks(content):
         return content
     text = (content or "").strip()
     return [{"type": "text", "text": text}] if text else []
+
+
+_RESPOND_FALLBACK = "I can't help with that one. Try asking another way."
 
 
 def _respond(payload):
@@ -1120,10 +1128,13 @@ def _respond(payload):
                 "max_tokens": 512,
                 "system": system_prompt,
                 "messages": bedrock_messages,
+                **_generation_params(_MODEL_ID, _EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
-        response_text = result["content"][0]["text"].strip()
+        # Empty on a refusal. The chat UI shows whatever comes back, so an empty
+        # reply would render as a blank bubble.
+        response_text = _reply_text(result) or _RESPOND_FALLBACK
         return _resp(200, {"response": response_text})
     except Exception as e:
         print(f"Bedrock error (respond): {e}")
@@ -1159,10 +1170,11 @@ def _classify_finance(payload):
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": _CLASSIFY_MAX_TOKENS,
                 "messages": [{"role": "user", "content": prompt}],
+                **_generation_params(_MODEL_ID, _EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
-        text = result["content"][0]["text"].strip()
+        text = _reply_text(result)
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text).strip()
         print(f"cost_line op=classifyFinance chars={len(prompt)}")
@@ -1911,6 +1923,43 @@ def advise_finance_stream(payload, request):
 
 # ── Shared Bedrock helper ──────────────────────────────────────────────────────
 
+# How to turn thinking off, per model (Plan 064). The 5.5 models think by
+# default: a reply can open with a `thinking` block, and thinking bills as
+# output tokens. None of our ops benefit from it, so it goes off -- but the
+# spelling differs by model, and the wrong one is a 400.
+#
+# A model not listed here gets no extra fields, which is what the models live
+# before Plan 064 require: Haiku 4.5 and Sonnet 4.5 both reject
+# `output_config.effort`.
+# That is what lets this code deploy BEFORE the env var flips, and lets the
+# flip be rolled back with the env var alone.
+_THINKING_OFF = {
+    "claude-haiku-5-5": {"type": "disabled"},
+}
+
+
+def _generation_params(model_id, effort):
+    """Extra request-body fields for `model_id`, or {} for an older model."""
+    for key, thinking in _THINKING_OFF.items():
+        if key in model_id:
+            return {"thinking": thinking, "output_config": {"effort": effort}}
+    return {}
+
+
+def _reply_text(result):
+    """The text of a Bedrock reply, read by block type, not by position.
+
+    A 5.x reply can open with a `thinking` block, and a refusal
+    (`stop_reason: "refusal"`) can carry no text at all -- so `content[0]["text"]`
+    is either the wrong block or a KeyError. Returns "" when there is no text.
+    """
+    return "\n".join(
+        (b.get("text") or "")
+        for b in result.get("content") or []
+        if isinstance(b, dict) and b.get("type") == "text"
+    ).strip()
+
+
 def _invoke_bedrock(*, prompt, max_tokens, parse_fn, fallback):
     """Shared Bedrock invocation with JSON fence stripping and error handling."""
     try:
@@ -1922,10 +1971,11 @@ def _invoke_bedrock(*, prompt, max_tokens, parse_fn, fallback):
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": max_tokens,
                 "messages": [{"role": "user", "content": prompt}],
+                **_generation_params(_MODEL_ID, _EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
-        text = result["content"][0]["text"].strip()
+        text = _reply_text(result)
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text).strip()
         parsed = json.loads(text)
