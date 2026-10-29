@@ -251,6 +251,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           description: description,
           date: _date,
           note: note.isEmpty ? null : note,
+          replacing: existing,
         );
       } else if (_type == TransactionType.outflow &&
           _splitInstallments &&
@@ -303,7 +304,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             // Converting a transfer into a normal income/expense: remove the
             // whole transfer group, then add the single replacement record.
             await widget.presenter.deleteTransactionOrGroup(existing.id);
-            await widget.presenter.addTransaction(txn);
+            await widget.presenter.addTransaction(txn, replacing: existing);
           } else if (existing.isInstallment) {
             // Split turned off, or moved off a credit account: the plan goes
             // and the record takes its full balance effect, exactly once.

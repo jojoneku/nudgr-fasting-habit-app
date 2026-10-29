@@ -58,6 +58,12 @@ class Receivable {
   /// automatic order (expected date, then name) for that entry. Only meaningful
   /// relative to other receivables of the same month.
   final int? sortIndex;
+
+  /// When the record was first created on a device. Set once by the owning
+  /// presenter's create path and never changed by an edit. Null on records
+  /// saved before this field shipped ("added before this release"). It is not
+  /// [updatedAt], which is a sync stamp.
+  final DateTime? createdAt;
   final DateTime updatedAt;
 
   Receivable({
@@ -79,6 +85,7 @@ class Receivable {
     this.accountId,
     this.reimbursementForTxnId,
     this.sortIndex,
+    this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -107,6 +114,11 @@ class Receivable {
       accountId: json['accountId'] as String?,
       reimbursementForTxnId: json['reimbursementForTxnId'] as String?,
       sortIndex: (json['sortIndex'] as num?)?.toInt(),
+      // Tolerant: a record saved before this field shipped (or a bad value)
+      // loads as null rather than failing the pull.
+      createdAt: json['createdAt'] is String
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -131,6 +143,7 @@ class Receivable {
         'accountId': accountId,
         'reimbursementForTxnId': reimbursementForTxnId,
         'sortIndex': sortIndex,
+        'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -157,6 +170,9 @@ class Receivable {
     Object? accountId = _kUnset,
     String? reimbursementForTxnId,
     Object? sortIndex = _kUnset,
+    // Sentinel-guarded so a presenter can carry the stored value onto an
+    // edited record exactly, null included. Omitting it keeps the current one.
+    Object? createdAt = _kUnset,
     DateTime? updatedAt,
   }) {
     return Receivable(
@@ -196,6 +212,9 @@ class Receivable {
       // ordering ("Reset order"), while omitting it keeps the current rank.
       sortIndex:
           identical(sortIndex, _kUnset) ? this.sortIndex : sortIndex as int?,
+      createdAt: identical(createdAt, _kUnset)
+          ? this.createdAt
+          : createdAt as DateTime?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

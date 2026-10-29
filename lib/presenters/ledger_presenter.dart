@@ -49,8 +49,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? cloudAi,
     FinancePersonalDictionary? financeDict,
     TreasuryMonthScope? monthScope,
+    DateTime Function()? clock,
   })  : _storage = storage,
         _stats = stats,
+        _clock = clock ?? DateTime.now,
         _ai = ai,
         _cloudAi = cloudAi,
         _monthScope = monthScope,
@@ -83,6 +85,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   final StorageService _storage;
   final StatsPresenter _stats;
+
+  /// "Now" for the [TransactionRecord.createdAt] stamp. Injected so tests can
+  /// pin it; [DateTime.now] otherwise.
+  final DateTime Function() _clock;
+
+  /// [txn] stamped with the time it was created. A record that already carries
+  /// a stamp keeps it, so a caller that re-adds a known record never resets it.
+  TransactionRecord _created(TransactionRecord txn) =>
+      txn.createdAt != null ? txn : txn.copyWith(createdAt: _clock());
+
+  /// [txn] stamped for an add. When the add is an edit that [replacing] a
+  /// record of another shape (the forms delete a transfer and add a single
+  /// record, or the reverse), it takes that record's stamp exactly, null
+  /// included: an edit never changes when a record was created.
+  TransactionRecord _createdOrKept(
+    TransactionRecord txn,
+    TransactionRecord? replacing,
+  ) =>
+      replacing == null ? _created(txn) : _keepCreated(txn, replacing);
+
+  /// [edited] with [stored]'s creation time. The edit forms build a fresh
+  /// record, so without this every save would drop the stamp. An edit never
+  /// changes when a record was created.
+  TransactionRecord _keepCreated(
+    TransactionRecord edited,
+    TransactionRecord stored,
+  ) =>
+      edited.createdAt == stored.createdAt
+          ? edited
+          : edited.copyWith(createdAt: stored.createdAt);
 
   /// On-device classifier (Qwen3 0.6B). Always present; may not be downloaded.
   final AiCoachService? _ai;
@@ -1044,7 +1076,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   // --- Transaction CRUD ---
 
-  Future<void> addTransaction(TransactionRecord txn) async {
+  /// Adds [record]. Pass [replacing] when an edit removed that record first, so
+  /// the new one keeps its `createdAt`.
+  Future<void> addTransaction(
+    TransactionRecord record, {
+    TransactionRecord? replacing,
+  }) async {
+    final txn = _createdOrKept(record, replacing);
     final isFirstEver = _allTransactions.isEmpty;
     final isFirstToday = !_hasTransactionToday();
 
@@ -1114,8 +1152,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return true;
   }
 
-  Future<void> postSystemTransactions(List<TransactionRecord> txns) async {
-    if (txns.isEmpty) return;
+  Future<void> postSystemTransactions(List<TransactionRecord> records) async {
+    if (records.isEmpty) return;
+    final txns = [for (final r in records) _created(r)];
     _allTransactions = [..._allTransactions, ...txns];
     for (final txn in txns) {
       _applyBalanceDelta(txn.accountId, txn.amount, txn.type,
@@ -1198,9 +1237,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// installment transaction in the ledger (with isInstallment: true), and
   /// updates the account's installment credit hold immediately without
   /// inflating the current month's cash expenses.
+  ///
+  /// Pass [replacing] when an edit removed that record first, so the purchase
+  /// record keeps its `createdAt`.
   Future<void> addInstallmentPurchase(
     Installment installment, {
     TransactionRecord? transaction,
+    TransactionRecord? replacing,
   }) async {
     await _spawnPlan(installment);
 
@@ -1221,12 +1264,19 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
     final existingIndex = _allTransactions.indexWhere((t) => t.id == txn.id);
     if (existingIndex >= 0) {
+      final stored = _allTransactions[existingIndex];
       _allTransactions = [
         for (var i = 0; i < _allTransactions.length; i++)
-          if (i == existingIndex) txn else _allTransactions[i],
+          if (i == existingIndex)
+            _keepCreated(txn, stored)
+          else
+            _allTransactions[i],
       ];
     } else {
-      _allTransactions = [..._allTransactions, txn];
+      _allTransactions = [
+        ..._allTransactions,
+        _createdOrKept(txn, replacing),
+      ];
     }
 
     safeNotify();
@@ -1331,7 +1381,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // Reachable: the edit form lets a transfer flip to an expense. Both legs
       // go, so neither account keeps half a transfer.
       await deleteTransactionOrGroup(existing.id);
-      await addInstallmentPurchase(plan, transaction: record);
+      await addInstallmentPurchase(plan,
+          transaction: record, replacing: existing);
     } else {
       // A regular record (or a purchase whose plan went missing). The plan
       // goes first so the hold refresh below already sees it; updateTransaction
@@ -1402,6 +1453,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         isInstallment: replacement.isInstallment);
     final transferCategoryId =
         cashPayments.isEmpty ? null : await _ensureTransferCategory();
+    final now = _clock();
     final asTransfers = <String, TransactionRecord>{};
     final cardLegs = <TransactionRecord>[];
     for (final p in cashPayments) {
@@ -1421,6 +1473,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         transferToAccountId: replacement.accountId,
         transferGroupId: groupId,
         billId: p.billId,
+        createdAt: p.createdAt,
       );
       cardLegs.add(TransactionRecord(
         id: _generateId(),
@@ -1435,6 +1488,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         transferToAccountId: p.accountId,
         transferGroupId: groupId,
         billId: p.billId,
+        // A new record: the card side of the transfer did not exist before.
+        createdAt: now,
       ));
       _applyBalanceDelta(
           replacement.accountId, p.amount, TransactionType.inflow);
@@ -1443,7 +1498,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = [
       for (final t in _allTransactions)
         if (!droppedIds.contains(t.id))
-          t.id == old.id ? replacement : (asTransfers[t.id] ?? t),
+          t.id == old.id
+              ? _keepCreated(replacement, old)
+              : (asTransfers[t.id] ?? t),
       ...cardLegs,
     ];
     safeNotify();
@@ -1614,6 +1671,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// bill they settle — a liability statement is paid via transfer, so without
   /// the back-link the payment was untraceable from the bill and undoing one
   /// could not find the ledger entries to unwind.
+  ///
+  /// Pass [replacing] when an edit removed that record first, so both legs keep
+  /// its `createdAt`.
   Future<void> addTransfer({
     required String fromAccountId,
     required String toAccountId,
@@ -1622,12 +1682,14 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required DateTime date,
     String? note,
     String? billId,
+    TransactionRecord? replacing,
   }) async {
     final groupId = _generateId();
     final monthKey = toMonthKey(date);
     // Both legs carry the reserved transfer category — a transfer is neither an
     // expense nor income, so it must never be stamped with a real category.
     final categoryId = await _ensureTransferCategory();
+    final createdAt = replacing == null ? _clock() : replacing.createdAt;
 
     final outflow = TransactionRecord(
       id: _generateId(),
@@ -1642,6 +1704,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       transferToAccountId: toAccountId,
       transferGroupId: groupId,
       billId: billId,
+      createdAt: createdAt,
     );
     final inflow = TransactionRecord(
       id: _generateId(),
@@ -1656,6 +1719,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       transferToAccountId: fromAccountId,
       transferGroupId: groupId,
       billId: billId,
+      createdAt: createdAt,
     );
 
     _allTransactions = [..._allTransactions, outflow, inflow];
@@ -1665,11 +1729,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await _saveAll();
   }
 
-  Future<void> updateTransaction(TransactionRecord txn) async {
+  Future<void> updateTransaction(TransactionRecord edited) async {
     // Guard against a vanished id (reachable via fast successive inline edits
     // or an interleaved delete) — `firstWhere` would otherwise throw. (C9)
-    final old = _allTransactions.where((t) => t.id == txn.id).firstOrNull;
+    final old = _allTransactions.where((t) => t.id == edited.id).firstOrNull;
     if (old == null) return;
+    final txn = _keepCreated(edited, old);
     _reverseBalanceDelta(old.accountId, old.amount, old.type,
         isInstallment: old.isInstallment);
     _applyBalanceDelta(txn.accountId, txn.amount, txn.type,

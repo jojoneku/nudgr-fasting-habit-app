@@ -1,6 +1,10 @@
 // Named TransactionRecord to avoid collision with Dart's Transaction.
 enum TransactionType { inflow, outflow, transfer }
 
+/// copyWith sentinel — see the note in `bill.dart`. Lets
+/// [TransactionRecord.copyWith] set [TransactionRecord.createdAt] back to null.
+const Object _kUnset = Object();
+
 class TransactionRecord {
   final String id;
   final DateTime date;
@@ -33,6 +37,12 @@ class TransactionRecord {
   // Who owes you back for a reimbursable expense (free text, e.g. "Acme Corp"
   // or "Jana"). Surfaced on the spawned receivable. Null/empty when unknown.
   final String? owedBy;
+
+  /// When the record was first created on a device. Set once by the owning
+  /// presenter's create path and never changed by an edit. Null on records
+  /// saved before this field shipped ("added before this release"). It is not
+  /// [updatedAt], which is a sync stamp.
+  final DateTime? createdAt;
   final DateTime updatedAt;
 
   TransactionRecord({
@@ -54,6 +64,7 @@ class TransactionRecord {
     this.reimbursable = false,
     this.reimbursementReceivableId,
     this.owedBy,
+    this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -77,6 +88,11 @@ class TransactionRecord {
       reimbursable: json['reimbursable'] as bool? ?? false,
       reimbursementReceivableId: json['reimbursementReceivableId'] as String?,
       owedBy: json['owedBy'] as String?,
+      // Tolerant: a record saved before this field shipped (or a bad value)
+      // loads as null rather than failing the pull.
+      createdAt: json['createdAt'] is String
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -101,6 +117,7 @@ class TransactionRecord {
         'reimbursable': reimbursable,
         'reimbursementReceivableId': reimbursementReceivableId,
         'owedBy': owedBy,
+        'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -122,6 +139,9 @@ class TransactionRecord {
     bool? reimbursable,
     String? reimbursementReceivableId,
     String? owedBy,
+    // Sentinel-guarded so a presenter can carry the stored value onto an
+    // edited record exactly, null included. Omitting it keeps the current one.
+    Object? createdAt = _kUnset,
     DateTime? updatedAt,
   }) {
     return TransactionRecord(
@@ -144,6 +164,9 @@ class TransactionRecord {
       reimbursementReceivableId:
           reimbursementReceivableId ?? this.reimbursementReceivableId,
       owedBy: owedBy ?? this.owedBy,
+      createdAt: identical(createdAt, _kUnset)
+          ? this.createdAt
+          : createdAt as DateTime?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
