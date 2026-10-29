@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
@@ -57,6 +58,10 @@ class TreasuryModuleView extends StatefulWidget {
   /// running — the pill reports that rather than claiming "Synced".
   final SyncPresenter? syncPresenter;
 
+  /// Lets the Ledger's input bar open Nudgy. Null on surfaces that reach Nudgy
+  /// another way (the web treasury app has its own dock).
+  final AiCoachPresenter? aiCoachPresenter;
+
   /// Extra tabs appended after the built-in seven. See [TreasuryModuleTab].
   final List<TreasuryModuleTab> extraTabs;
 
@@ -80,6 +85,7 @@ class TreasuryModuleView extends StatefulWidget {
     required this.groceryCartPresenter,
     this.nutritionPresenter,
     this.syncPresenter,
+    this.aiCoachPresenter,
     this.extraTabs = const [],
     this.initialTabIndex = 0,
     this.onTabChanged,
@@ -249,6 +255,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
           LedgerView(
             presenter: widget.ledgerPresenter,
             nutrition: widget.nutritionPresenter,
+            aiCoach: widget.aiCoachPresenter,
           ),
           BillsReceivablesView(
             presenter: widget.billsPresenter,

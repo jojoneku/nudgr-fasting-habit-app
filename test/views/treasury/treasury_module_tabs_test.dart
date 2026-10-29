@@ -4,7 +4,9 @@ import 'package:mockito/mockito.dart';
 
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
+import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -60,6 +62,7 @@ void main() {
     List<TreasuryModuleTab> extraTabs = const [],
     int initialTabIndex = 0,
     ValueChanged<int>? onTabChanged,
+    AiCoachPresenter? aiCoach,
   }) async {
     final storage = buildStorage();
     final stats = MockStatsPresenter();
@@ -87,6 +90,7 @@ void main() {
         extraTabs: extraTabs,
         initialTabIndex: initialTabIndex,
         onTabChanged: onTabChanged,
+        aiCoachPresenter: aiCoach,
       ),
     ));
     await tester.pump();
@@ -155,5 +159,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(seen, contains(3));
+  });
+
+  // Nudgy used to be reachable only from the Hub's quick-log bar. The Ledger's
+  // input bar now opens it too, through the sparkle in the input pill.
+  group('Nudgy on the Ledger', () {
+    AiCoachPresenter buildCoach() {
+      final stats = MockStatsPresenter();
+      final fasting = MockFastingPresenter();
+      final service = MockAiCoachService();
+      when(stats.stats).thenReturn(UserStats.initial());
+      when(fasting.isFasting).thenReturn(false);
+      when(fasting.fastingGoalHours).thenReturn(16);
+      when(service.isAvailable).thenReturn(true);
+      when(service.tier).thenReturn(AiCoachTier.cloud);
+      return AiCoachPresenter(stats: stats, fasting: fasting, service: service);
+    }
+
+    testWidgets('the Ledger shows an "Ask Nudgy" button when wired in',
+        (tester) async {
+      await pumpModule(tester, initialTabIndex: 1, aiCoach: buildCoach());
+
+      expect(find.byTooltip('Ask Nudgy'), findsOneWidget);
+    });
+
+    testWidgets('no Nudgy button when no coach is wired in', (tester) async {
+      await pumpModule(tester, initialTabIndex: 1);
+
+      expect(find.byTooltip('Ask Nudgy'), findsNothing);
+    });
   });
 }
