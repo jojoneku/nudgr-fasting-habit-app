@@ -79,7 +79,7 @@ research and the reviewer agree that this is right.
 |---|---|
 | `find` replaces the 7 `find*` tools | `find(entity, query, month)`. Match on all words in any order, ignore filler words, and return the nearest names on `not_found`. Status is found / not_found / ambiguous / error, with a fix hint. **If exactly 1 row matches, return all its fields** (bill: paid date, paid amount, account, note, linked transaction, series). Then no separate `getDetails` hop is needed. |
 | `queryFinance` | A group-by tool: metric, groupBy, filters, from/to, top. The phone computes the result. It uses the same rules as the presenters (`isSpendingOutflow`, transfers, installments). |
-| `getView` for 2 screens | Dashboard and Budget only. They answer "budget left", forecast and pace. Add other screens when a test question fails, not before. |
+| `getView` for every finance screen | Dashboard, Budget, Bills, Ledger, History, Accounts, Installments and Grocery (developer decision, 2026-10-30; it was Dashboard and Budget only). Each view returns the presenter getters its screen renders, and a Dart test per view fails if the screen and the view drift apart. |
 | `createdAt` | Add it to `Bill`, `TransactionRecord`, `Receivable` and `BudgetedExpense`. It is set on create and synced in the JSON, so no table change is needed. Old records report "before <release>". The user asked exactly this question. The cost is small, because the JSON carries the field. |
 
 After phase 3, one question has one tool path:
@@ -203,6 +203,7 @@ claim ignored the 0.1× cache-read price.
 | Nudgy-first routing | Planning-word veto + "ask Nudgy" button | Nudgy-first moves each log to Sonnet: about 8 s slower, and up to about $6 a month more. The veto fixes the reported cases in about 1 hour. |
 | Refine sub-session with `reviseBatch` | Revise in the main chat | The sub-session loses the main context, needs its own tools, uses up the daily cap, and adds items that have no `tool_use` id. |
 | `getView` for 6 screens + a PR rule | `getView` for 2 screens; more when a test fails | Nothing enforces the PR rule. The other screens answer no failing question. |
+| `getView` for 2 screens (rev 3) | `getView` for every finance screen (2026-10-30) | The developer asked for it. A test per view, not a PR rule, keeps each view equal to its screen. |
 | `getDetails` as its own tool | `find` returns all fields for a single match | Saves a hop of about 4 s. |
 | Full audit trail, invocation logs, `logEvent` now | `trace_id` + tool names and statuses now; the rest waits for a second user | The developer is the only user. Full bodies put finance text in CloudWatch. |
 | A golden set of 40 questions on live data | Free Dart tests on fixture data + 15 model questions | Live answers change every day. Each run of 40 questions costs about $4. |

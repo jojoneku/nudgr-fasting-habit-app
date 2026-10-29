@@ -67,20 +67,21 @@ void main() {
       when(bills.allBudgetedExpenses)
           .thenReturn([setAside('sa_1', 'Braces', 3000)]);
 
-      final result = await executor.runRead(
-          call('findSetAsides', {'query': 'brac', 'month': '2026-09'}));
+      final result = await executor.runRead(call(
+          'find', {'entity': 'setAside', 'query': 'brac', 'month': '2026-09'}));
 
       expect(result.ok, isTrue);
-      expect(result.summary, contains('id=sa_1'));
+      expect(result.summary, startsWith('status: found'));
+      expect(result.summary, contains('id: sa_1'));
       expect(result.summary, contains('Braces'));
     });
 
     test('no match tells the model not to invent an id', () async {
-      final result =
-          await executor.runRead(call('findSetAsides', {'query': 'yacht'}));
+      final result = await executor
+          .runRead(call('find', {'entity': 'setAside', 'query': 'yacht'}));
 
       expect(result.ok, isTrue);
-      expect(result.summary, contains('No set-asides matched'));
+      expect(result.summary, startsWith('status: not_found'));
       expect(result.summary, contains('Do not guess an id'));
     });
 
@@ -91,7 +92,8 @@ void main() {
       final now = DateTime.now();
       final today = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
-      final result = await executor.runRead(call('findSetAsides', {}));
+      final result =
+          await executor.runRead(call('find', {'entity': 'setAside'}));
 
       expect(result.summary, contains(today));
       expect(result.summary, isNot(contains('id=sa_1')));
@@ -101,7 +103,7 @@ void main() {
       when(bills.allBudgetedExpenses)
           .thenReturn([setAside('sa_1', 'Braces', 3000)]);
 
-      await executor.runRead(call('findSetAsides', {}));
+      await executor.runRead(call('find', {'entity': 'setAside'}));
 
       verifyNever(bills.addBudgetedExpense(any,
           applyToFuture: anyNamed('applyToFuture')));
@@ -803,7 +805,7 @@ void main() {
     });
   });
 
-  group('findAccounts', () {
+  group('find accounts', () {
     test('lists active accounts with balances and categories', () async {
       final storage = MockStorageService();
       final stats = MockStatsPresenter();
@@ -842,7 +844,7 @@ void main() {
       }
       final ex = FinanceActionsExecutor(bills: bills, ledger: ledger);
 
-      final result = await ex.runRead(call('findAccounts', {}));
+      final result = await ex.runRead(call('find', {'entity': 'account'}));
       expect(result.ok, isTrue);
       expect(result.summary, contains('GCash'));
       expect(result.summary, contains('₱1500'));
@@ -850,7 +852,7 @@ void main() {
       expect(result.summary, contains('owed ₱8000'));
       expect(result.summary, contains('limit ₱50000'));
       // No statement bill: the balance is not yet due.
-      expect(result.summary, contains('no statement owed right now'));
+      expect(result.summary, contains('statement: none owed right now'));
 
       // With an open statement, the card row carries what it asks for.
       when(bills.allBills).thenReturn([
@@ -867,9 +869,10 @@ void main() {
           paymentNote: Bill.autoStatementNote,
         ),
       ]);
-      final withStatement = await ex.runRead(call('findAccounts', {}));
+      final withStatement =
+          await ex.runRead(call('find', {'entity': 'account'}));
       expect(withStatement.summary,
-          contains('statement ₱6200, ₱1000 paid, ₱5200 left'));
+          contains('statement: ₱6200, ₱1000 paid, ₱5200 left'));
       expect(withStatement.summary, contains('due 2099-11-05'));
     });
   });
