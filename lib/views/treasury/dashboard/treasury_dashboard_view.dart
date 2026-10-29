@@ -157,6 +157,7 @@ class _DashboardScrollBody extends StatelessWidget {
             DashboardAccountsList(
               accounts: presenter.liquidAccounts,
               heldByAccountId: presenter.heldAmountByAccountId,
+              yoursByAccountId: presenter.yoursByAccountId,
               totalLiquidCash: presenter.totalLiquidCash,
               onEdit: onEditAccount,
             ),

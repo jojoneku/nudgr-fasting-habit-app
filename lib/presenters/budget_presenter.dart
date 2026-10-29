@@ -98,8 +98,8 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   ///
   /// Returns null when nothing recurring targets the account, which means "no
   /// opinion" — the row keeps its own stored allocation.
-  double? setAsideTargetFor(String accountId) {
-    final sources = setAsideSourcesFor(accountId);
+  double? setAsideTargetFor(String accountId, {String? month}) {
+    final sources = setAsideSourcesFor(accountId, month: month);
     if (sources.isEmpty) return null;
     return sources.fold<double>(0.0, (sum, e) => sum + e.allocatedAmount);
   }
@@ -111,9 +111,10 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// name the rows behind it — "edit it in Bills" is only actionable when it
   /// also says *which* entry. Filtered here rather than at each call site so a
   /// note can never disagree with the figure it explains.
-  List<BudgetedExpense> setAsideSourcesFor(String accountId) => [
+  List<BudgetedExpense> setAsideSourcesFor(String accountId, {String? month}) =>
+      [
         for (final e in _setAsides)
-          if (e.month == _selectedMonth &&
+          if (e.month == (month ?? _selectedMonth) &&
               e.destinationAccountId == accountId &&
               e.isRecurring)
             e,
@@ -402,21 +403,37 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Summary getters ─────────────────────────────────────────────────────────
 
-  double get totalAllocated =>
-      _budgetsForMonth.fold(0.0, (sum, b) => sum + b.allocatedAmount);
+  double get totalAllocated => totalAllocatedIn(_selectedMonth);
+
+  /// [totalAllocated] for any [month], so a reader can ask about a month the
+  /// tab is not showing without paging it there.
+  double totalAllocatedIn(String month) =>
+      _budgetsIn(month).fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
   /// Total "spent" across all budget rows. For expense rows that's outflows
   /// against the matched category; for savings rows it's contributions into
   /// the matched account.
-  double get totalSpent =>
-      _budgetsForMonth.fold(0.0, (sum, b) => sum + spentFor(b.categoryId));
+  double get totalSpent => totalSpentIn(_selectedMonth);
 
-  double get totalRemaining => totalAllocated - totalSpent;
+  /// [totalSpent] for any [month].
+  double totalSpentIn(String month) => _budgetsIn(month)
+      .fold(0.0, (sum, b) => sum + spentFor(b.categoryId, month: month));
+
+  double get totalRemaining => totalRemainingIn(_selectedMonth);
+
+  /// [totalRemaining] for any [month].
+  double totalRemainingIn(String month) =>
+      totalAllocatedIn(month) - totalSpentIn(month);
 
   /// Fraction of the total allocation already spent (0.0–∞). Returns 0 when
   /// nothing is allocated so the UI can avoid a divide-by-zero in `build()`.
-  double get percentUsed =>
-      totalAllocated > 0 ? totalSpent / totalAllocated : 0.0;
+  double get percentUsed => percentUsedIn(_selectedMonth);
+
+  /// [percentUsed] for any [month].
+  double percentUsedIn(String month) {
+    final allocated = totalAllocatedIn(month);
+    return allocated > 0 ? totalSpentIn(month) / allocated : 0.0;
+  }
 
   // ─── Pace (Nudgr budget-cards redesign) ────────────────────────────────────────
   // Pure derivations for the ring hero's on-pace pill. Pace only makes sense for
@@ -428,10 +445,13 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// Fraction of the selected month elapsed (0–1): 1.0 for a past month, 0.0 for
   /// a future month, today/last-day for the current month. Keeps the date math
   /// out of `build()` (Rule 1) and makes pace unit-testable without the tree.
-  double get monthElapsedFraction {
+  double get monthElapsedFraction => monthElapsedFractionOf(_selectedMonth);
+
+  /// [monthElapsedFraction] for any [month].
+  double monthElapsedFractionOf(String month) {
     final nowKey = toMonthKey(DateTime.now());
-    if (_selectedMonth.compareTo(nowKey) < 0) return 1.0;
-    if (_selectedMonth.compareTo(nowKey) > 0) return 0.0;
+    if (month.compareTo(nowKey) < 0) return 1.0;
+    if (month.compareTo(nowKey) > 0) return 0.0;
     final now = DateTime.now();
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     return (now.day / lastDay).clamp(0.0, 1.0);
@@ -439,7 +459,32 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
 
   /// True when spending is at or under the month's elapsed pace (a small
   /// tolerance so being exactly on pace still reads as "ahead").
-  bool get isAheadOfPace => percentUsed <= monthElapsedFraction + 0.02;
+  bool get isAheadOfPace => isAheadOfPaceIn(_selectedMonth);
+
+  /// [isAheadOfPace] for any [month].
+  bool isAheadOfPaceIn(String month) =>
+      percentUsedIn(month) <= monthElapsedFractionOf(month) + 0.02;
+
+  /// True when the month's spending has passed a non-zero allocation — the
+  /// ring hero turns red and the pace pill reads "Over budget".
+  bool get isOverAllocated => isOverAllocatedIn(_selectedMonth);
+
+  /// [isOverAllocated] for any [month].
+  bool isOverAllocatedIn(String month) {
+    final allocated = totalAllocatedIn(month);
+    return allocated > 0 && totalSpentIn(month) > allocated;
+  }
+
+  /// The ring hero's pace pill, or null for a month that is not in progress
+  /// (pace means nothing for a past or future month, so the pill is hidden).
+  String? get paceLabel => paceLabelIn(_selectedMonth);
+
+  /// [paceLabel] for any [month].
+  String? paceLabelIn(String month) {
+    if (month != toMonthKey(DateTime.now())) return null;
+    if (isOverAllocatedIn(month)) return 'Over budget';
+    return isAheadOfPaceIn(month) ? 'Ahead of pace' : 'Over pace';
+  }
 
   // ─── Mobile Budget sections (Nudgr budget-cards redesign) ───────────────────────
 
@@ -449,7 +494,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// resolved rows and spent/allocated totals; empty groups are omitted. Visual
   /// tokens (icon glyph, color) are left to the view — the presenter stays free
   /// of Flutter material types.
-  List<BudgetSection> get budgetSections {
+  List<BudgetSection> get budgetSections => budgetSectionsIn(_selectedMonth);
+
+  /// [budgetSections] for any [month]: what the Budget tab would show if it
+  /// were paged there, read without paging it.
+  List<BudgetSection> budgetSectionsIn(String month) {
     final ordered = [..._groups]
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     final sections = <BudgetSection>[];
@@ -457,15 +506,15 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
     for (final group in ordered) {
       final rows = <BudgetSectionRow>[];
       if (group.isSavings) {
-        for (final entry
-            in savingsBudgets.where((e) => e.budget.group == group.id)) {
+        for (final entry in savingsBudgetsIn(month)
+            .where((e) => e.budget.group == group.id)) {
           final account = entry.account;
           // Plan 060: when a recurring set-aside targets this account, IT is
           // the month's target — read, never written back. Writing would make
           // rendering mutate storage and race the sync pull.
-          final derived = setAsideTargetFor(account.id);
+          final derived = setAsideTargetFor(account.id, month: month);
           final allocated = derived ?? entry.budget.allocatedAmount;
-          final funded = fundedInto(account.id);
+          final funded = fundedInto(account.id, month: month);
           rows.add(BudgetSectionRow(
             targetId: account.id,
             name: account.name,
@@ -481,23 +530,25 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
             budgetType: entry.budget.budgetType,
             allocated: allocated,
             actual: funded,
-            withdrawn: withdrawnFrom(account.id),
+            withdrawn: withdrawnFrom(account.id, month: month),
             progress:
                 allocated > 0 ? (funded / allocated).clamp(0.0, 1.0) : 0.0,
             // Savings rows can never be "over" — exceeding the goal is good.
             isOver: false,
             overBy: 0.0,
             met: allocated > 0 && funded >= allocated,
-            transactions: _transactionsForAccount(account.id),
+            transactions: _transactionsForAccount(account.id, month),
           ));
         }
       } else {
-        for (final cat
-            in categoriesByGroup[group.id] ?? const <FinanceCategory>[]) {
-          final budget = budgetFor(cat.id);
+        for (final cat in categoriesByGroupIn(month)[group.id] ??
+            const <FinanceCategory>[]) {
+          final budget = budgetFor(cat.id, month: month);
           final allocated = budget?.allocatedAmount ?? 0.0;
           final isIncome = isCategoryIncome(cat.id);
-          final actual = isIncome ? receivedFor(cat.id) : spentFor(cat.id);
+          final actual = isIncome
+              ? receivedFor(cat.id, month: month)
+              : spentFor(cat.id, month: month);
           final isOver = allocated > 0 && actual > allocated && !isIncome;
           rows.add(BudgetSectionRow(
             targetId: cat.id,
@@ -516,7 +567,7 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
             isOver: isOver,
             overBy: isOver ? actual - allocated : 0.0,
             met: false,
-            transactions: transactionsForCategory(cat.id),
+            transactions: transactionsForCategory(cat.id, month: month),
           ));
         }
       }
@@ -525,8 +576,8 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
         groupId: group.id,
         name: group.name,
         isSavings: group.isSavings,
-        allocated: sectionAllocated(group.id),
-        spent: sectionSpent(group.id),
+        allocated: sectionAllocated(group.id, month: month),
+        spent: sectionSpent(group.id, month: month),
         rows: rows,
       ));
     }
@@ -541,10 +592,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Non-transfer ledger entries touching [accountId] this month, newest first —
   /// the contributions/withdrawals shown when a savings card is expanded.
-  List<TransactionRecord> _transactionsForAccount(String accountId) =>
+  List<TransactionRecord> _transactionsForAccount(
+          String accountId, String month) =>
       _allTransactions
           .where((t) =>
-              t.month == _selectedMonth &&
+              t.month == month &&
               t.accountId == accountId &&
               t.transferGroupId == null)
           .toList()
@@ -638,11 +690,15 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// Returns categories that have an *expense* budget set for the selected
   /// month, grouped by group ID string. The savings group is rendered separately
   /// via [savingsBudgets].
-  Map<String, List<FinanceCategory>> get categoriesByGroup {
+  Map<String, List<FinanceCategory>> get categoriesByGroup =>
+      categoriesByGroupIn(_selectedMonth);
+
+  /// [categoriesByGroup] for any [month].
+  Map<String, List<FinanceCategory>> categoriesByGroupIn(String month) {
     final result = <String, List<FinanceCategory>>{
       for (final g in expenseGroups) g.id: [],
     };
-    for (final b in _budgetsForMonth) {
+    for (final b in _budgetsIn(month)) {
       if (isSavingsGroup(b.group)) continue;
       final matches = _categories.where((c) => c.id == b.categoryId);
       if (matches.isEmpty) continue;
@@ -654,35 +710,42 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// Savings/goal budgets for the selected month. Each entry pairs the budget
   /// with its target account. Filters out budgets whose account no longer
   /// exists.
-  List<({Budget budget, FinancialAccount account})> get savingsBudgets {
+  List<({Budget budget, FinancialAccount account})> get savingsBudgets =>
+      savingsBudgetsIn(_selectedMonth);
+
+  /// [savingsBudgets] for any [month].
+  List<({Budget budget, FinancialAccount account})> savingsBudgetsIn(
+      String month) {
     final result = <({Budget budget, FinancialAccount account})>[];
-    for (final b in _budgetsForMonth.where((b) => isSavingsGroup(b.group))) {
+    for (final b in _budgetsIn(month).where((b) => isSavingsGroup(b.group))) {
       final acct = _accounts.where((a) => a.id == b.categoryId).firstOrNull;
       if (acct != null) result.add((budget: b, account: acct));
     }
     return result;
   }
 
-  double sectionAllocated(String groupId) => _budgetsForMonth
-      .where((b) => b.group == groupId)
-      .fold(0.0, (sum, b) => sum + b.allocatedAmount);
+  double sectionAllocated(String groupId, {String? month}) =>
+      _budgetsIn(month ?? _selectedMonth)
+          .where((b) => b.group == groupId)
+          .fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
-  double sectionSpent(String groupId) {
+  double sectionSpent(String groupId, {String? month}) {
+    final m = month ?? _selectedMonth;
     if (isSavingsGroup(groupId)) {
       // Scoped to this group: a user-created savings group and the built-in one
       // must not each report the other's rows.
-      return savingsBudgets
+      return savingsBudgetsIn(m)
           .where((e) => e.budget.group == groupId)
-          .fold(0.0, (sum, e) => sum + fundedInto(e.account.id));
+          .fold(0.0, (sum, e) => sum + fundedInto(e.account.id, month: m));
     }
-    final catIds = _budgetsForMonth
+    final catIds = _budgetsIn(m)
         .where((b) => b.group == groupId)
         .map((b) => b.categoryId)
         .toSet();
     final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
-            t.month == _selectedMonth &&
+            t.month == m &&
             catIds.contains(t.categoryId) &&
             isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
@@ -724,10 +787,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// Every outflow leg counts, including a move into another fund: that money
   /// did leave this one. Only the *receiving* side of such a move is discounted,
   /// by [fundedInto], and only to stop it inflating the month's funding.
-  double withdrawnFrom(String accountId) {
+  double withdrawnFrom(String accountId, {String? month}) {
+    final m = month ?? _selectedMonth;
     var total = 0.0;
     for (final t in _allTransactions) {
-      if (t.month != _selectedMonth) continue;
+      if (t.month != m) continue;
       if (t.accountId != accountId) continue;
       if (t.type == TransactionType.outflow) total += t.amount;
     }
@@ -761,38 +825,41 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
-  double receivedFor(String categoryId) {
+  double receivedFor(String categoryId, {String? month}) {
+    final m = month ?? _selectedMonth;
     final reimb = reimbursementReceivableIds(_allTransactions);
     final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
-            t.month == _selectedMonth &&
+            t.month == m &&
             t.categoryId == categoryId &&
             isIncomeInflow(t, reimb, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  List<TransactionRecord> transactionsForCategory(String categoryId) =>
+  List<TransactionRecord> transactionsForCategory(String categoryId,
+          {String? month}) =>
       _allTransactions
           .where((t) =>
-              t.month == _selectedMonth &&
+              t.month == (month ?? _selectedMonth) &&
               t.categoryId == categoryId &&
               t.transferGroupId == null)
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
 
-  Budget? budgetFor(String categoryId) {
+  Budget? budgetFor(String categoryId, {String? month}) {
     try {
-      return _budgetsForMonth.firstWhere((b) => b.categoryId == categoryId);
+      return _budgetsIn(month ?? _selectedMonth)
+          .firstWhere((b) => b.categoryId == categoryId);
     } catch (_) {
       return null;
     }
   }
 
-  double spentFor(String categoryId) {
-    final budget = budgetFor(categoryId);
+  double spentFor(String categoryId, {String? month}) {
+    final budget = budgetFor(categoryId, month: month);
     if (budget != null) return spentForBudget(budget);
-    return _spentInCategory(categoryId, _selectedMonth);
+    return _spentInCategory(categoryId, month ?? _selectedMonth);
   }
 
   /// What budget row [b] has used in its own month: funded in for a savings
@@ -1097,8 +1164,10 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
-  List<Budget> get _budgetsForMonth =>
-      _allBudgets.where((b) => b.month == _selectedMonth).toList();
+  List<Budget> get _budgetsForMonth => _budgetsIn(_selectedMonth);
+
+  List<Budget> _budgetsIn(String month) =>
+      _allBudgets.where((b) => b.month == month).toList();
 
   Future<void> _checkBudgetNotExceededXp() async {
     if (!_warnedKeysLoaded) return; // don't award before persisted state loads
@@ -1250,6 +1319,11 @@ class BudgetSectionRow {
     required this.transactions,
     this.withdrawn = 0.0,
   });
+
+  /// What is left of [allocated]: still to spend (expense), still to receive
+  /// (income) or still to fund (savings). Negative when [actual] passed it.
+  /// The rule the web table's "remaining" column uses.
+  double get left => allocated - actual;
 }
 
 /// A budget group with its resolved rows and section totals, ordered for the

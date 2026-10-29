@@ -261,7 +261,7 @@ class _BudgetRingHero extends StatelessWidget {
     final allocated = presenter.totalAllocated;
     final spent = presenter.totalSpent;
     final pct = presenter.percentUsed;
-    final over = spent > allocated && allocated > 0;
+    final over = presenter.isOverAllocated;
     final ringColor = over ? cs.error : appColors.fast;
     // The remaining figure keys off the raw sign (not `over`, which needs an
     // allocation) so spend against a zero allocation still reads "over".
@@ -329,9 +329,12 @@ class _BudgetRingHero extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (presenter.isCurrentMonth) ...[
+                if (presenter.paceLabel case final paceLabel?) ...[
                   const SizedBox(height: 10),
-                  _PacePill(ahead: presenter.isAheadOfPace, over: over),
+                  _PacePill(
+                    label: paceLabel,
+                    good: presenter.isAheadOfPace && !over,
+                  ),
                 ],
               ],
             ),
@@ -343,22 +346,16 @@ class _BudgetRingHero extends StatelessWidget {
 }
 
 class _PacePill extends StatelessWidget {
-  final bool ahead;
-  final bool over;
+  final String label;
+  final bool good;
 
-  const _PacePill({required this.ahead, required this.over});
+  const _PacePill({required this.label, required this.good});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final good = ahead && !over;
     final color = good ? context.appColors.success : cs.error;
-    final label = over
-        ? 'Over budget'
-        : ahead
-            ? 'Ahead of pace'
-            : 'Over pace';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(

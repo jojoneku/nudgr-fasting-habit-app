@@ -498,6 +498,53 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  AiTool(
+    name: 'getView',
+    kind: AiToolKind.read,
+    description:
+        'Read a screen\'s figures, labelled as the screen labels them and '
+        'computed by the app exactly as the screen shows them. Use it for '
+        '"a screen\'s figure" questions: "how much budget do I have left", '
+        '"where will my cash be at the end of next month", "am I on pace", '
+        '"what does the History tab say I average", "what is on my card '
+        'statement", "how much do I hold for others". Quote the figures; '
+        'never add or subtract them yourself. For a named record use the '
+        'find tools; for rows in a period use findTransactions.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['view'],
+      'properties': {
+        'view': {
+          'type': 'string',
+          'enum': [
+            'dashboard',
+            'budget',
+            'bills',
+            'ledger',
+            'history',
+            'accounts',
+            'installments',
+            'grocery',
+          ],
+          'description': 'dashboard: net worth, liquid cash, Budget Left, '
+              'month-end outlook, next-month forecast. budget: spent vs '
+              'budgeted, pace, every group and row. bills: pending/paid, '
+              'coming up, statement line items, receivables, set-asides. '
+              'ledger: month in/out/net, owed, daily average. history: '
+              'averages, % saved, a month\'s closed summary and balances at '
+              'close. accounts: every balance, held, yours, credit limit, '
+              'statement/due days. installments: every plan. grocery: cart, '
+              'price book, last trips.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. Defaults to the current month. The '
+              'dashboard shows the current month only; accounts and grocery '
+              'have no month.',
+        },
+      },
+    },
+  ),
 
   // ── Updates & Settlements ────────────────────────────────────────────────
   AiTool(

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/ai_tool.dart';
+import 'package:intermittent_fasting/presenters/finance_view_reader.dart';
 import 'package:intermittent_fasting/utils/finance_tool_catalogue.dart';
 
 /// Guards the two invariants the catalogue exists to hold, plus the MCP
@@ -102,6 +103,20 @@ void main() {
       expect(tool!.kind, AiToolKind.read);
       expect(schemaKeysDeep(tool.inputSchema).map((k) => '$k'),
           isNot(contains('id')));
+    });
+
+    test('getView is a read over every screen the reader knows', () {
+      // A screen's figures, computed by the app: nothing to confirm, and
+      // nothing that could reach a recurring series.
+      final tool = financeToolNamed('getView');
+      expect(tool, isNotNull);
+      expect(tool!.kind, AiToolKind.read);
+      final keys = schemaKeysDeep(tool.inputSchema).map((k) => '$k');
+      expect(keys, isNot(contains('applyToFuture')));
+      expect(keys, isNot(contains('id')));
+      final view = (tool.inputSchema['properties'] as Map)['view'] as Map;
+      expect(view['enum'], kFinanceViews,
+          reason: 'the schema and the reader must offer the same screens');
     });
 
     test('lookup resolves a real name and rejects an invented one', () {
