@@ -24,102 +24,52 @@ import '../models/ai_tool.dart';
 const List<AiTool> kFinanceTools = [
   // ── Reads ───────────────────────────────────────────────────────────────
   AiTool(
-    name: 'findBills',
+    name: 'find',
     kind: AiToolKind.read,
     description:
-        'Find bills matching a phrase, with their ids. Call this before '
-        'editing or deleting a bill. Do NOT call it before adding one: the '
-        'snapshot already lists this month\'s bills, and a search the user '
-        'did not ask for costs them a whole extra round trip of waiting '
-        'before the confirm card appears.',
+        'Look up the user\'s named records: bills, receivables (money owed '
+        'to them), set-asides, budgets, budget groups, installment plans and '
+        'accounts (with balances, credit limits and open statements). Use it '
+        'for "a named record and its details" and to get the id an edit, '
+        'delete or settlement needs. The query matches on all its words in '
+        'any order ("meralco aug", "bpi card"); a month name in it sets the '
+        'month. Every reply starts with a status: found (exactly one match '
+        'comes back with ALL its fields — paid date, paid amount, account, '
+        'note, linked ledger entry, series — so do not look it up again), '
+        'ambiguous (several matched: ask which, or narrow the query), '
+        'not_found (nearest names and matches in other months are listed: '
+        'never invent an id), or error (fix the call as it says). Which tool '
+        'answers what: a named record → find; rows in a period → '
+        'findTransactions; a figure a screen shows → getView; a sum or '
+        'group-by no screen shows → queryFinance. Do NOT call find before '
+        'adding something new: the snapshot already lists this month\'s '
+        'records, and an unasked lookup makes the user wait.',
     inputSchema: {
       'type': 'object',
+      'required': ['entity'],
       'properties': {
+        'entity': {
+          'type': 'string',
+          'enum': [
+            'bill',
+            'receivable',
+            'setAside',
+            'budget',
+            'budgetGroup',
+            'installment',
+            'account',
+          ],
+        },
         'query': {
           'type': 'string',
-          'description': 'Name or partial name, e.g. "internet". Omit to list '
-              'all bills for the month.',
+          'description': 'Name or words of it, e.g. "internet", "meralco '
+              'aug". Omit to list every record of the entity.',
         },
         'month': {
           'type': 'string',
-          'description': 'YYYY-MM. Defaults to the current month.',
-        },
-      },
-    },
-  ),
-  AiTool(
-    name: 'findReceivables',
-    kind: AiToolKind.read,
-    description:
-        'Find money owed TO the user, with ids. Call before editing or '
-        'deleting a receivable.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'query': {'type': 'string', 'description': 'Name, or who owes it.'},
-        'month': {
-          'type': 'string',
-          'description': 'YYYY-MM. Defaults to the current month.',
-        },
-      },
-    },
-  ),
-  AiTool(
-    name: 'findSetAsides',
-    kind: AiToolKind.read,
-    description:
-        'Find set-asides (money earmarked for a purpose: savings, a goal, a '
-        'sinking fund), with ids and their funded vs allocated amounts.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'query': {'type': 'string', 'description': 'Name, e.g. "braces".'},
-        'month': {
-          'type': 'string',
-          'description': 'YYYY-MM. Defaults to the current month.',
-        },
-      },
-    },
-  ),
-  AiTool(
-    name: 'findBudgets',
-    kind: AiToolKind.read,
-    description:
-        'Find category budgets with their limits and spend so far. Call '
-        'before changing a budget.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'query': {
-          'type': 'string',
-          'description': 'Category, or savings account, name.',
-        },
-        'month': {
-          'type': 'string',
-          'description': 'YYYY-MM. Defaults to the current month.',
-        },
-      },
-    },
-  ),
-  AiTool(
-    name: 'findInstallments',
-    kind: AiToolKind.read,
-    description:
-        'Find installment plans (e.g. credit card 0% plans, SPayLater, BNPL), '
-        'with their monthly payment, total months, remaining unbilled balance, '
-        'and account. Lists every plan, not one month\'s. Call this when the '
-        'user asks about their installments or BNPL purchases.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'query': {
-          'type': 'string',
-          'description':
-              'Name or partial name of the installment item, e.g. "phone".',
-        },
-        'account': {
-          'type': 'string',
-          'description': 'Credit card or BNPL account NAME or part of it.',
+          'description': 'YYYY-MM for bills, receivables, set-asides, '
+              'budgets and budget groups. Defaults to the current month. '
+              'Ignored for installments and accounts.',
         },
       },
     },
@@ -140,7 +90,9 @@ const List<AiTool> kFinanceTools = [
         'question: the snapshot already lists recent spending and each past '
         'month\'s biggest expenses, and an unrequested lookup makes the user '
         'wait. The rows come straight from the ledger and are as quotable as '
-        'the snapshot.',
+        'the snapshot. This answers "rows in a period"; a named bill, '
+        'account or plan is find, and a total grouped by category, account '
+        'or month is queryFinance.',
     inputSchema: {
       'type': 'object',
       'properties': {
@@ -430,34 +382,6 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
-    name: 'findAccounts',
-    kind: AiToolKind.read,
-    description:
-        'Find the user\'s financial accounts (cash, bank accounts, e-wallets, '
-        'credit cards, savings pockets) with their current balances, available credit, '
-        'and types. A credit card row also gives its open statement: amount, '
-        'paid, left, minimum and due date. Call this when the user asks about '
-        'an account balance or to find which account to pay a credit card from.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'query': {
-          'type': 'string',
-          'description':
-              'Account name or partial name, e.g. "gcash", "bpi". Omit to list all accounts.',
-        },
-        'type': {
-          'type': 'string',
-          'enum': ['liquid', 'liability', 'savings', 'all'],
-          'description':
-              'Filter by account category: liquid (bank, ewallet, cash), '
-                  'liability (credit cards, bnpl), savings (savings, goals, time deposits), '
-                  'or all. Defaults to all.',
-        },
-      },
-    },
-  ),
-  AiTool(
     name: 'checkAffordability',
     kind: AiToolKind.read,
     description:
@@ -482,23 +406,6 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
-    name: 'findBudgetGroups',
-    kind: AiToolKind.read,
-    description:
-        'Summarise high-level budget group allocations and spending (e.g. Needs, '
-        'Wants, Savings) for a month. Call when the user asks how they are doing '
-        'overall across budget groups rather than a single specific category.',
-    inputSchema: {
-      'type': 'object',
-      'properties': {
-        'month': {
-          'type': 'string',
-          'description': 'YYYY-MM. Defaults to the current month.',
-        },
-      },
-    },
-  ),
-  AiTool(
     name: 'getView',
     kind: AiToolKind.read,
     description:
@@ -508,8 +415,8 @@ const List<AiTool> kFinanceTools = [
         '"where will my cash be at the end of next month", "am I on pace", '
         '"what does the History tab say I average", "what is on my card '
         'statement", "how much do I hold for others". Quote the figures; '
-        'never add or subtract them yourself. For a named record use the '
-        'find tools; for rows in a period use findTransactions.',
+        'never add or subtract them yourself. For a named record use find; '
+        'for rows in a period use findTransactions.',
     inputSchema: {
       'type': 'object',
       'required': ['view'],
@@ -587,7 +494,7 @@ const List<AiTool> kFinanceTools = [
     name: 'markBillPaid',
     kind: AiToolKind.update,
     description:
-        'Mark an existing bill as paid for the month. Call ONLY after findBills '
+        'Mark an existing bill as paid for the month. Call ONLY after find '
         'returns the bill id. The user confirms on a card before the bill is '
         'marked paid.',
     inputSchema: {
@@ -596,7 +503,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description': 'The exact bill id from a preceding findBills result.',
+          'description': 'The exact bill id from a preceding find result.',
         },
         'paidAmount': {
           'type': 'number',
@@ -624,7 +531,7 @@ const List<AiTool> kFinanceTools = [
     name: 'markReceivableReceived',
     kind: AiToolKind.update,
     description:
-        'Mark money owed to the user as received. Call ONLY after findReceivables '
+        'Mark money owed to the user as received. Call ONLY after find '
         'returns the receivable id. Settling a receivable creates the offsetting '
         'income entry in the ledger automatically. The user confirms on a card '
         'before anything is saved.',
@@ -635,7 +542,7 @@ const List<AiTool> kFinanceTools = [
         'id': {
           'type': 'string',
           'description':
-              'The exact receivable id from a preceding findReceivables result.',
+              'The exact receivable id from a preceding find result.',
         },
         'receivedAmount': {
           'type': 'number',
@@ -665,7 +572,7 @@ const List<AiTool> kFinanceTools = [
     kind: AiToolKind.update,
     description:
         'Propose an edit to an existing bill (name, amount, due day, or category). '
-        'Call ONLY after findBills returns the bill id. Do NOT supply an id unprompted. '
+        'Call ONLY after find (entity bill) returns the bill id. Do NOT supply an id unprompted. '
         'Nothing is saved until the user accepts the confirmation card.',
     inputSchema: {
       'type': 'object',
@@ -673,7 +580,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description': 'The exact bill id from a preceding findBills call.',
+          'description': 'The exact bill id from a preceding find call.',
         },
         'name': {'type': 'string', 'description': 'Updated bill name.'},
         'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
@@ -693,7 +600,7 @@ const List<AiTool> kFinanceTools = [
     kind: AiToolKind.update,
     description:
         'Propose an edit to an existing receivable (name, amount or expected day). '
-        'Call ONLY after findReceivables returns the receivable id. '
+        'Call ONLY after find (entity receivable) returns the receivable id. '
         'Nothing is saved until confirmed on the card.',
     inputSchema: {
       'type': 'object',
@@ -701,8 +608,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description':
-              'The exact receivable id from a preceding findReceivables call.',
+          'description': 'The exact receivable id from a preceding find call.',
         },
         'name': {'type': 'string', 'description': 'Updated name.'},
         'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
@@ -718,7 +624,7 @@ const List<AiTool> kFinanceTools = [
     kind: AiToolKind.update,
     description:
         'Propose an edit to an existing set-aside (name, amount, type, or destination). '
-        'Call ONLY after findSetAsides returns the set-aside id. '
+        'Call ONLY after find (entity setAside) returns the set-aside id. '
         'Nothing is saved until confirmed.',
     inputSchema: {
       'type': 'object',
@@ -726,8 +632,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description':
-              'The exact set-aside id from a preceding findSetAsides call.',
+          'description': 'The exact set-aside id from a preceding find call.',
         },
         'name': {'type': 'string', 'description': 'Updated name.'},
         'amount': {'type': 'number', 'description': 'Updated amount in pesos.'},
@@ -793,7 +698,7 @@ const List<AiTool> kFinanceTools = [
     name: 'deleteBill',
     kind: AiToolKind.destroy,
     description:
-        'Propose deleting an existing bill. Call ONLY after findBills returns '
+        'Propose deleting an existing bill. Call ONLY after find returns '
         'the bill id. The user confirms on a card before the bill is deleted.',
     inputSchema: {
       'type': 'object',
@@ -801,7 +706,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description': 'The exact bill id from a preceding findBills call.',
+          'description': 'The exact bill id from a preceding find call.',
         },
       },
     },
@@ -810,7 +715,7 @@ const List<AiTool> kFinanceTools = [
     name: 'deleteReceivable',
     kind: AiToolKind.destroy,
     description:
-        'Propose deleting an existing receivable. Call ONLY after findReceivables '
+        'Propose deleting an existing receivable. Call ONLY after find '
         'returns the receivable id. The user confirms on a card before deletion.',
     inputSchema: {
       'type': 'object',
@@ -818,8 +723,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description':
-              'The exact receivable id from a preceding findReceivables call.',
+          'description': 'The exact receivable id from a preceding find call.',
         },
       },
     },
@@ -827,8 +731,7 @@ const List<AiTool> kFinanceTools = [
   AiTool(
     name: 'deleteSetAside',
     kind: AiToolKind.destroy,
-    description:
-        'Propose deleting an existing set-aside. Call ONLY after findSetAsides '
+    description: 'Propose deleting an existing set-aside. Call ONLY after find '
         'returns the set-aside id. The user confirms on a card before deletion.',
     inputSchema: {
       'type': 'object',
@@ -836,8 +739,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'id': {
           'type': 'string',
-          'description':
-              'The exact set-aside id from a preceding findSetAsides call.',
+          'description': 'The exact set-aside id from a preceding find call.',
         },
       },
     },

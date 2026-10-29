@@ -903,22 +903,20 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   static String? _statusFor(AiToolCall call) {
     if (financeToolNamed(call.name)?.mutates ?? false) return null;
     switch (call.name) {
-      case 'findBills':
-        return 'Checking your bills…';
-      case 'findReceivables':
-        return "Checking what you're owed…";
-      case 'findSetAsides':
-        return 'Checking your set-asides…';
-      case 'findBudgets':
-        return 'Checking your budgets…';
+      case 'find':
+        return switch (call.input['entity']) {
+          'bill' => 'Checking your bills…',
+          'receivable' => "Checking what you're owed…",
+          'setAside' => 'Checking your set-asides…',
+          'budget' || 'budgetGroup' => 'Checking your budgets…',
+          'installment' => 'Checking your installments…',
+          'account' => 'Checking your accounts…',
+          _ => 'Looking that up…',
+        };
       case 'findTransactions':
         return 'Going through your transactions…';
-      case 'findAccounts':
-        return 'Checking your accounts…';
       case 'checkAffordability':
         return 'Checking affordability…';
-      case 'findBudgetGroups':
-        return 'Checking your budget groups…';
       case 'getView':
         return 'Reading your ${call.input['view'] ?? 'finance'} screen…';
     }
