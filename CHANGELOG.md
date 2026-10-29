@@ -13,6 +13,13 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.110] - 2026-10-29
+
+### Added
+- one find tool replaces the seven find* tools
+- createdAt on bills, transactions, receivables, set-asides (Plan 065 phase 3)
+- queryFinance group-by tool (Plan 065 phase 3)
+
 ## [1.1.109] - 2026-10-29
 
 ### Added
@@ -988,7 +995,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.109...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.110...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1099,3 +1106,4 @@ distributed via `manifest.json`.
 [1.1.107]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.107
 [1.1.108]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.108
 [1.1.109]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.109
+[1.1.110]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.110
