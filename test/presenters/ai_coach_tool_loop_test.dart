@@ -52,14 +52,17 @@ class _RecordingExecutor implements FinanceToolExecutor {
   }
 }
 
-AiToolCall _call(String name, [String id = 'tu_1']) =>
-    AiToolCall(id: id, name: name, input: const {});
+AiToolCall _call(String name,
+        [String id = 'tu_1', Map<String, Object?> input = const {}]) =>
+    AiToolCall(id: id, name: name, input: input);
 
-AdvisorReply _toolTurn(String name, {String text = ''}) => AdvisorReply(
+AdvisorReply _toolTurn(String name,
+        {String text = '', Map<String, Object?> input = const {}}) =>
+    AdvisorReply(
       text: text,
-      toolCalls: [_call(name)],
+      toolCalls: [_call(name, 'tu_1', input)],
       assistantContent: [
-        {'type': 'tool_use', 'id': 'tu_1', 'name': name, 'input': {}}
+        {'type': 'tool_use', 'id': 'tu_1', 'name': name, 'input': input}
       ],
     );
 
@@ -130,7 +133,7 @@ void main() {
 
   test('a read tool runs and the answer comes back on the next hop', () async {
     scriptReplies([
-      _toolTurn('findSetAsides'),
+      _toolTurn('find', input: {'entity': 'setAside'}),
       const AdvisorReply(text: 'You have ₱2,000 set aside for braces.'),
     ]);
     final executor = _RecordingExecutor();
@@ -138,7 +141,7 @@ void main() {
 
     await p.send('how is my braces fund?');
 
-    expect(executor.reads, ['findSetAsides']);
+    expect(executor.reads, ['find']);
     // A read is never routed through the confirm card.
     expect(executor.proposals, isEmpty);
     expect(p.messages.last.text, 'You have ₱2,000 set aside for braces.');
@@ -179,7 +182,9 @@ void main() {
   test('the loop stops at the hop ceiling and says it did not finish',
       () async {
     // A model that never stops asking for tools.
-    scriptReplies([_toolTurn('findBills')]);
+    scriptReplies([
+      _toolTurn('find', input: {'entity': 'bill'})
+    ]);
     final executor = _RecordingExecutor();
     final p = build(executor: executor);
 
@@ -228,7 +233,8 @@ void main() {
     // the bubble's own thinking label is gone, and the next thing on screen is
     // a whole round trip away. Silence there reads as a hang.
     scriptReplies([
-      _toolTurn('findBills', text: 'Let me look at your bills.'),
+      _toolTurn('find',
+          text: 'Let me look at your bills.', input: {'entity': 'bill'}),
       const AdvisorReply(text: 'You have three due this week.'),
     ]);
     final executor = _RecordingExecutor();
@@ -246,7 +252,8 @@ void main() {
 
   test('status messages for new read tools work', () async {
     scriptReplies([
-      _toolTurn('findAccounts', text: 'Let me look at your accounts.'),
+      _toolTurn('find',
+          text: 'Let me look at your accounts.', input: {'entity': 'account'}),
       const AdvisorReply(text: 'All accounts loaded.'),
     ]);
     final executor = _RecordingExecutor();

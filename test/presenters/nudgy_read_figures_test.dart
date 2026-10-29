@@ -112,21 +112,22 @@ void main() {
       (await ex.runRead(AiToolCall(id: 't', name: tool, input: input))).summary;
 
   test('a savings row is named by its account and matches by name', () async {
-    final s =
-        await read('findBudgets', {'query': 'braces', 'month': '2026-08'});
-    expect(s, contains('"Braces Fund"'));
-    expect(s, isNot(contains('"braces"')));
-    expect(s, contains('funded ₱2000'));
+    final s = await read(
+        'find', {'entity': 'budget', 'query': 'braces', 'month': '2026-08'});
+    expect(s, contains('name: Braces Fund'));
+    expect(s, isNot(contains('name: braces')));
+    expect(s, contains('funded: ₱2000'));
   });
 
   test('spend is for the month asked, not the Budget tab\'s month', () async {
-    final s = await read('findBudgets', {'query': 'food', 'month': '2026-08'});
-    expect(s, contains('spent ₱900'));
-    expect(s, contains('left ₱2100'));
+    final s = await read(
+        'find', {'entity': 'budget', 'query': 'food', 'month': '2026-08'});
+    expect(s, contains('spent: ₱900'));
+    expect(s, contains('left: ₱2100'));
   });
 
   test('budget groups read the month asked for', () async {
-    final s = await read('findBudgetGroups', {'month': '2026-08'});
+    final s = await read('find', {'entity': 'budgetGroup', 'month': '2026-08'});
     expect(s, contains('allocated ₱3000, spent ₱900'));
     expect(s, contains('allocated ₱2500, funded ₱2000'));
   });
