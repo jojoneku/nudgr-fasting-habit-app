@@ -36,6 +36,10 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
   bool _applyToFuture = false;
   bool _busy = false;
 
+  /// The user's answer to "already in the ledger?", or null to keep the
+  /// proposal's starting answer ([LedgerEntryChoice.alreadyLogged]).
+  bool? _alreadyLogged;
+
   /// One turn can carry several proposals in a row, and the executor swaps the
   /// next one in during the same microtask that clears the last — so no frame
   /// is ever built without a card, this State is reused, and both fields below
@@ -55,12 +59,14 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
       // marking dirty from here is at best redundant.
       _busy = false;
       _applyToFuture = false;
+      _alreadyLogged = null;
     }
   }
 
   Future<void> _confirm() async {
     setState(() => _busy = true);
-    await widget.host.confirm(applyToFuture: _applyToFuture);
+    await widget.host
+        .confirm(applyToFuture: _applyToFuture, alreadyLogged: _alreadyLogged);
     // The card is normally gone by now (the pending proposal is cleared), but
     // a write that failed leaves it on screen — and a dead button is not a
     // usable answer to "that didn't save".
@@ -122,6 +128,16 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
               ],
             ),
           ),
+        if (action.ledgerChoice case final choice?) ...[
+          const SizedBox(height: 6),
+          _LedgerChoiceTile(
+            choice: choice,
+            alreadyLogged: _alreadyLogged ?? choice.alreadyLogged,
+            onChanged: _busy || !choice.canRecord
+                ? null
+                : (value) => setState(() => _alreadyLogged = value),
+          ),
+        ],
         if (action.isRecurring) ...[
           const SizedBox(height: 6),
           _ScopeChoice(
@@ -174,6 +190,43 @@ class _FinanceProposalCardState extends State<FinanceProposalCard> {
           ],
         ),
       ],
+    );
+  }
+}
+
+/// "Already in the ledger?" for a settlement. Checked means the bill or
+/// receivable is only flagged; unchecked records the money as a new entry.
+/// Locked on when there is no account to record it against.
+class _LedgerChoiceTile extends StatelessWidget {
+  const _LedgerChoiceTile({
+    required this.choice,
+    required this.alreadyLogged,
+    required this.onChanged,
+  });
+
+  final LedgerEntryChoice choice;
+  final bool alreadyLogged;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return CheckboxListTile(
+      value: alreadyLogged,
+      onChanged: onChanged == null ? null : (v) => onChanged!(v ?? false),
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      title: Text(
+        'Already added to ledger',
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        choice.hint,
+        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -1344,6 +1345,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  static final Random _traceRandom = Random.secure();
+
+  /// A fresh advisor trace id: 16 random hex characters. It names one user
+  /// message in the server's cost lines and carries nothing about the user.
+  @visibleForTesting
+  static String newTraceId() => [
+        for (var i = 0; i < 8; i++)
+          _traceRandom.nextInt(256).toRadixString(16).padLeft(2, '0'),
+      ].join();
+
   AiCoachContext _buildContext({List<Uint8List> images = const []}) {
     final stats = _stats.stats;
     final n = _nutrition;
@@ -1704,6 +1715,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       today: isAdvisor ? DateTime.now() : null,
       images: isAdvisor ? images : const [],
       imageMimeType: isAdvisor && images.isNotEmpty ? 'image/jpeg' : null,
+      // Built once per user message, so every hop and retry of it shares it.
+      traceId: isAdvisor ? newTraceId() : null,
       // Absent on finance-only surfaces (web): report "not fasting" rather than
       // inventing a fast, and omit the goal entirely.
       isFasting: _fasting?.isFasting ?? false,

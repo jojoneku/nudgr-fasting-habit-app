@@ -2186,6 +2186,23 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return true;
   }
 
+  /// Puts regex-resolved [drafts] on the review card, the confirm surface
+  /// every other path uses. Labels are cleaned now, so the card shows each row
+  /// the way it will be saved.
+  void _presentDraftsForReview(List<ParsedTransaction> drafts, String text) {
+    final entries = [
+      for (final d in drafts) ExtractedEntry(txn: _withCleanDescription(d)),
+    ];
+    _chatState = LedgerChatState(
+      phase: ChatPhase.reviewing,
+      entries: entries,
+      draft: entries.first.txn,
+      turns: [LedgerChatTurn(text: text, isUser: true, at: DateTime.now())],
+      turnCount: 0,
+    );
+    safeNotify();
+  }
+
   /// One extraction call. Returns null when the tier is unavailable or the
   /// response was unreadable — the caller then falls back to the regex path.
   Future<ExtractionResult?> _extractEntries(String text) async {
@@ -2496,10 +2513,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         safeNotify();
         return;
       }
-      // A fully-resolved parse commits directly (the AI is only consulted for
-      // ambiguous input). The old `a && b || a` clause collapsed to this. (C12)
+      // A fully-resolved parse needs no AI, but it still waits for a tap:
+      // this fallback runs when the extractor is unavailable, which is when a
+      // regex binding ("BPI Credit Card" → BPI Savings) is likeliest to be
+      // wrong. Only a surface with no review UI commits directly. (Plan 065)
       if (preparse.isFullyResolved) {
-        await _commitParsed(preparse.toDraft());
+        if (autoResolve) {
+          await _commitParsed(preparse.toDraft());
+        } else {
+          _presentDraftsForReview([preparse.toDraft()], text);
+        }
         return;
       }
       _chatState = _chatState.copyWith(
@@ -2558,7 +2581,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     bool autoResolve = false,
   }) async {
     if (batch.allResolved) {
-      await _commitBatch([for (final s in batch.segments) s.toDraft()]);
+      final drafts = [for (final s in batch.segments) s.toDraft()];
+      // The same rule as one entry: resolved is not confirmed. (Plan 065)
+      if (autoResolve) {
+        await _commitBatch(drafts);
+      } else {
+        _presentDraftsForReview(drafts, rawText);
+      }
       return;
     }
 

@@ -322,6 +322,9 @@ class CloudAiCoachService implements AiCoachService {
       // `images` is present. Drop once that deploy is out.
       if (images.isNotEmpty) 'image_base64': images.first,
       if (images.isNotEmpty) 'mime_type': mime,
+      // Groups the server's cost lines for one user message: every hop and
+      // retry of it sends the same id. An older Lambda ignores it.
+      if (context.traceId != null) 'trace_id': context.traceId,
       if (tools.isNotEmpty) 'tools': [for (final t in tools) t.toRequestJson()],
       // This client asks again for a tool call the server's time budget cut
       // off mid-input, so the server may report it instead of ending the turn

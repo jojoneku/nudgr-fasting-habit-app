@@ -15,7 +15,8 @@ class FakeHost extends ChangeNotifier implements FinanceProposalHost {
   PendingFinanceAction? get pending => _pending;
 
   @override
-  Future<void> confirm({bool applyToFuture = false}) async {
+  Future<void> confirm(
+      {bool applyToFuture = false, bool? alreadyLogged}) async {
     confirmedWithScope = applyToFuture;
     _pending = null;
     notifyListeners();
@@ -63,7 +64,8 @@ class SwappingHost extends ChangeNotifier implements FinanceProposalHost {
   PendingFinanceAction? get pending => _pending;
 
   @override
-  Future<void> confirm({bool applyToFuture = false}) async {
+  Future<void> confirm(
+      {bool applyToFuture = false, bool? alreadyLogged}) async {
     confirmedScopes.add(applyToFuture);
     _pending = _next;
     _next = null;

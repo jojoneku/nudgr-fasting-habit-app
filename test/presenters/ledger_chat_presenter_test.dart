@@ -652,14 +652,21 @@ void main() {
   });
 
   group('multi-transaction messages', () {
-    test('two fully-resolved entries commit with no AI call', () async {
+    test('two fully-resolved entries wait on the card, with no AI call',
+        () async {
       final ai = FakeAiCoachService([]);
       final presenter = LedgerPresenter(storage, stats, ai: ai);
       await _waitForLoad(presenter);
 
       await presenter.sendChatInput('-500 food gcash and -300 food bpi');
 
+      // Resolved is not confirmed (Plan 065): nothing is saved before a tap.
       expect(ai.callCount, 0);
+      expect(presenter.allTransactions, isEmpty);
+      expect(presenter.chatState.phase, ChatPhase.reviewing);
+      expect(presenter.chatState.entries, hasLength(2));
+
+      await presenter.confirmEntries();
       expect(presenter.allTransactions, hasLength(2));
       expect(presenter.lastCommittedSummary, 'Logged 2 transactions');
       expect(presenter.chatState.phase, ChatPhase.idle);
@@ -671,6 +678,7 @@ void main() {
       await _waitForLoad(presenter);
 
       await presenter.sendChatInput('-500 food gcash; -300 food bpi');
+      await presenter.confirmEntries();
 
       final byAccount = {
         for (final t in presenter.allTransactions) t.accountId: t.amount,
@@ -686,6 +694,7 @@ void main() {
 
       await presenter
           .sendChatInput('transfer 200 bpi to gcash and -100 food gcash');
+      await presenter.confirmEntries();
 
       // Two transfer legs + one expense. A transfer that logged only one leg
       // was the old failure here.

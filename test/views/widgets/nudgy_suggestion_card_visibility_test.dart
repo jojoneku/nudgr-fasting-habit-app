@@ -28,7 +28,8 @@ class _WaitingHost extends ChangeNotifier
   PendingFinanceAction? get pending => _pending;
 
   @override
-  Future<void> confirm({bool applyToFuture = false}) async {
+  Future<void> confirm(
+      {bool applyToFuture = false, bool? alreadyLogged}) async {
     _pending = null;
     notifyListeners();
   }
