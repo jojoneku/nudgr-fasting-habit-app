@@ -254,7 +254,7 @@ User confirms → NutritionPresenter.addEntry()
 ### Infrastructure
 - **AWS Lambda** (Node.js 20) — stateless function, 512MB RAM, 30s timeout
 - **API Gateway** (HTTP API) — HTTPS endpoint, API key auth
-- **Amazon Bedrock** — Claude Haiku 3 model (`anthropic.claude-haiku-20240307-v1:0`)
+- **Amazon Bedrock** — Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`); was Claude 3 Haiku (`anthropic.claude-3-haiku-20240307-v1:0`) until Plan 064
 - **Secrets Manager** — stores Bedrock credentials
 
 ### Lambda Request/Response
@@ -273,7 +273,7 @@ data: [DONE]\n\n
 
 ### Budget
 - Lambda free tier: 1M requests/month free
-- Bedrock Claude Haiku 3: ~$0.25/1M input + $1.25/1M output tokens
+- Bedrock Claude Haiku 5.5 (global, ap-southeast-1): $0.10/1M input + $0.50/1M output tokens
 - API Gateway HTTP: ~$1/1M requests
 - **Estimated: $2–5/month at 1,000 calls/day → $100 lasts ~20 months**
 
