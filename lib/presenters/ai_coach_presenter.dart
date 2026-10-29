@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -237,6 +238,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
+
+  /// True while Nudgy is answering: streaming a hop, running its tools,
+  /// waiting on a confirm card, or between hops. For this whole stretch the
+  /// send button is a stop button. Only the advisor turn can be stopped; a
+  /// ledger hand-off or another coach's reply does not set it.
+  bool get isWorking => _advisorRunning;
+
+  /// True when [stop] would do something. False once a stop was asked for,
+  /// while the turn unwinds, so a second tap is not taken as a second stop.
+  bool get canStop => _advisorRunning && !_stopRequested;
 
   // ── Session ───────────────────────────────────────────────────────────────
 
@@ -551,7 +562,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
         }
         _activeTier = AiCoachTier.cloud;
-        await _runAdvisorTurn(cloud, context);
+        _advisorRunning = true;
+        _stopRequested = false;
+        safeNotify();
+        try {
+          await _runAdvisorTurn(cloud, context);
+        } finally {
+          _advisorRunning = false;
+          _cancelHop = null;
+        }
       } else {
         // Prefer the primary (on-device) service; fall back to the cloud tier
         // for this response when the primary isn't ready but the cloud is.
@@ -597,6 +616,85 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  // ── Stop ──────────────────────────────────────────────────────────────────
+
+  /// Set from the start of an advisor turn until it has fully unwound.
+  bool _advisorRunning = false;
+
+  /// Set by [stop]. Every await in the tool loop checks it on the way back, so
+  /// nothing that finishes after the stop can start a hop or change the reply.
+  bool _stopRequested = false;
+
+  /// Cancels the latest hop's stream. Null outside an advisor turn. Between
+  /// hops it points at a finished hop, where calling it does nothing.
+  void Function()? _cancelHop;
+
+  /// True when the turn must not go on: the sheet went away, or the user
+  /// stopped it.
+  bool get _turnOver => isDisposed || _stopRequested;
+
+  /// Stops the advisor turn now.
+  ///
+  /// The words already on screen stay, marked as stopped, because they are
+  /// real work the user may still want. No further hop starts.
+  ///
+  /// An open confirm card is answered as a decline, so the change is not
+  /// saved and the future the loop waits on completes. The tool_use and its
+  /// declined tool_result live only in this turn's transcript, which is thrown
+  /// away: the next request carries the stopped prose as plain text and no
+  /// tool_use at all, so it can never hold a call without a result.
+  ///
+  /// Cancelling the subscription ends the service's generator, whose `finally`
+  /// closes the HTTP client. The server may still finish the reply on its
+  /// side; nobody reads it.
+  void stop() {
+    if (!canStop) return;
+    _stopRequested = true;
+    _cancelHop?.call();
+    _cancelHop = null;
+    final proposals = financeProposals;
+    if (proposals?.pending != null) proposals!.decline();
+    _advisorStatus = null;
+    _advisorAttempt = 1;
+    if (_messages.isNotEmpty && _messages.last.role == AiChatRole.assistant) {
+      _updateLastMessage(_stoppedText(_messages.last.text), isStreaming: false);
+    }
+    safeNotify();
+  }
+
+  /// The reply as it stood when the user stopped it, marked so it does not
+  /// read as a finished answer.
+  static String _stoppedText(String shown) =>
+      shown.trim().isEmpty ? '_Stopped._' : '$shown\n\n_Stopped._';
+
+  /// Wraps a hop's event stream so [stop] can end it while it waits.
+  ///
+  /// `await for` only notices a stop when the next event arrives, and the
+  /// slowest wait (the model thinking before its first word) has no events at
+  /// all. Closing this wrapper ends the loop at once.
+  ///
+  /// The source is cancelled without awaiting it: a generator still waiting
+  /// for response headers only finishes when they arrive, and the turn must
+  /// not wait for that. Its errors after the cancel have nobody to tell.
+  Stream<AdvisorEvent> _stoppable(Stream<AdvisorEvent> source) {
+    StreamSubscription<AdvisorEvent>? sub;
+    late final StreamController<AdvisorEvent> out;
+    void cancelSource() => sub?.cancel().ignore();
+    out = StreamController<AdvisorEvent>(
+      onListen: () {
+        sub = source.listen(out.add, onError: out.addError, onDone: out.close);
+      },
+      onPause: () => sub?.pause(),
+      onResume: () => sub?.resume(),
+      onCancel: cancelSource,
+    );
+    _cancelHop = () {
+      cancelSource();
+      out.close();
+    };
+    return out.stream;
+  }
+
   /// Model round trips allowed inside one user turn.
   ///
   /// A runaway loop is the standard failure of this pattern, and the user pays
@@ -630,6 +728,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var carried = '';
     var resumed = false;
     for (var hop = 1; hop <= maxToolHops; hop++) {
+      if (_turnOver) return;
       final reply = await _streamAdvisorHopWithRetries(
         cloud,
         context: context,
@@ -637,7 +736,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         historical: historical,
         tools: tools,
       );
-      if (isDisposed || reply == null) return;
+      if (_turnOver || reply == null) return;
       final text = reply.text.isEmpty ? carried : reply.text;
 
       if (!reply.wantsTools) {
@@ -704,7 +803,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _advisorStatus = _statusFor(call);
         safeNotify();
         final result = await _runTool(call);
-        if (isDisposed) return;
+        // A stop while a card was open declines it, which is what completes
+        // this await. The decline is not sent anywhere: no next hop starts.
+        if (_turnOver) return;
         results.add(result.toContentBlock());
       }
       transcript.add(AiChatMessage.toolResults(results));
@@ -848,7 +949,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         safeNotify();
         await Future<void>.delayed(
             _retryBackoff[(attempt - 2).clamp(0, _retryBackoff.length - 1)]);
-        if (isDisposed) return null;
+        if (_turnOver) return null;
       }
 
       // Timed, not just counted: how long the attempt lasted is what says
@@ -862,7 +963,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         tools: tools,
       );
       clock.stop();
-      if (isDisposed) return null;
+      if (_turnOver) return null;
       if (outcome.reply != null) {
         _advisorAttempt = 1;
         return outcome.reply;
@@ -937,16 +1038,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AdvisorReply? finished;
 
     try {
-      final stream = cloud.adviseFinance(
+      final stream = _stoppable(cloud.adviseFinance(
         messages: transcript,
         context: context,
         profile: _advisorProfile.promptSummary(),
         historical: historical.isEmpty ? null : historical,
         tools: tools,
-      );
+      ));
 
       await for (final event in stream) {
-        if (isDisposed) return const AdvisorHopOutcome.abandoned();
+        // Checked per event, not only at the end: events already queued when
+        // the user stopped must not write over the stopped reply.
+        if (_turnOver) return const AdvisorHopOutcome.abandoned();
         switch (event.kind) {
           case AdvisorEventKind.start:
             break;
@@ -967,6 +1070,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 retryable: true);
         }
       }
+      // A stop closes the stream with no terminal event. That is the user's
+      // choice, not a cut-off answer, so it is not reported as a failure.
+      if (_turnOver) return const AdvisorHopOutcome.abandoned();
     } on AiCoachException catch (e) {
       return AdvisorHopOutcome.failed(buffer.toString(), e);
     } catch (e) {

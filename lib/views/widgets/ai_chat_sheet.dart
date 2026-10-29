@@ -565,6 +565,9 @@ class _AiChatBodyState extends State<AiChatBody> {
                         ? (widget.inputHint ?? _presenter.inputHint)
                         : _presenter.inputHint,
                     onSend: _send,
+                    working: _presenter.isWorking,
+                    canStop: _presenter.canStop,
+                    onStop: _presenter.stop,
                     // Photo upload is an advisor-only capability (its op is
                     // the only one wired for vision).
                     onAttach: _advisorMode ? _attachPhoto : null,
@@ -1227,6 +1230,13 @@ class _InputBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onSend;
 
+  /// True while Nudgy works: the send button is a stop button.
+  final bool working;
+
+  /// False once a stop was asked for, while the turn unwinds.
+  final bool canStop;
+  final VoidCallback? onStop;
+
   /// Placeholder text, decided by the presenter — the bar is disabled for
   /// several different reasons and the user is owed the right one.
   final String hint;
@@ -1248,6 +1258,9 @@ class _InputBar extends StatelessWidget {
     required this.enabled,
     required this.hint,
     required this.onSend,
+    this.working = false,
+    this.canStop = false,
+    this.onStop,
     this.onAttach,
     this.canAttach = true,
     this.onImagesInserted,
@@ -1364,7 +1377,13 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          _SendButton(enabled: enabled, onSend: onSend),
+          _SendButton(
+            enabled: enabled,
+            onSend: onSend,
+            working: working,
+            canStop: canStop,
+            onStop: onStop,
+          ),
         ],
       ),
     );
@@ -1855,11 +1874,22 @@ class _PhotoSourceTile extends StatelessWidget {
   }
 }
 
+/// Sends a message, or stops Nudgy while it works. One 44×44 slot, so the
+/// control the user needs is always where their thumb already is.
 class _SendButton extends StatefulWidget {
   final bool enabled;
   final VoidCallback onSend;
+  final bool working;
+  final bool canStop;
+  final VoidCallback? onStop;
 
-  const _SendButton({required this.enabled, required this.onSend});
+  const _SendButton({
+    required this.enabled,
+    required this.onSend,
+    this.working = false,
+    this.canStop = false,
+    this.onStop,
+  });
 
   @override
   State<_SendButton> createState() => _SendButtonState();
@@ -1888,36 +1918,56 @@ class _SendButtonState extends State<_SendButton>
     super.dispose();
   }
 
+  /// Whether a tap does anything, in whichever mode the button is in.
+  bool get _active => widget.working ? widget.canStop : widget.enabled;
+
+  VoidCallback? get _action => widget.working ? widget.onStop : widget.onSend;
+
+  IconData get _icon =>
+      widget.working ? Icons.stop_rounded : Icons.send_rounded;
+
+  String get _label => widget.working ? 'Stop' : 'Send';
+
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: widget.enabled ? (_) => _ctrl.forward() : null,
-        onTapUp: widget.enabled
-            ? (_) {
-                _ctrl.reverse();
-                widget.onSend();
-              }
-            : null,
-        onTapCancel: () => _ctrl.reverse(),
-        child: ScaleTransition(
-          scale: _scale,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: widget.enabled
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.send_rounded,
-              color: widget.enabled
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 20,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        enabled: _active,
+        label: _label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTapDown: _active ? (_) => _ctrl.forward() : null,
+          onTapUp: _active
+              ? (_) {
+                  _ctrl.reverse();
+                  _action?.call();
+                }
+              : null,
+          onTapCancel: () => _ctrl.reverse(),
+          child: ScaleTransition(
+            scale: _scale,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: _active
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 150),
+                child: Icon(
+                  _icon,
+                  key: ValueKey(_icon),
+                  color: _active
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 20,
+                ),
+              ),
             ),
           ),
         ),
