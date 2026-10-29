@@ -12,8 +12,10 @@ void main() {
         netWorth: 1234567,
         monthNetCashFlow: -5400,
         savingsRatePct: 18,
-        monthBudget: 20000,
-        monthSpent: 15250,
+        expenseBudgetAllocated: 20000,
+        expenseBudgetSpent: 15250,
+        allBudgetsAllocated: 25000,
+        allBudgetsUsed: 17250,
         totalCreditOwed: 3000,
         totalCreditAvailable: 47000,
         daysLeftInMonth: 9,
@@ -35,7 +37,13 @@ void main() {
       expect(s, contains('₱1,234,567'));
       expect(s, contains('Net cash flow this month: -₱5,400'));
       expect(s, contains('Savings rate this month: 18%'));
-      expect(s, contains('₱15,250 spent of ₱20,000 target (₱4,750 remaining)'));
+      // Three budget totals, each named with what it means (Plan 065 1b).
+      expect(
+          s,
+          contains('Expense budgets: ₱15,250 spent of ₱20,000 (₱4,750 left). '
+              "This is the Dashboard's Budget overview total."));
+      expect(s, contains('Savings budgets: ₱2,000 funded of ₱5,000'));
+      expect(s, contains("All budget rows: ₱25,000. This is the Budget tab's"));
       expect(s, contains('unused capacity'));
       expect(s, contains('Days left in month: 9'));
       // Bills itemised + totalled.
@@ -378,7 +386,7 @@ void main() {
         h,
         contains(
           'Jun: bills ₱9,000 (paid ₱9,000), receivables ₱32,000 '
-          '(received ₱32,000), saved ₱11,000',
+          '(received ₱32,000), net (income − expenses) ₱11,000',
         ),
       );
       // Past detail must NOT leak into the live snapshot.

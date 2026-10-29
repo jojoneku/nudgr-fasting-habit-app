@@ -211,8 +211,33 @@ void main() {
           ]);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => [
             _txn(id: 'salary', amount: 10000, type: TransactionType.inflow),
+            // A transfer out of the pocket: the leg leaving savings.
             _txn(
                 id: 'raid',
+                amount: 2000,
+                type: TransactionType.outflow,
+                accountId: 'sav',
+                transferGroupId: 'g1'),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.monthSavingsContributions, -2000);
+      expect(p.savingsRate, closeTo(-0.2, 1e-9)); // -2000 / 10000
+    });
+
+    test('a purchase paid straight from savings is not a contribution',
+        () async {
+      // The one "set aside" rule (Plan 065) counts transfers only, the same
+      // as the History grid. Spending from a pocket is spending.
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(id: 'acc1'),
+            _account(id: 'sav', category: AccountCategory.savings),
+          ]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(id: 'salary', amount: 10000, type: TransactionType.inflow),
+            _txn(
+                id: 'dentist',
                 amount: 2000,
                 type: TransactionType.outflow,
                 accountId: 'sav'),
@@ -220,8 +245,7 @@ void main() {
       final p = TreasuryDashboardPresenter(mockStorage);
       await p.load();
 
-      expect(p.monthSavingsContributions, -2000);
-      expect(p.savingsRate, closeTo(-0.2, 1e-9)); // -2000 / 10000
+      expect(p.monthSavingsContributions, 0);
     });
 
     test('savingsRate is null when there is no income', () async {
