@@ -13,6 +13,8 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
+import '../models/finance/budget.dart';
+import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/food_db_entry.dart';
@@ -32,6 +34,7 @@ import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
 import '../utils/credit_cycle.dart';
+import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
 import '../utils/safe_notifier.dart';
 
@@ -1397,13 +1400,20 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       // asked about specific line items, and a category outside the top 10 was
       // simply invisible to it — indistinguishable from one with no spend.
       final trailing = t.categoryTrailingAverage(months: 3);
+      // This month's budget per category — not the Budget tab's month, which
+      // may be parked anywhere.
+      final thisMonth = toMonthKey(DateTime.now());
+      final targets = {
+        for (final x in b?.allBudgets ?? const <Budget>[])
+          if (x.month == thisMonth) x.categoryId: x.allocatedAmount,
+      };
       final spent = t.allCategorySpendThisMonth;
       final spentIds = {for (final e in spent) e.$1.id};
       topCategories = [
         for (final e in spent)
           AdvisorCategoryLine(
             name: e.$1.name,
-            target: b?.budgetFor(e.$1.id)?.allocatedAmount,
+            target: targets[e.$1.id],
             actual: e.$2,
             trailingAverage: trailing.averages[e.$1.id],
             trailingMonths: trailing.months,
@@ -1411,13 +1421,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         // Budgeted with nothing spent yet. Built from spending alone, the list
         // left these out, so a ₱2,000 Gifts budget did not exist to Nudgy
         // until the first gift was bought.
+        // An income category is a target to earn, not spending: listed here
+        // it read as "₱0 of ₱X" spent.
         if (b != null)
           for (final c in b.categoriesByGroup.values.expand((cs) => cs))
             if (!spentIds.contains(c.id) &&
-                (b.budgetFor(c.id)?.allocatedAmount ?? 0) > 0)
+                c.type != CategoryType.income &&
+                (targets[c.id] ?? 0) > 0)
               AdvisorCategoryLine(
                 name: c.name,
-                target: b.budgetFor(c.id)!.allocatedAmount,
+                target: targets[c.id],
                 actual: 0,
                 trailingAverage: trailing.averages[c.id],
                 trailingMonths: trailing.months,
@@ -1486,14 +1499,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }).toList();
       netWorthTrend = t
           .netWorthTrend(months: 12)
-          .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
+          // With the year: the trend runs 12 months, so a bare "Oct" is
+          // both this October and last.
+          .map((p) => AdvisorNetWorthPoint(
+              label: _monthYearLabel(p.month), value: p.value))
           .toList();
       // A year, so a seasonal month reads as seasonal.
       var cumulative = 0.0;
       incomeExpenseTrend = [
         for (final m in t.incomeExpenseTrend(months: 12))
           AdvisorMonthFlow(
-            label: m.label,
+            label: _monthYearLabel(m.month),
             income: m.income,
             expense: m.expense,
             // The history owner's figure, the one closed months are filed
@@ -1558,15 +1574,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
             insideAccount: h.insideAccount,
           ),
       ];
-      budgetGroups = b == null
-          ? const []
-          : b.groupBars
-              .map((g) => AdvisorBudgetGroupLine(
-                    name: g.label,
-                    allocated: g.allocated,
-                    spent: g.spent,
-                  ))
-              .toList();
+      // The dashboard's per-group figures, for this calendar month.
+      final allocatedByGroup = t.budgetAllocatedByGroup;
+      final spentByGroup = t.budgetSpentByGroup;
+      budgetGroups = [
+        for (final g in t.budgetGroups)
+          if ((allocatedByGroup[g.id] ?? 0) > 0)
+            AdvisorBudgetGroupLine(
+              name: g.name,
+              allocated: allocatedByGroup[g.id]!,
+              spent: spentByGroup[g.id] ?? 0,
+            ),
+      ];
       final inst = _installments;
       if (inst != null) {
         installmentLines = inst.installments
@@ -1644,7 +1663,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       monthlyLedger = t
           .historicalLedger(months: 12)
           .map((m) => AdvisorMonthLedger(
-                label: m.label,
+                label: _monthYearLabel(m.month),
                 billed: m.billed,
                 billsPaid: m.billsPaid,
                 receivablesExpected: m.receivablesExpected,
@@ -1742,6 +1761,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       monthNetCashFlow: isAdvisor ? t?.monthNetCashFlow : null,
       savingsRatePct:
           isAdvisor && savingsRate != null ? savingsRate * 100 : null,
+      expenseBudgetAllocated: isAdvisor && (t?.hasBudget ?? false)
+          ? t?.totalExpenseBudgetAllocated
+          : null,
+      expenseBudgetSpent: isAdvisor && (t?.hasBudget ?? false)
+          ? t?.totalExpenseBudgetSpent
+          : null,
+      allBudgetsAllocated:
+          isAdvisor && (t?.hasBudget ?? false) ? t?.totalBudgetAllocated : null,
+      allBudgetsUsed:
+          isAdvisor && (t?.hasBudget ?? false) ? t?.totalBudgetSpent : null,
       totalCreditAvailable: isAdvisor ? t?.totalCreditAvailable : null,
       totalCreditOwed: isAdvisor ? t?.totalCreditOwed : null,
       outstandingBillsTotal: isAdvisor ? t?.monthUnpaidBills : null,

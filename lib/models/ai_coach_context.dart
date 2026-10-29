@@ -523,6 +523,16 @@ class AiCoachContext {
 
   /// Savings rate this month as a percentage (0–100), or null if unknown.
   final double? savingsRatePct;
+
+  /// This calendar month's budgets, split the way the screens split them:
+  /// expense rows (the Dashboard's Budget overview) and savings rows (money
+  /// set aside into savings budgets). Their sum is every budget row — the
+  /// Budget tab's header total. Each is labelled with its definition, because
+  /// the three totals answer different questions and must not be mixed.
+  final double? expenseBudgetAllocated;
+  final double? expenseBudgetSpent;
+  final double? allBudgetsAllocated;
+  final double? allBudgetsUsed;
   final double? totalCreditAvailable;
   final double? totalCreditOwed;
   final double? outstandingBillsTotal;
@@ -676,6 +686,10 @@ class AiCoachContext {
     this.totalLiquidCash,
     this.monthNetCashFlow,
     this.savingsRatePct,
+    this.expenseBudgetAllocated,
+    this.expenseBudgetSpent,
+    this.allBudgetsAllocated,
+    this.allBudgetsUsed,
     this.totalCreditAvailable,
     this.totalCreditOwed,
     this.outstandingBillsTotal,
@@ -822,16 +836,32 @@ class AiCoachContext {
       buf.writeln('Net cash flow this month: ${_peso(monthNetCashFlow!)}');
     }
     if (savingsRatePct != null) {
-      buf.writeln(
-          'Savings rate this month: ${savingsRatePct!.toStringAsFixed(0)}%');
+      buf.writeln('Savings rate this month: '
+          '${savingsRatePct!.toStringAsFixed(0)}% of income set aside into '
+          'savings pockets (transfers in, less transfers out)');
     }
-    if (monthBudget != null && monthSpent != null) {
-      final remaining = monthBudget! - monthSpent!;
-      buf.writeln('Budget this month: ${_peso(monthSpent!)} spent of '
-          '${_peso(monthBudget!)} target (${_peso(remaining)} remaining)');
+    final expAlloc = expenseBudgetAllocated;
+    final expSpent = expenseBudgetSpent;
+    final allAlloc = allBudgetsAllocated;
+    final allUsed = allBudgetsUsed;
+    if (expAlloc != null && expSpent != null && allAlloc != null) {
+      final savAlloc = allAlloc - expAlloc;
+      final savFunded = (allUsed ?? expSpent) - expSpent;
+      buf.writeln('Budgets this month — three totals, each with its own '
+          'meaning; name the one you quote:');
+      buf.writeln('  - Expense budgets: ${_peso(expSpent)} spent of '
+          '${_peso(expAlloc)} (${_peso(expAlloc - expSpent)} left). This is '
+          'the Dashboard\'s Budget overview total.');
+      if (savAlloc > 0) {
+        buf.writeln('  - Savings budgets: ${_peso(savFunded)} funded of '
+            '${_peso(savAlloc)} — money to set aside, not spending.');
+      }
+      buf.writeln('  - All budget rows: ${_peso(allAlloc)}. This is the '
+          'Budget tab\'s header total for this month.');
     }
     if (budgetGroups.isNotEmpty) {
-      buf.writeln('Budget by group (spent vs allocated):');
+      buf.writeln('Budget by group this month (spent or funded vs '
+          'allocated):');
       for (final g in budgetGroups) {
         buf.writeln(
             '  - ${g.name}: ${_peso(g.spent)} of ${_peso(g.allocated)}');
@@ -1178,13 +1208,14 @@ class AiCoachContext {
       }
     }
     if (monthlyLedger.isNotEmpty) {
-      buf.writeln('Bills & receivables by closed month (totals; line items '
-          'are not retained per past month):');
+      buf.writeln('Bills & receivables by closed month (totals only here; '
+          'each past bill is still kept — call findBills with that month '
+          'for its line items):');
       for (final m in monthlyLedger) {
         buf.writeln('  - ${m.label}: bills ${_peso(m.billed)} '
             '(paid ${_peso(m.billsPaid)}), receivables '
             '${_peso(m.receivablesExpected)} (received ${_peso(m.received)}), '
-            'saved ${_peso(m.netSavings)}');
+            'net (income − expenses) ${_peso(m.netSavings)}');
       }
     }
     if (historyMonthLabels.isNotEmpty && categoryHistory.isNotEmpty) {
