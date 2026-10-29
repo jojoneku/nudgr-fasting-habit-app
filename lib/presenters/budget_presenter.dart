@@ -704,10 +704,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// what the old netting was really protecting: shuffling ₱3,000 from one fund
   /// into another funds neither, and counting the destination would inflate the
   /// month. Pair this with [withdrawnFrom] to show both directions.
-  double fundedInto(String accountId) {
+  double fundedInto(String accountId, {String? month}) {
+    final m = month ?? _selectedMonth;
     var total = 0.0;
     for (final t in _allTransactions) {
-      if (t.month != _selectedMonth) continue;
+      if (t.month != m) continue;
       if (t.accountId != accountId) continue;
       if (t.type != TransactionType.inflow) continue;
       if (_isInternalSavingsTransferLeg(t)) continue;
@@ -790,15 +791,23 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
 
   double spentFor(String categoryId) {
     final budget = budgetFor(categoryId);
-    if (budget != null && isSavingsGroup(budget.group)) {
-      // For savings rows the "categoryId" is actually a target account id —
-      // count what was funded in, not spending against a category.
-      return fundedInto(categoryId);
-    }
+    if (budget != null) return spentForBudget(budget);
+    return _spentInCategory(categoryId, _selectedMonth);
+  }
+
+  /// What budget row [b] has used in its own month: funded in for a savings
+  /// row (whose "categoryId" is the target account's id), real spending for
+  /// an expense row. The one rule behind [spentFor], public so a reader that
+  /// asks about another month (Nudgy's `findBudgets`) uses it too.
+  double spentForBudget(Budget b) => isSavingsGroup(b.group)
+      ? fundedInto(b.categoryId, month: b.month)
+      : _spentInCategory(b.categoryId, b.month);
+
+  double _spentInCategory(String categoryId, String month) {
     final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
-            t.month == _selectedMonth &&
+            t.month == month &&
             t.categoryId == categoryId &&
             isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);

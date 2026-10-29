@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -13,6 +14,8 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
+import '../models/finance/budget.dart';
+import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/food_db_entry.dart';
@@ -32,7 +35,9 @@ import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
 import '../utils/credit_cycle.dart';
+import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
+import '../utils/planning_intent.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
@@ -239,6 +244,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
 
+  /// True while Nudgy is answering: streaming a hop, running its tools,
+  /// waiting on a confirm card, or between hops. For this whole stretch the
+  /// send button is a stop button. Only the advisor turn can be stopped; a
+  /// ledger hand-off or another coach's reply does not set it.
+  bool get isWorking => _advisorRunning;
+
+  /// True when [stop] would do something. False once a stop was asked for,
+  /// while the turn unwinds, so a second tap is not taken as a second stop.
+  bool get canStop => _advisorRunning && !_stopRequested;
+
   // ── Session ───────────────────────────────────────────────────────────────
 
   /// Open a chat session scoped to [entryPoint].
@@ -415,6 +430,50 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     await send(prompt.text, images: prompt.images);
   }
 
+  /// The message the router last gave to the ledger's quick-log pipeline,
+  /// kept so the user can send it to Nudgy instead when the card misread it.
+  String? _routedLogText;
+
+  /// Set by [askNudgyInstead] so the next [send] skips the quick-log router.
+  bool _bypassRouterOnce = false;
+
+  /// True while the ledger shows a log card for a message this chat routed to
+  /// it, so the card can offer "Not a log — ask Nudgy".
+  bool get canAskNudgyInstead {
+    final ledger = _ledger;
+    if (_routedLogText == null || ledger == null || _isResponding) {
+      return false;
+    }
+    final state = ledger.chatState;
+    final step = state.lastStep;
+    return state.entries.isNotEmpty ||
+        step is StepResolved ||
+        step is StepClarify;
+  }
+
+  /// The quick-log card misread a message: drop the card and let Nudgy answer
+  /// the same words instead.
+  ///
+  /// Nothing is saved — the card is only a review, and cancelling it discards
+  /// every row on it. This is the escape hatch for the planning-word veto
+  /// (Plan 065, 1d): the veto catches the reported phrasings, the button
+  /// catches the rest without sending every message to the model first.
+  Future<void> askNudgyInstead() async {
+    if (!canAskNudgyInstead) return;
+    final text = _routedLogText!;
+    _routedLogText = null;
+    _ledger!.cancelChat();
+    // send() shows the prompt again, so drop the copy the routed turn left —
+    // the same move retryLastTurn makes.
+    if (_messages.isNotEmpty &&
+        _isEditablePrompt(_messages.last) &&
+        _messages.last.text == text) {
+      _messages.removeLast();
+    }
+    _bypassRouterOnce = true;
+    await send(text);
+  }
+
   /// Replaces a question already asked and answers the new one.
   ///
   /// Everything after the edited message goes: its answer was to a question
@@ -466,6 +525,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     String text, {
     List<Uint8List> images = const [],
   }) async {
+    final bypassRouter = _bypassRouterOnce;
+    _bypassRouterOnce = false;
     final trimmed = text.trim();
     if ((trimmed.isEmpty && images.isEmpty) || _isResponding) return;
 
@@ -484,10 +545,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // is the exception, and stays with Nudgy — see [isAdvisorToolRequest].
     final ledger = _ledger;
     var promptShown = false;
-    if (images.isEmpty &&
+    if (!bypassRouter &&
+        images.isEmpty &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         _routesToLedger(trimmed, ledger)) {
+      // A reply to the ledger's clarifying question is not the message the
+      // card is about, so it does not replace the one kept for "ask Nudgy".
+      if (ledger.chatState.phase != ChatPhase.clarifying) {
+        _routedLogText = trimmed;
+      }
       _messages.add(AiChatMessage.user(trimmed));
       _errorMessage = null;
       _isResponding = true;
@@ -508,6 +575,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       // has the whole conversation and every tool, including logging — so the
       // message is never left without a reply. It is already in the thread.
       promptShown = true;
+      _routedLogText = null;
     }
 
     // Compress attached photos off the UI thread before building the turn.
@@ -552,7 +620,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
         }
         _activeTier = AiCoachTier.cloud;
-        await _runAdvisorTurn(cloud, context);
+        _advisorRunning = true;
+        _stopRequested = false;
+        safeNotify();
+        try {
+          await _runAdvisorTurn(cloud, context);
+        } finally {
+          _advisorRunning = false;
+          _cancelHop = null;
+        }
       } else {
         // Prefer the primary (on-device) service; fall back to the cloud tier
         // for this response when the primary isn't ready but the cloud is.
@@ -598,6 +674,85 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  // ── Stop ──────────────────────────────────────────────────────────────────
+
+  /// Set from the start of an advisor turn until it has fully unwound.
+  bool _advisorRunning = false;
+
+  /// Set by [stop]. Every await in the tool loop checks it on the way back, so
+  /// nothing that finishes after the stop can start a hop or change the reply.
+  bool _stopRequested = false;
+
+  /// Cancels the latest hop's stream. Null outside an advisor turn. Between
+  /// hops it points at a finished hop, where calling it does nothing.
+  void Function()? _cancelHop;
+
+  /// True when the turn must not go on: the sheet went away, or the user
+  /// stopped it.
+  bool get _turnOver => isDisposed || _stopRequested;
+
+  /// Stops the advisor turn now.
+  ///
+  /// The words already on screen stay, marked as stopped, because they are
+  /// real work the user may still want. No further hop starts.
+  ///
+  /// An open confirm card is answered as a decline, so the change is not
+  /// saved and the future the loop waits on completes. The tool_use and its
+  /// declined tool_result live only in this turn's transcript, which is thrown
+  /// away: the next request carries the stopped prose as plain text and no
+  /// tool_use at all, so it can never hold a call without a result.
+  ///
+  /// Cancelling the subscription ends the service's generator, whose `finally`
+  /// closes the HTTP client. The server may still finish the reply on its
+  /// side; nobody reads it.
+  void stop() {
+    if (!canStop) return;
+    _stopRequested = true;
+    _cancelHop?.call();
+    _cancelHop = null;
+    final proposals = financeProposals;
+    if (proposals?.pending != null) proposals!.decline();
+    _advisorStatus = null;
+    _advisorAttempt = 1;
+    if (_messages.isNotEmpty && _messages.last.role == AiChatRole.assistant) {
+      _updateLastMessage(_stoppedText(_messages.last.text), isStreaming: false);
+    }
+    safeNotify();
+  }
+
+  /// The reply as it stood when the user stopped it, marked so it does not
+  /// read as a finished answer.
+  static String _stoppedText(String shown) =>
+      shown.trim().isEmpty ? '_Stopped._' : '$shown\n\n_Stopped._';
+
+  /// Wraps a hop's event stream so [stop] can end it while it waits.
+  ///
+  /// `await for` only notices a stop when the next event arrives, and the
+  /// slowest wait (the model thinking before its first word) has no events at
+  /// all. Closing this wrapper ends the loop at once.
+  ///
+  /// The source is cancelled without awaiting it: a generator still waiting
+  /// for response headers only finishes when they arrive, and the turn must
+  /// not wait for that. Its errors after the cancel have nobody to tell.
+  Stream<AdvisorEvent> _stoppable(Stream<AdvisorEvent> source) {
+    StreamSubscription<AdvisorEvent>? sub;
+    late final StreamController<AdvisorEvent> out;
+    void cancelSource() => sub?.cancel().ignore();
+    out = StreamController<AdvisorEvent>(
+      onListen: () {
+        sub = source.listen(out.add, onError: out.addError, onDone: out.close);
+      },
+      onPause: () => sub?.pause(),
+      onResume: () => sub?.resume(),
+      onCancel: cancelSource,
+    );
+    _cancelHop = () {
+      cancelSource();
+      out.close();
+    };
+    return out.stream;
+  }
+
   /// Model round trips allowed inside one user turn.
   ///
   /// A runaway loop is the standard failure of this pattern, and the user pays
@@ -631,6 +786,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var carried = '';
     var resumed = false;
     for (var hop = 1; hop <= maxToolHops; hop++) {
+      if (_turnOver) return;
       final reply = await _streamAdvisorHopWithRetries(
         cloud,
         context: context,
@@ -638,7 +794,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         historical: historical,
         tools: tools,
       );
-      if (isDisposed || reply == null) return;
+      if (_turnOver || reply == null) return;
       final text = reply.text.isEmpty ? carried : reply.text;
 
       if (!reply.wantsTools) {
@@ -705,7 +861,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _advisorStatus = _statusFor(call);
         safeNotify();
         final result = await _runTool(call);
-        if (isDisposed) return;
+        // A stop while a card was open declines it, which is what completes
+        // this await. The decline is not sent anywhere: no next hop starts.
+        if (_turnOver) return;
         results.add(result.toContentBlock());
       }
       transcript.add(AiChatMessage.toolResults(results));
@@ -849,7 +1007,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         safeNotify();
         await Future<void>.delayed(
             _retryBackoff[(attempt - 2).clamp(0, _retryBackoff.length - 1)]);
-        if (isDisposed) return null;
+        if (_turnOver) return null;
       }
 
       // Timed, not just counted: how long the attempt lasted is what says
@@ -863,7 +1021,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         tools: tools,
       );
       clock.stop();
-      if (isDisposed) return null;
+      if (_turnOver) return null;
       if (outcome.reply != null) {
         _advisorAttempt = 1;
         return outcome.reply;
@@ -938,16 +1096,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AdvisorReply? finished;
 
     try {
-      final stream = cloud.adviseFinance(
+      final stream = _stoppable(cloud.adviseFinance(
         messages: transcript,
         context: context,
         profile: _advisorProfile.promptSummary(),
         historical: historical.isEmpty ? null : historical,
         tools: tools,
-      );
+      ));
 
       await for (final event in stream) {
-        if (isDisposed) return const AdvisorHopOutcome.abandoned();
+        // Checked per event, not only at the end: events already queued when
+        // the user stopped must not write over the stopped reply.
+        if (_turnOver) return const AdvisorHopOutcome.abandoned();
         switch (event.kind) {
           case AdvisorEventKind.start:
             break;
@@ -968,6 +1128,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 retryable: true);
         }
       }
+      // A stop closes the stream with no terminal event. That is the user's
+      // choice, not a cut-off answer, so it is not reported as a failure.
+      if (_turnOver) return const AdvisorHopOutcome.abandoned();
     } on AiCoachException catch (e) {
       return AdvisorHopOutcome.failed(buffer.toString(), e);
     } catch (e) {
@@ -1397,13 +1560,20 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       // asked about specific line items, and a category outside the top 10 was
       // simply invisible to it — indistinguishable from one with no spend.
       final trailing = t.categoryTrailingAverage(months: 3);
+      // This month's budget per category — not the Budget tab's month, which
+      // may be parked anywhere.
+      final thisMonth = toMonthKey(DateTime.now());
+      final targets = {
+        for (final x in b?.allBudgets ?? const <Budget>[])
+          if (x.month == thisMonth) x.categoryId: x.allocatedAmount,
+      };
       final spent = t.allCategorySpendThisMonth;
       final spentIds = {for (final e in spent) e.$1.id};
       topCategories = [
         for (final e in spent)
           AdvisorCategoryLine(
             name: e.$1.name,
-            target: b?.budgetFor(e.$1.id)?.allocatedAmount,
+            target: targets[e.$1.id],
             actual: e.$2,
             trailingAverage: trailing.averages[e.$1.id],
             trailingMonths: trailing.months,
@@ -1411,13 +1581,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         // Budgeted with nothing spent yet. Built from spending alone, the list
         // left these out, so a ₱2,000 Gifts budget did not exist to Nudgy
         // until the first gift was bought.
+        // An income category is a target to earn, not spending: listed here
+        // it read as "₱0 of ₱X" spent.
         if (b != null)
           for (final c in b.categoriesByGroup.values.expand((cs) => cs))
             if (!spentIds.contains(c.id) &&
-                (b.budgetFor(c.id)?.allocatedAmount ?? 0) > 0)
+                c.type != CategoryType.income &&
+                (targets[c.id] ?? 0) > 0)
               AdvisorCategoryLine(
                 name: c.name,
-                target: b.budgetFor(c.id)!.allocatedAmount,
+                target: targets[c.id],
                 actual: 0,
                 trailingAverage: trailing.averages[c.id],
                 trailingMonths: trailing.months,
@@ -1486,14 +1659,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }).toList();
       netWorthTrend = t
           .netWorthTrend(months: 12)
-          .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
+          // With the year: the trend runs 12 months, so a bare "Oct" is
+          // both this October and last.
+          .map((p) => AdvisorNetWorthPoint(
+              label: _monthYearLabel(p.month), value: p.value))
           .toList();
       // A year, so a seasonal month reads as seasonal.
       var cumulative = 0.0;
       incomeExpenseTrend = [
         for (final m in t.incomeExpenseTrend(months: 12))
           AdvisorMonthFlow(
-            label: m.label,
+            label: _monthYearLabel(m.month),
             income: m.income,
             expense: m.expense,
             // The history owner's figure, the one closed months are filed
@@ -1558,15 +1734,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
             insideAccount: h.insideAccount,
           ),
       ];
-      budgetGroups = b == null
-          ? const []
-          : b.groupBars
-              .map((g) => AdvisorBudgetGroupLine(
-                    name: g.label,
-                    allocated: g.allocated,
-                    spent: g.spent,
-                  ))
-              .toList();
+      // The dashboard's per-group figures, for this calendar month.
+      final allocatedByGroup = t.budgetAllocatedByGroup;
+      final spentByGroup = t.budgetSpentByGroup;
+      budgetGroups = [
+        for (final g in t.budgetGroups)
+          if ((allocatedByGroup[g.id] ?? 0) > 0)
+            AdvisorBudgetGroupLine(
+              name: g.name,
+              allocated: allocatedByGroup[g.id]!,
+              spent: spentByGroup[g.id] ?? 0,
+            ),
+      ];
       final inst = _installments;
       if (inst != null) {
         installmentLines = inst.installments
@@ -1644,7 +1823,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       monthlyLedger = t
           .historicalLedger(months: 12)
           .map((m) => AdvisorMonthLedger(
-                label: m.label,
+                label: _monthYearLabel(m.month),
                 billed: m.billed,
                 billsPaid: m.billsPaid,
                 receivablesExpected: m.receivablesExpected,
@@ -1742,6 +1921,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       monthNetCashFlow: isAdvisor ? t?.monthNetCashFlow : null,
       savingsRatePct:
           isAdvisor && savingsRate != null ? savingsRate * 100 : null,
+      expenseBudgetAllocated: isAdvisor && (t?.hasBudget ?? false)
+          ? t?.totalExpenseBudgetAllocated
+          : null,
+      expenseBudgetSpent: isAdvisor && (t?.hasBudget ?? false)
+          ? t?.totalExpenseBudgetSpent
+          : null,
+      allBudgetsAllocated:
+          isAdvisor && (t?.hasBudget ?? false) ? t?.totalBudgetAllocated : null,
+      allBudgetsUsed:
+          isAdvisor && (t?.hasBudget ?? false) ? t?.totalBudgetSpent : null,
       totalCreditAvailable: isAdvisor ? t?.totalCreditAvailable : null,
       totalCreditOwed: isAdvisor ? t?.totalCreditOwed : null,
       outstandingBillsTotal: isAdvisor ? t?.monthUnpaidBills : null,
@@ -1913,6 +2102,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // answering it conversationally is how the assistant ended up describing
     // entries it had not logged.
     if (t.contains('?') && !isPoliteLogRequest(t)) return false;
+    // A plan is advice too: "I want to pay 5000 for the BPI card next month"
+    // has an amount and a spend verb, but nothing has been spent yet.
+    if (hasPlanningIntent(t)) return false;
     final hasAmount = RegExp(r'(₱|php|p)?\s?\d[\d,]*(\.\d+)?').hasMatch(t);
     if (!hasAmount) return false;
     final hasLogVerb = RegExp(

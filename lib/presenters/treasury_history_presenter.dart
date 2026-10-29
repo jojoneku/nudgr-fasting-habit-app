@@ -547,8 +547,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Set of account ids that are savings pockets (savings / goal / sinking
   /// fund), used to attribute transfer legs as savings contributions.
-  Set<String> get _savingsPocketIds =>
-      {for (final a in _accounts.where((a) => a.isSavingsPocket)) a.id};
+  Set<String> get _savingsPocketIds => savingsPocketIds(_accounts);
 
   /// Net amount moved into savings pockets across [txns]: the inflow leg of a
   /// transfer that LANDS in a savings/goal/sinking-fund account counts as a
@@ -556,15 +555,8 @@ class TreasuryHistoryPresenter extends ChangeNotifier with SafeNotifier {
   /// Transfers between two pockets net to zero — not a new contribution. Only
   /// transfer legs (transferGroupId != null) are considered; ordinary income or
   /// spending never touches this figure.
-  double _sumSavingsContribution(List<TransactionRecord> txns) {
-    final pockets = _savingsPocketIds;
-    var total = 0.0;
-    for (final t in txns) {
-      if (t.transferGroupId == null || !pockets.contains(t.accountId)) continue;
-      total += t.type == TransactionType.inflow ? t.amount : -t.amount;
-    }
-    return total;
-  }
+  double _sumSavingsContribution(List<TransactionRecord> txns) =>
+      savingsContribution(txns, _savingsPocketIds);
 
   /// Per-pocket net contribution for [txns]: accountId → amount set aside this
   /// period (negative when more was withdrawn than added). Only pockets with a

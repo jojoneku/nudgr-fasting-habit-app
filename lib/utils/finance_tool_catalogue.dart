@@ -42,7 +42,7 @@ const List<AiTool> kFinanceTools = [
         },
         'month': {
           'type': 'string',
-          'description': 'YYYY-MM. Defaults to the month being viewed.',
+          'description': 'YYYY-MM. Defaults to the current month.',
         },
       },
     },
@@ -57,7 +57,10 @@ const List<AiTool> kFinanceTools = [
       'type': 'object',
       'properties': {
         'query': {'type': 'string', 'description': 'Name, or who owes it.'},
-        'month': {'type': 'string', 'description': 'YYYY-MM.'},
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. Defaults to the current month.',
+        },
       },
     },
   ),
@@ -71,7 +74,10 @@ const List<AiTool> kFinanceTools = [
       'type': 'object',
       'properties': {
         'query': {'type': 'string', 'description': 'Name, e.g. "braces".'},
-        'month': {'type': 'string', 'description': 'YYYY-MM.'},
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. Defaults to the current month.',
+        },
       },
     },
   ),
@@ -84,8 +90,14 @@ const List<AiTool> kFinanceTools = [
     inputSchema: {
       'type': 'object',
       'properties': {
-        'query': {'type': 'string', 'description': 'Category or group name.'},
-        'month': {'type': 'string', 'description': 'YYYY-MM.'},
+        'query': {
+          'type': 'string',
+          'description': 'Category, or savings account, name.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. Defaults to the current month.',
+        },
       },
     },
   ),
@@ -141,7 +153,7 @@ const List<AiTool> kFinanceTools = [
         'month': {
           'type': 'string',
           'description': 'YYYY-MM. With no query and no dates, defaults to '
-              'the month being viewed.',
+              'the current month.',
         },
         'from': {
           'type': 'string',
@@ -481,7 +493,7 @@ const List<AiTool> kFinanceTools = [
       'properties': {
         'month': {
           'type': 'string',
-          'description': 'YYYY-MM. Defaults to the month being viewed.',
+          'description': 'YYYY-MM. Defaults to the current month.',
         },
       },
     },

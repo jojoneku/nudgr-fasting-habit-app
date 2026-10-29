@@ -133,7 +133,15 @@ void main() {
       icon: 'gift',
       colorHex: '#FFFFFF',
     );
-    when(storage.loadFinanceCategories()).thenAnswer((_) async => [gifts]);
+    final salary = FinanceCategory(
+      id: 'salary',
+      name: 'Salary',
+      type: CategoryType.income,
+      icon: 'cash',
+      colorHex: '#FFFFFF',
+    );
+    when(storage.loadFinanceCategories())
+        .thenAnswer((_) async => [gifts, salary]);
     // Budgeted, with nothing spent on it yet.
     when(storage.loadBudgets()).thenAnswer((_) async => [
           Budget(
@@ -144,12 +152,21 @@ void main() {
             group: 'wants',
             budgetType: BudgetType.monthly,
           ),
+          // An income target, which is not spending.
+          Budget(
+            id: 'bs',
+            categoryId: 'salary',
+            month: toMonthKey(now),
+            allocatedAmount: 50000,
+            group: 'income',
+            budgetType: BudgetType.monthly,
+          ),
         ]);
     when(storage.loadBudgetGroups()).thenAnswer((_) async => []);
     when(storage.loadWarnedBudgetKeys()).thenAnswer((_) async => <String>{});
   });
 
-  Future<String> snapshot() async {
+  Future<AiCoachContext> context() async {
     final treasury = TreasuryDashboardPresenter(storage);
     await treasury.load();
     final budget =
@@ -173,8 +190,10 @@ void main() {
       tools: anyNamed('tools'),
     )).captured.first as AiCoachContext;
     p.dispose();
-    return ctx.financeSnapshotSummary();
+    return ctx;
   }
+
+  Future<String> snapshot() async => (await context()).financeSnapshotSummary();
 
   test('a statement filed for next month reaches the credit line', () async {
     final s = await snapshot();
@@ -198,5 +217,16 @@ void main() {
     expect(s, contains('Internet: ₱1,699'));
     expect(s, contains('pay from BPI; note: Acct 1234'));
     expect(s, contains('Gifts: ₱0 of ₱2,000 target'));
+  });
+
+  test('a budgeted income category is not listed as spending', () async {
+    final s = await snapshot();
+    expect(s, isNot(contains('Salary: ₱0 of')));
+  });
+
+  test('trend labels carry the year', () async {
+    final now = DateTime.now();
+    final h = (await context()).financeHistoricalSummary();
+    expect(h, contains('${monthShortLabel(toMonthKey(now))} ${now.year}'));
   });
 }

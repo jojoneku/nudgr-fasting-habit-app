@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
+import 'package:intermittent_fasting/models/advisor_event.dart';
 import 'package:intermittent_fasting/models/advisor_reply.dart';
 import 'package:intermittent_fasting/models/ai_chat_message.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
@@ -444,6 +447,57 @@ void main() {
       final button = tester.getRect(find.text('Log all 7'));
       expect(button.bottom, lessThanOrEqualTo(852.0));
       expect(button.top, greaterThanOrEqualTo(852.0 - 341));
+    });
+  });
+
+  group('stop button', () {
+    testWidgets('the send button is a stop button while Nudgy works',
+        (tester) async {
+      final hop = StreamController<AdvisorEvent>();
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+        tools: anyNamed('tools'),
+      )).thenAnswer((_) => hop.stream);
+      final presenter = openAdvisor();
+      await pumpChat(tester, presenter);
+
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.stop_rounded), findsNothing);
+
+      await tester.enterText(find.byType(TextField).last, 'plan my month');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      hop
+        ..add(const AdvisorEvent.start())
+        ..add(const AdvisorEvent.delta('Start with rent'));
+      // Not pumpAndSettle: the streaming bubble animates until the turn ends.
+      // Two timed frames, because the icon switch's clock starts on the first.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.send_rounded), findsNothing);
+      expect(find.bySemanticsLabel('Stop'), findsOneWidget);
+      final slot = tester.getSize(find.ancestor(
+        of: find.byIcon(Icons.stop_rounded),
+        matching: find.byType(GestureDetector),
+      ));
+      expect(slot.width, greaterThanOrEqualTo(44));
+      expect(slot.height, greaterThanOrEqualTo(44));
+
+      await tester.tap(find.byIcon(Icons.stop_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.stop_rounded), findsNothing);
+      expect(presenter.isWorking, isFalse);
+      expect(presenter.messages.last.text, 'Start with rent\n\n_Stopped._');
+      expect(find.textContaining('Stopped', findRichText: true), findsWidgets);
+      expect(hop.hasListener, isFalse);
+      presenter.dispose();
     });
   });
 }

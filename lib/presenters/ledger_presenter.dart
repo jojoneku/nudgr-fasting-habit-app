@@ -21,6 +21,7 @@ import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
 import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
+import 'package:intermittent_fasting/utils/planning_intent.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 /// Field the ledger list is ordered by (reference "Filter & sort" sheet).
@@ -2038,6 +2039,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         !AiCoachPresenter.isPoliteLogRequest(trimmed)) {
       return false;
     }
+    // Same planning-word veto too: a plan names real accounts and amounts but
+    // reports nothing spent.
+    if (hasPlanningIntent(trimmed)) return false;
     // `viewingPastDate` is deliberately false: whether the ledger is parked on
     // an old day changes whether a log is ALLOWED, not whether the words are
     // one. sendChatInput re-parses with the real value and reports that error.

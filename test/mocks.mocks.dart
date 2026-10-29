@@ -6934,6 +6934,7 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
         double billed,
         double billsPaid,
         String label,
+        String month,
         double netSavings,
         double receivablesExpected,
         double received
@@ -6947,6 +6948,7 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
           double billed,
           double billsPaid,
           String label,
+          String month,
           double netSavings,
           double receivablesExpected,
           double received
@@ -6955,6 +6957,7 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
           double billed,
           double billsPaid,
           String label,
+          String month,
           double netSavings,
           double receivablesExpected,
           double received
@@ -6964,6 +6967,7 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
             double billed,
             double billsPaid,
             String label,
+            String month,
             double netSavings,
             double receivablesExpected,
             double received
@@ -7057,16 +7061,21 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as List<_i74.DailySpend>);
 
   @override
-  List<({String label, double value})> netWorthTrend({int? months = 6}) =>
+  List<({String label, String month, double value})> netWorthTrend(
+          {int? months = 6}) =>
       (super.noSuchMethod(
         Invocation.method(
           #netWorthTrend,
           [],
           {#months: months},
         ),
-        returnValue: <({String label, double value})>[],
-        returnValueForMissingStub: <({String label, double value})>[],
-      ) as List<({String label, double value})>);
+        returnValue: <({String label, String month, double value})>[],
+        returnValueForMissingStub: <({
+          String label,
+          String month,
+          double value
+        })>[],
+      ) as List<({String label, String month, double value})>);
 
   @override
   List<({double expense, double income, String label, String month})>

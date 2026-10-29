@@ -67,8 +67,8 @@ void main() {
       when(bills.allBudgetedExpenses)
           .thenReturn([setAside('sa_1', 'Braces', 3000)]);
 
-      final result =
-          await executor.runRead(call('findSetAsides', {'query': 'brac'}));
+      final result = await executor.runRead(
+          call('findSetAsides', {'query': 'brac', 'month': '2026-09'}));
 
       expect(result.ok, isTrue);
       expect(result.summary, contains('id=sa_1'));
@@ -82,6 +82,19 @@ void main() {
       expect(result.ok, isTrue);
       expect(result.summary, contains('No set-asides matched'));
       expect(result.summary, contains('Do not guess an id'));
+    });
+
+    test("a find with no month reads today's month, not the tab's", () async {
+      // The Bills tab is parked on 2026-09 (selectedMonth in setUp).
+      when(bills.allBudgetedExpenses)
+          .thenReturn([setAside('sa_1', 'Braces', 3000)]);
+      final now = DateTime.now();
+      final today = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+      final result = await executor.runRead(call('findSetAsides', {}));
+
+      expect(result.summary, contains(today));
+      expect(result.summary, isNot(contains('id=sa_1')));
     });
 
     test('a read never touches a mutator', () async {
@@ -419,10 +432,21 @@ void main() {
       return FinanceActionsExecutor(bills: bills, ledger: p);
     }
 
-    test('no filters reviews the month being viewed, newest first', () async {
+    test("no filters reviews today's month, not the tab's", () async {
       final ex = await withLedger();
+      final now = DateTime.now();
+      final today = '${now.year}-${now.month.toString().padLeft(2, '0')}';
 
       final result = await ex.runRead(call('findTransactions', {}));
+
+      expect(result.summary, contains(today));
+    });
+
+    test('a month lists newest first', () async {
+      final ex = await withLedger();
+
+      final result =
+          await ex.runRead(call('findTransactions', {'month': '2026-09'}));
 
       expect(result.ok, isTrue);
       expect(result.summary, contains('in 2026-09'));
@@ -461,8 +485,10 @@ void main() {
       final result = await ex.runRead(call('findTransactions',
           {'month': '2026-09', 'type': 'outflow', 'limit': 1}));
 
-      // Grab 245 + Groceries 1200 + Client lunch 800.
-      expect(result.summary, contains('Spent ₱2245'));
+      // Grab 245 + Groceries 1200. The ₱800 client lunch is reimbursable,
+      // so the app does not count it as spending, and neither does Nudgy.
+      expect(result.summary, contains('Spent ₱1445'));
+      expect(result.summary, contains('1 marked [not counted]'));
       expect(result.summary, contains('Showing the newest 1 of 3'));
       expect(result.summary.split('\n').length, 2);
     });
