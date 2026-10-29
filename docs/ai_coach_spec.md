@@ -254,7 +254,7 @@ User confirms → NutritionPresenter.addEntry()
 ### Infrastructure
 - **AWS Lambda** (Node.js 20) — stateless function, 512MB RAM, 30s timeout
 - **API Gateway** (HTTP API) — HTTPS endpoint, API key auth
-- **Amazon Bedrock** — Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`); was Claude 3 Haiku (`anthropic.claude-3-haiku-20240307-v1:0`) until Plan 064
+- **Amazon Bedrock** — Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`); production ran Claude Haiku 4.5 (`global.anthropic.claude-haiku-4-5-20251001-v1:0`) until Plan 064, although this spec and the SAM template named Claude 3 Haiku
 - **Secrets Manager** — stores Bedrock credentials
 
 ### Lambda Request/Response

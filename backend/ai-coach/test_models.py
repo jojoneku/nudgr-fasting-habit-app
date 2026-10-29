@@ -18,6 +18,8 @@ import pytest
 import lambda_function as lf
 
 HAIKU_3 = "anthropic.claude-3-haiku-20240307-v1:0"
+# What production actually ran before Plan 064 (the template said Claude 3 Haiku).
+HAIKU_45 = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
 HAIKU_55 = "global.anthropic.claude-haiku-5-5"
 SONNET_45 = "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
@@ -56,7 +58,7 @@ _REFUSAL = {"content": [], "stop_reason": "refusal"}
 
 # -- _generation_params --------------------------------------------------------
 
-@pytest.mark.parametrize("model_id", [HAIKU_3, SONNET_45, "x"])
+@pytest.mark.parametrize("model_id", [HAIKU_3, HAIKU_45, SONNET_45, "x"])
 def test_older_models_get_no_extra_fields(model_id):
     assert lf._generation_params(model_id, "low") == {}
 
@@ -81,7 +83,7 @@ def test_reply_text_is_empty_on_a_refusal():
 # -- call sites ----------------------------------------------------------------
 
 def test_old_model_body_is_unchanged(monkeypatch):
-    fake = _install(monkeypatch, HAIKU_3, {
+    fake = _install(monkeypatch, HAIKU_45, {
         "content": [{"type": "text", "text": '{"foodId": "f1", "confidence": 0.9}'}],
     })
     resp = lf._disambiguate_food({"query": "rice", "candidates": [{"id": "f1", "name": "Rice"}]})
