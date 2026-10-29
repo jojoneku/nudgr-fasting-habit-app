@@ -7061,7 +7061,8 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
       ) as List<_i74.DailySpend>);
 
   @override
-  List<({String label, String month, double value})> netWorthTrend({int? months = 6}) =>
+  List<({String label, String month, double value})> netWorthTrend(
+          {int? months = 6}) =>
       (super.noSuchMethod(
         Invocation.method(
           #netWorthTrend,
@@ -7069,7 +7070,11 @@ class MockTreasuryDashboardPresenter extends _i1.Mock
           {#months: months},
         ),
         returnValue: <({String label, String month, double value})>[],
-        returnValueForMissingStub: <({String label, String month, double value})>[],
+        returnValueForMissingStub: <({
+          String label,
+          String month,
+          double value
+        })>[],
       ) as List<({String label, String month, double value})>);
 
   @override
