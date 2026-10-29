@@ -1172,8 +1172,9 @@ class AiCoachContext {
       }
     }
     if (monthlyLedger.isNotEmpty) {
-      buf.writeln('Bills & receivables by closed month (totals; line items '
-          'are not retained per past month):');
+      buf.writeln('Bills & receivables by closed month (totals only here; '
+          'each past bill is still kept — call findBills with that month '
+          'for its line items):');
       for (final m in monthlyLedger) {
         buf.writeln('  - ${m.label}: bills ${_peso(m.billed)} '
             '(paid ${_peso(m.billsPaid)}), receivables '

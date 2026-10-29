@@ -12,6 +12,7 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
+import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/food_db_entry.dart';
@@ -1400,9 +1401,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         // Budgeted with nothing spent yet. Built from spending alone, the list
         // left these out, so a ₱2,000 Gifts budget did not exist to Nudgy
         // until the first gift was bought.
+        // An income category is a target to earn, not spending: listed here
+        // it read as "₱0 of ₱X" spent.
         if (b != null)
           for (final c in b.categoriesByGroup.values.expand((cs) => cs))
             if (!spentIds.contains(c.id) &&
+                c.type != CategoryType.income &&
                 (b.budgetFor(c.id)?.allocatedAmount ?? 0) > 0)
               AdvisorCategoryLine(
                 name: c.name,
@@ -1475,14 +1479,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }).toList();
       netWorthTrend = t
           .netWorthTrend(months: 12)
-          .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
+          // With the year: the trend runs 12 months, so a bare "Oct" is
+          // both this October and last.
+          .map((p) => AdvisorNetWorthPoint(
+              label: _monthYearLabel(p.month), value: p.value))
           .toList();
       // A year, so a seasonal month reads as seasonal.
       var cumulative = 0.0;
       incomeExpenseTrend = [
         for (final m in t.incomeExpenseTrend(months: 12))
           AdvisorMonthFlow(
-            label: m.label,
+            label: _monthYearLabel(m.month),
             income: m.income,
             expense: m.expense,
             // The history owner's figure, the one closed months are filed
@@ -1633,7 +1640,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       monthlyLedger = t
           .historicalLedger(months: 12)
           .map((m) => AdvisorMonthLedger(
-                label: m.label,
+                label: _monthYearLabel(m.month),
                 billed: m.billed,
                 billsPaid: m.billsPaid,
                 receivablesExpected: m.receivablesExpected,

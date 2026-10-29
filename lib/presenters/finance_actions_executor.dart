@@ -15,6 +15,7 @@ import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_entry_extraction.dart';
+import '../utils/finance_flows.dart';
 import '../utils/finance_format.dart';
 import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
@@ -78,9 +79,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   @override
   Future<AiToolResult> runRead(AiToolCall call) async {
     final query = _str(call.input['query']).toLowerCase();
-    final month = _str(call.input['month']).isEmpty
-        ? _bills.selectedMonth
-        : _str(call.input['month']);
+    final month = _readMonth(call.input);
 
     bool matches(String name) =>
         query.isEmpty || name.toLowerCase().contains(query);
@@ -118,14 +117,31 @@ class FinanceActionsExecutor extends ChangeNotifier
           return AiToolResult.failed(
               call.id, 'Budgets are not available here.');
         }
+        // A savings row's "categoryId" is the id of the account it funds, so
+        // it is named from the accounts; matching on the raw id found nothing.
         final names = {
+          for (final a in _ledger?.accounts ?? const <FinancialAccount>[])
+            a.id: a.name,
           for (final c in budget.allCategories) c.id: c.name,
         };
+        final groups = {for (final g in budget.groups) g.id: g.name};
         final rows = budget.allBudgets
             .where(
                 (b) => b.month == month && matches(names[b.categoryId] ?? ''))
-            .map((b) => 'id=${b.id} "${names[b.categoryId] ?? b.categoryId}" '
-                'limit ${_peso(b.allocatedAmount)}');
+            .map((b) {
+          final name = names[b.categoryId] ?? 'unknown';
+          final group = groups[b.group] ?? b.group;
+          final limit = _peso(b.allocatedAmount);
+          if (budget.isCategoryIncome(b.categoryId)) {
+            return 'id=${b.id} "$name" [$group] income target $limit — '
+                'not spending';
+          }
+          // The Budget tab's own rule for this row and month.
+          final used = budget.spentForBudget(b);
+          final verb = budget.isSavingsGroup(b.group) ? 'funded' : 'spent';
+          return 'id=${b.id} "$name" [$group] limit $limit, $verb '
+              '${_peso(used)}, left ${_peso(b.allocatedAmount - used)}';
+        });
         return _rows(call, rows, 'budgets', month);
 
       case 'findInstallments':
@@ -248,13 +264,23 @@ class FinanceActionsExecutor extends ChangeNotifier
           return AiToolResult.failed(
               call.id, 'Budgets are not available here.');
         }
-        final groups = budget.groups;
-        final rows = groups.map((g) {
-          final allocated = budget.sectionAllocated(g.id);
-          final spent = budget.sectionSpent(g.id);
-          final remaining = allocated - spent;
-          return '"${g.name}": allocated ${_peso(allocated)}, spent ${_peso(spent)}, remaining ${_peso(remaining)}';
-        });
+        // Built from the rows of the month asked for. The group totals the
+        // Budget tab shows follow the month that tab is on, which is not
+        // necessarily this one.
+        final rows = <String>[];
+        for (final g in budget.groups) {
+          final inGroup = budget.allBudgets
+              .where((b) => b.month == month && b.group == g.id)
+              .toList();
+          if (inGroup.isEmpty) continue;
+          final allocated =
+              inGroup.fold(0.0, (sum, b) => sum + b.allocatedAmount);
+          final spent =
+              inGroup.fold(0.0, (sum, b) => sum + budget.spentForBudget(b));
+          final verb = budget.isSavingsGroup(g.id) ? 'funded' : 'spent';
+          rows.add('"${g.name}": allocated ${_peso(allocated)}, $verb '
+              '${_peso(spent)}, remaining ${_peso(allocated - spent)}');
+        }
         return _rows(call, rows, 'budget groups', month);
 
       case 'findTransactions':
@@ -350,7 +376,7 @@ class FinanceActionsExecutor extends ChangeNotifier
     final month = askedMonth.isNotEmpty
         ? askedMonth
         : (query.isEmpty && rangeFrom == null && rangeTo == null)
-            ? _bills.selectedMonth
+            ? toMonthKey(now)
             : null;
     // Not [_int]: that falls back to 1, and a missing limit means the default.
     final raw = i['limit'];
@@ -422,13 +448,28 @@ class FinanceActionsExecutor extends ChangeNotifier
     // their own. Counting both would report the purchase twice, so it is left
     // out here exactly as every spending aggregation leaves it out
     // (isSpendingOutflow). It is still listed, labelled as what it is.
+    //
+    // The totals use the app's own rules (isSpendingOutflow, isIncomeInflow):
+    // a reimbursable, a category marked "exclude from totals" and a loan
+    // repayment are listed but not counted, exactly as every screen leaves
+    // them out. Counting them made Nudgy's "Spent" larger than the app's.
+    final excluded = excludedCashFlowCategoryIds(ledger.categories);
+    final reimbursements = reimbursementReceivableIds(ledger.allTransactions);
+    bool counted(TransactionRecord t) => t.type == TransactionType.outflow
+        ? isSpendingOutflow(t, excluded)
+        : isIncomeInflow(t, reimbursements, excluded);
     var spent = 0.0;
     var received = 0.0;
     var installmentPurchases = 0;
+    var uncounted = 0;
     for (final t in matched) {
       if (isTransfer(t)) continue;
       if (t.isInstallment) {
         installmentPurchases++;
+        continue;
+      }
+      if (!counted(t)) {
+        uncounted++;
         continue;
       }
       if (t.type == TransactionType.outflow) spent += t.amount;
@@ -458,8 +499,11 @@ class FinanceActionsExecutor extends ChangeNotifier
               : ' [reimbursable, owed by $owedBy]';
       final note =
           (t.note ?? '').trim().isEmpty ? '' : ' — note: "${t.note!.trim()}"';
+      final skipped = isTransfer(t) || t.isInstallment || counted(t)
+          ? ''
+          : ' [not counted]';
       return 'id=${t.id} ${_day(t.date)} "${t.description}" ${_peso(t.amount)} '
-          '$flow$owed$note';
+          '$flow$owed$skipped$note';
     }).toList();
 
     final purchasesNote = installmentPurchases == 0
@@ -468,6 +512,11 @@ class FinanceActionsExecutor extends ChangeNotifier
             '${installmentPurchases == 1 ? 'purchase is' : 'purchases are'} '
             'listed but not counted, since a plan\'s monthly payments are the '
             'spending';
+    final uncountedNote = uncounted == 0
+        ? ''
+        : '; $uncounted marked [not counted] — reimbursable, a loan '
+            'repayment, or a category set to "exclude from totals" — are '
+            'listed but left out, as the app leaves them out';
     final shown = rows.length < matched.length
         ? 'Showing the newest ${rows.length} of ${matched.length}; narrow by '
             'month, dates or query to see the rest.'
@@ -479,7 +528,7 @@ class FinanceActionsExecutor extends ChangeNotifier
           '${matched.length} transactions in $scope. '
           'Spent ${_peso(spent)}, received ${_peso(received)} '
           '(transfers between the user\'s own accounts excluded from both'
-          '$purchasesNote). '
+          '$purchasesNote$uncountedNote). '
           '$shown\n${rows.join('\n')}',
     );
   }
@@ -1585,6 +1634,17 @@ class FinanceActionsExecutor extends ChangeNotifier
       if (c.name.toLowerCase().startsWith(lower)) return c;
     }
     return null;
+  }
+
+  /// The month a find tool reads: the one asked for, else today's. Not the
+  /// month a tab is showing — a question asked from the Bills tab parked on
+  /// August is still about now unless it names August.
+  static String _readMonth(Map<String, Object?> input) {
+    final given = _str(input['month']);
+    final now = DateTime.now();
+    return RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
+        ? rebaseStaleMonthKey(given, now)
+        : toMonthKey(now);
   }
 
   /// The month a proposal lands in. A year the model slipped back to its own

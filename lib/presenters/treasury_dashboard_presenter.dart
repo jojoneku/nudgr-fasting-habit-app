@@ -1035,6 +1035,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   List<
       ({
         String label,
+        String month,
         double billed,
         double billsPaid,
         double receivablesExpected,
@@ -1043,6 +1044,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       })> historicalLedger({int months = 6}) {
     final out = <({
       String label,
+      String month,
       double billed,
       double billsPaid,
       double receivablesExpected,
@@ -1055,6 +1057,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       if (s == null) continue;
       out.add((
         label: monthShortLabel(key),
+        month: key,
         billed: s.totalBills,
         billsPaid: s.totalBillsPaid,
         receivablesExpected: s.totalReceivables,
@@ -1973,12 +1976,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// reconstructed from their stored snapshots. Months without a usable
   /// snapshot are omitted, so an account with little history yields a short
   /// (or single-point) series the UI can choose to render as an empty state.
-  List<({String label, double value})> netWorthTrend({int months = 6}) {
-    final result = <({String label, double value})>[];
+  List<({String label, String month, double value})> netWorthTrend(
+      {int months = 6}) {
+    final result = <({String label, String month, double value})>[];
     for (final key in _lastNMonthKeys(months)) {
       final label = monthShortLabel(key);
       if (key == _currentMonth) {
-        result.add((label: label, value: netWorth));
+        result.add((label: label, month: key, value: netWorth));
       } else {
         final summary = _summaryFor(key);
         if (summary == null) continue;
@@ -1989,7 +1993,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
                 ? null
                 : _netWorthFromSnapshot(summary.accountSnapshots));
         if (value == null) continue;
-        result.add((label: label, value: value));
+        result.add((label: label, month: key, value: value));
       }
     }
     return result;
