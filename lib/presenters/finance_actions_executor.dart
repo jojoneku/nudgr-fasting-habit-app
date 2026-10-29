@@ -800,7 +800,9 @@ class FinanceActionsExecutor extends ChangeNotifier
     final kind = financeToolNamed(tool)?.kind;
     if (kind == AiToolKind.destroy) return ProposalTier.destructive;
     if (kind == AiToolKind.update) return ProposalTier.change;
-    if (tool == 'payCredit' || tool == 'addInstallment') {
+    if (tool == 'payCredit' ||
+        tool == 'addInstallment' ||
+        tool == 'fundSetAside') {
       return ProposalTier.change;
     }
     return ProposalTier.create;
@@ -852,6 +854,11 @@ class FinanceActionsExecutor extends ChangeNotifier
             ProposalField.amount: 'amount',
             ProposalField.day: 'dueDay',
             ProposalField.category: 'category',
+          },
+        'fundSetAside' => const {
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'fromAccount',
+            ProposalField.date: 'date',
           },
         'editReceivable' => const {
             ProposalField.name: 'name',
@@ -1188,6 +1195,30 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Set-aside', value: eName),
             (label: 'Allocated', value: _peso(eAmt)),
             if (e != null) (label: 'Month', value: e.month),
+          ],
+        );
+      case 'fundSetAside':
+        final f = _setAsideFunding(i);
+        if (f == null) return null;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Fund set-aside: ${f.expense.name} (${_peso(f.amount)})',
+          isRecurring: false,
+          confirmLabel: 'Set Aside',
+          details: [
+            (label: 'Set-aside', value: f.expense.name),
+            (label: 'Amount', value: _peso(f.amount)),
+            (label: 'From', value: f.from?.name ?? 'not set'),
+            (
+              label: 'Into',
+              value: f.into?.name ?? 'none — recorded as spending',
+            ),
+            (label: 'Date', value: _day(f.date)),
+            if (f.expense.spentAmount > 0)
+              (
+                label: 'Funded',
+                value: '${_peso(f.expense.spentAmount)} → ${_peso(f.amount)}',
+              ),
           ],
         );
       case 'editTransaction':
@@ -1617,6 +1648,24 @@ class FinanceActionsExecutor extends ChangeNotifier
         await _bills.deleteBudgetedExpense(id, applyToFuture: applyToFuture);
         return 'Deleted set-aside "${e?.name ?? id}"$scope.';
 
+      case 'fundSetAside':
+        final f = _setAsideFunding(i);
+        final from = f?.from;
+        if (f == null || from == null) {
+          throw StateError('Set-aside "${_str(i['id'])}" cannot be funded');
+        }
+        // The Bills tab's own path: a transfer into the destination, or a
+        // plain outflow when there is none (a gift really is spent).
+        await _bills.markExpensePaid(
+          f.expense.id,
+          paidAmount: f.amount,
+          accountId: from.id,
+          toAccountId: f.into?.id,
+          paidDate: f.date,
+        );
+        return 'Set aside ${_peso(f.amount)} for "${f.expense.name}" from '
+            '${from.name}${f.into == null ? ' (recorded as spending)' : ' into ${f.into!.name}'}.';
+
       case 'editTransaction':
         final ledger = _ledger;
         if (ledger == null) throw StateError('Ledger is not available');
@@ -1748,6 +1797,35 @@ class FinanceActionsExecutor extends ChangeNotifier
             'on ${p.account.name}.';
     }
     throw StateError('no writer for ${call.name}');
+  }
+
+  /// A `fundSetAside` call bound against the live set-aside and accounts:
+  /// the named accounts, else the set-aside's own. The row and the write
+  /// both use it, so the accounts the user approved are the ones used.
+  ({
+    BudgetedExpense expense,
+    double amount,
+    FinancialAccount? from,
+    FinancialAccount? into,
+    DateTime date,
+  })? _setAsideFunding(Map<String, Object?> i) {
+    final e = _bills.allBudgetedExpenses
+        .where((e) => e.id == _str(i['id']))
+        .firstOrNull;
+    if (e == null) return null;
+    FinancialAccount? named(String field, String? fallbackId) {
+      final name = _str(i[field]);
+      if (name.isNotEmpty) return _accountFor(name);
+      return _activeAccounts.where((a) => a.id == fallbackId).firstOrNull;
+    }
+
+    return (
+      expense: e,
+      amount: _amountOrNull(i['amount']) ?? e.allocatedAmount,
+      from: named('fromAccount', e.accountId),
+      into: named('intoAccount', e.destinationAccountId),
+      date: _settleDate(i['date']),
+    );
   }
 
   // ── Settlements ───────────────────────────────────────────────────────────
@@ -2050,6 +2128,34 @@ class FinanceActionsExecutor extends ChangeNotifier
         return check('account', active, 'active');
       case 'editSetAside':
         return check('destinationAccount', active, 'active');
+      case 'fundSetAside':
+        final e =
+            _bills.allBudgetedExpenses.firstWhere((e) => e.id == _str(i['id']));
+        if (e.isPaid) {
+          return 'The set-aside "${e.name}" is already funded '
+              '(${_peso(e.spentAmount)}). Nothing to change — tell the user.';
+        }
+        final bad = check('fromAccount', active, 'active') ??
+            check('intoAccount', active, 'active');
+        if (bad != null) return bad;
+        final f = _setAsideFunding(i)!;
+        if (f.from == null) {
+          return 'Which account does the money for "${e.name}" come from? '
+              'Choices: ${active.map((a) => '"${a.name}"').join(', ')}. Ask '
+              'the user.';
+        }
+        if (f.into == null &&
+            e.budgetedType != SetAsideType.gift &&
+            e.budgetedType != SetAsideType.other) {
+          return '"${e.name}" is ${e.budgetedType.name} money, so it moves '
+              'into a savings or goal account, but none is set. Ask the user '
+              'which account it goes into.';
+        }
+        if (f.into != null && f.into!.id == f.from!.id) {
+          return 'The money cannot move from ${f.from!.name} into itself. Ask '
+              'the user which account it goes into.';
+        }
+        return null;
     }
     return null;
   }
@@ -2073,7 +2179,7 @@ class FinanceActionsExecutor extends ChangeNotifier
           'find (entity receivable)',
           _bills.allReceivables.any((r) => r.id == id),
         ),
-      'editSetAside' || 'deleteSetAside' => (
+      'editSetAside' || 'deleteSetAside' || 'fundSetAside' => (
           'set-aside',
           'find (entity setAside)',
           _bills.allBudgetedExpenses.any((e) => e.id == id),

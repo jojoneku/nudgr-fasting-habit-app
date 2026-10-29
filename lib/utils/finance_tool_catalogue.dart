@@ -648,6 +648,44 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'fundSetAside',
+    kind: AiToolKind.update,
+    description:
+        'Propose funding an existing set-aside: move the money into it, the '
+        'way "Set aside into" does on the Bills tab. It is a transfer between '
+        'the user\'s own accounts, never spending. Call ONLY after find '
+        '(entity setAside) returns its id. The user approves on the review '
+        'list before anything moves.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact set-aside id from a preceding find call.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Pesos to set aside. Omit for the allocated amount.',
+        },
+        'fromAccount': {
+          'type': 'string',
+          'description': 'Account NAME the money leaves. Omit for the '
+              'set-aside\'s own funding account.',
+        },
+        'intoAccount': {
+          'type': 'string',
+          'description': 'Savings or goal account NAME it moves into. Omit '
+              'for the set-aside\'s own destination.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD. Defaults to today.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'editBill',
     kind: AiToolKind.update,
     description:
