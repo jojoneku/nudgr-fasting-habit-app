@@ -104,6 +104,22 @@ void main() {
           isNot(contains('id')));
     });
 
+    test('queryFinance is a read that takes no id and no recurrence scope', () {
+      final tool = financeToolNamed('queryFinance');
+      expect(tool, isNotNull);
+      expect(tool!.kind, AiToolKind.read);
+      expect(tool.mutates, isFalse);
+      final keys = schemaKeysDeep(tool.inputSchema).map((k) => '$k');
+      expect(keys, isNot(contains('applyToFuture')));
+      expect(keys, isNot(contains('id')));
+      expect(tool.inputSchema['required'], ['metric']);
+      // It says which tool answers which question, so the model does not
+      // take two paths to two different numbers.
+      expect(tool.description, contains('no screen shows'));
+      expect(tool.description, contains('getView'));
+      expect(tool.description, contains('find'));
+    });
+
     test('lookup resolves a real name and rejects an invented one', () {
       expect(financeToolNamed('addSetAside')?.name, 'addSetAside');
       expect(financeToolNamed('deleteEverything'), isNull);
