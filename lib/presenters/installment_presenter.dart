@@ -121,9 +121,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   List<Installment> get allInstallments => List.unmodifiable(_installments);
 
-  List<Installment> get dueThisMonth => _installments
-      .where((i) => i.isActive && i.isDueIn(_selectedMonth))
-      .toList();
+  List<Installment> get dueThisMonth => dueIn(_selectedMonth);
+
+  /// [dueThisMonth] for any [month], so a reader can ask about a month the
+  /// tab is not showing without paging it there.
+  List<Installment> dueIn(String month) =>
+      _installments.where((i) => i.isActive && i.isDueIn(month)).toList();
 
   /// Looks up an installment by id, or null when not found.
   Installment? findById(String id) =>
@@ -135,10 +138,14 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// once its charges cover every schedule month up to it. A payment logged
   /// early (dated the month before) used to read as unpaid in its own month and
   /// get booked a second time.
-  bool isPaidForMonth(String installmentId) {
+  bool isPaidForMonth(String installmentId) =>
+      isPaidIn(installmentId, _selectedMonth);
+
+  /// [isPaidForMonth] for any [month].
+  bool isPaidIn(String installmentId, String month) {
     final inst = findById(installmentId);
     if (inst == null) return false;
-    final due = inst.chargesDueBy(_selectedMonth);
+    final due = inst.chargesDueBy(month);
     return due > 0 && inst.paidCount(_ledger.allTransactions) >= due;
   }
 
@@ -155,10 +162,10 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// Whether the row offers "Mark paid": only a plan on a card without a
   /// billing cycle (a BNPL with no statement), only once the plan has reached
   /// [selectedMonth], and only while that month is still open.
-  bool canMarkPaid(Installment inst) =>
+  bool canMarkPaid(Installment inst, {String? month}) =>
       !billsOnStatement(inst) &&
-      inst.chargesDueBy(_selectedMonth) > 0 &&
-      !isPaidForMonth(inst.id);
+      inst.chargesDueBy(month ?? _selectedMonth) > 0 &&
+      !isPaidIn(inst.id, month ?? _selectedMonth);
 
   /// Whether the row offers undoing this month's payment — the manual
   /// counterpart of [canMarkPaid]. A charge billed by a statement is not
@@ -210,11 +217,17 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     return (paidCount(installmentId) / inst.totalMonths).clamp(0.0, 1.0);
   }
 
-  double get totalDueThisMonth =>
-      dueThisMonth.fold(0.0, (sum, i) => sum + i.monthlyAmount);
+  double get totalDueThisMonth => totalDueIn(_selectedMonth);
 
-  double get totalPaidThisMonth => dueThisMonth
-      .where((i) => isPaidForMonth(i.id))
+  /// [totalDueThisMonth] for any [month].
+  double totalDueIn(String month) =>
+      dueIn(month).fold(0.0, (sum, i) => sum + i.monthlyAmount);
+
+  double get totalPaidThisMonth => totalPaidIn(_selectedMonth);
+
+  /// [totalPaidThisMonth] for any [month].
+  double totalPaidIn(String month) => dueIn(month)
+      .where((i) => isPaidIn(i.id, month))
       .fold(0.0, (sum, i) => sum + i.monthlyAmount);
 
   // ─── Web helpers (Plan 050-C) ─────────────────────────────────────────────────
@@ -286,10 +299,13 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// the one that closes in it, which under a "days after statement" rule is
   /// due the month after. Should no statement fall due in the month (a long
   /// days-after rule stepping over February) the date is unknown: null.
-  DateTime? dueDate(Installment inst) {
+  ///
+  /// [month] reads another month without paging the tab there.
+  DateTime? dueDate(Installment inst, {String? month}) {
+    final dueMonth = month ?? _selectedMonth;
     final account = accounts.where((a) => a.id == inst.accountId).firstOrNull;
     if (account == null) return null;
-    final parts = _selectedMonth.split('-');
+    final parts = dueMonth.split('-');
     if (parts.length != 2) return null;
     final y = int.tryParse(parts[0]);
     final m = int.tryParse(parts[1]);
@@ -303,7 +319,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       for (var back = 2; back >= 0; back--) {
         final anchor = DateTime(y, m - back);
         final cycle = account.cycleClosingIn(anchor.year, anchor.month);
-        if (cycle != null && cycle.dueMonthKey == _selectedMonth) {
+        if (cycle != null && cycle.dueMonthKey == dueMonth) {
           match = cycle;
         }
       }

@@ -247,8 +247,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Bills for the selected month, ordered unpaid-first then by due day, so the
   /// actionable items rise to the top and paid bills sink to the bottom.
-  List<Bill> get bills =>
-      _allBills.where((b) => b.month == _selectedMonth).toList()
+  List<Bill> get bills => billsIn(_selectedMonth);
+
+  /// [bills] for any [month], in the same order, so a reader can ask about a
+  /// month the tab is not showing without paging it there.
+  List<Bill> billsIn(String month) =>
+      _allBills.where((b) => b.month == month).toList()
         ..sort((a, b) {
           if (a.isPaid != b.isPaid) return a.isPaid ? 1 : -1;
           final byDue = a.dueDay.compareTo(b.dueDay);
@@ -277,13 +281,19 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   double get totalBillsAmount => bills.fold(0.0, (sum, b) => sum + b.amount);
 
-  double get totalBillsPaid => bills
+  double get totalBillsPaid => totalBillsPaidIn(_selectedMonth);
+
+  /// [totalBillsPaid] for any [month].
+  double totalBillsPaidIn(String month) => billsIn(month)
       .where((b) => b.isPaid)
       .fold(0.0, (sum, b) => sum + (b.paidAmount ?? b.amount));
 
   /// Still owed across the month's unpaid bills. A partly paid credit
   /// statement counts only what is left on it.
-  double get totalBillsPending => bills
+  double get totalBillsPending => totalBillsPendingIn(_selectedMonth);
+
+  /// [totalBillsPending] for any [month].
+  double totalBillsPendingIn(String month) => billsIn(month)
       .where((b) => !b.isPaid)
       .fold(0.0, (sum, b) => sum + _unpaidPortion(b));
 
@@ -372,12 +382,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// month is billed onto the card when the statement closes, so it is already
   /// inside that statement's row — listing it again showed the same money
   /// twice. Only a plan on a card without statements is listed separately.
-  List<ComingUpItem> comingUpItems(InstallmentPresenter installments) {
+  ///
+  /// [month] reads another month without paging the tab there.
+  List<ComingUpItem> comingUpItems(InstallmentPresenter installments,
+      {String? month}) {
+    final m = month ?? _selectedMonth;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final items = <ComingUpItem>[];
 
-    for (final b in bills.where((b) => !b.isPaid)) {
+    for (final b in billsIn(m).where((b) => !b.isPaid)) {
       final due = billDueDate(b);
       items.add(ComingUpItem(
         kind: ComingUpKind.bill,
@@ -389,7 +403,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         source: b,
       ));
     }
-    for (final r in receivables.where((r) => !r.isReceived)) {
+    for (final r in receivablesIn(m).where((r) => !r.isReceived)) {
       final d = r.expectedDate;
       items.add(ComingUpItem(
         kind: ComingUpKind.receivable,
@@ -403,7 +417,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         source: r,
       ));
     }
-    for (final e in budgetedExpenses.where((e) => !e.isPaid)) {
+    for (final e in budgetedExpensesIn(m).where((e) => !e.isPaid)) {
       items.add(ComingUpItem(
         kind: ComingUpKind.budgeted,
         name: e.name,
@@ -414,9 +428,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         source: e,
       ));
     }
-    for (final i in installments.dueThisMonth
-        .where((i) => installments.canMarkPaid(i))) {
-      final due = installments.dueDate(i);
+    for (final i in installments
+        .dueIn(m)
+        .where((i) => installments.canMarkPaid(i, month: m))) {
+      final due = installments.dueDate(i, month: m);
       items.add(ComingUpItem(
         kind: ComingUpKind.installment,
         name: i.name,
@@ -465,8 +480,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Step 3 compares calendar days, not raw timestamps: `expectedDate` used to
   /// carry the time of day it was picked, so several entries all labelled
   /// "exp Aug 4" sorted by an invisible time and looked shuffled.
-  List<Receivable> get receivables =>
-      _allReceivables.where((r) => r.month == _selectedMonth).toList()
+  List<Receivable> get receivables => receivablesIn(_selectedMonth);
+
+  /// [receivables] for any [month], in the same order.
+  List<Receivable> receivablesIn(String month) =>
+      _allReceivables.where((r) => r.month == month).toList()
         ..sort((a, b) {
           if (a.isReceived != b.isReceived) return a.isReceived ? 1 : -1;
           final ai = a.sortIndex;
@@ -546,14 +564,22 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   double get totalReceivablesAmount =>
       receivables.fold(0.0, (sum, r) => sum + r.amount);
 
-  double get totalReceived => receivables
+  double get totalReceived => totalReceivedIn(_selectedMonth);
+
+  /// [totalReceived] for any [month].
+  double totalReceivedIn(String month) => receivablesIn(month)
       .where((r) => r.isReceived)
       .fold(0.0, (sum, r) => sum + (r.receivedAmount ?? r.amount));
 
   /// Outstanding (not-yet-received) receivable amount for the selected month —
   /// the web KPI strip's "Pending receivables".
   double get totalReceivablesPending =>
-      receivables.where((r) => !r.isReceived).fold(0.0, (s, r) => s + r.amount);
+      totalReceivablesPendingIn(_selectedMonth);
+
+  /// [totalReceivablesPending] for any [month].
+  double totalReceivablesPendingIn(String month) => receivablesIn(month)
+      .where((r) => !r.isReceived)
+      .fold(0.0, (s, r) => s + r.amount);
 
   // ─── Web helpers (Plan 050-C) ─────────────────────────────────────────────────
 
@@ -642,7 +668,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Budgeted expenses for the selected month, ordered unpaid-first. These have
   /// no due day, so the secondary sort is alphabetical by name.
   List<BudgetedExpense> get budgetedExpenses =>
-      _allExpenses.where((e) => e.month == _selectedMonth).toList()
+      budgetedExpensesIn(_selectedMonth);
+
+  /// [budgetedExpenses] for any [month], in the same order.
+  List<BudgetedExpense> budgetedExpensesIn(String month) =>
+      _allExpenses.where((e) => e.month == month).toList()
         ..sort((a, b) {
           if (a.isPaid != b.isPaid) return a.isPaid ? 1 : -1;
           return a.name.compareTo(b.name);

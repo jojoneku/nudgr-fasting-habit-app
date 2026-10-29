@@ -24,6 +24,7 @@ import 'package:mockito/mockito.dart';
 
 import '../mocks.mocks.dart';
 import '../support/advisor_events.dart';
+import '../support/proposal_fakes.dart';
 
 /// Every way a Nudgy suggestion card used to fail to appear, one test each.
 ///
@@ -72,7 +73,7 @@ class _ExtractorOnly implements AiCoachService {
 
 /// A proposal host the test answers by hand, so a turn can be held open on a
 /// pending card exactly as it is while the user is looking at one.
-class _HeldExecutor implements FinanceToolExecutor {
+class _HeldExecutor with ProposeBatchOneByOne implements FinanceToolExecutor {
   final List<String> proposals = [];
   Completer<AiToolResult>? _decision;
 

@@ -46,6 +46,16 @@ class TreasuryHistoryPresenter extends ChangeNotifier with SafeNotifier {
   MonthlySummary? get currentMonthSummary =>
       _computeSummary(toMonthKey(DateTime.now()));
 
+  /// The History figures for [month]: its closed summary, or the live one when
+  /// [month] is the month in progress. Null for any other month — one that was
+  /// never closed has no frozen balances to report.
+  MonthlySummary? summaryFor(String month) {
+    for (final s in _summaries) {
+      if (s.month == month) return s;
+    }
+    return month == toMonthKey(DateTime.now()) ? currentMonthSummary : null;
+  }
+
   List<FinanceCategory> get categories => List.unmodifiable(_categories);
 
   List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
