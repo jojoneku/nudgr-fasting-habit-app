@@ -8493,6 +8493,7 @@ class MockBillsReceivablesPresenter extends _i1.Mock
     required String? fromAccountId,
     required double? amount,
     DateTime? date,
+    String? note,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -8503,6 +8504,7 @@ class MockBillsReceivablesPresenter extends _i1.Mock
             #fromAccountId: fromAccountId,
             #amount: amount,
             #date: date,
+            #note: note,
           },
         ),
         returnValue: _i15.Future<void>.value(),

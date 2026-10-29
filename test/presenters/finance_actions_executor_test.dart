@@ -861,8 +861,12 @@ void main() {
       );
       when(bills.allBills).thenReturn([testBill]);
 
+      // No ledger here, so no account to record from: only "already in the
+      // ledger" can be confirmed, and the model says so.
       unawaited(exPropose(
-          executor, call('markBillPaid', {'id': 'b1', 'paidAmount': 3500})));
+          executor,
+          call('markBillPaid',
+              {'id': 'b1', 'paidAmount': 3500, 'alreadyLogged': true})));
       await Future<void>.delayed(Duration.zero);
 
       expect(executor.pending, isNotNull);
@@ -873,7 +877,8 @@ void main() {
       verify(bills.markBillPaid('b1',
               paidAmount: 3500,
               paidDate: anyNamed('paidDate'),
-              accountId: anyNamed('accountId')))
+              accountId: null,
+              recordInLedger: false))
           .called(1);
     });
 
@@ -890,8 +895,8 @@ void main() {
 
       unawaited(exPropose(
           executor,
-          call(
-              'markReceivableReceived', {'id': 'r1', 'receivedAmount': 2000})));
+          call('markReceivableReceived',
+              {'id': 'r1', 'receivedAmount': 2000, 'alreadyLogged': true})));
       await Future<void>.delayed(Duration.zero);
 
       expect(executor.pending, isNotNull);
@@ -902,7 +907,8 @@ void main() {
       verify(bills.markReceivableReceived('r1',
               receivedAmount: 2000,
               receivedDate: anyNamed('receivedDate'),
-              accountId: anyNamed('accountId')))
+              accountId: null,
+              recordInLedger: false))
           .called(1);
     });
 
