@@ -36,6 +36,7 @@ import '../services/storage_service.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
+import '../utils/planning_intent.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
@@ -418,6 +419,50 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     await send(prompt.text, images: prompt.images);
   }
 
+  /// The message the router last gave to the ledger's quick-log pipeline,
+  /// kept so the user can send it to Nudgy instead when the card misread it.
+  String? _routedLogText;
+
+  /// Set by [askNudgyInstead] so the next [send] skips the quick-log router.
+  bool _bypassRouterOnce = false;
+
+  /// True while the ledger shows a log card for a message this chat routed to
+  /// it, so the card can offer "Not a log — ask Nudgy".
+  bool get canAskNudgyInstead {
+    final ledger = _ledger;
+    if (_routedLogText == null || ledger == null || _isResponding) {
+      return false;
+    }
+    final state = ledger.chatState;
+    final step = state.lastStep;
+    return state.entries.isNotEmpty ||
+        step is StepResolved ||
+        step is StepClarify;
+  }
+
+  /// The quick-log card misread a message: drop the card and let Nudgy answer
+  /// the same words instead.
+  ///
+  /// Nothing is saved — the card is only a review, and cancelling it discards
+  /// every row on it. This is the escape hatch for the planning-word veto
+  /// (Plan 065, 1d): the veto catches the reported phrasings, the button
+  /// catches the rest without sending every message to the model first.
+  Future<void> askNudgyInstead() async {
+    if (!canAskNudgyInstead) return;
+    final text = _routedLogText!;
+    _routedLogText = null;
+    _ledger!.cancelChat();
+    // send() shows the prompt again, so drop the copy the routed turn left —
+    // the same move retryLastTurn makes.
+    if (_messages.isNotEmpty &&
+        _isEditablePrompt(_messages.last) &&
+        _messages.last.text == text) {
+      _messages.removeLast();
+    }
+    _bypassRouterOnce = true;
+    await send(text);
+  }
+
   /// Replaces a question already asked and answers the new one.
   ///
   /// Everything after the edited message goes: its answer was to a question
@@ -469,6 +514,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     String text, {
     List<Uint8List> images = const [],
   }) async {
+    final bypassRouter = _bypassRouterOnce;
+    _bypassRouterOnce = false;
     final trimmed = text.trim();
     if ((trimmed.isEmpty && images.isEmpty) || _isResponding) return;
 
@@ -487,10 +534,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // is the exception, and stays with Nudgy — see [isAdvisorToolRequest].
     final ledger = _ledger;
     var promptShown = false;
-    if (images.isEmpty &&
+    if (!bypassRouter &&
+        images.isEmpty &&
         _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         _routesToLedger(trimmed, ledger)) {
+      // A reply to the ledger's clarifying question is not the message the
+      // card is about, so it does not replace the one kept for "ask Nudgy".
+      if (ledger.chatState.phase != ChatPhase.clarifying) {
+        _routedLogText = trimmed;
+      }
       _messages.add(AiChatMessage.user(trimmed));
       _errorMessage = null;
       _isResponding = true;
@@ -511,6 +564,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       // has the whole conversation and every tool, including logging — so the
       // message is never left without a reply. It is already in the thread.
       promptShown = true;
+      _routedLogText = null;
     }
 
     // Compress attached photos off the UI thread before building the turn.
@@ -1942,6 +1996,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // answering it conversationally is how the assistant ended up describing
     // entries it had not logged.
     if (t.contains('?') && !isPoliteLogRequest(t)) return false;
+    // A plan is advice too: "I want to pay 5000 for the BPI card next month"
+    // has an amount and a spend verb, but nothing has been spent yet.
+    if (hasPlanningIntent(t)) return false;
     final hasAmount = RegExp(r'(₱|php|p)?\s?\d[\d,]*(\.\d+)?').hasMatch(t);
     if (!hasAmount) return false;
     final hasLogVerb = RegExp(

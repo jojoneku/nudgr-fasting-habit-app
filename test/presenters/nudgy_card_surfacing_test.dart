@@ -438,4 +438,70 @@ void main() {
       p.dispose();
     });
   });
+  // Plan 065, 1d. The veto catches the planning phrasings it knows; this
+  // button catches the rest. It must save nothing and give Nudgy the words.
+  group('"Not a log — ask Nudgy"', () {
+    test('drops the card, saves nothing, and Nudgy answers the same text',
+        () async {
+      final cloud =
+          _ExtractorOnly(ExtractionResult(entries: [_entry(5000, 'BPI')]));
+      final ledger = await ledgerWith(cloud);
+      scriptAdvisor([const AdvisorReply(text: 'Here is a plan.')]);
+      final p = advisorWith(ledger: ledger, executor: _HeldExecutor());
+
+      await p.send('paid 5000 bpi card');
+      expect(ledger.chatState.entries, hasLength(1));
+      expect(p.canAskNudgyInstead, isTrue);
+
+      await p.askNudgyInstead();
+
+      expect(ledger.chatState.phase, ChatPhase.idle);
+      expect(ledger.chatState.entries, isEmpty);
+      verifyNever(storage.saveTransactions(any));
+      final sent = verify(advisor.adviseFinance(
+        messages: captureAnyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+        tools: anyNamed('tools'),
+      )).captured.single as List<AiChatMessage>;
+      expect(sent.last.text, 'paid 5000 bpi card');
+      // The prompt shows once, not once per route.
+      expect(p.messages.map((m) => m.text).toList(),
+          ['paid 5000 bpi card', 'Here is a plan.']);
+      expect(p.canAskNudgyInstead, isFalse);
+      p.dispose();
+    });
+
+    test('is not offered for a card this chat did not route', () async {
+      final cloud =
+          _ExtractorOnly(ExtractionResult(entries: [_entry(120, 'Coffee')]));
+      final ledger = await ledgerWith(cloud);
+      final p = advisorWith(ledger: ledger, executor: _HeldExecutor());
+
+      // The hub's quick-log bar shares the ledger.
+      await ledger.sendChatInput('coffee 120');
+      expect(ledger.chatState.entries, hasLength(1));
+
+      expect(p.canAskNudgyInstead, isFalse);
+      await p.askNudgyInstead();
+      expect(ledger.chatState.entries, hasLength(1));
+      p.dispose();
+    });
+
+    test('a planning sentence never reaches the card at all', () async {
+      final cloud =
+          _ExtractorOnly(ExtractionResult(entries: [_entry(5000, 'BPI')]));
+      final ledger = await ledgerWith(cloud);
+      scriptAdvisor([const AdvisorReply(text: 'Sure, let us plan it.')]);
+      final p = advisorWith(ledger: ledger, executor: _HeldExecutor());
+
+      await p.send('I want to pay 5000 for the BPI card next month');
+
+      expect(cloud.messages, isEmpty);
+      expect(advisorHops(), 1);
+      expect(p.canAskNudgyInstead, isFalse);
+      p.dispose();
+    });
+  });
 }
