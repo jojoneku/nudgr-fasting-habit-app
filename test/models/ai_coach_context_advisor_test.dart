@@ -625,6 +625,39 @@ void main() {
       expect(AiCoachPresenter.looksLikeExpenseLog('i have 12k'), isFalse);
       expect(AiCoachPresenter.looksLikeExpenseLog('about 5000'), isFalse);
     });
+
+    // Plan 065, 1d: these have an amount and a spend verb, but they describe
+    // a plan, so Nudgy answers them instead of the quick-log card.
+    test('a plan with a spend verb is advice, not a log', () {
+      for (final text in [
+        'I want to pay 5000 for the BPI card next month',
+        'I WANT to pay 5000 for the BPI card',
+        'pay 5000 next month',
+        'planning to buy a 3000 jacket',
+        'wanna buy shoes 2500',
+        'we plan to spend 8000 on the trip',
+        'if I pay 2000 now',
+        'how to pay 1500 meralco',
+        'should I pay 4000 to the card',
+        'thinking of buying a 60000 laptop',
+      ]) {
+        expect(AiCoachPresenter.looksLikeExpenseLog(text), isFalse,
+            reason: text);
+      }
+    });
+
+    test('plain logs still go to quick log', () {
+      for (final text in [
+        '-500 food gcash',
+        'grab 245',
+        'coffee 120',
+        'spent 500 on lunch',
+        'paid 2500 meralco bill from bpi',
+      ]) {
+        expect(AiCoachPresenter.looksLikeExpenseLog(text), isTrue,
+            reason: text);
+      }
+    });
   });
 
   group('financeSnapshotSummary — detail the advisor used to miss', () {

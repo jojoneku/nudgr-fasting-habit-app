@@ -633,6 +633,28 @@ void main() {
       expect(p.recognisesLoggableEntry(''), isFalse);
     });
 
+    // Plan 065, 1d. A plan names a real account and an amount, so the
+    // preparser sees an entry in it — but nothing has been spent yet.
+    test('a plan is not a log, even when it names an account', () async {
+      final p = await presenter();
+      for (final text in [
+        'I want to pay 5000 for the BPI card next month',
+        'planning to move 2000 food gcash',
+        'wanna put 1000 food gcash',
+        'If I pay 3000 from bpi',
+        'Thinking of 500 food gcash',
+        'should pay 1500 food bpi',
+      ]) {
+        expect(p.recognisesLoggableEntry(text), isFalse, reason: text);
+      }
+    });
+
+    test('the planning veto leaves plain logs alone', () async {
+      final p = await presenter();
+      expect(p.recognisesLoggableEntry('-500 food gcash'), isTrue);
+      expect(p.recognisesLoggableEntry('207 lunch at alturas gcash'), isTrue);
+    });
+
     test('a multi-entry message counts if any segment is loggable', () async {
       final p = await presenter();
       expect(
