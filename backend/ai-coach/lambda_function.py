@@ -1438,14 +1438,19 @@ def _clip(value, cap, label):
 # hiccup". Caching the stable prefix is what makes a long conversation stop
 # getting slower the longer it runs.
 #
-# Two breakpoints, because two different things are stable for different
-# reasons:
+# Three breakpoints, because three different things are stable for different
+# reasons (Bedrock allows four per request):
 #
-#   1. tools + system. Bedrock's cache prefix runs tools -> system -> messages,
-#      so a breakpoint at the end of the system block also covers the tool
-#      catalogue ahead of it. This is the big one: the snapshot and historical
-#      record are most of the prompt and change only when the ledger does.
-#   2. The conversation up to the second-to-last user turn. The newest turn is
+#   1. tools + rules. Bedrock's cache prefix runs tools -> system -> messages,
+#      so a breakpoint at the end of the rules block also covers the tool
+#      catalogue ahead of it. Neither changes between deploys of the app, so
+#      this one survives a ledger edit (Plan 065, item 1e). Without tools the
+#      rules alone are ~3.3k tokens: above Sonnet's 1,024 minimum, below
+#      Haiku 4.5's 4,096, where the breakpoint simply caches nothing.
+#   2. The rest of the system: snapshot, profile and historical record. Most
+#      of the prompt, and it changes only when the ledger does -- but when it
+#      does, only this block and what follows it are written again.
+#   3. The conversation up to the second-to-last user turn. The newest turn is
 #      deliberately left outside so the prefix that gets cached is the part that
 #      will still be a prefix next turn — cache turn N-2 now, read it back and
 #      cache N-1 on the following call. Marking the newest turn instead would
@@ -1458,9 +1463,17 @@ def _clip(value, cap, label):
 _CACHE_CONTROL = {"type": "ephemeral"}
 
 
-def _cached_system(system_prompt):
-    """The system prompt as a single cacheable block."""
-    return [{"type": "text", "text": system_prompt, "cache_control": _CACHE_CONTROL}]
+def _cached_system(rules, context=""):
+    """The system prompt as cacheable blocks: rules first, then the context.
+
+    Each block ends in its own breakpoint, so an edit to the context (the
+    snapshot and what follows it) leaves the tools + rules prefix cached. An
+    empty context gives the single rules block.
+    """
+    blocks = [{"type": "text", "text": rules, "cache_control": _CACHE_CONTROL}]
+    if context:
+        blocks.append({"type": "text", "text": context, "cache_control": _CACHE_CONTROL})
+    return blocks
 
 
 def _mark_conversation_cache(bedrock_messages):
@@ -1505,7 +1518,7 @@ def _build_advisor_request(payload):
     Extracted so the buffered and streaming advisor paths cannot drift. Every
     rule that makes the advisor trustworthy lives in here — the snapshot as
     sole source of numeric truth, the clipping caps, alternation enforcement,
-    the image attaching to the last user turn, and both cache breakpoints — so
+    the image attaching to the last user turn, and every cache breakpoint — so
     a second copy of it would be a second place for those to rot.
     """
     """Financial advisor chat (Plan: ai-financial-advisor).
@@ -1522,7 +1535,9 @@ def _build_advisor_request(payload):
     if not messages:
         return None, _resp(400, {"error": "missing_messages"})
 
-    system_lines = [_ADVISOR_SYSTEM_PREFIX]
+    # The rules (_ADVISOR_SYSTEM_PREFIX) are their own block; everything built
+    # here goes in the second one. See _cached_system.
+    system_lines = []
     summary = _clip(ctx.get("summary"), _MAX_SNAPSHOT_LEN, "snapshot")
     if summary:
         system_lines.append(
@@ -1552,7 +1567,7 @@ def _build_advisor_request(payload):
             "liquidity — what is spendable right now comes only from the snapshot above:\n"
             + historical
         )
-    system_prompt = "\n\n".join(system_lines)
+    system_context = "\n\n".join(system_lines)
 
     # A turn is kept if it carries text OR content blocks. The blocks path is
     # the tool loop: an assistant turn holding a tool_use block usually has no
@@ -1607,7 +1622,7 @@ def _build_advisor_request(payload):
 
 
     return {
-        "system": _cached_system(system_prompt),
+        "system": _cached_system(_ADVISOR_SYSTEM_PREFIX, system_context),
         "messages": _mark_conversation_cache(bedrock_messages),
         "tools": tools,
         # Only for the cost_line; not part of the Bedrock request.

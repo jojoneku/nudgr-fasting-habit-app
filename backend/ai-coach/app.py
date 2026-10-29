@@ -18,7 +18,7 @@ the first.
 
 Every rule that makes the advisor trustworthy is imported, not restated.
 `_build_advisor_request` assembles the prompt — snapshot as sole source of
-numeric truth, clipping caps, alternation enforcement, image placement, both
+numeric truth, clipping caps, alternation enforcement, image placement, the
 prompt-cache breakpoints — and `advise_finance_stream` runs the model. A second
 copy of any of that would be a second place for it to rot.
 """
