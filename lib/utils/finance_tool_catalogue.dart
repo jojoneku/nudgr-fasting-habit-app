@@ -494,7 +494,8 @@ const List<AiTool> kFinanceTools = [
         '"what does the History tab say I average", "what is on my card '
         'statement", "how much do I hold for others". Quote the figures; '
         'never add or subtract them yourself. For a named record use find; '
-        'for rows in a period use findTransactions.',
+        'for rows in a period use findTransactions; for a sum or group-by no '
+        'screen shows use queryFinance.',
     inputSchema: {
       'type': 'object',
       'required': ['view'],
