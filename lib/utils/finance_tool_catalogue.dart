@@ -185,6 +185,84 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  // Computed on the phone with the screens' own rules (Plan 065 phase 3), so
+  // the model quotes a figure instead of adding up rows.
+  AiTool(
+    name: 'queryFinance',
+    kind: AiToolKind.read,
+    description: 'Answer a sum or group-by that no screen shows, computed '
+        'from the ledger with the app\'s own rules: "average monthly '
+        'spending since I started", "top 5 categories this year", "how much '
+        'did I spend at Grab per month", "how much did I set aside in Q3". '
+        'Quote its figures as they are: never add, subtract or average them '
+        'yourself. A figure a screen shows (budget left, forecast, pace) '
+        'comes from getView, a named record and its details from find, and '
+        'the rows of a period from findTransactions. The result states the '
+        'range, the months covered and what the metric counts.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['metric'],
+      'properties': {
+        'metric': {
+          'type': 'string',
+          'enum': ['spend', 'income', 'net', 'count', 'setAside'],
+          'description': 'spend: real spending (no transfers, reimbursables '
+              'or installment purchase records). income: real income. net: '
+              'income minus spend. count: number of entries. setAside: money '
+              'moved into savings pockets, less money moved out.',
+        },
+        'groupBy': {
+          'type': 'string',
+          'enum': ['none', 'category', 'account', 'month', 'description'],
+          'description': 'One line per group. Default none (the total only). '
+              'month lists every month in the range, including empty ones.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Category NAME or part of it.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME or part of it.',
+        },
+        'query': {
+          'type': 'string',
+          'description': 'Words to match, in any order, against the '
+              'description, note, category, account or who owes it, e.g. '
+              '"grab".',
+        },
+        'type': {
+          'type': 'string',
+          'enum': ['outflow', 'inflow', 'transfer'],
+          'description': 'Only this direction. Omit for all.',
+        },
+        'from': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, inclusive. Overrides month.',
+        },
+        'to': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, inclusive. Defaults to today.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM. With no month and no dates, the whole '
+              'history is used, from the first ledger entry to today.',
+        },
+        'top': {
+          'type': 'integer',
+          'description': 'Most groups to list, biggest first. Default 10. '
+              'The total always covers every group.',
+        },
+        'average': {
+          'type': 'boolean',
+          'description': 'Also give the average per month over the range, '
+              'counting a month with no activity as 0. Use it for "average '
+              'monthly …" questions.',
+        },
+      },
+    },
+  ),
 
   // ── Creates ─────────────────────────────────────────────────────────────
   // Each returns a proposal the user confirms. None takes an id: a create has

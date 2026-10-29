@@ -17,6 +17,7 @@ import '../utils/credit_cycle.dart';
 import '../utils/finance_entry_extraction.dart';
 import '../utils/finance_flows.dart';
 import '../utils/finance_format.dart';
+import '../utils/finance_query.dart';
 import '../utils/model_date_guard.dart';
 import 'bills_receivables_presenter.dart';
 import 'budget_presenter.dart';
@@ -285,6 +286,9 @@ class FinanceActionsExecutor extends ChangeNotifier
 
       case 'findTransactions':
         return _findTransactions(call);
+
+      case 'queryFinance':
+        return _queryFinance(call);
     }
     return AiToolResult.failed(call.id, 'Unknown read tool "${call.name}".');
   }
@@ -530,6 +534,74 @@ class FinanceActionsExecutor extends ChangeNotifier
           '(transfers between the user\'s own accounts excluded from both'
           '$purchasesNote$uncountedNote). '
           '$shown\n${rows.join('\n')}',
+    );
+  }
+
+  /// A sum or group-by over the ledger, computed by [runFinanceQuery] with the
+  /// screens' own rules. This only reads the inputs and words the result: the
+  /// range, the months covered and the metric's definition are always said,
+  /// so the model never has to work out a figure or guess what one means.
+  AiToolResult _queryFinance(AiToolCall call) {
+    final ledger = _ledger;
+    if (ledger == null) {
+      return AiToolResult.failed(
+          call.id, 'Transactions are not available here.');
+    }
+    final i = call.input;
+    final metric = FinanceMetric.values
+        .where((m) => m.name == _str(i['metric']))
+        .firstOrNull;
+    if (metric == null) {
+      return AiToolResult.failed(call.id,
+          'metric must be one of spend, income, net, count, setAside.');
+    }
+    final groupByRaw = _str(i['groupBy']);
+    final groupBy = groupByRaw.isEmpty
+        ? FinanceGroupBy.none
+        : FinanceGroupBy.values.where((g) => g.name == groupByRaw).firstOrNull;
+    if (groupBy == null) {
+      return AiToolResult.failed(call.id,
+          'groupBy must be one of none, category, account, month, description.');
+    }
+    DateTime? date(String key) {
+      final raw = _str(i[key]);
+      return raw.isEmpty ? null : DateTime.tryParse(raw);
+    }
+
+    for (final key in ['from', 'to']) {
+      if (_str(i[key]).isNotEmpty && date(key) == null) {
+        return AiToolResult.failed(call.id, '$key must be YYYY-MM-DD.');
+      }
+    }
+    final rawTop = _numOrNull(i['top']);
+    final rawAverage = i['average'];
+    final now = DateTime.now();
+
+    final result = runFinanceQuery(
+      FinanceQuery(
+        metric: metric,
+        groupBy: groupBy,
+        category: _str(i['category']),
+        account: _str(i['account']),
+        query: _str(i['query']),
+        type: _str(i['type']),
+        from: date('from'),
+        to: date('to'),
+        month: _str(i['month']),
+        top: rawTop == null || rawTop <= 0 ? 10 : rawTop.toInt(),
+        average: rawAverage == true || _str(rawAverage) == 'true',
+      ),
+      transactions: ledger.allTransactions,
+      accounts: ledger.accounts,
+      categories: ledger.categories,
+      today: now,
+    );
+    final error = result.error;
+    if (error != null) return AiToolResult.failed(call.id, error);
+    return AiToolResult(
+      toolUseId: call.id,
+      ok: true,
+      summary: describeFinanceQuery(result, now),
     );
   }
 
