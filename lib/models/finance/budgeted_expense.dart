@@ -60,6 +60,11 @@ class BudgetedExpense {
   /// field shipped, which are backfilled on load.
   final String? seriesId;
   final String? transactionId; // linked TransactionRecord
+  /// When the record was first created on a device. Set once by the owning
+  /// presenter's create path and never changed by an edit. Null on records
+  /// saved before this field shipped ("added before this release"). It is not
+  /// [updatedAt], which is a sync stamp.
+  final DateTime? createdAt;
   final DateTime updatedAt;
 
   BudgetedExpense({
@@ -79,6 +84,7 @@ class BudgetedExpense {
     this.recurrenceType,
     this.seriesId,
     this.transactionId,
+    this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -100,6 +106,11 @@ class BudgetedExpense {
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
       seriesId: json['seriesId'] as String?,
       transactionId: json['transactionId'] as String?,
+      // Tolerant: a record saved before this field shipped (or a bad value)
+      // loads as null rather than failing the pull.
+      createdAt: json['createdAt'] is String
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -122,6 +133,7 @@ class BudgetedExpense {
         'recurrenceType': recurrenceType?.name,
         'seriesId': seriesId,
         'transactionId': transactionId,
+        'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -148,6 +160,9 @@ class BudgetedExpense {
     // `field ?? this.field` never could, which left an unfunded set-aside still
     // pointing at a transaction that no longer exists.
     Object? transactionId = _kUnset,
+    // Sentinel-guarded so a presenter can carry the stored value onto an
+    // edited record exactly, null included. Omitting it keeps the current one.
+    Object? createdAt = _kUnset,
     DateTime? updatedAt,
   }) {
     return BudgetedExpense(
@@ -173,6 +188,9 @@ class BudgetedExpense {
       transactionId: identical(transactionId, _kUnset)
           ? this.transactionId
           : transactionId as String?,
+      createdAt: identical(createdAt, _kUnset)
+          ? this.createdAt
+          : createdAt as DateTime?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
