@@ -6,7 +6,7 @@ AWS Lambda + Amazon Bedrock endpoint for the AI Coach cloud tier.
 - **Runtime:** Python 3.12 (`lambda_function.lambda_handler`)
 - **Framework:** AWS SAM (Serverless Application Model)
 - **Region:** `ap-southeast-1`
-- **Model:** Amazon Bedrock — Claude Haiku 3 (`anthropic.claude-haiku-20240307-v1:0`)
+- **Model:** Amazon Bedrock — Claude Haiku 5.5 (`global.anthropic.claude-haiku-5-5`, global cross-region profile) for every op except `adviseFinance`, which uses `ADVISOR_MODEL_ID`. See [Switching models](#switching-models).
 - **API:** API Gateway HTTP API (POST /coach) with a Supabase JWT authorizer
 - **Auth:** API Gateway verifies the Supabase JWT (issuer = `https://<ref>.supabase.co/auth/v1`, audience = `authenticated`). Unauthenticated calls are rejected with 401.
 - **Rate limiting:** per-user daily cap enforced via the Supabase `increment_ai_usage` RPC (see `docs/supabase_migration.sql`). No AWS-side datastore — the Lambda forwards the caller's Bearer token to PostgREST over HTTPS. Returns 429 when the cap is exceeded.
@@ -14,7 +14,7 @@ AWS Lambda + Amazon Bedrock endpoint for the AI Coach cloud tier.
 ## Prerequisites
 - AWS CLI configured (`aws configure`)
 - AWS SAM CLI installed (`brew install aws-sam-cli` / `choco install aws-sam-cli`)
-- Bedrock Claude Haiku access enabled in your AWS account (`ap-southeast-1`)
+- Bedrock access to Claude Haiku 5.5 enabled in your AWS account (`ap-southeast-1`; from this Region it is reachable only through the `global.` profile)
 - The rate-limit table + RPC applied to your Supabase project (run `docs/supabase_migration.sql` in the Supabase SQL editor)
 
 ## Deploy
@@ -34,6 +34,15 @@ Copy the `AiCoachApiUrl` output — this goes in your Flutter app as `--dart-def
 
 > CI (`deploy_lambda` in `.github/workflows/ci.yml`) only updates function **code** on changes under `backend/ai-coach/`. Provisioning auth, env vars, and the API/authorizer requires a full `sam deploy` (the parameters above) at least once.
 
+## Switching models
+
+The model IDs are env vars on the live function (`BEDROCK_MODEL_ID`, `ADVISOR_MODEL_ID`), so a model change is a configuration change, not a deploy. `_generation_params` in `lambda_function.py` decides the extra body fields for each model: thinking off and an effort level (`BEDROCK_EFFORT`, default `low`) for the 5.5 models, nothing for older ones. A model it does not list gets the plain body, so the code is safe on both sides of a switch and a rollback is the env var alone.
+
+1. Merge the code first and let CI deploy it.
+2. Grant the function `bedrock:InvokeModel` on the new global profile and on `arn:aws:bedrock:*::foundation-model/<model>` (a global profile can run in any Region).
+3. Set the env var with `aws lambda update-function-configuration --profile ifast-dev --region ap-southeast-1` (the `ifast-dev` profile is the account that runs `food-coach-handler`). **That call replaces the whole environment map** — read the current one first and put every key back.
+4. Watch the CloudWatch `cost_line` entries and the `Bedrock error` lines for an hour.
+
 ## Flutter integration
 
 Pass the endpoint at build time:
@@ -48,11 +57,11 @@ Or set it in `launch.json`:
 
 The client must send the current Supabase access token as `Authorization: Bearer <jwt>` — the authorizer rejects calls without it.
 
-## Cost estimate (Claude Haiku 3)
+## Cost estimate (Claude Haiku 5.5, global: $0.10 / $0.50 per 1M tokens)
 | Volume | Input tokens | Output tokens | Cost/month |
 |---|---|---|---|
-| 1,000 calls/day | ~200 tok/call | ~150 tok/call | ~$2–3 |
-| 5,000 calls/day | ~200 tok/call | ~150 tok/call | ~$10–15 |
+| 1,000 calls/day | ~200 tok/call | ~150 tok/call | ~$3 |
+| 5,000 calls/day | ~200 tok/call | ~150 tok/call | ~$15 |
 
 $100 AWS credit ≈ 20–50 months at 1,000 calls/day. The per-user `DailyCap` bounds worst-case spend against abuse.
 

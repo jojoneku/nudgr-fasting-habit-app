@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: AI Coach Lambda — Python 3.12, proxies to Amazon Bedrock Claude Haiku
+Description: AI Coach Lambda — Python 3.12, proxies to Amazon Bedrock Claude Haiku 5.5
 
 # ⚠️  THIS TEMPLATE DOES NOT DESCRIBE PRODUCTION.
 #
@@ -43,13 +43,15 @@ Parameters:
     Description: Maximum Bedrock requests per user per day (rate limiting).
   AdvisorModelId:
     Type: String
-    Default: global.anthropic.claude-sonnet-4-5-20250929-v1:0
+    Default: global.anthropic.claude-sonnet-5-5
     Description: >
-      Bedrock model (cross-region inference profile) used ONLY by the
-      adviseFinance op — a stronger model for financial reasoning. Verified
-      access-granted and invocable from ap-southeast-1 (2026-07-22). Sonnet 5
-      (global.anthropic.claude-sonnet-5) was NOT access-granted on this account;
-      request access in the Bedrock console if you want to upgrade later.
+      Bedrock model (global cross-region inference profile) used ONLY by the
+      adviseFinance op — a stronger model for financial reasoning. Sonnet 5.5
+      replaced Sonnet 4.5 (Legacy, EOL 2027-04-08) in Plan 064: $2/$10 per 1M
+      tokens against $3/$15, cache reads $0.10 against $0.30. It runs with
+      thinking `between_tools` and ADVISOR_EFFORT (see _generation_params in
+      lambda_function.py). Sonnet 4.5 still works here unchanged if a rollback
+      is needed: `global.anthropic.claude-sonnet-4-5-20250929-v1:0`.
   AdvisorMaxTokens:
     Type: Number
     Default: 3000
@@ -84,9 +86,11 @@ Globals:
     MemorySize: 512
     Environment:
       Variables:
-        BEDROCK_MODEL_ID: anthropic.claude-haiku-20240307-v1:0
+        BEDROCK_MODEL_ID: global.anthropic.claude-haiku-5-5
+        BEDROCK_EFFORT: low
         ADVISOR_MODEL_ID: !Ref AdvisorModelId
         ADVISOR_MAX_TOKENS: !Ref AdvisorMaxTokens
+        ADVISOR_EFFORT: medium
         MAX_TOKENS: '1024'
         DAILY_CAP: !Ref DailyCap
         SUPABASE_URL: !Sub 'https://${SupabaseProjectRef}.supabase.co'
