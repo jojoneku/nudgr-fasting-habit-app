@@ -2242,6 +2242,92 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
     }, user_id=user_id, stream=stream, error=error)
 
 
+# -- Debug log for allowlisted users --------------------------------------------
+#
+# ADVISOR_DEBUG_USERS is a comma-separated list of Supabase user ids. For those
+# users only, each hop also prints one `advisor_debug` JSON line with the text
+# the invocation log never carries: the user's message, the tool calls with
+# their inputs, the tool results the app sent back, and the reply. It is for
+# testing on one's own account; scripts/trace.py --text prints it.
+#
+# Empty (the default) logs nothing. Never the briefing, the headers or the
+# token. The text includes real finance data, so the log groups need a
+# retention period before an id goes in here; turning it off is removing the
+# id, no deploy.
+
+_DEBUG_LOG = "advisor_debug"
+
+# Each logged text is cut at this length, with the count of what was cut.
+_DEBUG_FIELD_MAX = 4000
+
+_ADVISOR_DEBUG_USERS = frozenset(
+    u.strip().lower()
+    for u in os.environ.get("ADVISOR_DEBUG_USERS", "").split(",")
+    if _USER_ID_RE.fullmatch(u.strip())
+)
+
+
+def _debug_clip(value):
+    """`value` as text, cut at _DEBUG_FIELD_MAX."""
+    text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    if len(text) <= _DEBUG_FIELD_MAX:
+        return text
+    return text[:_DEBUG_FIELD_MAX] + f"... [{len(text) - _DEBUG_FIELD_MAX} more chars]"
+
+
+def _debug_input(value):
+    """A tool input as it came, or as clipped text when it is too long."""
+    text = json.dumps(value, ensure_ascii=False)
+    return value if len(text) <= _DEBUG_FIELD_MAX else _debug_clip(text)
+
+
+def _block_text(content):
+    """The text of a tool_result's content: a string, or a list of text blocks."""
+    if isinstance(content, list):
+        return "".join(b.get("text") or "" for b in content if isinstance(b, dict))
+    return content if isinstance(content, str) else ""
+
+
+def _debug_log(*, payload, calls, response_text, user_id):
+    """Print one `advisor_debug` line when `user_id` is in ADVISOR_DEBUG_USERS.
+
+    The user's text is the newest user turn that has text: on a hop that
+    continues a turn, that is still the question that started it. The results
+    are the newest tool_result turn only, as in the trace fields. Never raises:
+    a debug line must not cost the user the reply.
+    """
+    if not (_ADVISOR_DEBUG_USERS and isinstance(user_id, str)
+            and user_id.lower() in _ADVISOR_DEBUG_USERS):
+        return
+    try:
+        question = next(
+            (m.get("text") for m in reversed(payload.get("messages") or [])
+             if isinstance(m, dict) and m.get("role") == "user"
+             and (m.get("text") or "").strip()),
+            None,
+        )
+        turns = _tool_results_by_turn(payload)
+        trace = _trace_id(payload)
+        print(json.dumps({
+            "event": _DEBUG_LOG,
+            "trace": None if trace == "-" else trace,
+            "hop": "cont" if _carries_tool_results({"payload": payload}) else "first",
+            "user_text": _debug_clip(question) if question else None,
+            "tool_results": [
+                {"status": _result_status(b),
+                 "text": _debug_clip(_block_text(b.get("content")))}
+                for b in (turns[-1] if turns else [])
+            ],
+            "tool_calls": [
+                {"name": c.get("name"), "input": _debug_input(c.get("input"))}
+                for c in calls
+            ],
+            "reply_text": _debug_clip(response_text) if response_text else None,
+        }, ensure_ascii=False, separators=(",", ":")))
+    except Exception as e:  # noqa: BLE001 -- see the docstring
+        print(f"advisor_debug skipped: {type(e).__name__}")
+
+
 # -- Cost estimate (Plan 065, phase 5) ----------------------------------------
 #
 # USD per million tokens, (input, output), at Anthropic's list prices. A
@@ -2436,6 +2522,8 @@ def _advise_finance(payload, user_id=None, usage_count=None):
             payload=payload, latency_ms=elapsed_ms, user_id=user_id,
             model_id=model_id,
         )
+        _debug_log(payload=payload, calls=tool_calls,
+                   response_text=response_text, user_id=user_id)
         return _resp(200, {
             "response": response_text,
             "truncated": truncated,
@@ -2611,6 +2699,8 @@ def advise_finance_stream(payload, request, user_id=None, usage_count=None):
             ttft_ms=ttft_ms if ttft_ms is not None else -1,
             user_id=user_id, model_id=model_id,
         )
+        _debug_log(payload=payload, calls=tool_calls,
+                   response_text=response_text, user_id=user_id)
         yield _frame({
             "type": "end",
             "response": response_text,

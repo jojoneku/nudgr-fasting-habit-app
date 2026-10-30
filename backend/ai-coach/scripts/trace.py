@@ -7,11 +7,14 @@ each hop (model, tokens, cache, latency, stop reason, tools, result statuses,
 estimated cost) and each client event.
 
 The logs hold metadata only, so neither does the output: no message text, no
-finance figures, no user id.
+finance figures, no user id. The one exception is a user listed in the
+Lambda's ADVISOR_DEBUG_USERS: their hops also log the text, and --text prints
+it under each hop (the question, each tool result, each tool call, the reply).
 
 Usage, from backend/ai-coach/:
     python scripts/trace.py <trace_id>
     python scripts/trace.py --latest           # the newest trace_id
+    python scripts/trace.py --latest --text    # with the text, if logged
     python scripts/trace.py <trace_id> --hours 168 --json
 
 Needs AWS credentials for the account that runs the functions (the default
@@ -100,6 +103,8 @@ def _entry(row):
         if data.get("event") == "client_event":
             return {**base, "kind": "event", "name": data.get("name"),
                     "fields": data.get("fields") or {}}
+        if data.get("event") == "advisor_debug":
+            return {**base, "kind": "debug", **data}
         return None
     if message.startswith("cost_line op=adviseFinance"):
         return {**base, "kind": "hop", "source": "cost_line",
@@ -168,6 +173,22 @@ def _event_line(e):
     return f"{'event':<6}  {e['name']}" + (f"  {fields}" if fields else "")
 
 
+def _debug_lines(e):
+    """The text of one `advisor_debug` entry, indented under its hop."""
+    pad = " " * 12
+    lines = []
+    if e.get("user_text") and e.get("hop") == "first":
+        lines.append(f"{pad}user: {e['user_text']}")
+    for r in e.get("tool_results") or []:
+        lines.append(f"{pad}result [{r.get('status')}]: {r.get('text')}")
+    for c in e.get("tool_calls") or []:
+        lines.append(f"{pad}call: {c.get('name')} "
+                     f"{json.dumps(c.get('input'), ensure_ascii=False)}")
+    if e.get("reply_text"):
+        lines.append(f"{pad}reply: {e['reply_text']}")
+    return "\n".join(lines)
+
+
 def render(trace_id, entries):
     hops = [e for e in entries if e["kind"] == "hop"]
     events = [e for e in entries if e["kind"] == "event"]
@@ -177,6 +198,12 @@ def render(trace_id, entries):
         return "\n".join(lines + ["  (nothing found in this time window)"])
     start = _epoch(entries[0]["time"])
     for e in entries:
+        if e["kind"] == "debug":
+            # Written right after its hop's line, so it reads as part of it.
+            text = _debug_lines(e)
+            if text:
+                lines.append(text)
+            continue
         offset = _epoch(e["time"]) - start
         body = _hop_line(e) if e["kind"] == "hop" else _event_line(e)
         lines.append(f"  +{offset:6.1f}s  {body}")
@@ -213,6 +240,10 @@ def main(argv=None):
     parser.add_argument("--region", default="ap-southeast-1")
     parser.add_argument("--json", action="store_true",
                         help="print the entries as JSON instead")
+    parser.add_argument("--text", action="store_true",
+                        help="also print the message text, tool calls, tool "
+                             "results and reply, for a user listed in the "
+                             "Lambda's ADVISOR_DEBUG_USERS")
     args = parser.parse_args(argv)
 
     logs = boto3.Session(profile_name=args.profile,
@@ -231,6 +262,8 @@ def main(argv=None):
         f'| filter @message like "{trace_id}" '
         "| sort @timestamp asc"), args.hours)
     entries = timeline(rows)
+    if not args.text:
+        entries = [e for e in entries if e["kind"] != "debug"]
     if args.json:
         print(json.dumps(entries, indent=2))
     else:
