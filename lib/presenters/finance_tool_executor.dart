@@ -18,6 +18,7 @@ class PendingFinanceAction {
     this.ledgerChoice,
     this.tier = ProposalTier.create,
     this.editable = const {},
+    this.option,
   });
 
   final AiToolCall call;
@@ -53,6 +54,9 @@ class PendingFinanceAction {
   /// row always shows what will be saved.
   final Map<ProposalField, String> editable;
 
+  /// An extra the row offers as a checkbox, or null.
+  final RowOption? option;
+
   /// True when widening the recurrence scope would also change later months,
   /// which makes the row a T3 change once the user picks it.
   bool get canTouchLaterMonths => isRecurring;
@@ -85,7 +89,30 @@ class PendingFinanceAction {
         ledgerChoice: ledgerChoice,
         tier: tier,
         editable: editable,
+        option: option,
       );
+}
+
+/// An extra a row offers as a checkbox — a card control, never a model
+/// argument. A savings budget set from chat offers its monthly set-aside
+/// here, as the add-budget sheet does (design D8), instead of as a second
+/// tool call.
+///
+/// The ticked state is kept in the call's input under [inputKey], written by
+/// the card through `editAction`, so the row is drawn again from it and the
+/// write reads what the user left ticked.
+class RowOption {
+  const RowOption({
+    required this.label,
+    required this.hint,
+    required this.value,
+    required this.inputKey,
+  });
+
+  final String label;
+  final String hint;
+  final bool value;
+  final String inputKey;
 }
 
 /// Risk tiers from Plan 065 (audit 065a part 2).

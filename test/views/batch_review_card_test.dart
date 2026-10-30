@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
+import 'package:intermittent_fasting/presenters/finance_tool_executor.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/widgets/finance/batch_review_card.dart';
 import 'package:mockito/mockito.dart';
@@ -259,5 +260,28 @@ void main() {
       await open(tester, three, theme: theme);
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('a row option is a checkbox that reports the tick',
+      (tester) async {
+    final ticks = <bool>[];
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: RowOptionTile(
+          option: const RowOption(
+            label: 'Also add a monthly set-aside in Bills',
+            hint: 'Nothing in Bills moves money into it yet.',
+            value: false,
+            inputKey: '_addSetAside',
+          ),
+          onChanged: ticks.add,
+        ),
+      ),
+    ));
+    expect(find.text('Also add a monthly set-aside in Bills'), findsOneWidget);
+    expect(tester.getSize(find.byType(CheckboxListTile)).height,
+        greaterThanOrEqualTo(44));
+    await tester.tap(find.byType(Checkbox));
+    expect(ticks, [true]);
   });
 }
