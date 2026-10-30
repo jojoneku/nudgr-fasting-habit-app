@@ -290,7 +290,7 @@ def test_a_streamed_200_carries_no_cors_header(_valid_token, monkeypatch):
     # `access-control-allow-origin` here, the browser saw two values on the
     # response and discarded the whole stream before a single frame was read.
     monkeypatch.setattr(advisor_app, "advise_finance_stream",
-                        lambda payload, request: iter(['{"type": "end"}\n']))
+                        lambda payload, request, **_: iter(['{"type": "end"}\n']))
     body = json.dumps({
         "payload": {
             "context": {"summary": "ACCOUNTS\n- Cash: 100"},
