@@ -404,7 +404,7 @@ def lambda_handler(event, context):
     if op == "classifyFinance":
         return _classify_finance(payload)
     if op == "adviseFinance":
-        return _advise_finance(payload)
+        return _advise_finance(payload, user_id=user_id)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
 
@@ -1809,7 +1809,7 @@ def _trace_fields(*, request, calls, payload):
 
 
 def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
-               ttft_ms=None):
+               ttft_ms=None, user_id=None):
     """The one place an advisor turn's economics get logged.
 
     latency_ms and out_tokens are what decide what _ADVISOR_MAX_TOKENS can
@@ -1824,7 +1824,7 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
     first token is what "fast" now means.
     """
     tools = request["tools"]
-    print(
+    line = (
         f"cost_line op=adviseFinance msgs={len(request['messages'])} "
         f"snapshot={'y' if request['_has_summary'] else 'n'} "
         f"image={'y' if request['_has_image'] else 'n'} "
@@ -1839,6 +1839,81 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
         + _trace_fields(request=request, calls=calls, payload=payload)
     )
+    print(line)
+    _invocation_log(_cost_fields(line), user_id=user_id,
+                    stream=ttft_ms is not None)
+
+
+# -- Invocation log (Plan 065, phase 5) -----------------------------------------
+#
+# One JSON line per advisor invocation, for CloudWatch Logs Insights and
+# scripts/trace.py. It is the cost_line read back into fields, plus the user id,
+# the transport and an error class -- so it can never carry more than the
+# cost_line does, and a field added to the cost_line appears here too. The
+# cost_line text stays as it is for anything that already reads it.
+#
+# Metadata only: ids, tool names, statuses, token counts, timings, the model
+# and hashes. Never message text, snapshot text, tool inputs or tool results.
+
+_INVOCATION_LOG = "advisor_invocation"
+
+# cost_line fields that hold a comma-separated list.
+_LIST_FIELDS = ("tool_names", "results")
+
+# A Supabase user id (a UUID). Anything else is logged as null.
+_USER_ID_RE = re.compile(r"[0-9a-fA-F-]{36}")
+
+
+def _cost_fields(line):
+    """The `key=value` pairs of a cost_line, as a dict with typed values.
+
+    "-" is None, a whole number is an int, and a list field is a list. Every
+    cost_line value is one token with no spaces, which is what makes the split
+    safe.
+    """
+    fields = {}
+    for part in line.split()[1:]:
+        key, _, value = part.partition("=")
+        if key in _LIST_FIELDS:
+            fields[key] = [] if value in ("", "-") else value.split(",")
+        elif value == "-":
+            fields[key] = None
+        elif re.fullmatch(r"-?\d+", value):
+            fields[key] = int(value)
+        else:
+            fields[key] = value
+    return fields
+
+
+def _invocation_log(fields, *, user_id=None, stream=False, error=None):
+    """Print one `advisor_invocation` JSON line.
+
+    `error` is the exception a failed invocation raised. Only its class name
+    is logged: an exception message can quote the request.
+    """
+    user = user_id if (isinstance(user_id, str)
+                       and _USER_ID_RE.fullmatch(user_id)) else None
+    print(json.dumps({
+        "event": _INVOCATION_LOG,
+        # Defaults for a cost_line that does not name them; one that does wins.
+        "model": _ADVISOR_MODEL_ID,
+        "route": None,
+        **fields,
+        "user": user,
+        "stream": stream,
+        "error_class": type(error).__name__ if error is not None else None,
+    }, separators=(",", ":")))
+
+
+def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
+    """The invocation log of a call that raised before it had a cost_line."""
+    _invocation_log({
+        "op": "adviseFinance",
+        "latency_ms": latency_ms,
+        "hop": "cont" if _carries_tool_results({"payload": payload}) else "first",
+        "trace": None if _trace_id(payload) == "-" else _trace_id(payload),
+        "hops": len(_tool_results_by_turn(payload)),
+    }, user_id=user_id, stream=stream, error=error)
 
 
 def _split_reply(content):
@@ -1860,7 +1935,7 @@ def _split_reply(content):
     return text, tool_calls
 
 
-def _advise_finance(payload):
+def _advise_finance(payload, user_id=None):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
     Kept as it was so a build without the streaming endpoint behaves exactly as
@@ -1906,7 +1981,7 @@ def _advise_finance(payload):
         _cost_line(
             request=request, usage=result.get("usage") or {},
             stop_reason=stop_reason, calls=tool_calls,
-            payload=payload, latency_ms=elapsed_ms,
+            payload=payload, latency_ms=elapsed_ms, user_id=user_id,
         )
         return _resp(200, {
             "response": response_text,
@@ -1917,6 +1992,8 @@ def _advise_finance(payload):
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)
         print(f"Bedrock error (adviseFinance) after {elapsed_ms}ms: {e}")
+        _failed_invocation_log(payload=payload, latency_ms=elapsed_ms, error=e,
+                               user_id=user_id, stream=False)
         return _resp(502, {"error": "bedrock_error", "message": str(e)})
 
 
@@ -1927,7 +2004,7 @@ def _frame(obj):
     return json.dumps(obj, ensure_ascii=False) + "\n"
 
 
-def advise_finance_stream(payload, request):
+def advise_finance_stream(payload, request, user_id=None):
     """Yield an advisor turn as NDJSON frames: start, deltas, then a terminator.
 
     The sequence is `start`, zero or more `delta`, then exactly one of `end` or
@@ -2034,8 +2111,9 @@ def advise_finance_stream(payload, request):
                     try:
                         content[idx]["input"] = json.loads(fragment) if fragment else {}
                     except json.JSONDecodeError:
+                        # Its length only: a tool input is the user's data.
                         print("adviseFinance: unparseable tool input at "
-                              f"{idx}: {fragment!r}")
+                              f"{idx}: {len(fragment)} chars")
                         content[idx]["input"] = {}
 
             elif kind == "message_delta":
@@ -2081,6 +2159,7 @@ def advise_finance_stream(payload, request):
             payload=payload,
             latency_ms=int((time.monotonic() - started) * 1000),
             ttft_ms=ttft_ms if ttft_ms is not None else -1,
+            user_id=user_id,
         )
         yield _frame({
             "type": "end",
@@ -2093,6 +2172,8 @@ def advise_finance_stream(payload, request):
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)
         print(f"Bedrock stream error (adviseFinance) after {elapsed_ms}ms: {e}")
+        _failed_invocation_log(payload=payload, latency_ms=elapsed_ms, error=e,
+                               user_id=user_id, stream=True)
         yield _frame({
             "type": "error",
             "message": "The advisor stopped partway through. Try again.",
