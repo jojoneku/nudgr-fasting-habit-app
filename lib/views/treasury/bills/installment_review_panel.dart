@@ -232,7 +232,8 @@ class _StartMonthWarning extends StatelessWidget {
 
 /// Opens the review as a bottom sheet over the mobile form. Resolves to the
 /// plan to save when the user confirms, or null on Back. Taking the suggested
-/// start month calls [onStartMonthChanged], so the form shows it on Back too.
+/// start month makes it computed again and calls [onStartMonthChanged], so
+/// the form shows it on Back too.
 Future<Installment?> showInstallmentReviewSheet(
   BuildContext context, {
   required InstallmentPresenter presenter,
@@ -290,7 +291,7 @@ class _InstallmentReviewSheetState extends State<_InstallmentReviewSheet> {
 
   void _show(Installment draft) {
     _draft = draft;
-    _review = widget.presenter.reviewPlan(draft, existing: widget.existing);
+    _review = widget.presenter.reviewPlan(draft);
     _receivables = widget.receivables?.installmentReceivablePreview(draft);
   }
 
@@ -298,7 +299,8 @@ class _InstallmentReviewSheetState extends State<_InstallmentReviewSheet> {
     final month = _review.suggestedStartMonth;
     if (month == null) return;
     widget.onStartMonthChanged(month);
-    setState(() => _show(_draft.copyWith(startMonth: month)));
+    setState(() => _show(_draft.copyWith(
+        startMonth: month, startMonthSource: StartMonthSource.computed)));
   }
 
   @override

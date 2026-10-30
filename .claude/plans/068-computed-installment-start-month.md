@@ -1,6 +1,6 @@
 # Plan 068 — Installment start month: computed unless set by hand
 
-**Status:** approved (2026-10-31). The user chose the recommended option for
+**Status:** built (2026-10-31). The user chose the recommended option for
 all 4 decisions in section 7. Separate PR, stacked on #796 (Plan 067).
 
 **Trigger.** The user said: "maybe there shouldnt be a start month at all it
