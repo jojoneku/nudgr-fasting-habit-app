@@ -143,6 +143,18 @@ The app sends small events about what the user did with a reply, with the messag
 - An event does **not** count against the daily AI cap. It has its own limit of 500 events per user per UTC day, counted per warm container (a ceiling on a runaway client, not an exact count).
 - It writes one `{"event":"client_event", …}` JSON line. The app sends it fire-and-forget and ignores the answer.
 
+### Trace one message
+
+`scripts/trace.py` prints the timeline of one user message: each model call (model, tokens, cache, latency, stop reason, tools, result statuses, estimated cost) and each client event with the same `trace_id`. It runs one read-only Logs Insights query over both functions' log groups.
+
+```bash
+python scripts/trace.py <trace_id>          # default: --profile ifast-dev, ap-southeast-1, last 72 h
+python scripts/trace.py --latest --hours 168
+python scripts/trace.py <trace_id> --json
+```
+
+The cost is an estimate at Anthropic's list prices (`estimated_cost_usd` in `lambda_function.py`); Bedrock bills its own price list. A line from a deploy older than the JSON line falls back to the `cost_line`, which names no model, so its cost shows as `?`.
+
 ## The streaming advisor (`food-advisor-stream`)
 
 `adviseFinance` runs on a **second function** with its own front door, because
