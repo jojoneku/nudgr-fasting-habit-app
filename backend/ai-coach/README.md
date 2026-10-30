@@ -65,6 +65,34 @@ To turn it on (only with the developer's approval):
 3. Set `ADVISOR_HAIKU_ROUTING=true` on **both** `food-advisor-stream` and `food-coach-handler` (the buffered fallback). `update-function-configuration` replaces the whole environment map, so read the current one first and put every key back.
 4. Watch `cost_line ... route=haiku model=...haiku...` for an hour. To roll back, remove `ADVISOR_HAIKU_ROUTING` (same care with the map).
 
+## Debug text for one account (`ADVISOR_DEBUG_USERS`)
+
+The logs hold metadata only (`advisor_invocation`). For testing on your own account, `ADVISOR_DEBUG_USERS` (comma-separated Supabase user ids) makes each hop of a listed user also print one `advisor_debug` JSON line, with these fields:
+
+- the user's message
+- each tool call with its input
+- each tool result the app sent back
+- the reply text
+
+Each field is cut at 4,000 characters. It never logs the briefing, the profile, the history, the tool descriptions or anything from the auth headers. `python scripts/trace.py --latest --text` prints the text under each hop.
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `ADVISOR_DEBUG_USERS` | unset (off) | User ids whose advisor text is logged. Anything that is not a UUID is ignored. |
+
+The text holds real finance data (names, amounts, payment notes). Before you add an id:
+
+1. Give both log groups a retention period, so the text deletes itself:
+
+   ```bash
+   MSYS_NO_PATHCONV=1 aws logs put-retention-policy --log-group-name /aws/lambda/food-advisor-stream --retention-in-days 30 --profile ifast-dev --region ap-southeast-1
+   ```
+
+   Run it again with `/aws/lambda/food-coach-handler`.
+2. Set `ADVISOR_DEBUG_USERS` on **both** `food-advisor-stream` and `food-coach-handler`. `update-function-configuration` replaces the whole environment map, so read the current one first and put every key back.
+
+To turn it off, remove the id from the variable (same care with the map). No deploy is needed.
+
 ## Prompt cache TTL (`ADVISOR_CACHE_TTL_1H`)
 
 The advisor's cache breakpoints all live 5 minutes by default. `ADVISOR_CACHE_TTL_1H=true` gives the first breakpoint (tool catalogue + rules, about 9k tokens) a 1-hour TTL. The profile and history breakpoints stay on 5 minutes, because Bedrock requires the longer TTL to come before the shorter ones. **It is off, and nothing sets it**: not `template.yaml`, not CI, not the live functions.
