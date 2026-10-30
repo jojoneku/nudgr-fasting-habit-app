@@ -767,6 +767,52 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'editAccount',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing account: its name; for a credit '
+        'card, credit line or BNPL account its credit limit, statement day '
+        'or payment due day; for a goal its target; for a time deposit its '
+        'maturity date. Call ONLY after find (entity account) returns the '
+        'account id. Send only the fields that change. It never changes a '
+        'balance — a balance moves only through transactions (logTransactions, '
+        'payCredit) — and never the account type. The user approves on the '
+        'review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact account id from a preceding find call.',
+        },
+        'name': {'type': 'string', 'description': 'New account name.'},
+        'creditLimit': {
+          'type': 'number',
+          'description': 'New credit limit in pesos. Credit accounts only.',
+        },
+        'statementDay': {
+          'type': 'integer',
+          'description': 'Day of the month the statement closes, 1-28. '
+              'Credit accounts only.',
+        },
+        'paymentDueDay': {
+          'type': 'integer',
+          'description': 'Day of the month payment is due, 1-28. Credit '
+              'accounts only. It replaces a "days after the statement" rule.',
+        },
+        'goalTarget': {
+          'type': 'number',
+          'description': 'New target in pesos. Goal accounts only.',
+        },
+        'maturityDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, today or later. Time deposits only.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'editTransaction',
     kind: AiToolKind.update,
     description:
