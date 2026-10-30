@@ -13,6 +13,16 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.117] - 2026-10-30
+
+### Added
+- read before saying 'I can't see it' (Plan 066 phase 3)
+- read hints in the finance snapshot (Plan 066 phase 2)
+
+### Performance
+- tune the briefing layout to 14/15 on the eval
+- move the briefing into the newest user turn
+
 ## [1.1.116] - 2026-10-30
 
 ### Added
@@ -1030,7 +1040,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.116...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.117...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1148,3 +1158,4 @@ distributed via `manifest.json`.
 [1.1.114]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.114
 [1.1.115]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.115
 [1.1.116]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.116
+[1.1.117]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.117
