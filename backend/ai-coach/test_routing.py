@@ -151,7 +151,7 @@ def test_cost_line_logs_route_and_model(fake, monkeypatch, capsys,
     _buffered(_payload(route))
     line = next(l for l in capsys.readouterr().out.splitlines()
                 if l.startswith("cost_line op=adviseFinance"))
-    assert line.endswith(want)
+    assert f" {want} cost_usd=" in line
 
 
 def test_invocation_log_names_the_routed_model(fake, monkeypatch, capsys):
@@ -161,3 +161,14 @@ def test_invocation_log_names_the_routed_model(fake, monkeypatch, capsys):
             if l.startswith("{") and '"advisor_invocation"' in l]
     assert logs[-1]["route"] == "haiku"
     assert logs[-1]["model"] == HAIKU_45
+
+
+def test_a_routed_call_is_priced_as_the_route_model(fake, monkeypatch):
+    usage = {"input_tokens": 1000, "output_tokens": 100}
+    monkeypatch.setattr(lf, "_ADVISOR_HAIKU_ROUTING", True)
+    request, _ = lf._build_advisor_request(_payload("haiku"))
+    cost = lf._cost_line(request=request, usage=usage, stop_reason="end_turn",
+                         calls=[], payload=_payload("haiku"), latency_ms=1,
+                         model_id=HAIKU_45)
+    assert cost == lf.estimated_cost_usd(HAIKU_45, usage)
+    assert cost < lf.estimated_cost_usd(SONNET_45, usage)

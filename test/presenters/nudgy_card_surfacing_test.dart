@@ -17,6 +17,7 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/finance_tool_executor.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/services/advisor_telemetry.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/services/image_compressor.dart';
 import 'package:intermittent_fasting/utils/finance_entry_extraction.dart';
@@ -25,6 +26,7 @@ import 'package:mockito/mockito.dart';
 import '../mocks.mocks.dart';
 import '../support/advisor_events.dart';
 import '../support/proposal_fakes.dart';
+import '../support/recording_telemetry.dart';
 
 /// Every way a Nudgy suggestion card used to fail to appear, one test each.
 ///
@@ -202,6 +204,7 @@ void main() {
     LedgerPresenter? ledger,
     FinanceToolExecutor? executor,
     MockStorageService? store,
+    AdvisorTelemetry? telemetry,
   }) {
     final p = AiCoachPresenter(
       stats: stats,
@@ -211,6 +214,7 @@ void main() {
       ledger: ledger,
       toolExecutor: executor,
       storage: store,
+      telemetry: telemetry,
     );
     p.openSession(AiCoachEntryPoint.financeAdvisor);
     return p;
@@ -451,13 +455,18 @@ void main() {
           _ExtractorOnly(ExtractionResult(entries: [_entry(5000, 'BPI')]));
       final ledger = await ledgerWith(cloud);
       scriptAdvisor([const AdvisorReply(text: 'Here is a plan.')]);
-      final p = advisorWith(ledger: ledger, executor: _HeldExecutor());
+      final telemetry = RecordingTelemetry();
+      final p = advisorWith(
+          ledger: ledger, executor: _HeldExecutor(), telemetry: telemetry);
 
       await p.send('paid 5000 bpi card');
       expect(ledger.chatState.entries, hasLength(1));
       expect(p.canAskNudgyInstead, isTrue);
 
       await p.askNudgyInstead();
+
+      expect(telemetry.names, ['ask_nudgy_tapped']);
+      expect(telemetry.events.single.traceId, isNull);
 
       expect(ledger.chatState.phase, ChatPhase.idle);
       expect(ledger.chatState.entries, isEmpty);
