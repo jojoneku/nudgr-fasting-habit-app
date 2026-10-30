@@ -1359,7 +1359,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         isPurchase ? await _resolvePlan(existing.installmentId!) : null;
 
     final plan = previous != null
-        ? _editedPlan(
+        ? editedPlan(
             previous,
             previousDate: existing!.date,
             account: account,
@@ -1576,7 +1576,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// recomputed when the purchase date or the card changed, and the monthly
   /// amount only when the terms did — so a rename keeps a hand-set monthly
   /// amount and a deferred start.
-  Installment _editedPlan(
+  ///
+  /// Public so Nudgy's `editInstallment` row is drawn from the same rule
+  /// that saves it, also for a plan with no purchase record in the ledger.
+  Installment editedPlan(
     Installment plan, {
     required DateTime previousDate,
     required FinancialAccount? account,
