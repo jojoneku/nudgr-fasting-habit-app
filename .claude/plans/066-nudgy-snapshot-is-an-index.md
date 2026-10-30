@@ -240,7 +240,7 @@ Same rules hash as production, with the briefing in the newest user turn
 |---|---|---|---|---|
 | 1 | installment-deferral | pass | pass | pass |
 | 2 | installment-colloquial-name | FAIL (text) | pass | pass |
-| 3 | bill-category | FAIL (text) | FAIL (text) | FAIL (text) |
+| 3 | bill-reminder (replaced bill-category, see below) | FAIL (text) | FAIL (text) | FAIL (text) |
 | 4 | receivable-account | pass | FAIL (text) | FAIL (text) |
 | 5 | setaside-account | pass | pass | pass |
 | 6 | budget-repeats | pass | pass | pass |
@@ -264,15 +264,24 @@ What it shows:
    (9, 10) from the briefing, as production did on 2026-10-30. Run 1 did not, so
    the failure is intermittent, which matches a model that is near the edge of
    its decision.
-2. **It fails across record types, not only installments.** The bill category
-   (3) and the credit limit (8) fail on every run and both models. The
-   receivable (4) fails on 2 of 3 runs.
+2. **It fails across record types, not only installments.** The bill (3) and
+   the credit limit (8) fail on every run and both models. The receivable (4)
+   fails on 2 of 3 runs. On the credit limit, Sonnet adds owed and available
+   (₱60,000): a sum the rules say a tool must return.
 3. **A Taglish dispute always fails** (13). On Sonnet it answers in text; on
    Haiku it reads the wrong record type.
 4. **The controls hold on Sonnet.** Haiku over-reads once (15). The rule rewrite
    must not make this worse.
 5. **Run-to-run noise is about 2 cases in 16.** A change ships only when both
    runs pass, as section 2 says.
+
+**Case 3 was replaced after the first runs.** It asked for the Netflix bill's
+category, but the recent-spending line states it ("Netflix — ₱549
+(Entertainment, …)"), so Sonnet's text answer was correct. The new case asks for
+the Globe bill's reminder, which only `find` returns. The dispute-bill history
+moved to the same question. On the phase 1 fixture, bill-reminder fails 3 of 3
+(Sonnet, Sonnet, Haiku) and dispute-bill passes 3 of 3, the same as the old
+cases, so the pass rates above stand.
 
 The briefing in the newest user turn sits right after the question. That makes
 "answer from the briefing" the easy path in a dispute turn. The phase 2 footers

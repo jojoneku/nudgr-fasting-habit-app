@@ -202,11 +202,11 @@
       ]}
     },
     {
-      "id": "bill-category",
-      "source": "detail: bill",
-      "question": "What category is my Netflix bill filed under?",
+      "id": "bill-reminder",
+      "source": "detail: bill (not its category: the recent-spending line states Netflix's)",
+      "question": "Do I get a reminder before my Globe bill is due? How many days before?",
       "expect": {"any": [
-        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "netflix"}}}
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "globe"}}}
       ]}
     },
     {
@@ -284,12 +284,12 @@
       "id": "dispute-bill",
       "source": "dispute: after the fixed 'cannot verify' reply",
       "history": [
-        {"role": "user", "text": "What category is my Netflix bill under?"},
+        {"role": "user", "text": "Is there a reminder set on my Globe bill?"},
         {"role": "assistant", "text": "I cannot verify this — that figure isn't in your current data."}
       ],
       "question": "Really? You can't check the bill itself?",
       "expect": {"any": [
-        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "netflix"}}}
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "globe"}}}
       ]}
     },
     {
