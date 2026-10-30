@@ -686,6 +686,41 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'markInstallmentMonthPaid',
+    kind: AiToolKind.update,
+    description:
+        'Propose recording one month of an installment plan as paid, the way '
+        '"Mark paid" does on the Installments list. Only for a plan on a BNPL '
+        'or card WITHOUT a statement: a plan on a card with statements is '
+        'billed when the statement closes and paid with payCredit. Call ONLY '
+        'after find (entity installment) returns its id. The user approves '
+        'on the review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact installment id from a preceding find '
+              'call.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM of the payment month. Omit for the month '
+              'the user is viewing.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Pesos paid. Omit for the monthly payment.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD the payment was made. Defaults to today.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'editBill',
     kind: AiToolKind.update,
     description:
@@ -807,6 +842,58 @@ const List<AiTool> kFinanceTools = [
           'type': 'string',
           'description': 'Updated note or remarks.',
         },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editInstallment',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing installment plan: name, total price, '
+        'number of months, monthly interest rate, credit account, purchase '
+        'date, category or note. Call ONLY after find (entity installment) '
+        'returns its id. The phone works out the new monthly payment and '
+        'shows what else changes (later months, the purchase entry in the '
+        'ledger); the user approves on the review list before anything is '
+        'saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact installment id from a preceding find '
+              'call.',
+        },
+        'name': {'type': 'string', 'description': 'Updated item name.'},
+        'amount': {
+          'type': 'number',
+          'description': 'Updated total purchase price in pesos.',
+        },
+        'months': {
+          'type': 'integer',
+          'description': 'Updated number of monthly payments, at least 2.',
+        },
+        'interestRate': {
+          'type': 'number',
+          'description': 'Updated MONTHLY add-on rate in percent, 0 for a 0% '
+              'plan. Divide a yearly rate by 12.',
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Updated credit card, credit line or BNPL account '
+              'NAME.',
+        },
+        'date': {
+          'type': 'string',
+          'description': 'Updated YYYY-MM-DD purchase date. Never a future '
+              'date.',
+        },
+        'category': {
+          'type': 'string',
+          'description': 'Updated expense category NAME.',
+        },
+        'note': {'type': 'string', 'description': 'Updated note.'},
       },
     },
   ),
