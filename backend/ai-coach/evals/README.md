@@ -70,7 +70,7 @@ The `holdout` questions check that a prompt change did not over-fit to the tunin
 
 ## Cost
 
-The plan budgets about **$1.50 per run** on Sonnet 4.5 ($3 / $15 per 1M tokens in / out). In practice the run costs less, because every request shares the same tools, rules and snapshot, and the prompt cache holds them. The first run on 2026-10-30 used 16 calls and cost about **$0.16** (13.6k tokens cache write, 199k cache read, 5k in, 2k out) in 60 seconds. The runner prints the token count and a cost estimate at the end of each run.
+The plan budgets about **$1.50 per run** on Sonnet 4.5 ($3 / $15 per 1M tokens in / out). In practice the run costs less, because every request shares the same tools and rules, and the prompt cache holds them. The first run on 2026-10-30 used 16 calls and cost about **$0.16** (13.6k tokens cache write, 199k cache read, 5k in, 2k out) in 60 seconds. Since phase 5 the snapshot is in the user turn and is not cached, so each call pays for it as input: a run of all 20 questions costs about **$0.42** (17k cache write, 254k cache read, 81k in, 2.5k out). The runner prints the token count and a cost estimate at the end of each run.
 
 ## Tests
 
