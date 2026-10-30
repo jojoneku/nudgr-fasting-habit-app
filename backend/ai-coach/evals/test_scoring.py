@@ -311,3 +311,22 @@ def test_usage_cost_estimate():
     usage.add({"input_tokens": 1_000_000, "output_tokens": 0})
     assert usage.cost(run_eval.PRODUCTION_MODEL) == pytest.approx(3.0)
     assert usage.cost("some-other-model") is None
+
+
+# ── text_excludes ────────────────────────────────────────────────────────────
+
+def test_text_excludes_fails_a_reply_that_concedes_before_the_read():
+    expect = {"any": [{"tool": "find", "input": {"entity": "installment"}}],
+              "text_excludes": ["you're right", "apolog"]}
+    call = _call("find", entity="installment")
+    # A curly apostrophe, as the model writes it.
+    passed, reason = scoring.score_reply(expect, [call], "You’re right, let me check.")
+    assert not passed and "you're right" in reason
+    assert scoring.score_reply(expect, [call], "Let me check the plan.") == (True, "ok")
+    assert "text without \"you're right\", 'apolog'" in scoring.describe_expect(expect)
+
+
+def test_text_excludes_applies_to_a_text_answer_too():
+    expect = {"any": [{"answer": ["December"]}], "text_excludes": ["january"]}
+    assert scoring.score_reply(expect, [], "Due in December 2026.")[0]
+    assert not scoring.score_reply(expect, [], "December close, paid in January.")[0]

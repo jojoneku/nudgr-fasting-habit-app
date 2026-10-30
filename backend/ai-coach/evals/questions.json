@@ -339,6 +339,52 @@
       "expect": {"any": [
         {"answer": ["55,000"]}
       ]}
+    },
+    {
+      "id": "pushback-was-right",
+      "source": "dispute where the earlier answer was right (trace 4dcfe6598a9f6d3e): read first, and do not concede before or after",
+      "history": [
+        {"role": "user", "text": "When is the first payment on the fridge plan?"},
+        {"role": "assistant", "text": "Your **Panasonic Refrigerator** plan's first payment is due in **December 2026**, from your plan."}
+      ],
+      "question": "hmm? really? december?",
+      "expect": {
+        "any": [
+          {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+          {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+          {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}}
+        ],
+        "text_excludes": ["you're right", "you are right", "i'm wrong", "i was wrong", "apolog", "sorry", "my mistake"]
+      },
+      "then": {
+        "tool_result": "status: found\nentity: installment · month: all · words: panasonic refrigerator\nid: inst-fridge\nname: Panasonic Refrigerator\naccount: BPI Credit Card\nstatus: active\npurchase price: ₱29988\npurchase date: 2026-09-25\nmonthly payment: ₱2499\nmonths: 12 (0 paid)\nfirst payment month: 2026-12\nlast payment month: 2027-11\ndeferred: 3 months\ninterest: 0%\ntotal interest: ₱0\ntotal payable: ₱29988\nnot yet billed: ₱29988",
+        "expect": {
+          "any": [{"answer": ["December"]}],
+          "text_excludes": ["you're right", "you are right", "i'm wrong", "i was wrong", "apolog", "sorry", "my mistake"]
+        }
+      }
+    },
+    {
+      "id": "statement-timing",
+      "source": "first payment month is the month the payment is DUE (trace 4dcfe6598a9f6d3e said a Dec close, paid in Jan)",
+      "question": "Which BPI statement will the first fridge charge be on, and when do I pay it?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}},
+        {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}}
+      ]},
+      "then": {
+        "tool_result": "status: found\nentity: installment · month: all · words: panasonic refrigerator\nid: inst-fridge\nname: Panasonic Refrigerator\naccount: BPI Credit Card\nstatus: active\npurchase price: ₱29988\npurchase date: 2026-09-25\nmonthly payment: ₱2499\nmonths: 12 (0 paid)\nfirst payment month: 2026-12\nlast payment month: 2027-11\ndeferred: 3 months\ninterest: 0%\ntotal interest: ₱0\ntotal payable: ₱29988\nnot yet billed: ₱29988",
+        "expect": {
+          "any": [
+            {"answer": ["December"]},
+            {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}},
+            {"tool": "getView", "input": {"view": "bills"}}
+          ],
+          "text_excludes": ["january", "jan 2027"]
+        }
+      }
     }
   ]
 }
