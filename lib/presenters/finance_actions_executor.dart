@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
+import '../models/finance/budget.dart';
+import '../models/finance/budget_group_def.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
 import '../models/finance/finance_category.dart';
@@ -538,7 +540,7 @@ class FinanceActionsExecutor extends ChangeNotifier
         // cannot sensibly confirm is sent back to the model with the reason,
         // instead of being parked behind a row that would save something
         // else.
-        final built = _build(call);
+        final built = _build(_withoutCardControls(call));
         final error = built.error;
         if (error != null) {
           immediate[call.id] = AiToolResult.failed(call.id, error);
@@ -819,6 +821,17 @@ class FinanceActionsExecutor extends ChangeNotifier
     );
   }
 
+  /// [call] without the keys only a row's controls set (design D8): a
+  /// model that sends one is ignored, so the user ticks the box.
+  static AiToolCall _withoutCardControls(AiToolCall call) =>
+      call.input.containsKey(_addSetAsideKey)
+          ? AiToolCall(
+              id: call.id,
+              name: call.name,
+              input: {...call.input}..remove(_addSetAsideKey),
+            )
+          : call;
+
   /// Checks [call], binds it, and draws its row — or says why it cannot be
   /// shown. Used when a batch opens and again on every in-place edit.
   ({PendingFinanceAction? action, String? error}) _build(AiToolCall call) {
@@ -952,6 +965,9 @@ class FinanceActionsExecutor extends ChangeNotifier
             ProposalField.date: 'date',
           },
         'editAccount' => const {ProposalField.name: 'name'},
+        'setBudget' || 'editBudget' => const {
+            ProposalField.amount: 'amount',
+          },
         'editTransaction' => const {
             ProposalField.name: 'description',
             ProposalField.amount: 'amount',
@@ -1459,6 +1475,96 @@ class FinanceActionsExecutor extends ChangeNotifier
               (label: 'Note', value: _str(i['note'])),
           ],
         );
+      case 'setBudget':
+        final b = _newBudget(i).plan;
+        if (b == null) return null;
+        final addsSetAside = b.offersSetAside && b.addSetAside;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Set budget: ${b.label}, ${_peso(b.amount)}',
+          isRecurring: false,
+          confirmLabel: 'Set Budget',
+          option: b.offersSetAside
+              ? RowOption(
+                  label: 'Also add a monthly set-aside in Bills',
+                  hint: 'Nothing in Bills moves money into ${b.label} yet. A '
+                      'set-aside gives you something to mark paid; you pick '
+                      'the account it comes from when you fund it.',
+                  value: b.addSetAside,
+                  inputKey: _addSetAsideKey,
+                )
+              : null,
+          details: [
+            (label: b.savings ? 'Set aside into' : 'Category', value: b.label),
+            (label: 'Amount', value: _peso(b.amount)),
+            (label: 'Month', value: b.month),
+            (label: 'Group', value: _groupName(b.groupId)),
+            (label: 'Repeats', value: 'Every month until removed'),
+            if (addsSetAside)
+              (
+                label: 'Also adds',
+                value: 'a monthly ${_peso(b.amount)} set-aside into '
+                    '${b.label} in Bills',
+              ),
+          ],
+        );
+      case 'editBudget':
+        final e = _budgetEdit(i).edit;
+        if (e == null) return null;
+        final b = e.budget;
+        final series = _isSeries(b);
+        return PendingFinanceAction(
+          call: call,
+          title: 'Edit budget: ${_budgetName(b)} (${b.month})',
+          isRecurring: false,
+          confirmLabel: 'Save Budget',
+          // No this-month-only path: an edit is the new going rate for the
+          // rest of the series (BudgetPresenter.setBudget).
+          tier: series ? ProposalTier.destructive : ProposalTier.change,
+          details: [
+            (label: 'Budget', value: _budgetName(b)),
+            (label: 'Month', value: b.month),
+            if (e.amount != b.allocatedAmount)
+              (
+                label: 'Amount',
+                value: '${_peso(b.allocatedAmount)} → ${_peso(e.amount)}',
+              ),
+            if (e.groupId != b.group)
+              (
+                label: 'Group',
+                value: '${_groupName(b.group)} → ${_groupName(e.groupId)}',
+              ),
+            if (series)
+              (
+                label: 'Also changes',
+                value: 'every later month of this budget; earlier months '
+                    'keep theirs',
+              ),
+          ],
+        );
+      case 'removeBudget':
+        final b = _budgetById(i);
+        if (b == null) return null;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Remove budget: ${_budgetName(b)} '
+              '(${_peso(b.allocatedAmount)})',
+          isRecurring: false,
+          confirmLabel: 'Remove Budget',
+          isDestructive: true,
+          details: [
+            (label: 'Budget', value: _budgetName(b)),
+            (label: 'Amount', value: _peso(b.allocatedAmount)),
+            (label: 'Month', value: b.month),
+            (
+              label: 'Also',
+              value: _isSeries(b)
+                  ? 'ends it: later months lose it too and it does not come '
+                      'back. Earlier months keep theirs.'
+                  : 'nothing else: this budget is for ${b.month} only.',
+            ),
+          ],
+        );
       case 'markInstallmentMonthPaid':
         final p = _monthPayment(i);
         if (p == null) return null;
@@ -1518,6 +1624,194 @@ class FinanceActionsExecutor extends ChangeNotifier
     }
     return null;
   }
+
+  // ── Budgets ───────────────────────────────────────────────────────────────
+
+  /// The card's input key for D8's "also add a monthly set-aside" checkbox.
+  /// Only the card sets it: [proposeBatch] drops it from a model call.
+  static const String _addSetAsideKey = '_addSetAside';
+
+  /// The budget row an id-taking budget call names, or null.
+  Budget? _budgetById(Map<String, Object?> i) =>
+      _budget?.allBudgets.where((b) => b.id == _str(i['id'])).firstOrNull;
+
+  /// What a budget row is for: the account a savings row funds, else its
+  /// category — the same name `find` prints.
+  String _budgetName(Budget b) {
+    final budget = _budget;
+    final savings = budget != null && budget.isSavingsGroup(b.group);
+    final name =
+        savings ? _accountName(b.categoryId) : _categoryName(b.categoryId);
+    return name;
+  }
+
+  String _groupName(String id) =>
+      _budget?.groupById(id)?.name ?? (id.isEmpty ? 'none' : id);
+
+  /// The budget group [name] names among [pool]: an exact name, else the one
+  /// it starts. Null when none or several match.
+  static BudgetGroupDef? _groupFor(String name, Iterable<BudgetGroupDef> pool) {
+    final q = name.trim().toLowerCase();
+    if (q.isEmpty) return null;
+    final exact = pool.where((g) => g.name.toLowerCase() == q).toList();
+    if (exact.length == 1) return exact.single;
+    final prefix = pool.where((g) => g.name.toLowerCase().startsWith(q));
+    return prefix.length == 1 ? prefix.single : null;
+  }
+
+  /// The month a new budget lands in: the one named (a slipped year
+  /// rebased), else the month the Budget tab shows.
+  String _budgetMonth(Map<String, Object?> i) {
+    final given = _str(i['month']);
+    return RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
+        ? rebaseStaleMonthKey(given, DateTime.now())
+        : (_budget?.selectedMonth ?? _bills.selectedMonth);
+  }
+
+  /// A `setBudget` call bound against the user's categories, savings
+  /// accounts and groups, or why it cannot be proposed. The row and the
+  /// write both use it.
+  ({_NewBudget? plan, String? error}) _newBudget(Map<String, Object?> i) {
+    ({_NewBudget? plan, String? error}) fail(String error) =>
+        (plan: null, error: error);
+    final budget = _budget;
+    if (budget == null) return fail('Budgets are not available here.');
+
+    final categoryName = _str(i['category']);
+    final accountName = _str(i['savingsAccount']);
+    if (categoryName.isEmpty == accountName.isEmpty) {
+      return fail('Give either a category (a spending budget) or a '
+          'savingsAccount (money to set aside into a savings or goal '
+          'account), not both and not neither.');
+    }
+    final amount = _amountOrNull(i['amount']);
+    if (amount == null) {
+      return fail('The budget amount must be in pesos, above zero. Ask the '
+          'user for it.');
+    }
+
+    final savings = accountName.isNotEmpty;
+    final String key;
+    final String label;
+    if (savings) {
+      final targets = budget.savingsTargets;
+      final account = _matchAccount(accountName, targets);
+      if (account == null) {
+        final names = targets.map((a) => '"${a.name}"').join(', ');
+        return fail('"$accountName" does not match exactly one savings or '
+            'goal account. Choices: ${names.isEmpty ? 'none' : names}. Ask '
+            'the user which one.');
+      }
+      key = account.id;
+      label = account.name;
+    } else {
+      final lower = categoryName.toLowerCase();
+      final pool = budget.expenseCategories;
+      final category = pool
+              .where((c) => c.name.toLowerCase() == lower)
+              .firstOrNull ??
+          pool.where((c) => c.name.toLowerCase().startsWith(lower)).firstOrNull;
+      if (category == null) {
+        // A budget is keyed by the category's id, which a category this
+        // list adds does not have until the user approves it.
+        if (_newCategories[lower] case final added?) {
+          return fail('"$added" is added in this same list, so it has no '
+              'budget yet. Propose the budget after the user approves the '
+              'category, in your next reply.');
+        }
+        final names = pool.map((c) => '"${c.name}"').join(', ');
+        return fail('No expense category is named "$categoryName". '
+            'Categories: $names. Use one of these names, or add the category '
+            'with addCategory first and set its budget after it is saved.');
+      }
+      key = category.id;
+      label = category.name;
+    }
+
+    final groups = budget.groups.where((g) => g.isSavings == savings);
+    final groupName = _str(i['group']);
+    final String groupId;
+    if (groupName.isEmpty) {
+      groupId = savings
+          ? BudgetGroupDef.idSavings
+          : BudgetGroupDef.idVariableOptional;
+    } else {
+      final group = _groupFor(groupName, groups);
+      if (group == null) {
+        final names = groups.map((g) => '"${g.name}"').join(', ');
+        return fail('"$groupName" does not match one '
+            '${savings ? 'savings' : 'spending'} group. Groups: $names. Use '
+            'one of these, or leave the group out.');
+      }
+      groupId = group.id;
+    }
+
+    final month = _budgetMonth(i);
+    final existing = budget.budgetFor(key, month: month);
+    if (existing != null) {
+      return fail('"$label" already has a budget in $month '
+          '(${_peso(existing.allocatedAmount)}, id=${existing.id}). To change '
+          'it, call editBudget with that id.');
+    }
+    return (
+      plan: _NewBudget(
+        key: key,
+        label: label,
+        savings: savings,
+        amount: amount,
+        groupId: groupId,
+        month: month,
+        // D8: offered only when nothing in Bills funds the account yet — the
+        // add-budget sheet's own check.
+        offersSetAside:
+            savings && budget.setAsideSourcesFor(key, month: month).isEmpty,
+        addSetAside: i[_addSetAsideKey] == true,
+      ),
+      error: null,
+    );
+  }
+
+  /// A new amount and group for an `editBudget` call, or why it cannot be
+  /// proposed.
+  ({_BudgetEdit? edit, String? error}) _budgetEdit(Map<String, Object?> i) {
+    ({_BudgetEdit? edit, String? error}) fail(String error) =>
+        (edit: null, error: error);
+    final budget = _budget;
+    final b = _budgetById(i);
+    if (budget == null || b == null) {
+      return fail('Budgets are not available here.');
+    }
+    var amount = b.allocatedAmount;
+    if (i['amount'] != null) {
+      final n = _amountOrNull(i['amount']);
+      if (n == null) return fail('The budget amount must be above zero.');
+      amount = n;
+    }
+    var groupId = b.group;
+    final groupName = _str(i['group']);
+    if (groupName.isNotEmpty) {
+      // A savings row is keyed by an account, a spending row by a category,
+      // so a row can only move to a group of its own kind.
+      final savings = budget.isSavingsGroup(b.group);
+      final groups = budget.groups.where((g) => g.isSavings == savings);
+      final group = _groupFor(groupName, groups);
+      if (group == null) {
+        final names = groups.map((g) => '"${g.name}"').join(', ');
+        return fail('"$groupName" does not match one '
+            '${savings ? 'savings' : 'spending'} group. Groups: $names.');
+      }
+      groupId = group.id;
+    }
+    if (amount == b.allocatedAmount && groupId == b.group) {
+      return fail('That changes nothing on the "${_budgetName(b)}" budget. '
+          'Ask the user what to change.');
+    }
+    return (edit: (budget: b, amount: amount, groupId: groupId), error: null);
+  }
+
+  /// True when [b] carries into later months, so an edit or a removal
+  /// reaches them too.
+  static bool _isSeries(Budget b) => b.isRecurring && b.seriesId != null;
 
   // ── Installments ──────────────────────────────────────────────────────────
 
@@ -2282,6 +2576,55 @@ class FinanceActionsExecutor extends ChangeNotifier
           throw StateError('Edit refused for installment purchase "$id"');
         }
         return 'Updated transaction "${updated.description}" (${_peso(updated.amount)}).';
+
+      case 'setBudget':
+        final budget = _budget;
+        final b = _newBudget(i).plan;
+        if (budget == null || b == null) {
+          throw StateError('setBudget could not be bound');
+        }
+        // The add-budget sheet's own save, then its set-aside offer (D8).
+        await budget.setBudget(b.key, b.amount,
+            group: b.groupId, month: b.month);
+        if (budget.budgetFor(b.key, month: b.month) == null) {
+          throw StateError('setBudget saved nothing for ${b.key}');
+        }
+        final addsSetAside = b.offersSetAside && b.addSetAside;
+        if (addsSetAside) {
+          await budget.createRecurringSetAsideFor(b.key, b.amount,
+              month: b.month);
+        }
+        return 'Set a ${_peso(b.amount)} budget for "${b.label}" from '
+            '${b.month}, repeating monthly'
+            '${addsSetAside ? ', and added a monthly ${_peso(b.amount)} set-aside into ${b.label} in Bills' : ''}.';
+
+      case 'editBudget':
+        final budget = _budget;
+        final e = _budgetEdit(i).edit;
+        if (budget == null || e == null) {
+          throw StateError('Budget "${_str(i['id'])}" cannot be edited');
+        }
+        final b = e.budget;
+        await budget.setBudget(b.categoryId, e.amount,
+            group: e.groupId, month: b.month);
+        return 'Updated the "${_budgetName(b)}" budget to ${_peso(e.amount)} '
+            '(${_groupName(e.groupId)}) in ${b.month}'
+            '${_isSeries(b) ? ' and every later month' : ''}.';
+
+      case 'removeBudget':
+        final budget = _budget;
+        final b = _budgetById(i);
+        if (budget == null || b == null) {
+          throw StateError('Budget "${_str(i['id'])}" not found');
+        }
+        final name = _budgetName(b);
+        final series = _isSeries(b);
+        await budget.removeBudget(b.categoryId, month: b.month);
+        if (budget.allBudgets.any((x) => x.id == b.id)) {
+          throw StateError('removeBudget left ${b.id}');
+        }
+        return 'Removed the "$name" budget from ${b.month}'
+            '${series ? ' and every later month; earlier months keep theirs' : ''}.';
 
       case 'markInstallmentMonthPaid':
         final installments = _installments;
@@ -3110,6 +3453,12 @@ class FinanceActionsExecutor extends ChangeNotifier
         return check('account', active, 'active') ??
             _settlementProblem(
                 _receivableSettlement(i)!, 'deposited into', active);
+      case 'setBudget':
+        return _newBudget(i).error;
+      case 'editBudget':
+        return _budgetEdit(i).error;
+      case 'removeBudget':
+        return _budget == null ? 'Budgets are not available here.' : null;
       case 'markInstallmentMonthPaid':
         return _monthPaymentProblem(i);
       case 'editInstallment':
@@ -3206,6 +3555,12 @@ class FinanceActionsExecutor extends ChangeNotifier
           'set-aside',
           'find (entity setAside)',
           _bills.allBudgetedExpenses.any((e) => e.id == id),
+        ),
+      'editBudget' || 'removeBudget' => (
+          'budget',
+          'find (entity budget)',
+          // No presenter: let the tool say budgets are unavailable.
+          _budget == null || _budgetById(call.input) != null,
         ),
       'markInstallmentMonthPaid' || 'editInstallment' => (
           'installment',
@@ -3573,3 +3928,35 @@ class _PlanEdit {
       after.note != before.note ||
       dateMoved;
 }
+
+/// A `setBudget` call bound against the user's categories, savings accounts
+/// and groups. The row and the write are both drawn from one.
+class _NewBudget {
+  const _NewBudget({
+    required this.key,
+    required this.label,
+    required this.savings,
+    required this.amount,
+    required this.groupId,
+    required this.month,
+    required this.offersSetAside,
+    required this.addSetAside,
+  });
+
+  /// The category id, or for a savings budget the account id it funds.
+  final String key;
+  final String label;
+  final bool savings;
+  final double amount;
+  final String groupId;
+  final String month;
+
+  /// True when the row offers the matching monthly set-aside (design D8).
+  final bool offersSetAside;
+
+  /// The user ticked that offer on the row.
+  final bool addSetAside;
+}
+
+/// An `editBudget` call bound against the live row: its new amount and group.
+typedef _BudgetEdit = ({Budget budget, double amount, String groupId});

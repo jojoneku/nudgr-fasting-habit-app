@@ -856,6 +856,46 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'setBudget',
+    kind: AiToolKind.create,
+    description:
+        'Propose a NEW monthly budget: a spending limit for an expense '
+        'category, or a savings target for a savings or goal account. It '
+        'repeats every month until removed. Give exactly one of category or '
+        'savingsAccount. Only for a category or account with no budget in '
+        'that month; to change an existing one, find (entity budget) and '
+        'call editBudget. For a savings budget the review row itself offers '
+        'the matching monthly set-aside, so do not also call addSetAside for '
+        'it. The user approves on the review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['amount'],
+      'properties': {
+        'category': {
+          'type': 'string',
+          'description': 'Expense category NAME for a spending budget.',
+        },
+        'savingsAccount': {
+          'type': 'string',
+          'description': 'Savings or goal account NAME for a savings budget.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'Monthly amount in pesos, above zero.',
+        },
+        'group': {
+          'type': 'string',
+          'description': 'Budget group NAME. Omit for the default group.',
+        },
+        'month': {
+          'type': 'string',
+          'description': 'YYYY-MM of the first month. Omit for the month '
+              'the user is viewing.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'editBill',
     kind: AiToolKind.update,
     description:
@@ -1078,6 +1118,34 @@ const List<AiTool> kFinanceTools = [
       },
     },
   ),
+  AiTool(
+    name: 'editBudget',
+    kind: AiToolKind.update,
+    description:
+        'Propose a change to an existing budget: its monthly amount or its '
+        'group. Call ONLY after find (entity budget) returns its id. The new '
+        'amount applies to that month and every later month of the budget; '
+        'earlier months keep theirs, and the review row says so. The user '
+        'approves before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact budget id from a preceding find call.',
+        },
+        'amount': {
+          'type': 'number',
+          'description': 'New monthly amount in pesos, above zero.',
+        },
+        'group': {
+          'type': 'string',
+          'description': 'New budget group NAME.',
+        },
+      },
+    },
+  ),
 
   // ── Deletions ────────────────────────────────────────────────────────────
   AiTool(
@@ -1126,6 +1194,25 @@ const List<AiTool> kFinanceTools = [
         'id': {
           'type': 'string',
           'description': 'The exact set-aside id from a preceding find call.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'removeBudget',
+    kind: AiToolKind.destroy,
+    description:
+        'Propose removing a budget. It ends the budget: it is removed from '
+        'that month and every later month, and does not come back; earlier '
+        'months keep theirs. Call ONLY after find (entity budget) returns its '
+        'id. The user confirms on a warning row before anything is removed.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact budget id from a preceding find call.',
         },
       },
     },
