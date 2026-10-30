@@ -24,7 +24,9 @@ exact figure, so an answer without a tool is correct. A spec is:
   numbers compare as numbers, so 20000 matches 20000.0),
 - {"contains": s}: the value, as text, contains s (ignoring case),
 - {"prefix": s}: the value, as text, starts with s (ignoring case),
-- {"any_of": [literal, ...]}: equal to one of the literals.
+- {"any_of": [literal, ...]}: equal to one of the literals,
+- {"absent": true}: the call leaves the key out ("find" with no query lists
+  every record of the entity).
 """
 
 
@@ -64,9 +66,14 @@ def match_call(option, call):
         return False
     given = call.get("input") or {}
     return all(
-        key in given and match_value(spec, given[key])
+        (key not in given) if _is_absent(spec)
+        else key in given and match_value(spec, given[key])
         for key, spec in (option.get("input") or {}).items()
     )
+
+
+def _is_absent(spec):
+    return isinstance(spec, dict) and spec.get("absent") is True
 
 
 def tool_calls(content):
@@ -105,7 +112,9 @@ def describe_option(option):
     for key, spec in (option.get("input") or {}).items():
         if isinstance(spec, dict):
             (kind, want), = spec.items()
-            if kind == "any_of":
+            if kind == "absent":
+                parts.append(f"no {key}")
+            elif kind == "any_of":
                 parts.append(f"{key}∈{'|'.join(map(str, want))}")
             else:
                 parts.append(f"{key} {kind} {want!r}")

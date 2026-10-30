@@ -1,5 +1,5 @@
 {
-  "_doc": "Plan 065 phase 2 tool-choice eval. Each question names the acceptable FIRST tool call. 'any': the first tool_use in the reply must match one option. 'some': a tool_use in any position of the reply must match one option (a two-part question whose calls run together). An option {\"answer\": [text, ..]} accepts a reply with no tool call whose text holds every text: only where the snapshot states the exact figure. 'holdout' questions are never used to tune the prompt; they check that the tuning did not over-fit. 'all': the reply must hold a tool_use matching every option (a batch in one reply). 'then': a canned tool_result is sent back for every tool_use of the first reply, and the next reply is scored the same way. Input specs: a literal (strings compare case-insensitively), {\"contains\": s}, {\"prefix\": s}, {\"any_of\": [..]}. See README.md.",
+  "_doc": "Plan 065 phase 2 tool-choice eval. Each question names the acceptable FIRST tool call. 'any': the first tool_use in the reply must match one option. 'some': a tool_use in any position of the reply must match one option (a two-part question whose calls run together). An option {\"answer\": [text, ..]} accepts a reply with no tool call whose text holds every text: only where the snapshot states the exact figure. 'holdout' questions are never used to tune the prompt; they check that the tuning did not over-fit. 'all': the reply must hold a tool_use matching every option (a batch in one reply). 'then': a canned tool_result is sent back for every tool_use of the first reply, and the next reply is scored the same way. Input specs: a literal (strings compare case-insensitively), {\"contains\": s}, {\"prefix\": s}, {\"any_of\": [..]}, {\"absent\": true} (the call leaves the key out). 'history': earlier user and assistant turns sent before the question, for a follow-up. 'index' (Plan 066): does the model read a record's details instead of trusting the snapshot summary, also when the user disputes an answer; its control questions check that it does not read what the snapshot states. See README.md.",
   "threshold": 0.8,
   "questions": [
     {
@@ -177,6 +177,167 @@
       "expect": {"any": [
         {"answer": ["999", "22"]},
         {"tool": "find", "input": {"entity": "bill", "query": {"contains": "globe"}}}
+      ]}
+    }
+  ],
+  "index": [
+    {
+      "id": "installment-deferral",
+      "source": "detail: installment (the 2026-10-30 trace)",
+      "question": "When is the first payment on my Panasonic Refrigerator plan, and is it deferred?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}}
+      ]}
+    },
+    {
+      "id": "installment-colloquial-name",
+      "source": "detail: a name the user shortens; find matches by substring, so 'fridge' is not_found",
+      "question": "When does the payment for my fridge start?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}}
+      ]}
+    },
+    {
+      "id": "bill-category",
+      "source": "detail: bill",
+      "question": "What category is my Netflix bill filed under?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "netflix"}}}
+      ]}
+    },
+    {
+      "id": "receivable-account",
+      "source": "detail: receivable",
+      "question": "Which account will my 2nd-half salary go into?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "receivable", "query": {"contains": "salary"}}}
+      ]}
+    },
+    {
+      "id": "setaside-account",
+      "source": "detail: set-aside",
+      "question": "Which account is my Christmas gifts set-aside kept in?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "setAside", "query": {"contains": "christmas"}}}
+      ]}
+    },
+    {
+      "id": "budget-repeats",
+      "source": "detail: budget",
+      "question": "Is my Groceries budget set to repeat every month?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "budget", "query": {"contains": "groceries"}}}
+      ]}
+    },
+    {
+      "id": "budget-group-members",
+      "source": "detail: budget group",
+      "question": "Which categories are in my Wants group?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "budgetGroup", "query": {"contains": "wants"}}},
+        {"tool": "getView", "input": {"view": "budget"}}
+      ]}
+    },
+    {
+      "id": "account-credit-limit",
+      "source": "detail: account (owed + available would be a sum the model must not do)",
+      "question": "What's the credit limit on my BPI Credit Card?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}}
+      ]}
+    },
+    {
+      "id": "dispute-installment",
+      "source": "dispute: the 2026-10-30 conversation, message (b)",
+      "history": [
+        {"role": "user", "text": "please check the installment for the fridge, when does it start?"},
+        {"role": "assistant", "text": "Your **Panasonic Refrigerator** plan is ₱2,499/mo on your BPI Credit Card, with 12 months (₱29,988) left. I can't see its start month or whether it's deferred — that isn't in your current data."}
+      ],
+      "question": "eh? you can't see in the installment that it is deferred?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}}
+      ]}
+    },
+    {
+      "id": "dispute-repeated",
+      "source": "dispute: the model already said it twice, as in the 2026-10-30 conversation (9 messages)",
+      "history": [
+        {"role": "user", "text": "please check the installment for the fridge, is it part of this month's load?"},
+        {"role": "assistant", "text": "Your **Panasonic Refrigerator** plan is ₱2,499/mo on your BPI Credit Card, with 12 months (₱29,988) left. Your installment load this month is ₱6,050, which is the iPhone 16 Pro (₱4,850) and the Air purifier (₱1,200), so the fridge is not in it. [Unverified] It may simply not be billed yet."},
+        {"role": "user", "text": "it's because it's deferred right?"},
+        {"role": "assistant", "text": "I cannot verify this — that figure isn't in your current data. Your data shows the fridge plan as ₱2,499/mo with 12 months left, and nothing about a deferred start."}
+      ],
+      "question": "eh? you can't see in the installment that it is deferred?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "refrigerator"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "panasonic"}}},
+        {"tool": "find", "input": {"entity": "installment", "query": {"absent": true}}}
+      ]}
+    },
+    {
+      "id": "dispute-bill",
+      "source": "dispute: after the fixed 'cannot verify' reply",
+      "history": [
+        {"role": "user", "text": "What category is my Netflix bill under?"},
+        {"role": "assistant", "text": "I cannot verify this — that figure isn't in your current data."}
+      ],
+      "question": "Really? You can't check the bill itself?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "netflix"}}}
+      ]}
+    },
+    {
+      "id": "dispute-setaside",
+      "source": "dispute: after an answer read off the snapshot",
+      "history": [
+        {"role": "user", "text": "Is my Christmas gifts set-aside linked to a goal?"},
+        {"role": "assistant", "text": "From your snapshot: Christmas gifts has ₱2,000 allocated and ₱0 funded. I don't see any link to a goal."}
+      ],
+      "question": "Are you sure? Look again.",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "setAside", "query": {"contains": "christmas"}}}
+      ]}
+    },
+    {
+      "id": "dispute-taglish",
+      "source": "dispute: Taglish, as the user writes",
+      "history": [
+        {"role": "user", "text": "Saang account papasok yung 2nd half salary ko?"},
+        {"role": "assistant", "text": "Hindi ko makita kung saang account papasok — wala 'yan sa data mo ngayon."}
+      ],
+      "question": "di mo ba talaga makita? check mo nga",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "receivable", "query": {"contains": "salary"}}}
+      ]}
+    },
+    {
+      "id": "control-meralco",
+      "source": "control: the snapshot states it exactly, so a read is waste",
+      "question": "How much is my Meralco bill and when is it due?",
+      "expect": {"any": [
+        {"answer": ["3,180", "18"]}
+      ]}
+    },
+    {
+      "id": "control-iphone-months",
+      "source": "control: the snapshot states it exactly, so a read is waste",
+      "question": "How many months are left on my iPhone plan?",
+      "expect": {"any": [
+        {"answer": ["14"]}
+      ]}
+    },
+    {
+      "id": "control-japan-saved",
+      "source": "control: the snapshot states it exactly, so a read is waste",
+      "question": "How much have I saved for the Japan trip so far?",
+      "expect": {"any": [
+        {"answer": ["55,000"]}
       ]}
     }
   ]
