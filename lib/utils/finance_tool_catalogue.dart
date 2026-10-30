@@ -608,6 +608,57 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'markBillsPaid',
+    kind: AiToolKind.update,
+    description:
+        'Mark SEVERAL bills paid in one step, all from one account on one '
+        'date, the way the Bills tab\'s multi-select does. Use for "paid '
+        'Meralco, water and internet from GCash". For a single bill use '
+        'markBillPaid. Call ONLY after find (entity bill) returns every id. '
+        'The user approves on the review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['bills'],
+      'properties': {
+        'bills': {
+          'type': 'array',
+          'description': 'Two or more unpaid bills, each listed once.',
+          'items': {
+            'type': 'object',
+            'required': ['id'],
+            'properties': {
+              'id': {
+                'type': 'string',
+                'description': 'The exact bill id from a preceding find '
+                    'result.',
+              },
+              'paidAmount': {
+                'type': 'number',
+                'description': 'Amount paid in pesos. Omit to pay what is '
+                    'left on the bill.',
+              },
+            },
+          },
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME all of them were paid from. Omit when '
+              'the bills already share one.',
+        },
+        'paidDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD date they were paid. Defaults to today.',
+        },
+        'alreadyLogged': {
+          'type': 'boolean',
+          'description': 'True when the user says they already logged these '
+              'payments in the Ledger, so no second entries are recorded. The '
+              'card lets them change it.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'markReceivableReceived',
     kind: AiToolKind.update,
     description:
@@ -643,6 +694,49 @@ const List<AiTool> kFinanceTools = [
           'description': 'True when the user says they already logged this '
               'income in the Ledger, so no second entry is recorded. The '
               'card lets them change it.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markBillUnpaid',
+    kind: AiToolKind.update,
+    description:
+        'Undo a bill payment: the bill goes back to unpaid, and the ledger '
+        'entry the payment made is deleted, so the money returns to the '
+        'account it left. Use when the user says a bill was marked paid by '
+        'mistake or is not paid yet. Call ONLY after find (entity bill) '
+        'returns the id of a PAID bill. The user approves on the review list '
+        'before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding find result.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markReceivableNotReceived',
+    kind: AiToolKind.update,
+    description:
+        'Undo a receipt: the receivable goes back to still owed, and the '
+        'ledger income entry it made is deleted, so the money leaves the '
+        'account it went into. Use when the user says money was marked '
+        'received by mistake or has not arrived. Call ONLY after find '
+        '(entity receivable) returns the id of a RECEIVED receivable. The '
+        'user approves on the review list before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding find result.',
         },
       },
     },
