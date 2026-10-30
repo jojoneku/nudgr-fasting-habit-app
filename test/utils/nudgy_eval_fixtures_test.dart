@@ -262,6 +262,14 @@ final _context = AiCoachContext(
         remainingMonths: 3,
         remainingAmount: 3600,
         account: 'BPI Credit Card'),
+    // Deferred: its first payment is after this month, so it is not in
+    // installmentsMonthlyLoad. The snapshot cannot say so (Plan 066).
+    AdvisorInstallmentLine(
+        name: 'Panasonic Refrigerator',
+        monthlyAmount: 2499,
+        remainingMonths: 12,
+        remainingAmount: 29988,
+        account: 'BPI Credit Card'),
   ],
   maturities: const [
     AdvisorMaturityLine(
