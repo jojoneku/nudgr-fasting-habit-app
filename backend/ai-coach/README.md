@@ -43,6 +43,30 @@ The model IDs are env vars on the live function (`BEDROCK_MODEL_ID`, `ADVISOR_MO
 3. Set the env var with `aws lambda update-function-configuration --profile ifast-dev --region ap-southeast-1` (the `ifast-dev` profile is the account that runs `food-coach-handler`). **That call replaces the whole environment map** — read the current one first and put every key back.
 4. Watch the CloudWatch `cost_line` entries and the `Bedrock error` lines for an hour.
 
+## Prompt cache TTL (`ADVISOR_CACHE_TTL_1H`)
+
+The advisor's cache breakpoints all live 5 minutes by default. `ADVISOR_CACHE_TTL_1H=true` gives the first breakpoint (tool catalogue + rules, about 9k tokens) a 1-hour TTL. The profile and history breakpoints stay on 5 minutes, because Bedrock requires the longer TTL to come before the shorter ones. **It is off, and nothing sets it**: not `template.yaml`, not CI, not the live functions.
+
+Bedrock lists the 1-hour TTL for Sonnet 4.5 and 4.6 ([prompt caching models](https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html#prompt-caching-models)). One InvokeModel call on each `global.` profile on 2026-10-30 accepted it: the reply's `usage.cache_creation` split the write into `ephemeral_1h_input_tokens` (the rules, 3,737) and `ephemeral_5m_input_tokens` (the rest, 40). If the model rejects it anyway (a `ValidationException`), the Lambda sends the call again with every breakpoint on 5 minutes, logs `WARNING advisor_cache_ttl_1h rejected`, and stays on 5 minutes until the container is recycled. The user sees no error.
+
+### The cost trade-off
+
+| | 5 minutes (default) | 1 hour |
+|---|---|---|
+| Cache write | 1.25 × input ($3.75 / 1M on Sonnet 4.5) | 2 × input ($6 / 1M) |
+| Cache read | 0.1 × input ($0.30 / 1M) | the same |
+| A read resets the TTL | yes | yes |
+
+On the 9k-token prefix, a write costs about $0.034 (5 min) or $0.054 (1 h). The 1-hour TTL pays its extra $0.020 back each time the prefix is used again between 5 and 60 minutes after its last use, because that use reads ($0.003) instead of writing again ($0.034). With one user who chats a few times a day, hours apart, most writes are never read back, and the flag costs more. Turn it on when many users share the prefix, or when the cost lines show `cache_write` near 9k on most first hops of the day.
+
+### Turning it on
+
+1. Read the current environment: `aws lambda get-function-configuration --function-name <fn> --profile ifast-dev --region ap-southeast-1`.
+2. Set it on both advisor functions (`food-coach-handler` and `food-advisor-stream`) with `aws lambda update-function-configuration --function-name <fn> --profile ifast-dev --region ap-southeast-1 --environment "Variables={ADVISOR_CACHE_TTL_1H=true,<every existing key>}"`. ⚠️ `--environment` **replaces the whole map**: repeat every existing key.
+3. Watch the `cost_line` entries (`cache_write`, `cache_read`) and search the logs for `advisor_cache_ttl_1h` for a day.
+
+To turn it off, remove the key the same way. Nothing else changes.
+
 ## Flutter integration
 
 Pass the endpoint at build time:
@@ -106,6 +130,18 @@ Each advisor invocation writes 2 lines to CloudWatch, on both functions:
 - `{"event":"advisor_invocation", …}` — the same fields as JSON, plus `user` (the Supabase user id), `stream`, `model`, `route` and `error_class`. A failed Bedrock call writes this line too, with the exception class name only.
 
 Both lines carry ids, tool names, result statuses, token counts, timings, the model and short hashes. They never carry message text, snapshot text, tool inputs, tool results or auth headers. `test_invocation_log.py` sends a request full of sentinel strings and fails if one reaches stdout. Query the JSON line in Logs Insights with `filter event = "advisor_invocation"`.
+
+### Client events (`op: "logEvent"`)
+
+The app sends small events about what the user did with a reply, with the message's `trace_id`: `batch_opened`, `batch_answered` (approved / declined / revised / removed / failed counts), `stop_pressed` (`phase`), `ask_nudgy_tapped` and `batch_resumed` (`items`, `outcome`). Request body:
+
+```json
+{ "op": "logEvent", "payload": { "event": "batch_opened", "trace_id": "a1b2c3d4e5f6a7b8", "fields": { "items": 2 } } }
+```
+
+- The Lambda checks each event against `_CLIENT_EVENTS`: known names only, and fields that are counts (0–1000) or enum values. Anything else is a 400 and is not logged.
+- An event does **not** count against the daily AI cap. It has its own limit of 500 events per user per UTC day, counted per warm container (a ceiling on a runaway client, not an exact count).
+- It writes one `{"event":"client_event", …}` JSON line. The app sends it fire-and-forget and ignores the answer.
 
 ### Trace one message
 

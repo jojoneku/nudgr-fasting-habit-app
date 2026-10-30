@@ -173,6 +173,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       storage: _storage,
       cloudFallback: _cloudAi,
       toolExecutor: _treasury.financeActions,
+      telemetry: _cloudAi,
     );
     _insightsPresenter = InsightsPresenter(
       storage: _storage,

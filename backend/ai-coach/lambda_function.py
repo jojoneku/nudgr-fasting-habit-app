@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import os
@@ -356,6 +357,11 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return _resp(400, {"error": "invalid_json", "message": "Body is not valid JSON"})
 
+    # A client event runs no model, so it does not count against the daily AI
+    # cap. It has its own limit; see _log_event.
+    if isinstance(body, dict) and body.get("op") == "logEvent":
+        return _log_event(body.get("payload"), user_id)
+
     # Per-user daily cap — prevents unbounded Bedrock billing.
     #
     # Metered per USER TURN, not per model call. A tool-calling turn is several
@@ -407,6 +413,105 @@ def lambda_handler(event, context):
         return _advise_finance(payload, user_id=user_id)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
+
+
+# ── Client events (Plan 065, phase 5) ─────────────────────────────────────────
+#
+# Small events the app sends about what the user did with Nudgy's reply: a
+# batch opened and how it was answered, stop pressed, "ask Nudgy" tapped, a
+# batch resumed after a restart. Each one is checked against an allow-list and
+# written as one `client_event` JSON line, next to the advisor_invocation
+# lines of the same trace_id.
+#
+# Only names from the allow-list, and only numbers, enum values and ids:
+# never text. A field the list does not name, or a value of the wrong kind,
+# rejects the whole event, so a client bug cannot put a sentence in the log.
+
+_CLIENT_EVENT_LOG = "client_event"
+
+_COUNT = "count"  # a whole number from 0 to _MAX_EVENT_COUNT
+
+_MAX_EVENT_COUNT = 1000
+
+# Event name -> {field: _COUNT or a tuple of allowed values}.
+_CLIENT_EVENTS = {
+    "batch_opened": {"items": _COUNT},
+    "batch_answered": {
+        "approved": _COUNT,
+        "declined": _COUNT,
+        "revised": _COUNT,
+        "removed": _COUNT,
+        "failed": _COUNT,
+    },
+    "stop_pressed": {"phase": ("reply", "batch")},
+    "ask_nudgy_tapped": {},
+    "batch_resumed": {
+        "items": _COUNT,
+        "outcome": ("shown", "not_reviewed"),
+    },
+}
+
+# Events one user may log per UTC day. Counted per warm container, so it is a
+# ceiling on a runaway client, not an exact count: a new container starts at
+# 0. A Supabase counter would make it exact, at the cost of a migration and a
+# round trip for a log line.
+_CLIENT_EVENT_DAILY_LIMIT = 500
+
+_client_event_counts = {"day": None, "users": {}}
+
+
+def _client_event_allowed(user_id):
+    """Count one event for `user_id`; False once today's limit is reached."""
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    if _client_event_counts["day"] != today:
+        _client_event_counts["day"] = today
+        _client_event_counts["users"] = {}
+    users = _client_event_counts["users"]
+    users[user_id] = users.get(user_id, 0) + 1
+    return users[user_id] <= _CLIENT_EVENT_DAILY_LIMIT
+
+
+def _client_event_fields(name, fields):
+    """The checked fields of one event, or None when anything is off."""
+    allowed = _CLIENT_EVENTS.get(name)
+    if allowed is None or not isinstance(fields, dict):
+        return None
+    checked = {}
+    for key, value in fields.items():
+        kind = allowed.get(key)
+        if kind is None:
+            return None
+        if kind == _COUNT:
+            # bool is an int in Python; true is not a count.
+            if (isinstance(value, bool) or not isinstance(value, int)
+                    or not 0 <= value <= _MAX_EVENT_COUNT):
+                return None
+        elif value not in kind:
+            return None
+        checked[key] = value
+    return checked
+
+
+def _log_event(payload, user_id):
+    """op=logEvent: check one client event and write it as one JSON line."""
+    payload = payload if isinstance(payload, dict) else {}
+    name = payload.get("event")
+    fields = _client_event_fields(name, payload.get("fields", {}))
+    if fields is None:
+        return _resp(400, {"error": "invalid_event"})
+    raw_trace = payload.get("trace_id")
+    if raw_trace is not None and _trace_id(payload) == "-":
+        return _resp(400, {"error": "invalid_event"})
+    if not _client_event_allowed(user_id):
+        return _resp(429, {"error": "event_limit_exceeded"})
+    print(json.dumps({
+        "event": _CLIENT_EVENT_LOG,
+        "name": name,
+        "trace": raw_trace,
+        "user": user_id if _USER_ID_RE.fullmatch(user_id or "") else None,
+        "fields": fields,
+    }, separators=(",", ":")))
+    return _resp(200, {"ok": True})
 
 
 # ── Food ops ───────────────────────────────────────────────────────────────────
@@ -1493,6 +1598,29 @@ def _clip(value, cap, label):
 # that is the intended trade.
 _CACHE_CONTROL = {"type": "ephemeral"}
 
+# ADVISOR_CACHE_TTL_1H (off by default) gives breakpoint 1, tools + rules, a
+# 1-hour TTL. Every other breakpoint keeps the 5-minute default: Bedrock wants
+# the longer TTL ahead of the shorter ones, and breakpoint 1 comes first. A
+# 1-hour write bills at 2x input instead of 1.25x, so it pays off only when the
+# shared prefix is read again between 5 and 60 minutes later -- many users, or
+# one who comes back within the hour. Bedrock lists the 1-hour TTL for Sonnet
+# 4.5 and 4.6. If a model rejects it anyway, _invoke_advisor logs a warning and
+# this container falls back to 5 minutes.
+_ADVISOR_CACHE_TTL_1H = os.environ.get(
+    "ADVISOR_CACHE_TTL_1H", "").lower() in ("1", "true", "yes")
+_CACHE_CONTROL_1H = {"type": "ephemeral", "ttl": "1h"}
+
+# Set when Bedrock rejected the 1-hour TTL once; it then stays off for the
+# life of this container.
+_ttl_1h_rejected = False
+
+
+def _rules_cache_control():
+    """The breakpoint for tools + rules: 1 hour when the flag is on, else 5 min."""
+    if _ADVISOR_CACHE_TTL_1H and not _ttl_1h_rejected:
+        return _CACHE_CONTROL_1H
+    return _CACHE_CONTROL
+
 
 def _cached_system(rules, context=""):
     """The system prompt as cacheable blocks: rules first, then the context.
@@ -1501,9 +1629,10 @@ def _cached_system(rules, context=""):
     snapshot and what follows it) leaves the tools + rules prefix cached. An
     empty context gives the single rules block.
     """
-    blocks = [{"type": "text", "text": rules, "cache_control": _CACHE_CONTROL}]
+    blocks = [{"type": "text", "text": rules,
+               "cache_control": dict(_rules_cache_control())}]
     if context:
-        blocks.append({"type": "text", "text": context, "cache_control": _CACHE_CONTROL})
+        blocks.append({"type": "text", "text": context, "cache_control": dict(_CACHE_CONTROL)})
     return blocks
 
 
@@ -1536,7 +1665,7 @@ def _mark_conversation_cache(bedrock_messages):
     # an image turn it has to sit after the image, not before it.
     last = content[-1]
     if isinstance(last, dict):
-        last["cache_control"] = _CACHE_CONTROL
+        last["cache_control"] = dict(_CACHE_CONTROL)
     return bedrock_messages
 
 
@@ -1919,7 +2048,8 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
 # -- Cost estimate (Plan 065, phase 5) ----------------------------------------
 #
 # USD per million tokens, (input, output), at Anthropic's list prices. A
-# cache write (5-minute TTL) costs 1.25x input and a cache read 0.1x input.
+# cache write costs 1.25x input (5-minute TTL) or 2x input (1-hour TTL, see
+# _ADVISOR_CACHE_TTL_1H), and a cache read 0.1x input.
 # Bedrock bills its own price list, so this is an estimate, not the invoice.
 # Haiku 5.5 costs more above 100K prompt tokens; the advisor never sends that
 # many.
@@ -1938,7 +2068,9 @@ def estimated_cost_usd(model_id, usage):
 
     `usage` is a Bedrock usage dict (input_tokens, output_tokens,
     cache_read_input_tokens, cache_creation_input_tokens). A missing or
-    negative count counts as 0.
+    negative count counts as 0. Cache writes are priced at the 5-minute rate,
+    except the part `cache_creation.ephemeral_1h_input_tokens` names as
+    1-hour writes, when the usage carries that split.
     """
     for key, (price_in, price_out) in _MODEL_PRICES.items():
         if key in (model_id or ""):
@@ -1946,14 +2078,19 @@ def estimated_cost_usd(model_id, usage):
     else:
         return None
 
-    def count(name):
-        value = (usage or {}).get(name)
+    def count(name, source=None):
+        value = (source if source is not None else usage or {}).get(name)
         return value if isinstance(value, int) and value > 0 else 0
 
+    split = (usage or {}).get("cache_creation")
+    writes_1h = count("ephemeral_1h_input_tokens",
+                      split if isinstance(split, dict) else {})
+    writes_5m = max(count("cache_creation_input_tokens") - writes_1h, 0)
     dollars = (
         count("input_tokens") * price_in
         + count("output_tokens") * price_out
-        + count("cache_creation_input_tokens") * price_in * 1.25
+        + writes_5m * price_in * 1.25
+        + writes_1h * price_in * 2
         + count("cache_read_input_tokens") * price_in * 0.1
     ) / 1_000_000
     return round(dollars, 6)
@@ -1978,6 +2115,42 @@ def _split_reply(content):
     return text, tool_calls
 
 
+def _without_ttl(body):
+    """`body` with every breakpoint back on the 5-minute default."""
+    body = copy.deepcopy(body)
+    for block in body.get("system") or []:
+        if isinstance(block, dict) and "cache_control" in block:
+            block["cache_control"] = dict(_CACHE_CONTROL)
+    return body
+
+
+def _invoke_advisor(invoke, body):
+    """Call `invoke` (a Bedrock invoke method) with `body` as JSON.
+
+    When the 1-hour TTL is on and Bedrock rejects the request as invalid, the
+    call is made once more with every breakpoint on 5 minutes. If that one
+    works, the TTL was the problem: a warning is logged and the TTL stays off
+    for this container. If it fails too, its error is the real one.
+    """
+    global _ttl_1h_rejected
+    kwargs = {"modelId": _ADVISOR_MODEL_ID, "contentType": "application/json",
+              "accept": "application/json"}
+    uses_ttl = any(
+        isinstance(b, dict) and (b.get("cache_control") or {}).get("ttl")
+        for b in body.get("system") or [])
+    try:
+        return invoke(body=json.dumps(body), **kwargs)
+    except Exception as e:
+        code = (getattr(e, "response", None) or {}).get("Error", {}).get("Code")
+        if not uses_ttl or code != "ValidationException":
+            raise
+        result = invoke(body=json.dumps(_without_ttl(body)), **kwargs)
+        _ttl_1h_rejected = True
+        print("WARNING advisor_cache_ttl_1h rejected by "
+              f"{_ADVISOR_MODEL_ID}; using 5 minutes for this container: {e}")
+        return result
+
+
 def _advise_finance(payload, user_id=None):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
@@ -1992,19 +2165,14 @@ def _advise_finance(payload, user_id=None):
     tools = request["tools"]
     started = time.monotonic()
     try:
-        raw = _bedrock.invoke_model(
-            modelId=_ADVISOR_MODEL_ID,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": request["system"],
-                "messages": request["messages"],
-                **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-            }),
-        )
+        raw = _invoke_advisor(_bedrock.invoke_model, {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": _ADVISOR_MAX_TOKENS,
+            "system": request["system"],
+            "messages": request["messages"],
+            **({"tools": tools} if tools else {}),
+            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+        })
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
@@ -2076,19 +2244,14 @@ def advise_finance_stream(payload, request, user_id=None):
 
     yield _frame({"type": "start"})
     try:
-        raw = _bedrock.invoke_model_with_response_stream(
-            modelId=_ADVISOR_MODEL_ID,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": request["system"],
-                "messages": request["messages"],
-                **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-            }),
-        )
+        raw = _invoke_advisor(_bedrock.invoke_model_with_response_stream, {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": _ADVISOR_MAX_TOKENS,
+            "system": request["system"],
+            "messages": request["messages"],
+            **({"tools": tools} if tools else {}),
+            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+        })
 
         # A `thinking` block (Sonnet 5.5's notes between tool calls) is stored by
         # content_block_start like any other, its thinking_delta / signature_delta

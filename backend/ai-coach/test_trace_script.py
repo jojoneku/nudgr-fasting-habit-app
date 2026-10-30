@@ -77,6 +77,16 @@ def test_cost_uses_input_output_and_cache_prices():
     assert cost == pytest.approx(22.05)
 
 
+def test_one_hour_cache_writes_cost_twice_input():
+    cost = lf.estimated_cost_usd(_SONNET, {
+        "cache_creation_input_tokens": 3_000_000,
+        "cache_creation": {"ephemeral_1h_input_tokens": 1_000_000,
+                           "ephemeral_5m_input_tokens": 2_000_000}})
+
+    # 1M at 3 * 2, 2M at 3 * 1.25
+    assert cost == pytest.approx(13.5)
+
+
 def test_an_unknown_model_has_no_cost():
     assert lf.estimated_cost_usd("some-other-model", {"input_tokens": 5}) is None
     assert lf.estimated_cost_usd(None, {"input_tokens": 5}) is None
