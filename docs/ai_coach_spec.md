@@ -294,8 +294,26 @@ New `StorageService` keys:
 |---|---|---|
 | `aiCoachTier` | `String` | `"onDevice"` or `"cloud"` |
 | `aiCoachCloudOptIn` | `bool` | User consented to cloud tier |
-| `aiCoachHistory` | `List<AiChatMessage>` JSON | Last 50 messages persisted |
+| `aiCoachHistory` | `List<AiChatMessage>` JSON | The current advisor conversation, in full (it mirrors the saved conversation) |
 | `aiCoachDownloaded` | `bool` | Whether Qwen3 model is on device |
+
+### Conversation memory (Plan 065 phase 5)
+
+- **New conversation after an idle gap.** When the user sends an advisor
+  message and the current conversation has been silent for more than 6 hours
+  (`AiCoachPresenter.idleGapForNewConversation`), a new conversation starts
+  first. The old one stays in the conversation list. This does not happen
+  while a turn runs, while a batch of changes waits (in memory, or being read
+  back from storage), while the ledger waits for an answer, or for the other
+  coaches. A conversation the user picked from the list counts as active from
+  the moment they picked it.
+- **Chunked request trim.** The saved and visible conversation is never
+  trimmed. Only the request is: past 50 messages
+  (`requestTrimThreshold`), the oldest are dropped in chunks of 20
+  (`requestTrimChunk`), so the request keeps the same start between trims and
+  the prompt cache keeps its prefix. A cut never separates a user message from
+  its reply. There is no summary of what was dropped, because a summary loses
+  numbers. `AiCoachPresenter.trimForRequest` is the one owner of this rule.
 
 ## Prompt Injection Posture
 
