@@ -578,10 +578,11 @@ class TestAdvisorImages:
                  if b.get("type") == "image"]
         assert mimes == ["image/jpeg", "image/png", "image/webp"]
         # Labelled so "the second one" means the same picture to both sides.
-        labels = [b["text"] for b in content if b.get("type") == "text"]
+        labels = [b["text"] for b in content if b.get("type") == "text"
+                  and not b["text"].startswith(lf._BRIEFING_OPEN)]
         assert labels[:3] == ["Image 1:", "Image 2:", "Image 3:"]
-        # The user's words come last, after every image.
-        assert content[-1] == {"type": "text", "text": "what are these?"}
+        # The user's words come after every image (the briefing follows them).
+        assert content[-2] == {"type": "text", "text": "what are these?"}
 
     def test_the_old_single_image_field_still_works(self):
         content = _last_user_content({
@@ -622,7 +623,8 @@ class TestAdvisorImages:
         content = _last_user_content({
             **_TURN, "images": [{"base64": "aaaa", "mime_type": "image/heic"}],
         })
-        assert content[0]["source"]["media_type"] == "image/jpeg"
+        image = next(b for b in content if b.get("type") == "image")
+        assert image["source"]["media_type"] == "image/jpeg"
 
     def test_no_images_leaves_a_plain_text_turn(self):
         request, err = lf._build_advisor_request(dict(_TURN))
