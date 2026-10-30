@@ -1,6 +1,6 @@
 # Plan 066 — Nudgy: the snapshot is an index, the tools are the record
 
-**Status:** revision 2 (2026-10-30). Phase 1 in progress. Revision 2 is the
+**Status:** revision 2 (2026-10-30). Phase 1 done (section 10); phase 2 next. Revision 2 is the
 result of a critical review of revision 1: section 9 lists what changed and why.
 
 **Trigger.** On 2026-10-30 at about 6:42 PM Manila, the user asked Nudgy about
@@ -94,7 +94,8 @@ Extend `backend/ai-coach/evals/`. The runner already supports a 2-step question
 | Fixture | Add a deferred "Panasonic Refrigerator" plan to `_context` in `test/utils/nudgy_eval_fixtures_test.dart`, then regenerate. |
 | Baseline | Run twice on Sonnet 4.5, and once on Haiku 4.5. Record the numbers in section 10. Expected: detail and dispute cases fail today. |
 
-About 15 new cases. One run costs about $1 on Sonnet 4.5.
+16 new cases (a second, longer dispute was added after the first runs). One run
+costs about $0.30 on Sonnet 4.5.
 
 ### Phase 2 — Snapshot footers and tool descriptions (one PR)
 
@@ -151,7 +152,7 @@ control cases do not fall.
 - No change to write tools or confirm cards.
 - No change to which model a conversation uses.
 - No server-side copy of the finance data. All reads stay on the phone.
-- No fix for the uncached snapshot (section 6). That is a separate task.
+- No change to where the briefing goes (PR #778, section 6).
 
 ## 5. Order and PRs
 
@@ -190,12 +191,12 @@ would have cost about $0.04.
 read hop has a short output, so it takes about the time to first token (2–3 s)
 plus the phone's tool run.
 
-**Bigger lever, out of scope.** The rules and tools are about 14k tokens and are
-cached (13,380 written on the first message). The snapshot and history, about
-10k tokens for the real user, are billed uncached on every hop, although
-`_cached_system` gives them their own breakpoint and `h_snapshot` did not change
-all day. Cached, a hop would cost about $0.02 instead of $0.05. That fix pays for
-every read this plan adds. It belongs in its own task, with Plan 065.
+**Why the snapshot is uncached.** The rules and tools are about 14k tokens and
+are cached (13,380 written on the first message). The briefing (snapshot and
+historical record, about 10k tokens for the real user) is billed uncached on
+every hop. That is by design: PR #778 moved the briefing into the newest user
+turn, so that a ledger edit rewrites only the last turn pair instead of the whole
+conversation. It is not a bug, and this plan does not change it.
 
 ## 7. Open questions
 
@@ -224,10 +225,55 @@ Accepted by the developer on 2026-10-30 ("proceed" after the review):
 | Taglish dispute case and Tagalog words in phase 4 | The real dispute was Taglish ("eh?"). An English-only regex misses it. |
 | 2 runs per measurement | One run of about 15 cases is noisy. A change ships when both runs pass. |
 | Separate `index` set | Mixed into the tuning set, the new cases would hide in an overall rate. |
-| Cost section rebuilt from the trace | Revision 1 said "under $1 a month". A read hop costs about $0.04 on Sonnet 4.5, because about 10k snapshot tokens are billed uncached on every hop. |
-| Uncached snapshot named as a separate task | It is the biggest cost lever, and it is not about tool use. |
+| Cost section rebuilt from the trace | Revision 1 said "under $1 a month". A read hop costs about $0.04 on Sonnet 4.5, because about 10k briefing tokens are billed uncached on every hop (by design, PR #778). |
+| Eval runs on the production layout | The first baseline ran on a branch without PR #778 (rules hash `49bed87b`, production `80bbe004`). On that layout every dispute passed, so the eval did not show the real failure. On the production layout it does. Always check `h_rules` against the trace before a baseline. |
 | "Replace, do not add" for the rules | The rules block is in every hop. |
 
 ## 10. Eval results
 
-(Filled in by phase 1.)
+### Phase 1 baseline (2026-10-30, `index` set, 16 cases, rules `80bbe004`)
+
+Same rules hash as production, with the briefing in the newest user turn
+(PR #778).
+
+| # | Case | Sonnet 4.5 run 1 | Sonnet 4.5 run 2 | Haiku 4.5 |
+|---|---|---|---|---|
+| 1 | installment-deferral | pass | pass | pass |
+| 2 | installment-colloquial-name | FAIL (text) | pass | pass |
+| 3 | bill-category | FAIL (text) | FAIL (text) | FAIL (text) |
+| 4 | receivable-account | pass | FAIL (text) | FAIL (text) |
+| 5 | setaside-account | pass | pass | pass |
+| 6 | budget-repeats | pass | pass | pass |
+| 7 | budget-group-members | pass | pass | pass |
+| 8 | account-credit-limit | FAIL (text) | FAIL (text) | FAIL (text) |
+| 9 | dispute-installment | pass | **FAIL (text)** | pass |
+| 10 | dispute-repeated | pass | **FAIL (text)** | pass |
+| 11 | dispute-bill | pass | pass | pass |
+| 12 | dispute-setaside | pass | pass | pass |
+| 13 | dispute-taglish | FAIL (text) | FAIL (text) | FAIL (find account, not receivable) |
+| 14 | control-meralco | pass | pass | pass |
+| 15 | control-iphone-months | pass | pass | FAIL (read it anyway) |
+| 16 | control-japan-saved | pass | pass | pass |
+| | **Pass rate** | **12/16 = 75%** | **10/16 = 62%** | **11/16 = 69%** |
+
+Cost: about $0.34 and $0.29 per Sonnet run, $0.11 on Haiku.
+
+What it shows:
+
+1. **The real failure reproduces.** Run 2 answered both installment disputes
+   (9, 10) from the briefing, as production did on 2026-10-30. Run 1 did not, so
+   the failure is intermittent, which matches a model that is near the edge of
+   its decision.
+2. **It fails across record types, not only installments.** The bill category
+   (3) and the credit limit (8) fail on every run and both models. The
+   receivable (4) fails on 2 of 3 runs.
+3. **A Taglish dispute always fails** (13). On Sonnet it answers in text; on
+   Haiku it reads the wrong record type.
+4. **The controls hold on Sonnet.** Haiku over-reads once (15). The rule rewrite
+   must not make this worse.
+5. **Run-to-run noise is about 2 cases in 16.** A change ships only when both
+   runs pass, as section 2 says.
+
+The briefing in the newest user turn sits right after the question. That makes
+"answer from the briefing" the easy path in a dispute turn. The phase 2 footers
+go inside the briefing, next to the data, which is the right place for them.

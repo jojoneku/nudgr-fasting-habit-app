@@ -275,7 +275,9 @@ def test_the_history_goes_before_the_question(ctx):
     assert messages[1]["content"] == "I can't see that."
     # The cache breakpoint marks the earlier user turn, as in production.
     assert messages[0]["content"][-1]["text"] == "When does the fridge plan start?"
-    assert messages[2]["content"] == "you can't see it?"
+    # The newest turn carries the question, then the briefing.
+    assert messages[2]["content"][0]["text"] == "you can't see it?"
+    assert messages[2]["content"][-1]["text"].startswith("<briefing>")
 
 
 def test_every_history_alternates_and_ends_with_the_assistant():
