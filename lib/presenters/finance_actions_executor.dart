@@ -801,6 +801,8 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// create is T1. A recurring row becomes T3 on the card when the user
   /// widens it to later months.
   static ProposalTier _tierFor(String tool) {
+    // A bulk change is T3: one approval settles several bills at once.
+    if (tool == 'markBillsPaid') return ProposalTier.destructive;
     final kind = financeToolNamed(tool)?.kind;
     if (kind == AiToolKind.destroy) return ProposalTier.destructive;
     if (kind == AiToolKind.update) return ProposalTier.change;
@@ -845,6 +847,10 @@ class FinanceActionsExecutor extends ChangeNotifier
           },
         'markBillPaid' => const {
             ProposalField.amount: 'paidAmount',
+            ProposalField.account: 'account',
+            ProposalField.date: 'paidDate',
+          },
+        'markBillsPaid' => const {
             ProposalField.account: 'account',
             ProposalField.date: 'paidDate',
           },
@@ -1048,6 +1054,29 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Amount', value: _peso(s.amount)),
             if (s.account case final a?) (label: 'Paid from', value: a.name),
             (label: 'Paid date', value: _day(s.date)),
+          ],
+        );
+      case 'markBillsPaid':
+        final s = _bulkSettlement(i);
+        if (s == null) return null;
+        final total = s.items.fold(0.0, (t, x) => t + x.amount);
+        return PendingFinanceAction(
+          call: call,
+          title: 'Mark ${s.items.length} bills paid (${_peso(total)})',
+          isRecurring: false,
+          confirmLabel: 'Mark Paid',
+          ledgerChoice: s.choice,
+          details: [
+            for (final x in s.items)
+              (label: 'Bill', value: '${x.bill.name} — ${_peso(x.amount)}'),
+            if (s.account case final a?) (label: 'Paid from', value: a.name),
+            (label: 'Paid date', value: _day(s.date)),
+            // When every bill matched, the ledger choice already says so;
+            // otherwise each lookalike is named so the user can remove it.
+            if (s.choice.match == null)
+              for (final x in s.items)
+                if (s.found[x.bill.id] case final found?)
+                  (label: 'In ledger?', value: '${x.bill.name}: $found'),
           ],
         );
       case 'markReceivableReceived':
@@ -1616,6 +1645,33 @@ class FinanceActionsExecutor extends ChangeNotifier
         return 'Marked bill "${s.name}" as paid (${_peso(s.amount)}'
             '${record ? ' from ${s.account!.name}' : ', already in the ledger, so no new entry'}).';
 
+      case 'markBillsPaid':
+        final s = _bulkSettlement(i);
+        if (s == null) throw StateError('markBillsPaid names an unknown bill');
+        final record = !alreadyLogged;
+        if (record && s.account == null) {
+          throw StateError('No account to record the payments in');
+        }
+        // The Bills tab's batch path: every bill settles in memory, then one
+        // save and one fan-out for the lot.
+        final result = await _bills.markBillsPaid(
+          [for (final x in s.items) x.bill.id],
+          accountId: record ? s.account!.id : null,
+          paidDate: s.date,
+          recordInLedger: record,
+          paidAmounts: {for (final x in s.items) x.bill.id: x.amount},
+        );
+        final lines = [
+          for (final x in s.items)
+            '${x.bill.name} ${_peso(x.amount)}'
+                '${_bulkOutcome(x.bill)}',
+        ];
+        return 'Marked ${result.applied} of ${s.items.length} bills paid'
+            '${record ? ' from ${s.account!.name}' : ', already in the ledger, so no new entries'}'
+            ' on ${_day(s.date)}: ${lines.join(', ')}.'
+            '${result.skipped == 0 ? '' : ' ${result.skipped} could not be '
+                'paid, so nothing changed for them.'}';
+
       case 'markReceivableReceived':
         final s = _receivableSettlement(i);
         if (s == null) {
@@ -1973,6 +2029,93 @@ class FinanceActionsExecutor extends ChangeNotifier
     );
   }
 
+  /// The `bills` list of a `markBillsPaid` call, in call order: each an id
+  /// and the amount the model gave, if any. An item that is a bare string is
+  /// read as an id.
+  static List<({String id, double? amount})> _bulkBills(
+      Map<String, Object?> i) {
+    final raw = i['bills'];
+    if (raw is! List) return const [];
+    return [
+      for (final e in raw)
+        if (e is Map)
+          (id: _str(e['id']), amount: _amountOrNull(e['paidAmount']))
+        else
+          (id: _str(e), amount: null),
+    ];
+  }
+
+  /// A `markBillsPaid` call bound against the live bills and accounts. The
+  /// row is drawn from it and the write passes its amounts, account and date
+  /// to the presenter, so what the user approved is what is saved. Null when
+  /// an id is unknown or no bill is listed.
+  _BulkSettlement? _bulkSettlement(Map<String, Object?> i) {
+    final items = <({Bill bill, double amount})>[];
+    for (final e in _bulkBills(i)) {
+      final bill = _bills.allBills.where((b) => b.id == e.id).firstOrNull;
+      if (bill == null) return null;
+      items.add((
+        bill: bill,
+        amount: e.amount ?? _bills.unpaidPortionOf(bill),
+      ));
+    }
+    if (items.isEmpty) return null;
+    final date = _settleDate(i['paidDate']);
+    // One account pays the lot, so it must be one the presenter accepts for
+    // every bill: a card statement is never paid from a card.
+    final eligible = _bills
+        .payerAccountsForAll(items.map((x) => x.bill))
+        .map((a) => a.id)
+        .toSet();
+    final named = _str(i['account']);
+    final shared = items.map((x) => x.bill.accountId).toSet();
+    final from = named.isNotEmpty
+        ? _accountFor(named)
+        : shared.length == 1
+            ? _activeAccounts
+                .where((a) =>
+                    a.id == shared.single &&
+                    !a.isLiability &&
+                    eligible.contains(a.id))
+                .firstOrNull
+            : null;
+    final found = <String, String>{};
+    for (final x in items) {
+      final match = _ledgerMatch(
+        type: TransactionType.outflow,
+        amount: x.amount,
+        months: {x.bill.month, toMonthKey(date)},
+        name: x.bill.name,
+      );
+      if (match != null) found[x.bill.id] = _matchLabel(match);
+    }
+    final allFound = found.length == items.length;
+    final payable = from != null && eligible.contains(from.id);
+    return _BulkSettlement(
+      items: items,
+      account: from,
+      accountPaysAll: payable,
+      date: date,
+      found: found,
+      choice: LedgerEntryChoice(
+        alreadyLogged: i['alreadyLogged'] == true || allFound,
+        canRecord: payable,
+        match: allFound ? found.values.join('; ') : null,
+      ),
+    );
+  }
+
+  /// What became of [before] after a batch payment, for the result: nothing
+  /// when it is paid, else whether it moved at all.
+  String _bulkOutcome(Bill before) {
+    final after = _bills.allBills.where((b) => b.id == before.id).firstOrNull;
+    if (after == null) return ' (not found after saving)';
+    if (after.isPaid) return '';
+    return (after.paidAmount ?? 0) > (before.paidAmount ?? 0)
+        ? ' (part paid; still open)'
+        : ' (not saved)';
+  }
+
   /// Whether a confirmed settlement writes a ledger entry. Recording needs an
   /// account; the card cannot offer it without one, so reaching here without
   /// one is a bug, not a choice.
@@ -2223,6 +2366,47 @@ class FinanceActionsExecutor extends ChangeNotifier
         }
         return check('account', active, 'active') ??
             _settlementProblem(_billSettlement(i)!, 'paid from', active);
+      case 'markBillsPaid':
+        final listed = _bulkBills(i);
+        if (listed.length < 2) {
+          return 'markBillsPaid is for two or more bills. For one bill call '
+              'markBillPaid with its id.';
+        }
+        final ids = [for (final e in listed) e.id];
+        final targets = [
+          for (final id in ids.toSet())
+            _bills.allBills.firstWhere((b) => b.id == id)
+        ];
+        String names(Iterable<Bill> bs) =>
+            bs.map((b) => '"${b.name}"').join(', ');
+        final twice = targets
+            .where((b) => ids.where((id) => id == b.id).length > 1)
+            .toList();
+        if (twice.isNotEmpty) {
+          return '${names(twice)} is listed more than once. List each bill '
+              'once, with the amount paid on it.';
+        }
+        final paid = targets.where((b) => b.isPaid).toList();
+        if (paid.isNotEmpty) {
+          return '${names(paid)} ${paid.length == 1 ? 'is' : 'are'} already '
+              'marked paid. Leave ${paid.length == 1 ? 'it' : 'them'} out and '
+              'tell the user.';
+        }
+        final bad = check('account', active, 'active');
+        if (bad != null) return bad;
+        final s = _bulkSettlement(i)!;
+        final from = s.account;
+        if (from != null && !s.accountPaysAll) {
+          final cannot = targets.where(
+              (b) => !_bills.payerAccountsFor(b).any((a) => a.id == from.id));
+          return '${from.name} cannot pay ${names(cannot)}: a card statement '
+              'is paid from a bank, e-wallet or cash account. Ask the user '
+              'which account paid them.';
+        }
+        if (s.choice.alreadyLogged || s.choice.canRecord) return null;
+        return 'Which account paid these bills? Choices: ${list(active)}. Ask '
+            'the user. If they already logged these payments in the Ledger, '
+            'call again with alreadyLogged true instead.';
       case 'markReceivableReceived':
         final rec =
             _bills.allReceivables.firstWhere((r) => r.id == _str(i['id']));
@@ -2294,6 +2478,16 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// the user approved a change that was never going to happen (design D2:
   /// an id only ever comes from a find result).
   String? _unknownIdProblem(AiToolCall call) {
+    if (call.name == 'markBillsPaid') {
+      final missing = [
+        for (final e in _bulkBills(call.input))
+          if (!_bills.allBills.any((b) => b.id == e.id)) '"${e.id}"'
+      ];
+      if (missing.isEmpty) return null;
+      return 'No bill has the id ${missing.join(', ')}. Call find (entity '
+          'bill) and use ids from its result — never ones you made up. If a '
+          'bill is not there, tell the user you could not find it.';
+    }
     final id = _str(call.input['id']);
     final (String kind, String finder, bool exists) = switch (call.name) {
       'markBillPaid' || 'markBillUnpaid' || 'editBill' || 'deleteBill' => (
@@ -2459,6 +2653,35 @@ class _Settlement {
   /// Where the money goes from or into. Null when none resolves; the card
   /// then offers "already in the ledger" only.
   final FinancialAccount? account;
+  final LedgerEntryChoice choice;
+}
+
+/// A `markBillsPaid` call bound against the live bills and accounts. Both
+/// the row and the write are drawn from one.
+class _BulkSettlement {
+  const _BulkSettlement({
+    required this.items,
+    required this.account,
+    required this.accountPaysAll,
+    required this.date,
+    required this.found,
+    required this.choice,
+  });
+
+  /// Each bill with the amount paid on it, in call order.
+  final List<({Bill bill, double amount})> items;
+
+  /// The one account that pays them all. Null when none was named and the
+  /// bills share no account that can pay every one of them.
+  final FinancialAccount? account;
+
+  /// False when [account] cannot pay one of the bills (a card statement and
+  /// a card): the call is then refused before any row.
+  final bool accountPaysAll;
+  final DateTime date;
+
+  /// A ledger entry that looks like each bill's payment, by bill id.
+  final Map<String, String> found;
   final LedgerEntryChoice choice;
 }
 

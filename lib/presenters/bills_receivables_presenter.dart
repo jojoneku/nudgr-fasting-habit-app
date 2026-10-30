@@ -301,6 +301,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       ? creditStatementRemaining(b)
       : b.amount;
 
+  /// What [markBillsPaid] pays on [bill] when no amount is given for it: its
+  /// full amount, less anything already paid toward a credit statement.
+  double unpaidPortionOf(Bill bill) => _unpaidPortion(bill);
+
   double get totalNextMonth {
     final billsNm = _allBills
         .where((b) => b.month == _selectedMonth)
@@ -2071,12 +2075,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Marks every still-unpaid bill in [billIds] paid for what is left on it
   /// (its full amount, less anything already paid toward a credit statement).
   /// [accountId] funds all of them (ignored, and not required, when
-  /// [recordInLedger] is false).
+  /// [recordInLedger] is false). [paidAmounts] overrides the amount for the
+  /// bills it names; the rest pay [unpaidPortionOf].
   Future<BatchResult> markBillsPaid(
     Iterable<String> billIds, {
     String? accountId,
     DateTime? paidDate,
     bool recordInLedger = true,
+    Map<String, double> paidAmounts = const {},
   }) async {
     final ids = billIds.toSet();
     final targets = _allBills.where((b) => ids.contains(b.id) && !b.isPaid);
@@ -2086,7 +2092,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       try {
         await _applyBillPayment(
           bill,
-          paidAmount: _unpaidPortion(bill),
+          paidAmount: paidAmounts[bill.id] ?? _unpaidPortion(bill),
           accountId: accountId,
           paidDate: paidDate,
           recordInLedger: recordInLedger,

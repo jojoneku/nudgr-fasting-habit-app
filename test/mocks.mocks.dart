@@ -8153,6 +8153,7 @@ class MockBillsReceivablesPresenter extends _i1.Mock
     String? accountId,
     DateTime? paidDate,
     bool? recordInLedger = true,
+    Map<String, double>? paidAmounts = const {},
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -8162,6 +8163,7 @@ class MockBillsReceivablesPresenter extends _i1.Mock
             #accountId: accountId,
             #paidDate: paidDate,
             #recordInLedger: recordInLedger,
+            #paidAmounts: paidAmounts,
           },
         ),
         returnValue: _i15.Future<({int applied, int skipped})>.value(
