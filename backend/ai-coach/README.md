@@ -107,6 +107,18 @@ Each advisor invocation writes 2 lines to CloudWatch, on both functions:
 
 Both lines carry ids, tool names, result statuses, token counts, timings, the model and short hashes. They never carry message text, snapshot text, tool inputs, tool results or auth headers. `test_invocation_log.py` sends a request full of sentinel strings and fails if one reaches stdout. Query the JSON line in Logs Insights with `filter event = "advisor_invocation"`.
 
+### Trace one message
+
+`scripts/trace.py` prints the timeline of one user message: each model call (model, tokens, cache, latency, stop reason, tools, result statuses, estimated cost) and each client event with the same `trace_id`. It runs one read-only Logs Insights query over both functions' log groups.
+
+```bash
+python scripts/trace.py <trace_id>          # default: --profile ifast-dev, ap-southeast-1, last 72 h
+python scripts/trace.py --latest --hours 168
+python scripts/trace.py <trace_id> --json
+```
+
+The cost is an estimate at Anthropic's list prices (`estimated_cost_usd` in `lambda_function.py`); Bedrock bills its own price list. A line from a deploy older than the JSON line falls back to the `cost_line`, which names no model, so its cost shows as `?`.
+
 ## The streaming advisor (`food-advisor-stream`)
 
 `adviseFinance` runs on a **second function** with its own front door, because

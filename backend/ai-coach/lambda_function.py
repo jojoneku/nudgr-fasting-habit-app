@@ -1916,6 +1916,49 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
     }, user_id=user_id, stream=stream, error=error)
 
 
+# -- Cost estimate (Plan 065, phase 5) ----------------------------------------
+#
+# USD per million tokens, (input, output), at Anthropic's list prices. A
+# cache write (5-minute TTL) costs 1.25x input and a cache read 0.1x input.
+# Bedrock bills its own price list, so this is an estimate, not the invoice.
+# Haiku 5.5 costs more above 100K prompt tokens; the advisor never sends that
+# many.
+
+_MODEL_PRICES = {
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+}
+
+
+def estimated_cost_usd(model_id, usage):
+    """Estimated USD cost of one model call, or None for an unknown model.
+
+    `usage` is a Bedrock usage dict (input_tokens, output_tokens,
+    cache_read_input_tokens, cache_creation_input_tokens). A missing or
+    negative count counts as 0.
+    """
+    for key, (price_in, price_out) in _MODEL_PRICES.items():
+        if key in (model_id or ""):
+            break
+    else:
+        return None
+
+    def count(name):
+        value = (usage or {}).get(name)
+        return value if isinstance(value, int) and value > 0 else 0
+
+    dollars = (
+        count("input_tokens") * price_in
+        + count("output_tokens") * price_out
+        + count("cache_creation_input_tokens") * price_in * 1.25
+        + count("cache_read_input_tokens") * price_in * 0.1
+    ) / 1_000_000
+    return round(dollars, 6)
+
+
 def _split_reply(content):
     """Split an assistant turn into (text, tool_calls).
 
