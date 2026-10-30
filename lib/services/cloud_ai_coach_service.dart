@@ -363,7 +363,9 @@ class CloudAiCoachService implements AiCoachService, AdvisorTelemetry {
     final images = [for (final img in context.images) base64Encode(img)];
     return {
       'context': {
-        'summary': context.financeSnapshotSummary(),
+        // Read hints point at the tools, so only a request that sends them
+        // gets them (Plan 066).
+        'summary': context.financeSnapshotSummary(readHints: tools.isNotEmpty),
         if (profile != null && profile.trim().isNotEmpty)
           'profile': profile.trim(),
         if (historical != null && historical.trim().isNotEmpty)

@@ -471,12 +471,14 @@ void main() {
 
   test('snapshot.json is the context the app sends for the fixture', () {
     // The same payload builder the app uses, so the eval sends what the
-    // phone sends. Messages and tools are left out: the eval supplies its own
-    // questions, and tools.json carries the catalogue.
+    // phone sends. Only the context is kept: the eval supplies its own
+    // questions, and tools.json carries the catalogue. The tools still go in,
+    // because with them the snapshot carries its read hints (Plan 066).
     final payload = CloudAiCoachService.advisorPayload(
       messages: const [],
       context: _context,
       historical: _context.financeHistoricalSummary(),
+      tools: kFinanceTools,
     );
     _expectFixture('snapshot.json', {
       'today': '2026-10-15',
