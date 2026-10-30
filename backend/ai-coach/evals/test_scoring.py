@@ -217,9 +217,14 @@ def test_the_request_is_the_lambdas(ctx):
     body = run_eval.build_body(ctx["lf"], ctx["model_id"], ctx["snapshot"], ctx["tools"],
                                [{"role": "user", "text": "Hi"}])
     assert body["system"][0]["text"] == ctx["lf"]._ADVISOR_SYSTEM_PREFIX
-    assert ctx["snapshot"]["summary"] in body["system"][1]["text"]
+    question, briefing = body["messages"][0]["content"]
+    # The TODAY line moves to the system; the rest of the snapshot stays.
+    today, rest = ctx["snapshot"]["summary"].split("\n", 1)
+    assert body["system"][1]["text"].startswith(today)
+    assert rest.strip() in briefing["text"]
+    assert ctx["snapshot"]["historical"] in briefing["text"]
     assert body["tools"] == ctx["tools"]
-    assert body["messages"] == [{"role": "user", "content": "Hi"}]
+    assert question == {"type": "text", "text": "Hi"}
     # Sonnet 4.5 takes the plain body: no thinking or effort fields.
     assert "thinking" not in body
 
