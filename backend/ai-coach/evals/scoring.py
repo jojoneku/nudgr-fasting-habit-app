@@ -14,6 +14,10 @@ An expectation is {"any": [option, ...]}, {"some": [option, ...]} or
   batch check: two writes the user asked for in one message belong in one
   reply, so the user reviews them as one batch.
 
+An expectation can also have "text_excludes": [phrase, ...]. The reply's text,
+with or without tool calls, must hold none of them (ignoring case). This is how
+a case catches text the user sees before a read, such as "you're right".
+
 An option is {"tool": name, "input": {key: spec}}. Every key in "input" must be
 present in the call and match its spec. An option can instead be
 {"answer": [text, ...]}: the reply makes no tool call and its text contains
@@ -125,14 +129,32 @@ def describe_option(option):
 
 def describe_expect(expect):
     if "all" in expect:
-        return " + ".join(describe_option(o) for o in expect["all"])
-    if "some" in expect:
-        return "any call: " + " or ".join(describe_option(o) for o in expect["some"])
-    return " or ".join(describe_option(o) for o in expect["any"])
+        text = " + ".join(describe_option(o) for o in expect["all"])
+    elif "some" in expect:
+        text = "any call: " + " or ".join(describe_option(o) for o in expect["some"])
+    else:
+        text = " or ".join(describe_option(o) for o in expect["any"])
+    if expect.get("text_excludes"):
+        text += "; text without " + ", ".join(repr(p) for p in expect["text_excludes"])
+    return text
+
+
+def excluded_text(expect, text):
+    """The first of `expect`'s "text_excludes" phrases in `text`, or None.
+
+    Ignores case, and reads a curly apostrophe as a straight one, so "you’re
+    right" is caught by "you're right".
+    """
+    have = _norm(text).replace("’", "'")
+    return next((p for p in expect.get("text_excludes") or []
+                 if _norm(p).replace("’", "'") in have), None)
 
 
 def score_reply(expect, calls, text=""):
     """Score one reply's tool calls and text. Returns `(passed, reason)`."""
+    bad = excluded_text(expect, text)
+    if bad is not None:
+        return False, f"the text says {bad!r}"
     options = expect.get("any") or expect.get("some") or expect.get("all") or []
     if not calls:
         answers = [o for o in options if "answer" in o]
