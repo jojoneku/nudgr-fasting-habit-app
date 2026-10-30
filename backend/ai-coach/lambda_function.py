@@ -410,7 +410,7 @@ def lambda_handler(event, context):
     if op == "classifyFinance":
         return _classify_finance(payload)
     if op == "adviseFinance":
-        return _advise_finance(payload, user_id=user_id)
+        return _advise_finance(payload, user_id=user_id, usage_count=count)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
 
@@ -1938,8 +1938,12 @@ def _trace_fields(*, request, calls, payload):
 
 
 def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
-               ttft_ms=None, user_id=None):
+               ttft_ms=None, user_id=None, model_id=None):
     """The one place an advisor turn's economics get logged.
+
+    Returns the call's estimated cost in USD (see estimated_cost_usd), or None
+    when the model has no known price. `model_id` is the model the call ran
+    on; None means _ADVISOR_MODEL_ID.
 
     latency_ms and out_tokens are what decide what _ADVISOR_MAX_TOKENS can
     safely be. cache_read + cache_write are how you tell whether prompt caching
@@ -1953,6 +1957,7 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
     first token is what "fast" now means.
     """
     tools = request["tools"]
+    cost = estimated_cost_usd(model_id or _ADVISOR_MODEL_ID, usage)
     line = (
         f"cost_line op=adviseFinance msgs={len(request['messages'])} "
         f"snapshot={'y' if request['_has_summary'] else 'n'} "
@@ -1967,10 +1972,30 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         f"calls={len(calls)} "
         f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
         + _trace_fields(request=request, calls=calls, payload=payload)
+        + f" cost_usd={'-' if cost is None else f'{cost:.6f}'}"
     )
     print(line)
     _invocation_log(_cost_fields(line), user_id=user_id,
                     stream=ttft_ms is not None)
+    return cost
+
+
+# -- Usage in the reply (Plan 065, phase 5) -------------------------------------
+#
+# Each advisor reply tells the app where the user stands today: `count` is the
+# user's AI requests today including this one (what increment_ai_usage
+# returned), `cap` is _DAILY_CAP, and `cost_usd` is the estimated cost of this
+# one model call. A continuation hop is not counted again, so it has no count
+# (null); neither has a deploy without rate limiting. The day's total cost is
+# not known here: nothing stores it.
+
+def _ai_usage(count, cost):
+    """The `ai_usage` field of an advisor reply."""
+    return {
+        "count": count if isinstance(count, int) and count > 0 else None,
+        "cap": _DAILY_CAP,
+        "cost_usd": cost,
+    }
 
 
 # -- Invocation log (Plan 065, phase 5) -----------------------------------------
@@ -2009,6 +2034,8 @@ def _cost_fields(line):
             fields[key] = None
         elif re.fullmatch(r"-?\d+", value):
             fields[key] = int(value)
+        elif re.fullmatch(r"-?\d+\.\d+", value):
+            fields[key] = float(value)
         else:
             fields[key] = value
     return fields
@@ -2151,7 +2178,7 @@ def _invoke_advisor(invoke, body):
         return result
 
 
-def _advise_finance(payload, user_id=None):
+def _advise_finance(payload, user_id=None, usage_count=None):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
     Kept as it was so a build without the streaming endpoint behaves exactly as
@@ -2189,7 +2216,7 @@ def _advise_finance(payload, user_id=None):
         truncated = stop_reason == "max_tokens"
         if truncated:
             response_text += _TRUNCATION_NOTICE
-        _cost_line(
+        cost = _cost_line(
             request=request, usage=result.get("usage") or {},
             stop_reason=stop_reason, calls=tool_calls,
             payload=payload, latency_ms=elapsed_ms, user_id=user_id,
@@ -2199,6 +2226,7 @@ def _advise_finance(payload, user_id=None):
             "truncated": truncated,
             "tool_calls": tool_calls,
             "assistant_content": content,
+            "ai_usage": _ai_usage(usage_count, cost),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)
@@ -2215,7 +2243,7 @@ def _frame(obj):
     return json.dumps(obj, ensure_ascii=False) + "\n"
 
 
-def advise_finance_stream(payload, request, user_id=None):
+def advise_finance_stream(payload, request, user_id=None, usage_count=None):
     """Yield an advisor turn as NDJSON frames: start, deltas, then a terminator.
 
     The sequence is `start`, zero or more `delta`, then exactly one of `end` or
@@ -2359,7 +2387,7 @@ def advise_finance_stream(payload, request, user_id=None):
                 response_text += (_TIME_NOTICE if stop_reason == "time_budget"
                                   else _TRUNCATION_NOTICE)
 
-        _cost_line(
+        cost = _cost_line(
             request=request, usage=usage,
             stop_reason=stop_reason, calls=tool_calls,
             payload=payload,
@@ -2374,6 +2402,7 @@ def advise_finance_stream(payload, request, user_id=None):
             "tool_calls": tool_calls,
             "assistant_content": content,
             **({"interrupted_tools": cut_tools} if resumable else {}),
+            "ai_usage": _ai_usage(usage_count, cost),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)

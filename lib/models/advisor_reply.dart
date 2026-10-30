@@ -14,6 +14,7 @@ class AdvisorReply {
     this.assistantContent = const [],
     this.truncated = false,
     this.interruptedTools = const [],
+    this.usage,
   });
 
   /// The prose half of the turn. May be empty when the model went straight to
@@ -38,6 +39,10 @@ class AdvisorReply {
   /// when the request opted in with `resume_cut_tools`.
   final List<String> interruptedTools;
 
+  /// The user's AI usage today, as the server reported it with this reply.
+  /// Null from a server that does not send it.
+  final AdvisorUsage? usage;
+
   /// True when this turn is a request to run tools rather than an answer.
   bool get wantsTools => toolCalls.isNotEmpty;
 
@@ -56,5 +61,39 @@ class AdvisorReply {
           for (final b in (json['assistant_content'] as List?) ?? const [])
             if (b is Map) Map<String, Object?>.from(b),
         ],
+        usage: AdvisorUsage.fromJson(json['ai_usage']),
       );
+}
+
+/// The user's AI usage that comes with an advisor reply (Plan 065, phase 5).
+///
+/// Nothing shows it yet. It is here so a usage screen can read it later.
+class AdvisorUsage {
+  const AdvisorUsage({this.count, required this.cap, this.costUsd});
+
+  /// AI requests today, this message included. Null on a tool-loop hop
+  /// (the server counts each message once) and when the server does not
+  /// count at all.
+  final int? count;
+
+  /// AI requests allowed per day.
+  final int cap;
+
+  /// Estimated cost of this one model call, in USD, at list prices. Null for
+  /// a model the server has no price for.
+  final double? costUsd;
+
+  /// Null when [json] is not a usage object with a whole-number cap.
+  static AdvisorUsage? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final cap = json['cap'];
+    if (cap is! int) return null;
+    final count = json['count'];
+    final cost = json['cost_usd'];
+    return AdvisorUsage(
+      count: count is int ? count : null,
+      cap: cap,
+      costUsd: cost is num ? cost.toDouble() : null,
+    );
+  }
 }

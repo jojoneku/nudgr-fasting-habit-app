@@ -119,7 +119,8 @@ def timeline(rows):
         entries = [e for e in entries
                    if not (e["kind"] == "hop" and e["source"] == "cost_line")]
     for e in entries:
-        if e["kind"] == "hop":
+        # A deploy with the per-user usage field logs the cost it computed.
+        if e["kind"] == "hop" and e.get("cost_usd") is None:
             e["cost_usd"] = estimated_cost_usd(e.get("model"), {
                 "input_tokens": e.get("in_tokens"),
                 "output_tokens": e.get("out_tokens"),
