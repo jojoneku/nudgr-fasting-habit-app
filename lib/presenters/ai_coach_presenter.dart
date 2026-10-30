@@ -9,6 +9,7 @@ import '../models/advisor_event.dart';
 import '../models/advisor_hop_outcome.dart';
 import '../models/advisor_reply.dart';
 import '../models/advisor_conversation.dart';
+import '../models/advisor_route.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
@@ -29,11 +30,14 @@ import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
+import '../services/advisor_telemetry.dart';
 import '../services/ai_coach_service.dart';
 import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
+import '../utils/advisor_client_events.dart';
+import '../utils/advisor_routing.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
@@ -108,6 +112,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// never propose a change nothing is able to carry out.
   final FinanceToolExecutor? _toolExecutor;
 
+  /// Where the advisor's client events go (Plan 065, phase 5). Null sends
+  /// none. Fire-and-forget: see [AdvisorTelemetry].
+  final AdvisorTelemetry? _telemetry;
+
+  /// The trace id of the user message the running advisor turn answers, for
+  /// the client events it sends. Null outside an advisor turn's lifetime.
+  String? _turnTraceId;
+
   /// The proposal surface a confirm card binds to, when the injected executor
   /// has one. Resolved here rather than type-tested inside a `build()`.
   /// The cast is explicit because [FinanceProposalHost] is deliberately not a
@@ -174,6 +186,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? cloudFallback,
     ImageCompressor? imageCompressor,
     FinanceToolExecutor? toolExecutor,
+    AdvisorTelemetry? telemetry,
     Duration retryHorizon = defaultRetryHorizon,
     DateTime Function()? clock,
   })  : _retryHorizon = retryHorizon,
@@ -189,6 +202,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _storage = storage,
         _cloudFallback = cloudFallback,
         _toolExecutor = toolExecutor,
+        _telemetry = telemetry,
         _imageCompressor = imageCompressor ?? const ImageCompressor(),
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
@@ -479,6 +493,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// catches the rest without sending every message to the model first.
   Future<void> askNudgyInstead() async {
     if (!canAskNudgyInstead) return;
+    // No trace yet: the message's advisor turn has not started.
+    _telemetry?.record(AdvisorClientEvent.askNudgyTapped);
     final text = _routedLogText!;
     _routedLogText = null;
     _ledger!.cancelChat();
@@ -734,6 +750,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _cancelHop?.call();
     _cancelHop = null;
     final proposals = financeProposals;
+    _logEvent(AdvisorClientEvent.stopPressed,
+        {'phase': proposals?.batch != null ? 'batch' : 'reply'});
     if (proposals?.batch != null) proposals!.decline();
     _advisorStatus = null;
     _advisorAttempt = 1;
@@ -793,6 +811,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// nothing to a later turn.
   Future<void> _runAdvisorTurn(AiCoachService cloud, AiCoachContext context,
       {List<AiChatMessage>? resumeFrom}) async {
+    _turnTraceId = context.traceId;
     final historical = context.financeHistoricalSummary();
     // A resumed turn carries on from the protocol transcript saved with its
     // batch, which already ends in that batch's results.
@@ -801,6 +820,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
+    _decideRoute(context);
     // The first hop needs no strip: the bubble is empty, so its own thinking
     // label is on screen. The strip is for after the model has written words.
     _advisorStatus = null;
@@ -863,6 +883,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       if (hop == maxToolHops) {
         // Out of hops with a tool call still pending. Say so rather than
         // leaving the last partial thought looking like a finished answer.
+        // A routed conversation that runs out of hops goes to Sonnet.
+        _escalateRoute();
         _updateLastMessage(
           reply.text.isEmpty
               ? "I couldn't finish that one. Try asking for one change at a time."
@@ -902,6 +924,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final writes = <AiToolCall>[];
     for (final call in calls) {
       final tool = financeToolNamed(call.name);
+      // An unknown tool or an input that breaks the schema means the routing
+      // model is not coping: the rest of the conversation goes to Sonnet. The
+      // call itself runs as before, and the executor answers it.
+      if (tool == null || toolInputProblem(tool, call.input) != null) {
+        _escalateRoute();
+      }
       if (tool != null && tool.mutates && _toolExecutor != null) {
         writes.add(call);
         continue;
@@ -919,7 +947,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       _advisorStatus = null;
       safeNotify();
       _saveOpenBatch(transcript, writes);
+      _logEvent(AdvisorClientEvent.batchOpened, {'items': writes.length});
       final answers = await _proposeBatch(writes);
+      _logEvent(AdvisorClientEvent.batchAnswered, batchOutcomeCounts(answers));
       // A stop while the batch was open declines it, which is what completes
       // this await. The decline is not sent anywhere: no next hop starts.
       _clearOpenBatch();
@@ -999,6 +1029,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     storage.saveAdvisorOpenBatch({
       'conversationId': conversation,
       'savedAt': DateTime.now().toIso8601String(),
+      if (_turnTraceId != null) 'traceId': _turnTraceId,
       'transcript': [for (final m in transcript) m.toJson()],
       'calls': [
         for (final c in writes) {'id': c.id, 'name': c.name, 'input': c.input},
@@ -1054,6 +1085,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final stale = savedAt == null ||
         DateTime.now().difference(savedAt) > openBatchLifetime;
     final cloud = _advisorService;
+    final savedTrace = saved['traceId'];
+    _turnTraceId = savedTrace is String ? savedTrace : null;
 
     _messages.add(AiChatMessage.assistantStreaming());
     _isResponding = true;
@@ -1063,11 +1096,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     try {
       final List<AiToolResult> answers;
       if (stale || cloud == null || _toolExecutor == null) {
+        _logEvent(AdvisorClientEvent.batchResumed,
+            {'items': writes.length, 'outcome': 'not_reviewed'});
         answers = [for (final c in writes) _notReviewed(c.id)];
         _clearOpenBatch();
       } else {
         _saveOpenBatch(transcript, writes);
+        _logEvent(AdvisorClientEvent.batchResumed,
+            {'items': writes.length, 'outcome': 'shown'});
         answers = await _proposeBatch(writes);
+        _logEvent(
+            AdvisorClientEvent.batchAnswered, batchOutcomeCounts(answers));
         _clearOpenBatch();
       }
       if (_turnOver) return;
@@ -1095,6 +1134,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       safeNotify();
     }
   }
+
+  /// One client event for the running advisor turn's message.
+  void _logEvent(String event, Map<String, Object> fields) =>
+      _telemetry?.record(event, traceId: _turnTraceId, fields: fields);
 
   static AiToolResult _notReviewed(String id) => AiToolResult(
         toolUseId: id,
@@ -1332,6 +1375,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         profile: _advisorProfile.promptSummary(),
         historical: historical.isEmpty ? null : historical,
         tools: tools,
+        // Read on each hop, so an escalation takes effect on the next one.
+        route: _currentConversation?.route?.wireName,
       ));
 
       await for (final event in stream) {
@@ -1634,6 +1679,39 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     }
     _storage?.saveAdvisorConversations(_conversations);
     safeNotify();
+  }
+
+  // ── Model route (Plan 065, phase 5) ────────────────────────────────────────
+
+  /// Fixes the current conversation's route when its first advisor message
+  /// is sent. A route already set is kept for the conversation's life.
+  void _decideRoute(AiCoachContext context) {
+    _ensureCurrentConversation();
+    final convo = _currentConversation!;
+    if (convo.route != null) return;
+    final users = _messages.where((m) => m.role == AiChatRole.user).toList();
+    // More than one user message: the conversation started before routing
+    // existed, so it already ran on Sonnet.
+    final route = users.length == 1
+        ? routeForFirstMessage(users.single.text,
+            hasImages: context.images.isNotEmpty)
+        : AdvisorRoute.sonnet;
+    _replaceCurrentConversation(convo.copyWith(route: route));
+  }
+
+  /// Moves a Haiku conversation to Sonnet for good. Never back: each model
+  /// writes its own cache of the history, so going back and forth would pay
+  /// for both. The escalation itself costs one cache rewrite, because Sonnet
+  /// has no cache of this conversation yet and its first hop writes one.
+  void _escalateRoute() {
+    final convo = _currentConversation;
+    if (convo == null || convo.route != AdvisorRoute.haiku) return;
+    _replaceCurrentConversation(convo.copyWith(route: AdvisorRoute.sonnet));
+  }
+
+  void _replaceCurrentConversation(AdvisorConversation convo) {
+    final idx = _conversations.indexWhere((c) => c.id == convo.id);
+    if (idx != -1) _conversations[idx] = convo;
   }
 
   // ── Conversation internals ────────────────────────────────────────────────

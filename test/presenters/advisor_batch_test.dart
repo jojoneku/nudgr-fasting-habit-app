@@ -150,6 +150,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((inv) {
       requests
           .add(List.of(inv.namedArguments[#messages] as List<AiChatMessage>));

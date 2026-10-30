@@ -1,4 +1,5 @@
 import 'ai_chat_message.dart';
+import 'advisor_route.dart';
 
 /// A single named Nudgy conversation — the unit the history browser
 /// lists (ChatGPT/Claude style). Persisted locally and synced as part of the
@@ -14,12 +15,17 @@ class AdvisorConversation {
   final DateTime updatedAt;
   final List<AiChatMessage> messages;
 
+  /// The model this conversation runs on, fixed when its first advisor
+  /// message is sent (Plan 065, phase 5). Null until then.
+  final AdvisorRoute? route;
+
   const AdvisorConversation({
     required this.id,
     required this.title,
     required this.createdAt,
     required this.updatedAt,
     required this.messages,
+    this.route,
   });
 
   bool get isArchive => id == archiveId;
@@ -39,6 +45,7 @@ class AdvisorConversation {
     String? title,
     DateTime? updatedAt,
     List<AiChatMessage>? messages,
+    AdvisorRoute? route,
   }) =>
       AdvisorConversation(
         id: id,
@@ -46,6 +53,7 @@ class AdvisorConversation {
         createdAt: createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         messages: messages ?? this.messages,
+        route: route ?? this.route,
       );
 
   factory AdvisorConversation.fromJson(Map<String, dynamic> json) =>
@@ -60,6 +68,7 @@ class AdvisorConversation {
             .cast<Map<String, dynamic>>()
             .map(AiChatMessage.fromJson)
             .toList(),
+        route: AdvisorRoute.fromWire(json['route']),
       );
 
   Map<String, dynamic> toJson() => {
@@ -68,5 +77,6 @@ class AdvisorConversation {
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
         'messages': messages.map((m) => m.toJson()).toList(),
+        if (route != null) 'route': route!.wireName,
       };
 }

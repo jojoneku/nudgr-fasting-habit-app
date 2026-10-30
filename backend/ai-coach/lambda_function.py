@@ -16,6 +16,15 @@ _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 # The financial advisor (op=adviseFinance) reasons better on a stronger model.
 # Falls back to the base model when unset so the op still works pre-config.
 _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
+# Haiku routing (Plan 065, phase 5). OFF by default: with the flag off, every
+# advisor request runs on _ADVISOR_MODEL_ID exactly as before, whatever `route`
+# the client sends. See _advisor_model_id and the README to turn it on.
+_ADVISOR_HAIKU_ROUTING = os.environ.get(
+    "ADVISOR_HAIKU_ROUTING", "").lower() in ("1", "true", "yes")
+# The model a `route: "haiku"` conversation runs on. A setting, so Haiku 5.5
+# can replace Haiku 4.5 by config once the account has quota for it.
+_ADVISOR_ROUTE_MODEL_ID = os.environ.get(
+    "ADVISOR_ROUTE_MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 # Effort for models that take one (see _generation_params). Every Haiku-tier op
 # is short extraction or a 2-3 sentence chat reply, which is what `low` is for.
 _EFFORT = os.environ.get("BEDROCK_EFFORT", "low")
@@ -357,6 +366,11 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return _resp(400, {"error": "invalid_json", "message": "Body is not valid JSON"})
 
+    # A client event runs no model, so it does not count against the daily AI
+    # cap. It has its own limit; see _log_event.
+    if isinstance(body, dict) and body.get("op") == "logEvent":
+        return _log_event(body.get("payload"), user_id)
+
     # Per-user daily cap — prevents unbounded Bedrock billing.
     #
     # Metered per USER TURN, not per model call. A tool-calling turn is several
@@ -405,9 +419,108 @@ def lambda_handler(event, context):
     if op == "classifyFinance":
         return _classify_finance(payload)
     if op == "adviseFinance":
-        return _advise_finance(payload, user_id=user_id)
+        return _advise_finance(payload, user_id=user_id, usage_count=count)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
+
+
+# ── Client events (Plan 065, phase 5) ─────────────────────────────────────────
+#
+# Small events the app sends about what the user did with Nudgy's reply: a
+# batch opened and how it was answered, stop pressed, "ask Nudgy" tapped, a
+# batch resumed after a restart. Each one is checked against an allow-list and
+# written as one `client_event` JSON line, next to the advisor_invocation
+# lines of the same trace_id.
+#
+# Only names from the allow-list, and only numbers, enum values and ids:
+# never text. A field the list does not name, or a value of the wrong kind,
+# rejects the whole event, so a client bug cannot put a sentence in the log.
+
+_CLIENT_EVENT_LOG = "client_event"
+
+_COUNT = "count"  # a whole number from 0 to _MAX_EVENT_COUNT
+
+_MAX_EVENT_COUNT = 1000
+
+# Event name -> {field: _COUNT or a tuple of allowed values}.
+_CLIENT_EVENTS = {
+    "batch_opened": {"items": _COUNT},
+    "batch_answered": {
+        "approved": _COUNT,
+        "declined": _COUNT,
+        "revised": _COUNT,
+        "removed": _COUNT,
+        "failed": _COUNT,
+    },
+    "stop_pressed": {"phase": ("reply", "batch")},
+    "ask_nudgy_tapped": {},
+    "batch_resumed": {
+        "items": _COUNT,
+        "outcome": ("shown", "not_reviewed"),
+    },
+}
+
+# Events one user may log per UTC day. Counted per warm container, so it is a
+# ceiling on a runaway client, not an exact count: a new container starts at
+# 0. A Supabase counter would make it exact, at the cost of a migration and a
+# round trip for a log line.
+_CLIENT_EVENT_DAILY_LIMIT = 500
+
+_client_event_counts = {"day": None, "users": {}}
+
+
+def _client_event_allowed(user_id):
+    """Count one event for `user_id`; False once today's limit is reached."""
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    if _client_event_counts["day"] != today:
+        _client_event_counts["day"] = today
+        _client_event_counts["users"] = {}
+    users = _client_event_counts["users"]
+    users[user_id] = users.get(user_id, 0) + 1
+    return users[user_id] <= _CLIENT_EVENT_DAILY_LIMIT
+
+
+def _client_event_fields(name, fields):
+    """The checked fields of one event, or None when anything is off."""
+    allowed = _CLIENT_EVENTS.get(name)
+    if allowed is None or not isinstance(fields, dict):
+        return None
+    checked = {}
+    for key, value in fields.items():
+        kind = allowed.get(key)
+        if kind is None:
+            return None
+        if kind == _COUNT:
+            # bool is an int in Python; true is not a count.
+            if (isinstance(value, bool) or not isinstance(value, int)
+                    or not 0 <= value <= _MAX_EVENT_COUNT):
+                return None
+        elif value not in kind:
+            return None
+        checked[key] = value
+    return checked
+
+
+def _log_event(payload, user_id):
+    """op=logEvent: check one client event and write it as one JSON line."""
+    payload = payload if isinstance(payload, dict) else {}
+    name = payload.get("event")
+    fields = _client_event_fields(name, payload.get("fields", {}))
+    if fields is None:
+        return _resp(400, {"error": "invalid_event"})
+    raw_trace = payload.get("trace_id")
+    if raw_trace is not None and _trace_id(payload) == "-":
+        return _resp(400, {"error": "invalid_event"})
+    if not _client_event_allowed(user_id):
+        return _resp(429, {"error": "event_limit_exceeded"})
+    print(json.dumps({
+        "event": _CLIENT_EVENT_LOG,
+        "name": name,
+        "trace": raw_trace,
+        "user": user_id if _USER_ID_RE.fullmatch(user_id or "") else None,
+        "fields": fields,
+    }, separators=(",", ":")))
+    return _resp(200, {"ok": True})
 
 
 # ── Food ops ───────────────────────────────────────────────────────────────────
@@ -1983,8 +2096,12 @@ def _trace_fields(*, request, calls, payload):
 
 
 def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
-               ttft_ms=None, user_id=None):
+               ttft_ms=None, user_id=None, model_id=None):
     """The one place an advisor turn's economics get logged.
+
+    Returns the call's estimated cost in USD (see estimated_cost_usd), or None
+    when the model has no known price. `model_id` is the model the call ran
+    on; None means _ADVISOR_MODEL_ID.
 
     latency_ms and out_tokens are what decide what _ADVISOR_MAX_TOKENS can
     safely be. cache_read + cache_write are how you tell whether prompt caching
@@ -1998,6 +2115,7 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
     first token is what "fast" now means.
     """
     tools = request["tools"]
+    cost = estimated_cost_usd(model_id or _ADVISOR_MODEL_ID, usage)
     line = (
         f"cost_line op=adviseFinance msgs={len(request['messages'])} "
         f"snapshot={'y' if request['_has_summary'] else 'n'} "
@@ -2012,10 +2130,31 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         f"calls={len(calls)} "
         f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
         + _trace_fields(request=request, calls=calls, payload=payload)
+        + f" route={_advisor_route(payload)} model={_advisor_model_id(payload)}"
+        + f" cost_usd={'-' if cost is None else f'{cost:.6f}'}"
     )
     print(line)
     _invocation_log(_cost_fields(line), user_id=user_id,
                     stream=ttft_ms is not None)
+    return cost
+
+
+# -- Usage in the reply (Plan 065, phase 5) -------------------------------------
+#
+# Each advisor reply tells the app where the user stands today: `count` is the
+# user's AI requests today including this one (what increment_ai_usage
+# returned), `cap` is _DAILY_CAP, and `cost_usd` is the estimated cost of this
+# one model call. A continuation hop is not counted again, so it has no count
+# (null); neither has a deploy without rate limiting. The day's total cost is
+# not known here: nothing stores it.
+
+def _ai_usage(count, cost):
+    """The `ai_usage` field of an advisor reply."""
+    return {
+        "count": count if isinstance(count, int) and count > 0 else None,
+        "cap": _DAILY_CAP,
+        "cost_usd": cost,
+    }
 
 
 # -- Invocation log (Plan 065, phase 5) -----------------------------------------
@@ -2054,6 +2193,8 @@ def _cost_fields(line):
             fields[key] = None
         elif re.fullmatch(r"-?\d+", value):
             fields[key] = int(value)
+        elif re.fullmatch(r"-?\d+\.\d+", value):
+            fields[key] = float(value)
         else:
             fields[key] = value
     return fields
@@ -2087,7 +2228,60 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
         "hop": "cont" if _carries_tool_results({"payload": payload}) else "first",
         "trace": None if _trace_id(payload) == "-" else _trace_id(payload),
         "hops": len(_tool_results_by_turn(payload)),
+        "route": None if _advisor_route(payload) == "-" else _advisor_route(payload),
+        "model": _advisor_model_id(payload),
     }, user_id=user_id, stream=stream, error=error)
+
+
+# -- Cost estimate (Plan 065, phase 5) ----------------------------------------
+#
+# USD per million tokens, (input, output), at Anthropic's list prices. A
+# cache write costs 1.25x input (5-minute TTL) or 2x input (1-hour TTL, see
+# _ADVISOR_CACHE_TTL_1H), and a cache read 0.1x input.
+# Bedrock bills its own price list, so this is an estimate, not the invoice.
+# Haiku 5.5 costs more above 100K prompt tokens; the advisor never sends that
+# many.
+
+_MODEL_PRICES = {
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+}
+
+
+def estimated_cost_usd(model_id, usage):
+    """Estimated USD cost of one model call, or None for an unknown model.
+
+    `usage` is a Bedrock usage dict (input_tokens, output_tokens,
+    cache_read_input_tokens, cache_creation_input_tokens). A missing or
+    negative count counts as 0. Cache writes are priced at the 5-minute rate,
+    except the part `cache_creation.ephemeral_1h_input_tokens` names as
+    1-hour writes, when the usage carries that split.
+    """
+    for key, (price_in, price_out) in _MODEL_PRICES.items():
+        if key in (model_id or ""):
+            break
+    else:
+        return None
+
+    def count(name, source=None):
+        value = (source if source is not None else usage or {}).get(name)
+        return value if isinstance(value, int) and value > 0 else 0
+
+    split = (usage or {}).get("cache_creation")
+    writes_1h = count("ephemeral_1h_input_tokens",
+                      split if isinstance(split, dict) else {})
+    writes_5m = max(count("cache_creation_input_tokens") - writes_1h, 0)
+    dollars = (
+        count("input_tokens") * price_in
+        + count("output_tokens") * price_out
+        + writes_5m * price_in * 1.25
+        + writes_1h * price_in * 2
+        + count("cache_read_input_tokens") * price_in * 0.1
+    ) / 1_000_000
+    return round(dollars, 6)
 
 
 def _split_reply(content):
@@ -2109,6 +2303,46 @@ def _split_reply(content):
     return text, tool_calls
 
 
+# -- Haiku routing (Plan 065, phase 5) -----------------------------------------
+#
+# The client picks a route ONCE per conversation, when its first advisor
+# message is sent, and sends the same `route` on every request of that
+# conversation: "haiku" for a lookup-only conversation, "sonnet" for anything
+# else. Per conversation, not per turn: each model writes its own prompt cache,
+# so a route that changed turn by turn would pay for two caches of the same
+# history. The client can escalate a conversation from haiku to sonnet (never
+# back); that costs one cache rewrite of the history on Sonnet.
+#
+# Haiku 4.5 caches only a prefix of 4,096 tokens or more. The tools + rules
+# prefix (breakpoint 1) is well over that, so it caches; a breakpoint that
+# closes a shorter prefix is simply not cached, which is not an error.
+# _generation_params gives Haiku 4.5 no extra fields, and Haiku 5.5 thinking
+# off, so ADVISOR_ROUTE_MODEL_ID can move to 5.5 with no code change.
+
+def _advisor_route(payload):
+    """The route the client asked for, as a cost_line value.
+
+    Only the known values are echoed; anything else is `other`, so a client
+    string never reaches the log.
+    """
+    route = payload.get("route")
+    if route is None:
+        return "-"
+    return route if route in ("haiku", "sonnet") else "other"
+
+
+def _advisor_model_id(payload):
+    """The model this advisor request runs on.
+
+    Flag off: always _ADVISOR_MODEL_ID. Flag on: the route model for
+    `route: "haiku"`, and _ADVISOR_MODEL_ID for every other value, a missing
+    one included, so an old app or an unknown route gets the stronger model.
+    """
+    if _ADVISOR_HAIKU_ROUTING and payload.get("route") == "haiku":
+        return _ADVISOR_ROUTE_MODEL_ID
+    return _ADVISOR_MODEL_ID
+
+
 def _without_ttl(body):
     """`body` with every breakpoint back on the 5-minute default."""
     body = copy.deepcopy(body)
@@ -2118,8 +2352,10 @@ def _without_ttl(body):
     return body
 
 
-def _invoke_advisor(invoke, body):
-    """Call `invoke` (a Bedrock invoke method) with `body` as JSON.
+def _invoke_advisor(invoke, body, model_id=None):
+    """Call `invoke` (a Bedrock invoke method) on `model_id` with `body` as JSON.
+
+    `model_id` defaults to _ADVISOR_MODEL_ID; a routed call passes its own.
 
     When the 1-hour TTL is on and Bedrock rejects the request as invalid, the
     call is made once more with every breakpoint on 5 minutes. If that one
@@ -2127,7 +2363,8 @@ def _invoke_advisor(invoke, body):
     for this container. If it fails too, its error is the real one.
     """
     global _ttl_1h_rejected
-    kwargs = {"modelId": _ADVISOR_MODEL_ID, "contentType": "application/json",
+    model_id = model_id or _ADVISOR_MODEL_ID
+    kwargs = {"modelId": model_id, "contentType": "application/json",
               "accept": "application/json"}
     uses_ttl = any(
         isinstance(b, dict) and (b.get("cache_control") or {}).get("ttl")
@@ -2141,11 +2378,11 @@ def _invoke_advisor(invoke, body):
         result = invoke(body=json.dumps(_without_ttl(body)), **kwargs)
         _ttl_1h_rejected = True
         print("WARNING advisor_cache_ttl_1h rejected by "
-              f"{_ADVISOR_MODEL_ID}; using 5 minutes for this container: {e}")
+              f"{model_id}; using 5 minutes for this container: {e}")
         return result
 
 
-def _advise_finance(payload, user_id=None):
+def _advise_finance(payload, user_id=None, usage_count=None):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
     Kept as it was so a build without the streaming endpoint behaves exactly as
@@ -2157,6 +2394,7 @@ def _advise_finance(payload, user_id=None):
         return err
 
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     try:
         raw = _invoke_advisor(_bedrock.invoke_model, {
@@ -2165,8 +2403,8 @@ def _advise_finance(payload, user_id=None):
             "system": request["system"],
             "messages": request["messages"],
             **({"tools": tools} if tools else {}),
-            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-        })
+            **_generation_params(model_id, _ADVISOR_EFFORT),
+        }, model_id)
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
@@ -2183,16 +2421,18 @@ def _advise_finance(payload, user_id=None):
         truncated = stop_reason == "max_tokens"
         if truncated:
             response_text += _TRUNCATION_NOTICE
-        _cost_line(
+        cost = _cost_line(
             request=request, usage=result.get("usage") or {},
             stop_reason=stop_reason, calls=tool_calls,
             payload=payload, latency_ms=elapsed_ms, user_id=user_id,
+            model_id=model_id,
         )
         return _resp(200, {
             "response": response_text,
             "truncated": truncated,
             "tool_calls": tool_calls,
             "assistant_content": content,
+            "ai_usage": _ai_usage(usage_count, cost),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)
@@ -2209,7 +2449,7 @@ def _frame(obj):
     return json.dumps(obj, ensure_ascii=False) + "\n"
 
 
-def advise_finance_stream(payload, request, user_id=None):
+def advise_finance_stream(payload, request, user_id=None, usage_count=None):
     """Yield an advisor turn as NDJSON frames: start, deltas, then a terminator.
 
     The sequence is `start`, zero or more `delta`, then exactly one of `end` or
@@ -2225,6 +2465,7 @@ def advise_finance_stream(payload, request, user_id=None):
     200 body, so one AdvisorReply.fromJson parses both.
     """
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     ttft_ms = None
 
@@ -2244,8 +2485,8 @@ def advise_finance_stream(payload, request, user_id=None):
             "system": request["system"],
             "messages": request["messages"],
             **({"tools": tools} if tools else {}),
-            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-        })
+            **_generation_params(model_id, _ADVISOR_EFFORT),
+        }, model_id)
 
         # A `thinking` block (Sonnet 5.5's notes between tool calls) is stored by
         # content_block_start like any other, its thinking_delta / signature_delta
@@ -2353,13 +2594,13 @@ def advise_finance_stream(payload, request, user_id=None):
                 response_text += (_TIME_NOTICE if stop_reason == "time_budget"
                                   else _TRUNCATION_NOTICE)
 
-        _cost_line(
+        cost = _cost_line(
             request=request, usage=usage,
             stop_reason=stop_reason, calls=tool_calls,
             payload=payload,
             latency_ms=int((time.monotonic() - started) * 1000),
             ttft_ms=ttft_ms if ttft_ms is not None else -1,
-            user_id=user_id,
+            user_id=user_id, model_id=model_id,
         )
         yield _frame({
             "type": "end",
@@ -2368,6 +2609,7 @@ def advise_finance_stream(payload, request, user_id=None):
             "tool_calls": tool_calls,
             "assistant_content": content,
             **({"interrupted_tools": cut_tools} if resumable else {}),
+            "ai_usage": _ai_usage(usage_count, cost),
         })
     except Exception as e:
         elapsed_ms = int((time.monotonic() - started) * 1000)

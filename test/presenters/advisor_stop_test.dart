@@ -128,6 +128,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) => script[i++]());
   }
 
@@ -137,6 +138,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       )).captured.cast<List<AiChatMessage>>();
 
   AiCoachPresenter build({FinanceToolExecutor? executor}) {

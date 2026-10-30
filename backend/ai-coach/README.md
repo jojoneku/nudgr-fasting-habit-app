@@ -43,6 +43,28 @@ The model IDs are env vars on the live function (`BEDROCK_MODEL_ID`, `ADVISOR_MO
 3. Set the env var with `aws lambda update-function-configuration --profile ifast-dev --region ap-southeast-1` (the `ifast-dev` profile is the account that runs `food-coach-handler`). **That call replaces the whole environment map** — read the current one first and put every key back.
 4. Watch the CloudWatch `cost_line` entries and the `Bedrock error` lines for an hour.
 
+## Haiku routing (Plan 065, phase 5) — OFF by default
+
+The app picks a route for each Nudgy conversation when its first message is sent, and sends it as `route` (`haiku` or `sonnet`) on every request of that conversation. Only a lookup goes to `haiku`: no planning word, no write or advice word, no image (`lib/utils/advisor_routing.dart`). The app moves a conversation from `haiku` to `sonnet` for good when Haiku reaches the hop ceiling, calls an unknown tool, or sends a tool input that breaks the tool's schema. It never moves back, because each model writes its own prompt cache of the history. One escalation costs one cache write on Sonnet.
+
+The Lambda honours the route only while the flag is on:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `ADVISOR_HAIKU_ROUTING` | unset (off) | `true` runs `route: "haiku"` requests on the route model. Off, every advisor request runs on `ADVISOR_MODEL_ID` with the same request as before. |
+| `ADVISOR_ROUTE_MODEL_ID` | `global.anthropic.claude-haiku-4-5-20251001-v1:0` | The route model. Set it to the Haiku 5.5 profile when the account has quota; `_generation_params` then turns thinking off for it. |
+
+Any other route value, or none, runs on `ADVISOR_MODEL_ID`. Each `cost_line` ends with `route=` (what the app asked for: `haiku`, `sonnet`, `-` or `other`) and `model=` (the model that ran).
+
+Haiku 4.5 caches only a prefix of 4,096 tokens or more. The tools + rules prefix is larger than that, so it caches on Haiku too.
+
+To turn it on (only with the developer's approval):
+
+1. Run the eval on the route model first: `python evals/run_eval.py --model haiku-4.5`. It must pass the 80% threshold.
+2. Grant both advisor functions `bedrock:InvokeModel` on the route model's global profile and foundation model, as in "Switching models".
+3. Set `ADVISOR_HAIKU_ROUTING=true` on **both** `food-advisor-stream` and `food-coach-handler` (the buffered fallback). `update-function-configuration` replaces the whole environment map, so read the current one first and put every key back.
+4. Watch `cost_line ... route=haiku model=...haiku...` for an hour. To roll back, remove `ADVISOR_HAIKU_ROUTING` (same care with the map).
+
 ## Prompt cache TTL (`ADVISOR_CACHE_TTL_1H`)
 
 The advisor's cache breakpoints all live 5 minutes by default. `ADVISOR_CACHE_TTL_1H=true` gives the first breakpoint (tool catalogue + rules, about 9k tokens) a 1-hour TTL. The profile and history breakpoints stay on 5 minutes, because Bedrock requires the longer TTL to come before the shorter ones. **It is off, and nothing sets it**: not `template.yaml`, not CI, not the live functions.
@@ -122,6 +144,18 @@ Supported `op` values: `respond`, `parseFoodWithCandidates`, `disambiguateFood`,
 { "response": "After 8 hours fasted, break with protein + healthy fat first..." }
 ```
 
+An `adviseFinance` reply (the buffered body and the streamed `end` frame) also carries the user's AI usage:
+
+```json
+"ai_usage": { "count": 7, "cap": 100, "cost_usd": 0.008775 }
+```
+
+- `count`: the user's AI requests today, this message included (what `increment_ai_usage` returned). `null` on a tool-loop hop, which is not counted again, and on a deploy without rate limiting.
+- `cap`: `DAILY_CAP`.
+- `cost_usd`: the estimated cost of this one model call (`estimated_cost_usd`, list prices), `null` for a model with no known price. The day's total cost is not known: nothing stores it. The same value goes on the `cost_line` as `cost_usd=`.
+
+The app parses it into `AdvisorReply.usage` and shows nothing yet.
+
 ## Logs (metadata only)
 
 Each advisor invocation writes 2 lines to CloudWatch, on both functions:
@@ -130,6 +164,30 @@ Each advisor invocation writes 2 lines to CloudWatch, on both functions:
 - `{"event":"advisor_invocation", …}` — the same fields as JSON, plus `user` (the Supabase user id), `stream`, `model`, `route` and `error_class`. A failed Bedrock call writes this line too, with the exception class name only.
 
 Both lines carry ids, tool names, result statuses, token counts, timings, the model and short hashes. They never carry message text, snapshot text, tool inputs, tool results or auth headers. `test_invocation_log.py` sends a request full of sentinel strings and fails if one reaches stdout. Query the JSON line in Logs Insights with `filter event = "advisor_invocation"`.
+
+### Client events (`op: "logEvent"`)
+
+The app sends small events about what the user did with a reply, with the message's `trace_id`: `batch_opened`, `batch_answered` (approved / declined / revised / removed / failed counts), `stop_pressed` (`phase`), `ask_nudgy_tapped` and `batch_resumed` (`items`, `outcome`). Request body:
+
+```json
+{ "op": "logEvent", "payload": { "event": "batch_opened", "trace_id": "a1b2c3d4e5f6a7b8", "fields": { "items": 2 } } }
+```
+
+- The Lambda checks each event against `_CLIENT_EVENTS`: known names only, and fields that are counts (0–1000) or enum values. Anything else is a 400 and is not logged.
+- An event does **not** count against the daily AI cap. It has its own limit of 500 events per user per UTC day, counted per warm container (a ceiling on a runaway client, not an exact count).
+- It writes one `{"event":"client_event", …}` JSON line. The app sends it fire-and-forget and ignores the answer.
+
+### Trace one message
+
+`scripts/trace.py` prints the timeline of one user message: each model call (model, tokens, cache, latency, stop reason, tools, result statuses, estimated cost) and each client event with the same `trace_id`. It runs one read-only Logs Insights query over both functions' log groups.
+
+```bash
+python scripts/trace.py <trace_id>          # default: --profile ifast-dev, ap-southeast-1, last 72 h
+python scripts/trace.py --latest --hours 168
+python scripts/trace.py <trace_id> --json
+```
+
+The cost is an estimate at Anthropic's list prices (`estimated_cost_usd` in `lambda_function.py`); Bedrock bills its own price list. A line from a deploy older than the JSON line falls back to the `cost_line`, which names no model, so its cost shows as `?`.
 
 ## The streaming advisor (`food-advisor-stream`)
 

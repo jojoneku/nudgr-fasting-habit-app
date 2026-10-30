@@ -77,6 +77,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'ok')));
 
     final now = DateTime.now();
@@ -188,6 +189,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).captured.first as AiCoachContext;
     p.dispose();
     return ctx;

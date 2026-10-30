@@ -69,6 +69,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) {
       final reply = script[i < script.length ? i : script.length - 1];
       i++;
@@ -82,6 +83,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       )).captured.cast<AiCoachContext>().map((c) => c.traceId).toList();
 
   test(

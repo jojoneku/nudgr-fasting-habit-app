@@ -258,6 +258,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer((_) => advisorStreamOf(const AdvisorReply()));
     });
 
@@ -460,6 +461,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       )).thenAnswer((_) => hop.stream);
       final presenter = openAdvisor();
       await pumpChat(tester, presenter);
