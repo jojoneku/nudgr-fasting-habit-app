@@ -219,3 +219,53 @@ def test_a_trace_id_that_could_change_the_query_is_refused(fake_logs, bad):
     with pytest.raises(SystemExit):
         ts.main([bad])
     assert fake_logs["logs"].queries == []
+
+
+# -- --text: the debug lines of an allowlisted user ----------------------------
+
+def _debug_json(stamp, **fields):
+    return {"@timestamp": stamp, "@log": _STREAM, "@message": json.dumps({
+        "event": "advisor_debug", "trace": "t1", **fields})}
+
+
+def _rows_with_text():
+    return _rows() + [
+        _debug_json("2026-10-30 10:00:04.201", hop="first",
+                    user_text="When does the fridge plan start?",
+                    tool_results=[], reply_text=None,
+                    tool_calls=[{"name": "find", "input": {
+                        "entity": "installment", "query": "Panasonic"}}]),
+        _debug_json("2026-10-30 10:00:11.301", hop="cont",
+                    user_text="When does the fridge plan start?",
+                    tool_results=[{"status": "ok",
+                                   "text": "first payment month: 2026-12"}],
+                    tool_calls=[], reply_text="Your first payment is in Dec."),
+    ]
+
+
+def test_text_prints_each_hops_text_under_it(fake_logs, capsys):
+    fake_logs["logs"] = _FakeLogs([_rows_with_text()])
+
+    ts.main(["t1", "--text"])
+
+    out = capsys.readouterr().out
+    assert out.startswith("trace t1: 2 model calls, 2 client events")
+    lines = out.splitlines()
+    first = next(i for i, l in enumerate(lines) if "hop 0 first" in l)
+    assert lines[first + 1].strip() == "user: When does the fridge plan start?"
+    assert lines[first + 2].strip().startswith("call: find {")
+    assert "result [ok]: first payment month: 2026-12" in out
+    assert "reply: Your first payment is in Dec." in out
+    # The question is printed once, on the hop that started the turn.
+    assert out.count("user: When does") == 1
+
+
+def test_without_text_the_debug_lines_stay_out(fake_logs, capsys):
+    fake_logs["logs"] = _FakeLogs([_rows_with_text(), _rows_with_text()])
+
+    ts.main(["t1"])
+    ts.main(["t1", "--json"])
+
+    out = capsys.readouterr().out
+    assert "fridge" not in out
+    assert "advisor_debug" not in out
