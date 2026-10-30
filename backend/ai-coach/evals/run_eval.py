@@ -33,6 +33,9 @@ PRODUCTION_MODEL = "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
 MODEL_ALIASES = {
     "sonnet-4.5": PRODUCTION_MODEL,
     "sonnet-4.6": "global.anthropic.claude-sonnet-4-6",
+    # The model Haiku routing sends lookup-only conversations to (Plan 065
+    # phase 5; the Lambda's ADVISOR_ROUTE_MODEL_ID default).
+    "haiku-4.5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
 }
 
 # USD per 1M tokens (Singapore, global profile): input, output, cache write,
@@ -40,6 +43,7 @@ MODEL_ALIASES = {
 PRICES = {
     "claude-sonnet-4-5": (3.0, 15.0, 3.75, 0.30),
     "claude-sonnet-4-6": (3.0, 15.0, 3.75, 0.30),
+    "claude-haiku-4-5": (1.0, 5.0, 1.25, 0.10),
 }
 
 

@@ -2857,6 +2857,7 @@ class MockAiCoachService extends _i1.Mock implements _i48.AiCoachService {
     String? profile,
     String? historical,
     List<_i51.AiTool>? tools = const [],
+    String? route,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -2868,6 +2869,7 @@ class MockAiCoachService extends _i1.Mock implements _i48.AiCoachService {
             #profile: profile,
             #historical: historical,
             #tools: tools,
+            #route: route,
           },
         ),
         returnValue: _i15.Stream<_i50.AdvisorEvent>.empty(),

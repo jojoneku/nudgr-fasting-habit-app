@@ -81,6 +81,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer(
           (_) => advisorStreamOf(const AdvisorReply(text: 'Looks fine.')));
 
@@ -93,6 +94,7 @@ void main() {
         context: captureAnyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).captured.single as AiCoachContext;
 
       // The absent fasting presenter reports "not fasting" rather than
@@ -397,6 +399,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer(
           (_) => advisorStreamOf(const AdvisorReply(text: 'About ₱400.')));
 
@@ -430,6 +433,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'Sure.')));
 
       final p = buildWebAdvisor();
@@ -485,6 +489,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer((_) => advisorStreamOf(
           const AdvisorReply(text: 'You are running a deficit.')));
 

@@ -9,6 +9,7 @@ import '../models/advisor_event.dart';
 import '../models/advisor_hop_outcome.dart';
 import '../models/advisor_reply.dart';
 import '../models/advisor_conversation.dart';
+import '../models/advisor_route.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
@@ -36,6 +37,7 @@ import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
 import '../utils/advisor_client_events.dart';
+import '../utils/advisor_routing.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
@@ -818,6 +820,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
     final tools = _toolExecutor == null ? const <AiTool>[] : kFinanceTools;
+    _decideRoute(context);
     // The first hop needs no strip: the bubble is empty, so its own thinking
     // label is on screen. The strip is for after the model has written words.
     _advisorStatus = null;
@@ -880,6 +883,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       if (hop == maxToolHops) {
         // Out of hops with a tool call still pending. Say so rather than
         // leaving the last partial thought looking like a finished answer.
+        // A routed conversation that runs out of hops goes to Sonnet.
+        _escalateRoute();
         _updateLastMessage(
           reply.text.isEmpty
               ? "I couldn't finish that one. Try asking for one change at a time."
@@ -919,6 +924,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final writes = <AiToolCall>[];
     for (final call in calls) {
       final tool = financeToolNamed(call.name);
+      // An unknown tool or an input that breaks the schema means the routing
+      // model is not coping: the rest of the conversation goes to Sonnet. The
+      // call itself runs as before, and the executor answers it.
+      if (tool == null || toolInputProblem(tool, call.input) != null) {
+        _escalateRoute();
+      }
       if (tool != null && tool.mutates && _toolExecutor != null) {
         writes.add(call);
         continue;
@@ -1364,6 +1375,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         profile: _advisorProfile.promptSummary(),
         historical: historical.isEmpty ? null : historical,
         tools: tools,
+        // Read on each hop, so an escalation takes effect on the next one.
+        route: _currentConversation?.route?.wireName,
       ));
 
       await for (final event in stream) {
@@ -1666,6 +1679,39 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     }
     _storage?.saveAdvisorConversations(_conversations);
     safeNotify();
+  }
+
+  // ── Model route (Plan 065, phase 5) ────────────────────────────────────────
+
+  /// Fixes the current conversation's route when its first advisor message
+  /// is sent. A route already set is kept for the conversation's life.
+  void _decideRoute(AiCoachContext context) {
+    _ensureCurrentConversation();
+    final convo = _currentConversation!;
+    if (convo.route != null) return;
+    final users = _messages.where((m) => m.role == AiChatRole.user).toList();
+    // More than one user message: the conversation started before routing
+    // existed, so it already ran on Sonnet.
+    final route = users.length == 1
+        ? routeForFirstMessage(users.single.text,
+            hasImages: context.images.isNotEmpty)
+        : AdvisorRoute.sonnet;
+    _replaceCurrentConversation(convo.copyWith(route: route));
+  }
+
+  /// Moves a Haiku conversation to Sonnet for good. Never back: each model
+  /// writes its own cache of the history, so going back and forth would pay
+  /// for both. The escalation itself costs one cache rewrite, because Sonnet
+  /// has no cache of this conversation yet and its first hop writes one.
+  void _escalateRoute() {
+    final convo = _currentConversation;
+    if (convo == null || convo.route != AdvisorRoute.haiku) return;
+    _replaceCurrentConversation(convo.copyWith(route: AdvisorRoute.sonnet));
+  }
+
+  void _replaceCurrentConversation(AdvisorConversation convo) {
+    final idx = _conversations.indexWhere((c) => c.id == convo.id);
+    if (idx != -1) _conversations[idx] = convo;
   }
 
   // ── Conversation internals ────────────────────────────────────────────────

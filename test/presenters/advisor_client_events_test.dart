@@ -166,6 +166,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((inv) {
       traceIds.add((inv.namedArguments[#context] as AiCoachContext).traceId);
       final next = script[i < script.length ? i : script.length - 1];

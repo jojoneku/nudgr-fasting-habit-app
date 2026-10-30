@@ -47,6 +47,7 @@ class NullAiCoachService implements AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   }) async* {
     // The advisor requires the cloud tier; there's no canned equivalent.
     throw const AiCoachException(
