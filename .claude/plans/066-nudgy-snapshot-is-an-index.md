@@ -1,6 +1,6 @@
 # Plan 066 — Nudgy: the snapshot is an index, the tools are the record
 
-**Status:** revision 2 (2026-10-30). Phases 1 and 2 built (section 10); phase 3 next. Revision 2 is the
+**Status:** revision 2 (2026-10-30). Phases 1–3 built (section 10). Phase 4 held back: not needed on the eval. Revision 2 is the
 result of a critical review of revision 1: section 9 lists what changed and why.
 
 **Trigger.** On 2026-10-30 at about 6:42 PM Manila, the user asked Nudgy about
@@ -316,3 +316,34 @@ Both installment disputes now pass on every run. Sonnet still answers the bill
 reminder and the credit limit from the snapshot. The rule rewrite (phase 3)
 targets those: a detail the line does not state, and a figure the model adds up
 itself.
+
+### Phase 3 (2026-10-30, rule rewrite, rules `146cf151`, with the phase 2 snapshot)
+
+| Set | Sonnet 4.5 run 1 | Sonnet 4.5 run 2 | Haiku 4.5 |
+|---|---|---|---|
+| `index` | **16/16 = 100%** | **15/16 = 94%** | 14/16 = 88% |
+| Tuning (Plan 065) | 14/15 | 14/15 | 14/15 |
+| Held-out | 5/5 | 5/5 | 5/5 |
+
+Remaining failures:
+
+- Sonnet run 2: the credit limit (8), answered as owed plus available.
+- Haiku: the control `control-iphone-months` (15) is read anyway, as in every
+  earlier run, so this is not a regression. The Taglish dispute (13) calls
+  `find (entity receivable)` with no query. That is a real read, and the new
+  `find` description allows it; the case accepts only `query` containing
+  "salary", so it scores as a fail. Left as is, so the numbers are not tuned
+  after the fact.
+
+**Rules alone, old snapshot (no hints, old `find` description):** Sonnet 4.5
+14/16 and 15/16. The Lambda deploys before the app build that carries the
+hints, so the user gets most of the gain from the Lambda alone.
+
+**Size.** The rules grew from 15,655 to 16,458 characters (+5%, about 200
+tokens), mostly the push-back rule. They sit in the cached prefix, so the cost
+is about $0.00006 per hop.
+
+**Phase 4 is not needed now.** Both runs pass the threshold, and the disputes
+pass on every Sonnet run. Keep phase 4 as the backstop: build it only if
+`trace.py` shows a real push-back answered with no read after phases 2 and 3
+ship.
