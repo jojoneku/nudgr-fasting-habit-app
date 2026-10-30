@@ -305,6 +305,29 @@ void main() {
       expect(record.isInstallment, isTrue);
     });
 
+    test('a category added earlier in the same list is named, then saved',
+        () async {
+      await build([_plan(categoryId: 'gadgets')]);
+      final answer = ex.proposeBatch([
+        const AiToolCall(
+            id: 'a1',
+            name: 'addCategory',
+            input: {'name': 'Pets', 'type': 'expense'}),
+        call('editInstallment', {'category': 'Pets'}),
+      ]);
+      await settle();
+
+      final edit = ex.batch!.actions.last;
+      final shown = {for (final d in edit.details) d.label: d.value};
+      expect(shown['Category'], 'Gadgets → Pets (new, added in this list)');
+
+      await ex.approveAll();
+      final results = await answer;
+      expect(results.map((r) => r.ok), [true, true]);
+      final pets = ledger.categories.singleWhere((c) => c.name == 'Pets');
+      expect(installments.findById('p1')!.categoryId, pets.id);
+    });
+
     test('a bad id is refused before any row', () async {
       await build([_plan()]);
       final r = await ex.propose(const AiToolCall(

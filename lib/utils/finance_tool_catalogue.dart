@@ -316,6 +316,35 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'addCategory',
+    kind: AiToolKind.create,
+    description:
+        'Propose a new expense or income category. A name that already '
+        'exists (in any letter case) is refused. To use it at once in '
+        'addBill, editBill, editTransaction or addInstallment, call it in '
+        'the SAME reply, BEFORE those rows: the user approves them in one '
+        'list and the category is saved first. logTransactions can only use '
+        'a saved category, so log those entries in the next step, after the '
+        'user approves this.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['name', 'type'],
+      'properties': {
+        'name': {'type': 'string', 'description': 'e.g. "Pets".'},
+        'type': {
+          'type': 'string',
+          'enum': ['expense', 'income'],
+        },
+        'excludeFromTotals': {
+          'type': 'boolean',
+          'description': 'True to leave it out of the income and expense '
+              'totals and budget spend, e.g. a "Reimbursement" income. '
+              'Default false.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'logTransactions',
     kind: AiToolKind.create,
     description:
