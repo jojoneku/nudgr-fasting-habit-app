@@ -131,6 +131,18 @@ Each advisor invocation writes 2 lines to CloudWatch, on both functions:
 
 Both lines carry ids, tool names, result statuses, token counts, timings, the model and short hashes. They never carry message text, snapshot text, tool inputs, tool results or auth headers. `test_invocation_log.py` sends a request full of sentinel strings and fails if one reaches stdout. Query the JSON line in Logs Insights with `filter event = "advisor_invocation"`.
 
+### Client events (`op: "logEvent"`)
+
+The app sends small events about what the user did with a reply, with the message's `trace_id`: `batch_opened`, `batch_answered` (approved / declined / revised / removed / failed counts), `stop_pressed` (`phase`), `ask_nudgy_tapped` and `batch_resumed` (`items`, `outcome`). Request body:
+
+```json
+{ "op": "logEvent", "payload": { "event": "batch_opened", "trace_id": "a1b2c3d4e5f6a7b8", "fields": { "items": 2 } } }
+```
+
+- The Lambda checks each event against `_CLIENT_EVENTS`: known names only, and fields that are counts (0–1000) or enum values. Anything else is a 400 and is not logged.
+- An event does **not** count against the daily AI cap. It has its own limit of 500 events per user per UTC day, counted per warm container (a ceiling on a runaway client, not an exact count).
+- It writes one `{"event":"client_event", …}` JSON line. The app sends it fire-and-forget and ignores the answer.
+
 ## The streaming advisor (`food-advisor-stream`)
 
 `adviseFinance` runs on a **second function** with its own front door, because
