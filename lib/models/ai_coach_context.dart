@@ -774,9 +774,18 @@ class AiCoachContext {
   /// PHP-formatted financial snapshot for the financial-advisor op. This is the
   /// model's ONLY source of numeric truth — figures are pre-computed by the
   /// Treasury presenters so the model reproduces rather than derives them.
-  String financeSnapshotSummary() {
+  ///
+  /// [readHints] ends each section that names records with a line saying the
+  /// record has more fields and which read tool returns them (Plan 066). A
+  /// line that only summarises reads as complete otherwise, and the model
+  /// answers "I can't see that" instead of looking. Only for a caller that
+  /// sends the read tools: a hint to a tool the model lacks is a dead end.
+  String financeSnapshotSummary({bool readHints = false}) {
     final buf = StringBuffer();
     final dateLine = _todayLine();
+    void hint(String text) {
+      if (readHints) buf.writeln('  (Summary only. $text)');
+    }
 
     if (totalLiquidCash != null) {
       buf.writeln('Total liquid cash: ${_peso(totalLiquidCash!)}');
@@ -818,6 +827,13 @@ class AiCoachContext {
         buf.writeln(
             '  - ${p.name}: ${_peso(p.balance)} (inside ${p.parentName})');
       }
+    }
+    if (liquidAccounts.isNotEmpty ||
+        savingsAccounts.isNotEmpty ||
+        investmentAccounts.isNotEmpty ||
+        subAccounts.isNotEmpty) {
+      hint('Every field of an account, such as its type, goal target and '
+          'maturity date: find (entity account).');
     }
     if (forecastedNetBalance != null) {
       buf.writeln('Forecasted ending cash this month (after bills & budgets): '
@@ -868,6 +884,7 @@ class AiCoachContext {
         buf.writeln(
             '  - ${g.name}: ${_peso(g.spent)} of ${_peso(g.allocated)}');
       }
+      hint('The budget rows in a group: find (entity budgetGroup).');
     }
     if (setAsidesRemaining != null && setAsidesRemaining! > 0) {
       buf.writeln('Set-asides still to fund this month (sinking funds): '
@@ -883,6 +900,9 @@ class AiCoachContext {
                 '${_peso(s.remaining)} to go';
         buf.writeln('  - ${s.name}: $status');
       }
+      hint('Every field of a set-aside, such as the account it comes from '
+          'and goes into, its note and whether it repeats: find (entity '
+          'setAside).');
     }
     if (monthIncome != null) {
       buf.writeln('Income received this month: ${_peso(monthIncome!)}');
@@ -910,6 +930,8 @@ class AiCoachContext {
         }
         buf.writeln(line.toString());
       }
+      hint('A goal is an account; every field of it: find (entity '
+          'account).');
     }
     if (completedGoals.isNotEmpty) {
       buf.writeln('Goals already reached and spent (achievements — this money '
@@ -952,6 +974,8 @@ class AiCoachContext {
         buf.writeln('  Total owed: ${_peso(totalCreditOwed!)}'
             '${totalCreditAvailable != null ? ', ${_peso(totalCreditAvailable!)} available (unused capacity)' : ''}');
       }
+      hint('Every field of a card, such as its credit limit: find (entity '
+          'account). The charges on a statement: find (entity bill).');
     } else if (totalCreditOwed != null || totalCreditAvailable != null) {
       buf.writeln('Credit cards: ${_peso(totalCreditOwed ?? 0)} owed, '
           '${_peso(totalCreditAvailable ?? 0)} available (unused capacity)');
@@ -967,6 +991,8 @@ class AiCoachContext {
         buf.writeln('  Total installment load this month: '
             '${_peso(installmentsMonthlyLoad!)}');
       }
+      hint('Every field of a plan, such as its purchase date, first payment '
+          'month, deferral and interest: find (entity installment).');
     }
     if (daysLeftInMonth != null) {
       buf.writeln('Days left in month: $daysLeftInMonth');
@@ -995,6 +1021,11 @@ class AiCoachContext {
         buf.writeln('  - ${b.name}: ${_peso(b.amount)}');
       }
     }
+    if (outstandingBills.isNotEmpty || paidBillsThisMonth.isNotEmpty) {
+      hint('Every field of a bill, such as its category, paid date and '
+          'amount and whether it repeats, and the bills of other months: '
+          'find (entity bill).');
+    }
     if (pendingReceivables.isNotEmpty || pendingReceivablesTotal != null) {
       buf.writeln('Receivables this month (money coming IN, owed to you):');
       for (final r in pendingReceivables) {
@@ -1010,6 +1041,11 @@ class AiCoachContext {
       for (final r in receivedThisMonth) {
         buf.writeln('  - ${r.name}: ${_peso(r.amount)}');
       }
+    }
+    if (pendingReceivables.isNotEmpty || receivedThisMonth.isNotEmpty) {
+      hint('Every field of a receivable, such as the account it goes into, '
+          'its received date and amount, and the receivables of other '
+          'months: find (entity receivable).');
     }
     if (nextMonthBillsTotal != null || nextMonthReceivablesTotal != null) {
       final parts = <String>[];
@@ -1071,6 +1107,8 @@ class AiCoachContext {
         }
         buf.writeln('  - ${c.name}: $line');
       }
+      hint('Every field of a budget, such as its kind and type: find '
+          '(entity budget).');
     }
     // Spending pace — helps the advisor project the rest of the month.
     if (avgDailySpend != null || todaySpend != null) {
@@ -1098,6 +1136,7 @@ class AiCoachContext {
         buf.writeln('  - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
             '(${tx.category}$via)');
       }
+      hint('Only the latest few; any other transaction: findTransactions.');
     }
 
     final s = buf.toString().trim();
