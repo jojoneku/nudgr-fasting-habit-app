@@ -357,6 +357,11 @@ def lambda_handler(event, context):
     except json.JSONDecodeError:
         return _resp(400, {"error": "invalid_json", "message": "Body is not valid JSON"})
 
+    # A client event runs no model, so it does not count against the daily AI
+    # cap. It has its own limit; see _log_event.
+    if isinstance(body, dict) and body.get("op") == "logEvent":
+        return _log_event(body.get("payload"), user_id)
+
     # Per-user daily cap — prevents unbounded Bedrock billing.
     #
     # Metered per USER TURN, not per model call. A tool-calling turn is several
@@ -408,6 +413,105 @@ def lambda_handler(event, context):
         return _advise_finance(payload, user_id=user_id)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
+
+
+# ── Client events (Plan 065, phase 5) ─────────────────────────────────────────
+#
+# Small events the app sends about what the user did with Nudgy's reply: a
+# batch opened and how it was answered, stop pressed, "ask Nudgy" tapped, a
+# batch resumed after a restart. Each one is checked against an allow-list and
+# written as one `client_event` JSON line, next to the advisor_invocation
+# lines of the same trace_id.
+#
+# Only names from the allow-list, and only numbers, enum values and ids:
+# never text. A field the list does not name, or a value of the wrong kind,
+# rejects the whole event, so a client bug cannot put a sentence in the log.
+
+_CLIENT_EVENT_LOG = "client_event"
+
+_COUNT = "count"  # a whole number from 0 to _MAX_EVENT_COUNT
+
+_MAX_EVENT_COUNT = 1000
+
+# Event name -> {field: _COUNT or a tuple of allowed values}.
+_CLIENT_EVENTS = {
+    "batch_opened": {"items": _COUNT},
+    "batch_answered": {
+        "approved": _COUNT,
+        "declined": _COUNT,
+        "revised": _COUNT,
+        "removed": _COUNT,
+        "failed": _COUNT,
+    },
+    "stop_pressed": {"phase": ("reply", "batch")},
+    "ask_nudgy_tapped": {},
+    "batch_resumed": {
+        "items": _COUNT,
+        "outcome": ("shown", "not_reviewed"),
+    },
+}
+
+# Events one user may log per UTC day. Counted per warm container, so it is a
+# ceiling on a runaway client, not an exact count: a new container starts at
+# 0. A Supabase counter would make it exact, at the cost of a migration and a
+# round trip for a log line.
+_CLIENT_EVENT_DAILY_LIMIT = 500
+
+_client_event_counts = {"day": None, "users": {}}
+
+
+def _client_event_allowed(user_id):
+    """Count one event for `user_id`; False once today's limit is reached."""
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    if _client_event_counts["day"] != today:
+        _client_event_counts["day"] = today
+        _client_event_counts["users"] = {}
+    users = _client_event_counts["users"]
+    users[user_id] = users.get(user_id, 0) + 1
+    return users[user_id] <= _CLIENT_EVENT_DAILY_LIMIT
+
+
+def _client_event_fields(name, fields):
+    """The checked fields of one event, or None when anything is off."""
+    allowed = _CLIENT_EVENTS.get(name)
+    if allowed is None or not isinstance(fields, dict):
+        return None
+    checked = {}
+    for key, value in fields.items():
+        kind = allowed.get(key)
+        if kind is None:
+            return None
+        if kind == _COUNT:
+            # bool is an int in Python; true is not a count.
+            if (isinstance(value, bool) or not isinstance(value, int)
+                    or not 0 <= value <= _MAX_EVENT_COUNT):
+                return None
+        elif value not in kind:
+            return None
+        checked[key] = value
+    return checked
+
+
+def _log_event(payload, user_id):
+    """op=logEvent: check one client event and write it as one JSON line."""
+    payload = payload if isinstance(payload, dict) else {}
+    name = payload.get("event")
+    fields = _client_event_fields(name, payload.get("fields", {}))
+    if fields is None:
+        return _resp(400, {"error": "invalid_event"})
+    raw_trace = payload.get("trace_id")
+    if raw_trace is not None and _trace_id(payload) == "-":
+        return _resp(400, {"error": "invalid_event"})
+    if not _client_event_allowed(user_id):
+        return _resp(429, {"error": "event_limit_exceeded"})
+    print(json.dumps({
+        "event": _CLIENT_EVENT_LOG,
+        "name": name,
+        "trace": raw_trace,
+        "user": user_id if _USER_ID_RE.fullmatch(user_id or "") else None,
+        "fields": fields,
+    }, separators=(",", ":")))
+    return _resp(200, {"ok": True})
 
 
 # ── Food ops ───────────────────────────────────────────────────────────────────
@@ -1939,6 +2043,57 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
         "trace": None if _trace_id(payload) == "-" else _trace_id(payload),
         "hops": len(_tool_results_by_turn(payload)),
     }, user_id=user_id, stream=stream, error=error)
+
+
+# -- Cost estimate (Plan 065, phase 5) ----------------------------------------
+#
+# USD per million tokens, (input, output), at Anthropic's list prices. A
+# cache write costs 1.25x input (5-minute TTL) or 2x input (1-hour TTL, see
+# _ADVISOR_CACHE_TTL_1H), and a cache read 0.1x input.
+# Bedrock bills its own price list, so this is an estimate, not the invoice.
+# Haiku 5.5 costs more above 100K prompt tokens; the advisor never sends that
+# many.
+
+_MODEL_PRICES = {
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-sonnet-4-5": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+}
+
+
+def estimated_cost_usd(model_id, usage):
+    """Estimated USD cost of one model call, or None for an unknown model.
+
+    `usage` is a Bedrock usage dict (input_tokens, output_tokens,
+    cache_read_input_tokens, cache_creation_input_tokens). A missing or
+    negative count counts as 0. Cache writes are priced at the 5-minute rate,
+    except the part `cache_creation.ephemeral_1h_input_tokens` names as
+    1-hour writes, when the usage carries that split.
+    """
+    for key, (price_in, price_out) in _MODEL_PRICES.items():
+        if key in (model_id or ""):
+            break
+    else:
+        return None
+
+    def count(name, source=None):
+        value = (source if source is not None else usage or {}).get(name)
+        return value if isinstance(value, int) and value > 0 else 0
+
+    split = (usage or {}).get("cache_creation")
+    writes_1h = count("ephemeral_1h_input_tokens",
+                      split if isinstance(split, dict) else {})
+    writes_5m = max(count("cache_creation_input_tokens") - writes_1h, 0)
+    dollars = (
+        count("input_tokens") * price_in
+        + count("output_tokens") * price_out
+        + writes_5m * price_in * 1.25
+        + writes_1h * price_in * 2
+        + count("cache_read_input_tokens") * price_in * 0.1
+    ) / 1_000_000
+    return round(dollars, 6)
 
 
 def _split_reply(content):

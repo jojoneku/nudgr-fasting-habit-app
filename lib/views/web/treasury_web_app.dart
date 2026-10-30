@@ -237,6 +237,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       ledger: _ledgerPresenter,
       storage: _storage,
       toolExecutor: _treasury.financeActions,
+      telemetry: cloudAi,
     );
     _nudgy = NudgyController(_advisorPresenter, storage: _storage);
     _authPresenter = AuthPresenter(
