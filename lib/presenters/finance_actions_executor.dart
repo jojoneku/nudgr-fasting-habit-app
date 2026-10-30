@@ -928,6 +928,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             ProposalField.amount: 'amount',
             ProposalField.account: 'destinationAccount',
           },
+        'editAccount' => const {ProposalField.name: 'name'},
         'editTransaction' => const {
             ProposalField.name: 'description',
             ProposalField.amount: 'amount',
@@ -1315,6 +1316,16 @@ class FinanceActionsExecutor extends ChangeNotifier
                 value: '${_peso(f.expense.spentAmount)} → ${_peso(f.amount)}',
               ),
           ],
+        );
+      case 'editAccount':
+        final e = _accountEdit(i);
+        if (e == null) return null;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Update account: ${e.before.name}',
+          isRecurring: false,
+          confirmLabel: 'Update Account',
+          details: e.rows,
         );
       case 'editTransaction':
         final id = _str(i['id']);
@@ -1766,6 +1777,18 @@ class FinanceActionsExecutor extends ChangeNotifier
         return 'Set aside ${_peso(f.amount)} for "${f.expense.name}" from '
             '${from.name}${f.into == null ? ' (recorded as spending)' : ' into ${f.into!.name}'}.';
 
+      case 'editAccount':
+        final dashboard = _dashboard;
+        final e = _accountEdit(i);
+        if (dashboard == null || e == null) {
+          throw StateError('Account "${_str(i['id'])}" cannot be edited');
+        }
+        // The account sheet's own save, so a re-planned goal target is
+        // reconciled exactly as it is there.
+        await dashboard.updateAccount(e.after);
+        return 'Updated account "${e.after.name}": '
+            '${e.rows.map((r) => '${r.label} ${r.value}').join('; ')}.';
+
       case 'editTransaction':
         final ledger = _ledger;
         if (ledger == null) throw StateError('Ledger is not available');
@@ -1952,6 +1975,157 @@ class FinanceActionsExecutor extends ChangeNotifier
       into: named('intoAccount', e.destinationAccountId),
       date: _settleDate(i['date']),
     );
+  }
+
+  // ── Accounts ──────────────────────────────────────────────────────────────
+
+  /// An `editAccount` call bound against the live account: the account as it
+  /// will be saved, and one before → after row for each field that really
+  /// changes. The row and the write are both drawn from it, so the user
+  /// approves exactly what is saved. A field equal to its current value is no
+  /// change and gets no row.
+  ({
+    FinancialAccount before,
+    FinancialAccount after,
+    List<({String label, String value})> rows,
+  })? _accountEdit(Map<String, Object?> i) {
+    final a = (_ledger?.accounts ?? const <FinancialAccount>[])
+        .where((a) => a.id == _str(i['id']))
+        .firstOrNull;
+    if (a == null) return null;
+    var after = a;
+    final rows = <({String label, String value})>[];
+    String was(double? v) => v == null ? 'not set' : _peso(v);
+
+    final name = _str(i['name']);
+    if (name.isNotEmpty && name != a.name) {
+      after = after.copyWith(name: name);
+      rows.add((label: 'Name', value: '${a.name} → $name'));
+    }
+    final limit = _amountOrNull(i['creditLimit']);
+    if (limit != null && limit != a.creditLimit) {
+      after = after.copyWith(creditLimit: limit);
+      rows.add((
+        label: 'Credit limit',
+        value: '${was(a.creditLimit)} → ${_peso(limit)}',
+      ));
+    }
+    final statement = _numOrNull(i['statementDay'])?.toInt();
+    if (statement != null && statement != a.statementDay) {
+      after = after.copyWith(statementDay: statement);
+      rows.add((
+        label: 'Statement day',
+        value: '${_dayOfMonth(a.statementDay)} → day $statement',
+      ));
+    }
+    final due = _numOrNull(i['paymentDueDay'])?.toInt();
+    final daysAfter = a.dueDaysAfterStatement;
+    if (due != null && (due != a.paymentDueDay || daysAfter != null)) {
+      // The sheet stores one due rule: a fixed day replaces "N days after
+      // the statement", which would otherwise win over it.
+      after = after.copyWith(paymentDueDay: due, dueDaysAfterStatement: null);
+      final before = daysAfter != null
+          ? '$daysAfter days after the statement'
+          : _dayOfMonth(a.paymentDueDay);
+      rows.add((label: 'Payment due', value: '$before → day $due'));
+    }
+    final target = _amountOrNull(i['goalTarget']);
+    if (target != null && target != a.goalTarget) {
+      after = after.copyWith(goalTarget: target);
+      rows.add((
+        label: 'Goal target',
+        value: '${was(a.goalTarget)} → ${_peso(target)}',
+      ));
+    }
+    final given = DateTime.tryParse(_str(i['maturityDate']));
+    final maturity =
+        given == null ? null : DateTime(given.year, given.month, given.day);
+    final oldMaturity = a.maturityDate;
+    if (maturity != null &&
+        (oldMaturity == null || _day(oldMaturity) != _day(maturity))) {
+      after = after.copyWith(maturityDate: maturity);
+      rows.add((
+        label: 'Maturity date',
+        value: '${oldMaturity == null ? 'not set' : _day(oldMaturity)}'
+            ' → ${_day(maturity)}',
+      ));
+    }
+    return (
+      before: a,
+      after: after.copyWith(updatedAt: DateTime.now()),
+      rows: rows,
+    );
+  }
+
+  static String _dayOfMonth(int? day) => day == null ? 'not set' : 'day $day';
+
+  /// Why an `editAccount` call cannot be shown, or null. Each field is
+  /// allowed only where the account sheet shows it: credit details on a
+  /// credit card, credit line or BNPL account, a target on a goal, a maturity
+  /// on a time deposit. A balance or a type is never edited here.
+  String? _accountEditProblem(Map<String, Object?> i) {
+    if (_dashboard == null) return 'Editing accounts is not available here.';
+    final a = _ledger!.accounts.firstWhere((a) => a.id == _str(i['id']));
+    if (i['balance'] != null) {
+      return 'A balance never changes by an edit: it moves only through '
+          'transactions. If "${a.name}" is off, ask the user what money is '
+          'missing and log it with logTransactions (or payCredit for a card '
+          'payment).';
+    }
+    if (i['category'] != null || i['type'] != null) {
+      return 'The type of an account cannot change from chat. Ask the user '
+          'to change it in Accounts.';
+    }
+    String notOn(String what, String only) =>
+        '"${a.name}" has no $what: only $only has one. Tell the user.';
+    const credit = 'a credit card, credit line or BNPL account';
+    if (i['creditLimit'] != null) {
+      if (!a.isLiability) return notOn('credit limit', credit);
+      if (_amountOrNull(i['creditLimit']) == null) {
+        return 'The credit limit must be an amount in pesos above zero.';
+      }
+    }
+    for (final (key, what) in const [
+      ('statementDay', 'statement day'),
+      ('paymentDueDay', 'payment due day'),
+    ]) {
+      if (i[key] == null) continue;
+      if (!a.isLiability) return notOn(what, credit);
+      final day = _numOrNull(i[key]);
+      if (day == null || day != day.roundToDouble() || day < 1 || day > 28) {
+        return 'The $what must be a whole day of the month from 1 to 28, '
+            'the days the account sheet offers.';
+      }
+    }
+    if (i['goalTarget'] != null) {
+      if (a.category != AccountCategory.goal) {
+        return notOn('goal target', 'a goal account');
+      }
+      if (_amountOrNull(i['goalTarget']) == null) {
+        return 'The goal target must be an amount in pesos above zero.';
+      }
+    }
+    if (i['maturityDate'] != null) {
+      if (a.category != AccountCategory.timeDeposit) {
+        return notOn('maturity date', 'a time deposit');
+      }
+      final raw = _str(i['maturityDate']);
+      final date = DateTime.tryParse(raw);
+      if (date == null) {
+        return 'The maturity date must be YYYY-MM-DD, not "$raw".';
+      }
+      final now = DateTime.now();
+      if (DateTime(date.year, date.month, date.day)
+          .isBefore(DateTime(now.year, now.month, now.day))) {
+        return 'The maturity date $raw is in the past. A maturity date is '
+            'today or later: check it with the user.';
+      }
+    }
+    if (_accountEdit(i)!.rows.isEmpty) {
+      return 'That changes nothing on "${a.name}": no field was given, or '
+          'each one already has that value. Tell the user.';
+    }
+    return null;
   }
 
   // ── Settlements ───────────────────────────────────────────────────────────
@@ -2252,6 +2426,8 @@ class FinanceActionsExecutor extends ChangeNotifier
                 _receivableSettlement(i)!, 'deposited into', active);
       case 'editBill':
         return _categoryProblem(i);
+      case 'editAccount':
+        return _accountEditProblem(i);
       case 'editReceivable':
         return check('account', active, 'active');
       case 'editSetAside':
@@ -2311,6 +2487,11 @@ class FinanceActionsExecutor extends ChangeNotifier
           'set-aside',
           'find (entity setAside)',
           _bills.allBudgetedExpenses.any((e) => e.id == id),
+        ),
+      'editAccount' => (
+          'account',
+          'find (entity account)',
+          _ledger?.accounts.any((a) => a.id == id) ?? false,
         ),
       'editTransaction' || 'deleteTransaction' => (
           'transaction',
