@@ -227,6 +227,31 @@ void main() {
     });
   });
 
+  test('a category added in the same list is refused with the reason',
+      () async {
+    await build([]);
+    final answer = ex.proposeBatch([
+      const AiToolCall(
+          id: 'a1',
+          name: 'addCategory',
+          input: {'name': 'Pets', 'type': 'expense'}),
+      call('setBudget', {'category': 'Pets', 'amount': 1500}),
+    ]);
+    await settle();
+    expect(ex.batch!.actions.map((a) => a.call.name), ['addCategory']);
+    ex.decline();
+    final results = await answer;
+    expect(results.last.ok, isFalse);
+    expect(results.last.summary, contains('next reply'));
+  });
+
+  test('an unknown category names addCategory as the way to add one', () async {
+    await build([]);
+    final r =
+        await ex.propose(call('setBudget', {'category': 'Pets', 'amount': 1}));
+    expect(r.summary, contains('addCategory first'));
+  });
+
   group('editBudget', () {
     test('a recurring budget is T3: this and later months change, not earlier',
         () async {
