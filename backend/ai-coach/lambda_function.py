@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import json
 import os
@@ -1511,6 +1512,29 @@ def _clip(value, cap, label):
 # that is the intended trade.
 _CACHE_CONTROL = {"type": "ephemeral"}
 
+# ADVISOR_CACHE_TTL_1H (off by default) gives breakpoint 1, tools + rules, a
+# 1-hour TTL. Every other breakpoint keeps the 5-minute default: Bedrock wants
+# the longer TTL ahead of the shorter ones, and breakpoint 1 comes first. A
+# 1-hour write bills at 2x input instead of 1.25x, so it pays off only when the
+# shared prefix is read again between 5 and 60 minutes later -- many users, or
+# one who comes back within the hour. Bedrock lists the 1-hour TTL for Sonnet
+# 4.5 and 4.6. If a model rejects it anyway, _invoke_advisor logs a warning and
+# this container falls back to 5 minutes.
+_ADVISOR_CACHE_TTL_1H = os.environ.get(
+    "ADVISOR_CACHE_TTL_1H", "").lower() in ("1", "true", "yes")
+_CACHE_CONTROL_1H = {"type": "ephemeral", "ttl": "1h"}
+
+# Set when Bedrock rejected the 1-hour TTL once; it then stays off for the
+# life of this container.
+_ttl_1h_rejected = False
+
+
+def _rules_cache_control():
+    """The breakpoint for tools + rules: 1 hour when the flag is on, else 5 min."""
+    if _ADVISOR_CACHE_TTL_1H and not _ttl_1h_rejected:
+        return _CACHE_CONTROL_1H
+    return _CACHE_CONTROL
+
 
 def _cached_system(rules, context=""):
     """The system prompt as cacheable blocks: rules first, then the context.
@@ -1519,9 +1543,10 @@ def _cached_system(rules, context=""):
     profile) leaves the tools + rules prefix cached. An empty context gives
     the single rules block.
     """
-    blocks = [{"type": "text", "text": rules, "cache_control": _CACHE_CONTROL}]
+    blocks = [{"type": "text", "text": rules,
+               "cache_control": dict(_rules_cache_control())}]
     if context:
-        blocks.append({"type": "text", "text": context, "cache_control": _CACHE_CONTROL})
+        blocks.append({"type": "text", "text": context, "cache_control": dict(_CACHE_CONTROL)})
     return blocks
 
 
@@ -1554,7 +1579,7 @@ def _mark_conversation_cache(bedrock_messages):
     # an image turn it has to sit after the image, not before it.
     last = content[-1]
     if isinstance(last, dict):
-        last["cache_control"] = _CACHE_CONTROL
+        last["cache_control"] = dict(_CACHE_CONTROL)
     return bedrock_messages
 
 
@@ -2020,6 +2045,42 @@ def _split_reply(content):
     return text, tool_calls
 
 
+def _without_ttl(body):
+    """`body` with every breakpoint back on the 5-minute default."""
+    body = copy.deepcopy(body)
+    for block in body.get("system") or []:
+        if isinstance(block, dict) and "cache_control" in block:
+            block["cache_control"] = dict(_CACHE_CONTROL)
+    return body
+
+
+def _invoke_advisor(invoke, body):
+    """Call `invoke` (a Bedrock invoke method) with `body` as JSON.
+
+    When the 1-hour TTL is on and Bedrock rejects the request as invalid, the
+    call is made once more with every breakpoint on 5 minutes. If that one
+    works, the TTL was the problem: a warning is logged and the TTL stays off
+    for this container. If it fails too, its error is the real one.
+    """
+    global _ttl_1h_rejected
+    kwargs = {"modelId": _ADVISOR_MODEL_ID, "contentType": "application/json",
+              "accept": "application/json"}
+    uses_ttl = any(
+        isinstance(b, dict) and (b.get("cache_control") or {}).get("ttl")
+        for b in body.get("system") or [])
+    try:
+        return invoke(body=json.dumps(body), **kwargs)
+    except Exception as e:
+        code = (getattr(e, "response", None) or {}).get("Error", {}).get("Code")
+        if not uses_ttl or code != "ValidationException":
+            raise
+        result = invoke(body=json.dumps(_without_ttl(body)), **kwargs)
+        _ttl_1h_rejected = True
+        print("WARNING advisor_cache_ttl_1h rejected by "
+              f"{_ADVISOR_MODEL_ID}; using 5 minutes for this container: {e}")
+        return result
+
+
 def _advise_finance(payload, user_id=None):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
@@ -2034,19 +2095,14 @@ def _advise_finance(payload, user_id=None):
     tools = request["tools"]
     started = time.monotonic()
     try:
-        raw = _bedrock.invoke_model(
-            modelId=_ADVISOR_MODEL_ID,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": request["system"],
-                "messages": request["messages"],
-                **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-            }),
-        )
+        raw = _invoke_advisor(_bedrock.invoke_model, {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": _ADVISOR_MAX_TOKENS,
+            "system": request["system"],
+            "messages": request["messages"],
+            **({"tools": tools} if tools else {}),
+            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+        })
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
@@ -2118,19 +2174,14 @@ def advise_finance_stream(payload, request, user_id=None):
 
     yield _frame({"type": "start"})
     try:
-        raw = _bedrock.invoke_model_with_response_stream(
-            modelId=_ADVISOR_MODEL_ID,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": _ADVISOR_MAX_TOKENS,
-                "system": request["system"],
-                "messages": request["messages"],
-                **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-            }),
-        )
+        raw = _invoke_advisor(_bedrock.invoke_model_with_response_stream, {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": _ADVISOR_MAX_TOKENS,
+            "system": request["system"],
+            "messages": request["messages"],
+            **({"tools": tools} if tools else {}),
+            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+        })
 
         # A `thinking` block (Sonnet 5.5's notes between tool calls) is stored by
         # content_block_start like any other, its thinking_delta / signature_delta
