@@ -3,15 +3,22 @@
 Pure functions with no network, so test_scoring.py covers them for free. The
 runner (run_eval.py) calls Bedrock and hands each reply's content here.
 
-An expectation is {"any": [option, ...]} or {"all": [option, ...]}:
+An expectation is {"any": [option, ...]}, {"some": [option, ...]} or
+{"all": [option, ...]}:
 
 - any: the FIRST tool_use in the reply must match one option.
+- some: a tool_use in ANY position of the reply must match one option. For a
+  two-part question, where the calls of one reply run together and their
+  order changes nothing.
 - all: every option must match its own tool_use in the reply. This is the
   batch check: two writes the user asked for in one message belong in one
   reply, so the user reviews them as one batch.
 
 An option is {"tool": name, "input": {key: spec}}. Every key in "input" must be
-present in the call and match its spec. A spec is:
+present in the call and match its spec. An option can instead be
+{"answer": [text, ...]}: the reply makes no tool call and its text contains
+every listed text (ignoring case). Use it only when the snapshot states the
+exact figure, so an answer without a tool is correct. A spec is:
 
 - a literal: equal to the value (strings ignore case and outer spaces;
   numbers compare as numbers, so 20000 matches 20000.0),
@@ -53,7 +60,7 @@ def match_value(spec, value):
 
 def match_call(option, call):
     """True when the tool call `{"name", "input"}` satisfies `option`."""
-    if call.get("name") != option["tool"]:
+    if "tool" not in option or call.get("name") != option["tool"]:
         return False
     given = call.get("input") or {}
     return all(
@@ -71,6 +78,20 @@ def tool_calls(content):
     ]
 
 
+def reply_text(content):
+    """The text blocks of a reply's content, joined."""
+    return "\n".join(
+        b.get("text") or ""
+        for b in content or []
+        if isinstance(b, dict) and b.get("type") == "text"
+    )
+
+
+def match_answer(option, text):
+    """True when `text` contains every text an answer option lists."""
+    return all(_norm(want) in _norm(text) for want in option["answer"])
+
+
 def describe_call(call):
     """`name(key=value, ...)`, short enough for a table cell."""
     args = ", ".join(f"{k}={v!r}" for k, v in (call.get("input") or {}).items())
@@ -78,6 +99,8 @@ def describe_call(call):
 
 
 def describe_option(option):
+    if "answer" in option:
+        return "text answer with " + " and ".join(repr(a) for a in option["answer"])
     parts = []
     for key, spec in (option.get("input") or {}).items():
         if isinstance(spec, dict):
@@ -94,13 +117,28 @@ def describe_option(option):
 def describe_expect(expect):
     if "all" in expect:
         return " + ".join(describe_option(o) for o in expect["all"])
+    if "some" in expect:
+        return "any call: " + " or ".join(describe_option(o) for o in expect["some"])
     return " or ".join(describe_option(o) for o in expect["any"])
 
 
-def score_reply(expect, calls):
-    """Score one reply's tool calls. Returns `(passed, reason)`."""
+def score_reply(expect, calls, text=""):
+    """Score one reply's tool calls and text. Returns `(passed, reason)`."""
+    options = expect.get("any") or expect.get("some") or expect.get("all") or []
     if not calls:
+        answers = [o for o in options if "answer" in o]
+        if any(match_answer(o, text) for o in answers):
+            return True, "ok (answered from the snapshot)"
+        if answers:
+            return False, "answered in text without the expected figure"
         return False, "no tool call (answered in text)"
+    if "some" in expect:
+        if any(match_call(o, c) for o in options for c in calls):
+            return True, "ok"
+        names = {c["name"] for c in calls}
+        if any(o.get("tool") in names for o in options):
+            return False, "right tool, wrong input"
+        return False, "wrong tool"
     if "all" in expect:
         unused = list(calls)
         missing = []
@@ -116,7 +154,7 @@ def score_reply(expect, calls):
     first = calls[0]
     if any(match_call(option, first) for option in expect["any"]):
         return True, "ok"
-    if any(option["tool"] == first["name"] for option in expect["any"]):
+    if any(option.get("tool") == first["name"] for option in expect["any"]):
         return False, "right tool, wrong input"
     return False, "wrong tool"
 

@@ -12,6 +12,7 @@ backend/ai-coach/:
     python evals/run_eval.py                    # production advisor model
     python evals/run_eval.py --model sonnet-4.6
     python evals/run_eval.py --dry-run          # print the requests, no calls
+    python evals/run_eval.py --set tuning       # leave the held-out set out
 """
 
 import argparse
@@ -108,7 +109,7 @@ def run_question(q, *, call, lf, model_id, snapshot, tools):
     reply = call(build_body(lf, model_id, snapshot, tools, messages))
     content = lf._without_thinking(reply.get("content") or [])
     calls = scoring.tool_calls(content)
-    passed, reason = scoring.score_reply(q["expect"], calls)
+    passed, reason = scoring.score_reply(q["expect"], calls, scoring.reply_text(content))
     got = "; ".join(scoring.describe_call(c) for c in calls) or "(text only)"
     expected = scoring.describe_expect(q["expect"])
 
@@ -119,8 +120,10 @@ def run_question(q, *, call, lf, model_id, snapshot, tools):
             {"role": "user", "content_blocks": _tool_results(calls, then["tool_result"])},
         ]
         reply = call(build_body(lf, model_id, snapshot, tools, messages))
-        calls = scoring.tool_calls(lf._without_thinking(reply.get("content") or []))
-        passed, reason = scoring.score_reply(then["expect"], calls)
+        content = lf._without_thinking(reply.get("content") or [])
+        calls = scoring.tool_calls(content)
+        passed, reason = scoring.score_reply(then["expect"], calls,
+                                             scoring.reply_text(content))
         got += " → " + ("; ".join(scoring.describe_call(c) for c in calls) or "(text only)")
         if not passed:
             reason = "second step: " + reason
@@ -156,6 +159,10 @@ def main(argv=None):
     parser.add_argument("--region", default="ap-southeast-1")
     parser.add_argument("--only", nargs="*", metavar="ID",
                         help="run only these question ids")
+    parser.add_argument("--set", choices=["tuning", "holdout", "all"], default="all",
+                        help="tuning: the questions used to tune the prompt; "
+                             "holdout: the held-out questions; all: both, "
+                             "reported apart (default)")
     parser.add_argument("--threshold", type=float,
                         help="pass rate needed (default: questions.json)")
     parser.add_argument("--dry-run", action="store_true",
@@ -166,9 +173,13 @@ def main(argv=None):
 
     model_id = MODEL_ALIASES.get(args.model, args.model)
     spec = _load("questions.json")
-    questions = spec["questions"]
+    sets = {"tuning": spec["questions"], "holdout": spec.get("holdout", [])}
+    if args.set != "all":
+        sets = {args.set: sets[args.set]}
     if args.only:
-        questions = [q for q in questions if q["id"] in set(args.only)]
+        sets = {k: [q for q in qs if q["id"] in set(args.only)] for k, qs in sets.items()}
+    sets = {k: qs for k, qs in sets.items() if qs}
+    questions = [q for qs in sets.values() for q in qs]
     threshold = args.threshold if args.threshold is not None else spec["threshold"]
     snapshot, tools = _load("snapshot.json"), _load("tools.json")
     lf = _lambda_module(model_id)
@@ -191,12 +202,12 @@ def main(argv=None):
         usage.add(reply.get("usage") or {})
         return reply
 
-    results = []
+    results = {k: [] for k in sets}
     started = time.monotonic()
-    for q in questions:
+    for name, q in ((k, q) for k, qs in sets.items() for q in qs):
         try:
-            results.append(run_question(q, call=call, lf=lf, model_id=model_id,
-                                        snapshot=snapshot, tools=tools))
+            results[name].append(run_question(q, call=call, lf=lf, model_id=model_id,
+                                              snapshot=snapshot, tools=tools))
         except ClientError as e:
             code = e.response.get("Error", {}).get("Code", "")
             print(f"Bedrock refused the call ({code}): {e}", file=sys.stderr)
@@ -204,15 +215,19 @@ def main(argv=None):
                   f"in {args.region}. The eval changes nothing in AWS.",
                   file=sys.stderr)
             return 2
-        print(f"{'pass' if results[-1]['passed'] else 'FAIL'}  {q['id']}",
+        print(f"{'pass' if results[name][-1]['passed'] else 'FAIL'}  {q['id']}",
               file=sys.stderr)
 
-    rate = scoring.pass_rate(results)
-    passed = sum(r["passed"] for r in results)
-    print(f"Model: `{model_id}`\n")
-    print(scoring.format_table(results))
-    print(f"\nPass rate: {passed}/{len(results)} = {rate:.0%} "
-          f"(threshold {threshold:.0%}) — {'PASS' if rate >= threshold else 'FAIL'}")
+    print(f"Model: `{model_id}`")
+    titles = {"tuning": "Tuning questions", "holdout": "Held-out questions"}
+    rates = {}
+    for name, rows in results.items():
+        rates[name] = rate = scoring.pass_rate(rows)
+        passed = sum(r["passed"] for r in rows)
+        print(f"\n**{titles[name]}**\n")
+        print(scoring.format_table(rows))
+        print(f"\nPass rate: {passed}/{len(rows)} = {rate:.0%} "
+              f"(threshold {threshold:.0%}) — {'PASS' if rate >= threshold else 'FAIL'}")
     cost = usage.cost(model_id)
     t = usage.tokens
     print(f"Tokens: {t['input_tokens']} in, {t['output_tokens']} out, "
@@ -220,6 +235,8 @@ def main(argv=None):
           f"{t['cache_read_input_tokens']} cache read"
           + (f" — about ${cost:.2f}" if cost is not None else "")
           + f"; {time.monotonic() - started:.0f}s")
+    # The tuning set decides the exit code; the held-out set only when run alone.
+    rate = rates.get("tuning", rates.get("holdout", 0.0))
     return 0 if rate >= threshold else 1
 
 
