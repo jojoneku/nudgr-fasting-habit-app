@@ -15,6 +15,8 @@ Run from backend/ai-coach/:
 
 import copy
 
+import pytest
+
 import lambda_function as lf
 
 # Bedrock rejects a request with more than this many cache_control markers.
@@ -125,6 +127,67 @@ def test_no_profile_leaves_the_rules_block_alone():
 
     assert system == [{"type": "text", "text": lf._ADVISOR_SYSTEM_PREFIX,
                        "cache_control": {"type": "ephemeral"}}]
+
+
+_TODAY = "TODAY: Thursday, 15 Oct 2026 (2026-10-15). This is the real current date."
+
+
+def test_the_today_line_moves_to_the_system_ahead_of_the_profile():
+    request = _build(_payload(summary=_TODAY + "\nCash: P1,000"))
+    system = request["system"][1]["text"]
+    briefing = request["messages"][-1]["content"][-1]["text"]
+
+    assert system.startswith(_TODAY + "\nCALENDAR")
+    assert system.index("CALENDAR") < system.index("Paid on the 15th.")
+    assert "TODAY:" not in briefing
+    assert "Cash: P1,000" in briefing
+
+
+def test_the_today_line_alone_still_makes_a_second_system_block():
+    system = _build(_payload(summary=_TODAY + "\nCash: P1,000", profile=""))["system"]
+
+    assert len(system) == 2
+    assert system[1]["text"].startswith(_TODAY)
+    assert system[1]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_a_ledger_edit_on_the_same_day_leaves_the_system_byte_identical():
+    before = _build(_payload(summary=_TODAY + "\nCash: P1,000"))
+    after = _build(_payload(summary=_TODAY + "\nCash: P1,250"))
+
+    assert before["system"] == after["system"]
+
+
+def test_a_snapshot_without_a_today_line_stays_whole():
+    request = _build(_payload(summary="Cash: P1,000\nTODAY: not first"))
+
+    assert "TODAY: not first" in request["messages"][-1]["content"][-1]["text"]
+
+
+@pytest.mark.parametrize("today, expected", [
+    ("2026-10-15", ["this month = Oct 2026 (2026-10-01 to 2026-10-15)",
+                    "last month = Sep 2026 (2026-09-01 to 2026-09-30)",
+                    "this quarter = Q4 2026 (2026-10-01 to 2026-10-15)",
+                    "last quarter = Q3 2026 (2026-07-01 to 2026-09-30)",
+                    "this year = 2026 (2026-01-01 to 2026-10-15)"]),
+    # Year boundaries, and a leap-year February.
+    ("2026-01-05", ["last month = Dec 2025 (2025-12-01 to 2025-12-31)",
+                    "this quarter = Q1 2026 (2026-01-01 to 2026-01-05)",
+                    "last quarter = Q4 2025 (2025-10-01 to 2025-12-31)"]),
+    ("2024-03-01", ["last month = Feb 2024 (2024-02-01 to 2024-02-29)"]),
+    ("2026-03-01", ["last month = Feb 2026 (2026-02-01 to 2026-02-28)"]),
+    ("2026-07-31", ["this quarter = Q3 2026 (2026-07-01 to 2026-07-31)",
+                    "last quarter = Q2 2026 (2026-04-01 to 2026-06-30)"]),
+])
+def test_the_calendar_line_states_each_named_period(today, expected):
+    line = lf._calendar_periods(f"TODAY: x ({today}).")
+
+    for period in expected:
+        assert period in line
+
+
+def test_a_today_line_with_no_iso_date_gets_no_calendar():
+    assert lf._calendar_periods("TODAY: sometime") == "TODAY: sometime"
 
 
 def test_the_briefing_closes_the_newest_user_turn_with_no_breakpoint():

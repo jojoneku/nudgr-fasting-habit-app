@@ -209,7 +209,10 @@ def test_the_request_is_the_lambdas(ctx):
                                [{"role": "user", "text": "Hi"}])
     assert body["system"][0]["text"] == ctx["lf"]._ADVISOR_SYSTEM_PREFIX
     question, briefing = body["messages"][0]["content"]
-    assert ctx["snapshot"]["summary"] in briefing["text"]
+    # The TODAY line moves to the system; the rest of the snapshot stays.
+    today, rest = ctx["snapshot"]["summary"].split("\n", 1)
+    assert body["system"][1]["text"].startswith(today)
+    assert rest.strip() in briefing["text"]
     assert ctx["snapshot"]["historical"] in briefing["text"]
     assert body["tools"] == ctx["tools"]
     assert question == {"type": "text", "text": "Hi"}
