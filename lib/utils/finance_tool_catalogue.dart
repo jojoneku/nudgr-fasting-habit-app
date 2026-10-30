@@ -648,6 +648,49 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'markBillUnpaid',
+    kind: AiToolKind.update,
+    description:
+        'Undo a bill payment: the bill goes back to unpaid, and the ledger '
+        'entry the payment made is deleted, so the money returns to the '
+        'account it left. Use when the user says a bill was marked paid by '
+        'mistake or is not paid yet. Call ONLY after find (entity bill) '
+        'returns the id of a PAID bill. The user approves on the review list '
+        'before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding find result.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markReceivableNotReceived',
+    kind: AiToolKind.update,
+    description:
+        'Undo a receipt: the receivable goes back to still owed, and the '
+        'ledger income entry it made is deleted, so the money leaves the '
+        'account it went into. Use when the user says money was marked '
+        'received by mistake or has not arrived. Call ONLY after find '
+        '(entity receivable) returns the id of a RECEIVED receivable. The '
+        'user approves on the review list before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding find result.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'fundSetAside',
     kind: AiToolKind.update,
     description:

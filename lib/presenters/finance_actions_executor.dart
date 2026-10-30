@@ -785,7 +785,11 @@ class FinanceActionsExecutor extends ChangeNotifier
     }
     return (
       action: described.withReview(
-        tier: _tierFor(call.name),
+        // A row that deletes something (an undo that takes its ledger entry
+        // with it) is T3 whatever its tool's kind.
+        tier: described.isDestructive
+            ? ProposalTier.destructive
+            : _tierFor(call.name),
         editable: _editableFor(call.name),
       ),
       error: null,
@@ -1060,6 +1064,53 @@ class FinanceActionsExecutor extends ChangeNotifier
             (label: 'Amount', value: _peso(s.amount)),
             if (s.account case final a?) (label: 'Deposit into', value: a.name),
             (label: 'Date received', value: _day(s.date)),
+          ],
+        );
+      case 'markBillUnpaid':
+        final bill =
+            _bills.allBills.where((b) => b.id == _str(i['id'])).firstOrNull;
+        if (bill == null) return null;
+        final gone = _undoneEntries(_bills.billLedgerEntries(bill));
+        final paid = bill.paidAmount ?? bill.amount;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Mark bill unpaid: ${bill.name} (${_peso(paid)})',
+          isRecurring: false,
+          confirmLabel: 'Mark Unpaid',
+          isDestructive: gone.isNotEmpty,
+          details: [
+            (label: 'Bill', value: bill.name),
+            (
+              label: 'Status',
+              value: 'Paid ${_peso(paid)}'
+                  '${bill.paidDate == null ? '' : ' on ${_day(bill.paidDate!)}'}'
+                  ' → Unpaid',
+            ),
+            ..._undoRows(gone),
+          ],
+        );
+      case 'markReceivableNotReceived':
+        final rec = _bills.allReceivables
+            .where((r) => r.id == _str(i['id']))
+            .firstOrNull;
+        if (rec == null) return null;
+        final gone = _undoneEntries(_bills.receivableLedgerEntries(rec));
+        final got = rec.receivedAmount ?? rec.amount;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Mark not received: ${rec.name} (${_peso(got)})',
+          isRecurring: false,
+          confirmLabel: 'Mark Not Received',
+          isDestructive: gone.isNotEmpty,
+          details: [
+            (label: 'Receivable', value: rec.name),
+            (
+              label: 'Status',
+              value: 'Received ${_peso(got)}'
+                  '${rec.receivedDate == null ? '' : ' on ${_day(rec.receivedDate!)}'}'
+                  ' → Not received',
+            ),
+            ..._undoRows(gone),
           ],
         );
       case 'editBill':
@@ -1581,6 +1632,29 @@ class FinanceActionsExecutor extends ChangeNotifier
         return 'Marked receivable "${s.name}" as received (${_peso(s.amount)}'
             '${record ? ' into ${s.account!.name}' : ', already in the ledger, so no new entry'}).';
 
+      case 'markBillUnpaid':
+        final id = _str(i['id']);
+        final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
+        if (bill == null) throw StateError('Bill "$id" not found');
+        final gone = _undoneEntries(_bills.billLedgerEntries(bill));
+        // The Bills tab's own undo, with its default: the ledger entry goes
+        // too, which is what makes the undo stick.
+        await _bills.markBillUnpaid(id);
+        final after = _bills.allBills.where((b) => b.id == id).firstOrNull;
+        final stillPaid = after?.isPaid ?? false;
+        return 'Marked bill "${bill.name}" unpaid${_undoneSummary(gone)}.'
+            '${stillPaid ? ' It still reads as paid: payments to the card in '
+                'the ledger cover it.' : ''}';
+
+      case 'markReceivableNotReceived':
+        final id = _str(i['id']);
+        final rec = _bills.allReceivables.where((r) => r.id == id).firstOrNull;
+        if (rec == null) throw StateError('Receivable "$id" not found');
+        final gone = _undoneEntries(_bills.receivableLedgerEntries(rec));
+        await _bills.markReceivableUnreceived(id);
+        return 'Marked receivable "${rec.name}" not received'
+            '${_undoneSummary(gone)}.';
+
       case 'editBill':
         final id = _str(i['id']);
         final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
@@ -1952,6 +2026,44 @@ class FinanceActionsExecutor extends ChangeNotifier
     return DateTime(d.year, d.month, d.day);
   }
 
+  // ── Undoing a settlement ──────────────────────────────────────────────────
+
+  /// Every ledger record an undo deletes: the settlement's own entries and
+  /// the other leg of any transfer among them, since
+  /// [LedgerPresenter.deleteTransactionOrGroup] takes both legs.
+  List<TransactionRecord> _undoneEntries(List<TransactionRecord> entries) {
+    final groups = {
+      for (final t in entries)
+        if (t.transferGroupId != null) t.transferGroupId
+    };
+    final gone = {for (final t in entries) t.id: t};
+    for (final t in _ledger?.allTransactions ?? const <TransactionRecord>[]) {
+      if (groups.contains(t.transferGroupId)) gone[t.id] = t;
+    }
+    return gone.values.toList();
+  }
+
+  /// The row's lines for what an undo deletes from the ledger.
+  List<({String label, String value})> _undoRows(
+          List<TransactionRecord> gone) =>
+      gone.isEmpty
+          ? const [
+              (
+                label: 'Ledger',
+                value: 'No ledger entry to delete; balances stay as they are',
+              ),
+            ]
+          : [for (final t in gone) (label: 'Deletes', value: _entryLabel(t))];
+
+  String _entryLabel(TransactionRecord t) =>
+      '"${t.description}" ${_peso(t.amount)} '
+      '${t.type == TransactionType.inflow ? 'into' : 'out of'} '
+      '${_accountName(t.accountId)}, ${_day(t.date)}';
+
+  String _undoneSummary(List<TransactionRecord> gone) => gone.isEmpty
+      ? '; no ledger entry was deleted'
+      : '; deleted from the ledger: ${gone.map(_entryLabel).join('; ')}';
+
   // ── Delete warnings ───────────────────────────────────────────────────────
 
   /// What else goes when transaction [t] is deleted, named on the card:
@@ -2122,6 +2234,21 @@ class FinanceActionsExecutor extends ChangeNotifier
         return check('account', active, 'active') ??
             _settlementProblem(
                 _receivableSettlement(i)!, 'deposited into', active);
+      case 'markBillUnpaid':
+        final bill = _bills.allBills.firstWhere((b) => b.id == _str(i['id']));
+        if (!_bills.billHasPayment(bill)) {
+          return 'The bill "${bill.name}" is not paid, so there is no payment '
+              'to undo. Nothing to change — tell the user.';
+        }
+        return null;
+      case 'markReceivableNotReceived':
+        final rec =
+            _bills.allReceivables.firstWhere((r) => r.id == _str(i['id']));
+        if (!rec.isReceived) {
+          return 'The receivable "${rec.name}" is not marked received, so '
+              'there is nothing to undo. Nothing to change — tell the user.';
+        }
+        return null;
       case 'editBill':
         return _categoryProblem(i);
       case 'editReceivable':
@@ -2169,12 +2296,16 @@ class FinanceActionsExecutor extends ChangeNotifier
   String? _unknownIdProblem(AiToolCall call) {
     final id = _str(call.input['id']);
     final (String kind, String finder, bool exists) = switch (call.name) {
-      'markBillPaid' || 'editBill' || 'deleteBill' => (
+      'markBillPaid' || 'markBillUnpaid' || 'editBill' || 'deleteBill' => (
           'bill',
           'find (entity bill)',
           _bills.allBills.any((b) => b.id == id),
         ),
-      'markReceivableReceived' || 'editReceivable' || 'deleteReceivable' => (
+      'markReceivableReceived' ||
+      'markReceivableNotReceived' ||
+      'editReceivable' ||
+      'deleteReceivable' =>
+        (
           'receivable',
           'find (entity receivable)',
           _bills.allReceivables.any((r) => r.id == id),
