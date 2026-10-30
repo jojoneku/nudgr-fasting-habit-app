@@ -1,6 +1,6 @@
 # Nudgy tool-choice eval (Plan 065 phase 2)
 
-This eval asks the advisor model 15 finance questions. For each question it checks which tool the model calls **first**. It does not run the tools and it does not grade the answer text. The Dart tests check what each tool returns. This eval checks that the model picks the right tool.
+This eval asks the advisor model 15 tuning questions and 5 held-out questions about finance. For each question it checks which tool the model calls **first**. It does not run the tools. It reads the answer text only when the snapshot states the exact figure, so an answer without a tool is correct (see Scoring). The Dart tests check what each tool returns. This eval checks that the model picks the right tool.
 
 The eval is not part of CI and it is not in the Lambda package. CI zips only `lambda_function.py`, `app.py` and `run.sh`.
 
@@ -8,7 +8,7 @@ The eval is not part of CI and it is not in the Lambda package. CI zips only `la
 
 | File | What it is |
 |---|---|
-| `questions.json` | The 15 questions, the acceptable first tool calls, and the pass threshold (80%). |
+| `questions.json` | The 15 tuning questions (`questions`), the 5 held-out questions (`holdout`), the acceptable first tool calls, and the pass threshold (80%). |
 | `tools.json` | `financeToolsRequestJson()`: the tool catalogue the app sends. Generated. |
 | `snapshot.json` | The `context` the app sends (`summary` + `historical`) for a fixed, made-up user on 2026-10-15. Generated. No real user data. |
 | `run_eval.py` | The runner. It calls Bedrock and prints a Markdown table. |
@@ -46,21 +46,27 @@ python evals/run_eval.py --dry-run
 | `--model` | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` (production) | A model or inference profile id, or `sonnet-4.5` / `sonnet-4.6`. |
 | `--profile` | `ifast-dev` | AWS profile. |
 | `--region` | `ap-southeast-1` | Bedrock region. |
+| `--set` | `all` | `tuning`, `holdout` or `all`. With `all`, each set gets its own table and pass rate. |
 | `--only ID ...` | all | Run only these question ids. |
 | `--threshold` | `0.8` (from `questions.json`) | Pass rate needed. |
 | `--dry-run` | off | Print every request and make no calls. |
 
-The progress goes to stderr. The table, the pass rate and the token count go to stdout, so `> result.md` gives a file to paste into a PR. The exit code is 0 at or above the threshold, 1 below it, and 2 when Bedrock refuses the call (for example, no access).
+The progress goes to stderr. The table, the pass rate and the token count go to stdout, so `> result.md` gives a file to paste into a PR. The exit code is 0 when the tuning set is at or above the threshold (the held-out set when it runs alone), 1 below it, and 2 when Bedrock refuses the call (for example, no access).
 
 The request is built by the Lambda's own `_build_advisor_request` and `_generation_params`, with the Lambda's `max_tokens`, so the eval sends what production sends. The model is called with the default temperature, as in production, so two runs can differ by a question or two.
 
 ## Scoring
 
 - `any`: the **first** `tool_use` of the reply must match one of the options. A correct tool in second place does not count.
+- `some`: a `tool_use` in **any** position of the reply must match one of the options. Use it only for a two-part question, where the calls of one reply run together and their order changes nothing.
 - `all`: the reply must hold a `tool_use` for every option. This is the batch check: 2 writes in one message must come back in one reply.
 - `then`: a canned `tool_result` goes back for every call of the first reply, and the next reply is scored. This is how "delete my gym bill" checks `find`, then `deleteBill` with the id from the result.
 
-An option names the tool and the inputs that matter. An input spec is a literal (strings ignore case), `{"contains": s}`, `{"prefix": s}` or `{"any_of": [...]}`. An input that the option does not name can have any value.
+An option names the tool and the inputs that matter. An option can instead be `{"answer": [text, ...]}`: the reply makes no tool call, and its text holds every listed text. Use it only when the snapshot states the exact figure under the name the user uses. An input spec is a literal (strings ignore case), `{"contains": s}`, `{"prefix": s}` or `{"any_of": [...]}`. An input that the option does not name can have any value.
+
+## Held-out questions
+
+The `holdout` questions check that a prompt change did not over-fit to the tuning questions. Do not change the prompt or a tool description because of a held-out result. When you tune, run `--set tuning`, and run `--set all` only at the end. When a held-out question has served for tuning, move it to `questions` and write a new held-out question.
 
 ## Cost
 
