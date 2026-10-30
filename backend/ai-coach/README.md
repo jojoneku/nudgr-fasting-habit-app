@@ -43,6 +43,28 @@ The model IDs are env vars on the live function (`BEDROCK_MODEL_ID`, `ADVISOR_MO
 3. Set the env var with `aws lambda update-function-configuration --profile ifast-dev --region ap-southeast-1` (the `ifast-dev` profile is the account that runs `food-coach-handler`). **That call replaces the whole environment map** — read the current one first and put every key back.
 4. Watch the CloudWatch `cost_line` entries and the `Bedrock error` lines for an hour.
 
+## Haiku routing (Plan 065, phase 5) — OFF by default
+
+The app picks a route for each Nudgy conversation when its first message is sent, and sends it as `route` (`haiku` or `sonnet`) on every request of that conversation. Only a lookup goes to `haiku`: no planning word, no write or advice word, no image (`lib/utils/advisor_routing.dart`). The app moves a conversation from `haiku` to `sonnet` for good when Haiku reaches the hop ceiling, calls an unknown tool, or sends a tool input that breaks the tool's schema. It never moves back, because each model writes its own prompt cache of the history. One escalation costs one cache write on Sonnet.
+
+The Lambda honours the route only while the flag is on:
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `ADVISOR_HAIKU_ROUTING` | unset (off) | `true` runs `route: "haiku"` requests on the route model. Off, every advisor request runs on `ADVISOR_MODEL_ID` with the same request as before. |
+| `ADVISOR_ROUTE_MODEL_ID` | `global.anthropic.claude-haiku-4-5-20251001-v1:0` | The route model. Set it to the Haiku 5.5 profile when the account has quota; `_generation_params` then turns thinking off for it. |
+
+Any other route value, or none, runs on `ADVISOR_MODEL_ID`. Each `cost_line` ends with `route=` (what the app asked for: `haiku`, `sonnet`, `-` or `other`) and `model=` (the model that ran).
+
+Haiku 4.5 caches only a prefix of 4,096 tokens or more. The tools + rules prefix is larger than that, so it caches on Haiku too.
+
+To turn it on (only with the developer's approval):
+
+1. Run the eval on the route model first: `python evals/run_eval.py --model haiku-4.5`. It must pass the 80% threshold.
+2. Grant both advisor functions `bedrock:InvokeModel` on the route model's global profile and foundation model, as in "Switching models".
+3. Set `ADVISOR_HAIKU_ROUTING=true` on **both** `food-advisor-stream` and `food-coach-handler` (the buffered fallback). `update-function-configuration` replaces the whole environment map, so read the current one first and put every key back.
+4. Watch `cost_line ... route=haiku model=...haiku...` for an hour. To roll back, remove `ADVISOR_HAIKU_ROUTING` (same care with the map).
+
 ## Prompt cache TTL (`ADVISOR_CACHE_TTL_1H`)
 
 The advisor's cache breakpoints all live 5 minutes by default. `ADVISOR_CACHE_TTL_1H=true` gives the first breakpoint (tool catalogue + rules, about 9k tokens) a 1-hour TTL. The profile and history breakpoints stay on 5 minutes, because Bedrock requires the longer TTL to come before the shorter ones. **It is off, and nothing sets it**: not `template.yaml`, not CI, not the live functions.

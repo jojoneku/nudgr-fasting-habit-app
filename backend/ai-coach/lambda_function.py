@@ -16,6 +16,15 @@ _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 # The financial advisor (op=adviseFinance) reasons better on a stronger model.
 # Falls back to the base model when unset so the op still works pre-config.
 _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
+# Haiku routing (Plan 065, phase 5). OFF by default: with the flag off, every
+# advisor request runs on _ADVISOR_MODEL_ID exactly as before, whatever `route`
+# the client sends. See _advisor_model_id and the README to turn it on.
+_ADVISOR_HAIKU_ROUTING = os.environ.get(
+    "ADVISOR_HAIKU_ROUTING", "").lower() in ("1", "true", "yes")
+# The model a `route: "haiku"` conversation runs on. A setting, so Haiku 5.5
+# can replace Haiku 4.5 by config once the account has quota for it.
+_ADVISOR_ROUTE_MODEL_ID = os.environ.get(
+    "ADVISOR_ROUTE_MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 # Effort for models that take one (see _generation_params). Every Haiku-tier op
 # is short extraction or a 2-3 sentence chat reply, which is what `low` is for.
 _EFFORT = os.environ.get("BEDROCK_EFFORT", "low")
@@ -1972,6 +1981,7 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         f"calls={len(calls)} "
         f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
         + _trace_fields(request=request, calls=calls, payload=payload)
+        + f" route={_advisor_route(payload)} model={_advisor_model_id(payload)}"
         + f" cost_usd={'-' if cost is None else f'{cost:.6f}'}"
     )
     print(line)
@@ -2069,6 +2079,8 @@ def _failed_invocation_log(*, payload, latency_ms, error, user_id, stream):
         "hop": "cont" if _carries_tool_results({"payload": payload}) else "first",
         "trace": None if _trace_id(payload) == "-" else _trace_id(payload),
         "hops": len(_tool_results_by_turn(payload)),
+        "route": None if _advisor_route(payload) == "-" else _advisor_route(payload),
+        "model": _advisor_model_id(payload),
     }, user_id=user_id, stream=stream, error=error)
 
 
@@ -2142,6 +2154,46 @@ def _split_reply(content):
     return text, tool_calls
 
 
+# -- Haiku routing (Plan 065, phase 5) -----------------------------------------
+#
+# The client picks a route ONCE per conversation, when its first advisor
+# message is sent, and sends the same `route` on every request of that
+# conversation: "haiku" for a lookup-only conversation, "sonnet" for anything
+# else. Per conversation, not per turn: each model writes its own prompt cache,
+# so a route that changed turn by turn would pay for two caches of the same
+# history. The client can escalate a conversation from haiku to sonnet (never
+# back); that costs one cache rewrite of the history on Sonnet.
+#
+# Haiku 4.5 caches only a prefix of 4,096 tokens or more. The tools + rules
+# prefix (breakpoint 1) is well over that, so it caches; a breakpoint that
+# closes a shorter prefix is simply not cached, which is not an error.
+# _generation_params gives Haiku 4.5 no extra fields, and Haiku 5.5 thinking
+# off, so ADVISOR_ROUTE_MODEL_ID can move to 5.5 with no code change.
+
+def _advisor_route(payload):
+    """The route the client asked for, as a cost_line value.
+
+    Only the known values are echoed; anything else is `other`, so a client
+    string never reaches the log.
+    """
+    route = payload.get("route")
+    if route is None:
+        return "-"
+    return route if route in ("haiku", "sonnet") else "other"
+
+
+def _advisor_model_id(payload):
+    """The model this advisor request runs on.
+
+    Flag off: always _ADVISOR_MODEL_ID. Flag on: the route model for
+    `route: "haiku"`, and _ADVISOR_MODEL_ID for every other value, a missing
+    one included, so an old app or an unknown route gets the stronger model.
+    """
+    if _ADVISOR_HAIKU_ROUTING and payload.get("route") == "haiku":
+        return _ADVISOR_ROUTE_MODEL_ID
+    return _ADVISOR_MODEL_ID
+
+
 def _without_ttl(body):
     """`body` with every breakpoint back on the 5-minute default."""
     body = copy.deepcopy(body)
@@ -2151,8 +2203,10 @@ def _without_ttl(body):
     return body
 
 
-def _invoke_advisor(invoke, body):
-    """Call `invoke` (a Bedrock invoke method) with `body` as JSON.
+def _invoke_advisor(invoke, body, model_id=None):
+    """Call `invoke` (a Bedrock invoke method) on `model_id` with `body` as JSON.
+
+    `model_id` defaults to _ADVISOR_MODEL_ID; a routed call passes its own.
 
     When the 1-hour TTL is on and Bedrock rejects the request as invalid, the
     call is made once more with every breakpoint on 5 minutes. If that one
@@ -2160,7 +2214,8 @@ def _invoke_advisor(invoke, body):
     for this container. If it fails too, its error is the real one.
     """
     global _ttl_1h_rejected
-    kwargs = {"modelId": _ADVISOR_MODEL_ID, "contentType": "application/json",
+    model_id = model_id or _ADVISOR_MODEL_ID
+    kwargs = {"modelId": model_id, "contentType": "application/json",
               "accept": "application/json"}
     uses_ttl = any(
         isinstance(b, dict) and (b.get("cache_control") or {}).get("ttl")
@@ -2174,7 +2229,7 @@ def _invoke_advisor(invoke, body):
         result = invoke(body=json.dumps(_without_ttl(body)), **kwargs)
         _ttl_1h_rejected = True
         print("WARNING advisor_cache_ttl_1h rejected by "
-              f"{_ADVISOR_MODEL_ID}; using 5 minutes for this container: {e}")
+              f"{model_id}; using 5 minutes for this container: {e}")
         return result
 
 
@@ -2190,6 +2245,7 @@ def _advise_finance(payload, user_id=None, usage_count=None):
         return err
 
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     try:
         raw = _invoke_advisor(_bedrock.invoke_model, {
@@ -2198,8 +2254,8 @@ def _advise_finance(payload, user_id=None, usage_count=None):
             "system": request["system"],
             "messages": request["messages"],
             **({"tools": tools} if tools else {}),
-            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-        })
+            **_generation_params(model_id, _ADVISOR_EFFORT),
+        }, model_id)
         result = json.loads(raw["body"].read())
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
@@ -2220,6 +2276,7 @@ def _advise_finance(payload, user_id=None, usage_count=None):
             request=request, usage=result.get("usage") or {},
             stop_reason=stop_reason, calls=tool_calls,
             payload=payload, latency_ms=elapsed_ms, user_id=user_id,
+            model_id=model_id,
         )
         return _resp(200, {
             "response": response_text,
@@ -2259,6 +2316,7 @@ def advise_finance_stream(payload, request, user_id=None, usage_count=None):
     200 body, so one AdvisorReply.fromJson parses both.
     """
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     ttft_ms = None
 
@@ -2278,8 +2336,8 @@ def advise_finance_stream(payload, request, user_id=None, usage_count=None):
             "system": request["system"],
             "messages": request["messages"],
             **({"tools": tools} if tools else {}),
-            **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
-        })
+            **_generation_params(model_id, _ADVISOR_EFFORT),
+        }, model_id)
 
         # A `thinking` block (Sonnet 5.5's notes between tool calls) is stored by
         # content_block_start like any other, its thinking_delta / signature_delta
@@ -2393,7 +2451,7 @@ def advise_finance_stream(payload, request, user_id=None, usage_count=None):
             payload=payload,
             latency_ms=int((time.monotonic() - started) * 1000),
             ttft_ms=ttft_ms if ttft_ms is not None else -1,
-            user_id=user_id,
+            user_id=user_id, model_id=model_id,
         )
         yield _frame({
             "type": "end",

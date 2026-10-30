@@ -94,6 +94,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) {
       final reply = script[i < script.length ? i : script.length - 1];
       i++;
@@ -119,6 +120,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: captureAnyNamed('tools'),
+        route: anyNamed('route'),
       )).captured.first as List<AiTool>;
 
   test('a turn needing no tool answers in one hop', () async {
@@ -318,6 +320,7 @@ void main() {
           profile: anyNamed('profile'),
           historical: anyNamed('historical'),
           tools: anyNamed('tools'),
+          route: anyNamed('route'),
         )).captured.cast<List<dynamic>>();
 
     test('is asked for again on a fresh hop, so the card appears', () async {

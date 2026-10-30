@@ -43,6 +43,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) {
       final i = calls[0];
       calls[0]++;

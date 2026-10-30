@@ -242,6 +242,7 @@ class OnDeviceAiCoachService implements AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   }) async* {
     // The 0.6B on-device model can't do reliable financial reasoning with the
     // anti-hallucination contract — the advisor is cloud-only. The presenter

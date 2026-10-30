@@ -104,6 +104,7 @@ class _NoOpAiCoach implements AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   }) =>
       advisorStreamOf(const AdvisorReply());
 

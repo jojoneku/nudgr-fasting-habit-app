@@ -97,6 +97,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
+      route: anyNamed('route'),
     )).thenAnswer((inv) {
       captured = inv.namedArguments[#context] as AiCoachContext;
       return advisorStreamOf(
@@ -130,6 +131,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
+      route: anyNamed('route'),
     )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'reply')));
 
     final p =
@@ -158,6 +160,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
+      route: anyNamed('route'),
     )).thenAnswer((_) => advisorStreamOf(const AdvisorReply(text: 'ok')));
 
     final p =
@@ -180,6 +183,7 @@ void main() {
       context: anyNamed('context'),
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
+      route: anyNamed('route'),
     )).thenAnswer(
         (_) => advisorStreamOf(const AdvisorReply(text: 'A receipt.')));
 
@@ -263,6 +267,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer((inv) {
         captured = inv.namedArguments[#context] as AiCoachContext;
         return advisorStreamOf(const AdvisorReply(text: 'Two bills.'));
@@ -290,6 +295,7 @@ void main() {
         context: anyNamed('context'),
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
+        route: anyNamed('route'),
       )).thenAnswer((inv) {
         seen.add(
             (inv.namedArguments[#context] as AiCoachContext).images.length);
