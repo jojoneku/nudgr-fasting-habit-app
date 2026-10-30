@@ -79,6 +79,40 @@ def test_no_tool_call_fails():
     assert scoring.score_reply(_ANY, []) == (False, "no tool call (answered in text)")
 
 
+_SOME = {"some": [{"tool": "getView", "input": {"view": "grocery"}}]}
+
+
+def test_some_accepts_the_match_in_any_position():
+    both = [_call("findTransactions", category="Groceries"), _call("getView", view="grocery")]
+    assert scoring.score_reply(_SOME, both) == (True, "ok")
+    assert scoring.score_reply(_SOME, [_call("getView", view="budget")]) == (
+        False, "right tool, wrong input")
+    assert scoring.score_reply(_SOME, [_call("findTransactions")]) == (False, "wrong tool")
+
+
+_ANSWER = {"any": [
+    {"answer": ["999", "22"]},
+    {"tool": "find", "input": {"entity": "bill"}},
+]}
+
+
+def test_an_answer_option_accepts_text_with_every_figure():
+    assert scoring.score_reply(_ANSWER, [], "Globe is ₱999, due Oct 22.") == (
+        True, "ok (answered from the snapshot)")
+    assert scoring.score_reply(_ANSWER, [], "Globe is ₱999.") == (
+        False, "answered in text without the expected figure")
+    # A tool call is still scored as a tool call.
+    assert scoring.score_reply(_ANSWER, [_call("find", entity="bill")], "x") == (True, "ok")
+    assert scoring.score_reply(_ANSWER, [_call("getView", view="bills")]) == (
+        False, "wrong tool")
+
+
+def test_reply_text_joins_the_text_blocks():
+    content = [{"type": "text", "text": "a"}, {"type": "tool_use", "name": "x"},
+               {"type": "text", "text": "b"}]
+    assert scoring.reply_text(content) == "a\nb"
+
+
 _ALL = {"all": [
     {"tool": "addBill", "input": {"amount": 1299}},
     {"tool": "addSetAside", "input": {"amount": 3000}},
@@ -127,13 +161,19 @@ def _fixture(name):
 
 
 def _options(expect):
-    return expect.get("any", []) + expect.get("all", [])
+    options = expect.get("any", []) + expect.get("some", []) + expect.get("all", [])
+    return [o for o in options if "tool" in o]
+
+
+def _all_questions():
+    spec = _fixture("questions.json")
+    return spec["questions"] + spec.get("holdout", [])
 
 
 def test_every_expected_tool_and_input_exists_in_the_catalogue():
     """A typo in questions.json would fail every run for the wrong reason."""
     tools = {t["name"]: t for t in _fixture("tools.json")}
-    for q in _fixture("questions.json")["questions"]:
+    for q in _all_questions():
         expects = [q["expect"]] + ([q["then"]["expect"]] if "then" in q else [])
         for option in (o for e in expects for o in _options(e)):
             assert option["tool"] in tools, (q["id"], option["tool"])
@@ -143,7 +183,7 @@ def test_every_expected_tool_and_input_exists_in_the_catalogue():
 
 
 def test_the_question_ids_are_unique():
-    ids = [q["id"] for q in _fixture("questions.json")["questions"]]
+    ids = [q["id"] for q in _all_questions()]
     assert len(ids) == len(set(ids))
 
 

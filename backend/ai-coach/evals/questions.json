@@ -1,5 +1,5 @@
 {
-  "_doc": "Plan 065 phase 2 tool-choice eval. Each question names the acceptable FIRST tool call. 'any': the first tool_use in the reply must match one option. 'all': the reply must hold a tool_use matching every option (a batch in one reply). 'then': a canned tool_result is sent back for every tool_use of the first reply, and the next reply is scored the same way. Input specs: a literal (strings compare case-insensitively), {\"contains\": s}, {\"prefix\": s}, {\"any_of\": [..]}. See README.md.",
+  "_doc": "Plan 065 phase 2 tool-choice eval. Each question names the acceptable FIRST tool call. 'any': the first tool_use in the reply must match one option. 'some': a tool_use in any position of the reply must match one option (a two-part question whose calls run together). An option {\"answer\": [text, ..]} accepts a reply with no tool call whose text holds every text: only where the snapshot states the exact figure. 'holdout' questions are never used to tune the prompt; they check that the tuning did not over-fit. 'all': the reply must hold a tool_use matching every option (a batch in one reply). 'then': a canned tool_result is sent back for every tool_use of the first reply, and the next reply is scored the same way. Input specs: a literal (strings compare case-insensitively), {\"contains\": s}, {\"prefix\": s}, {\"any_of\": [..]}. See README.md.",
   "threshold": 0.8,
   "questions": [
     {
@@ -24,6 +24,7 @@
       "question": "What's on my BPI statement from last month?",
       "expect": {"any": [
         {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}},
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "bpi"}}},
         {"tool": "getView", "input": {"view": "bills"}}
       ]}
     },
@@ -41,7 +42,9 @@
       "question": "When did I pay Meralco in August?",
       "expect": {"any": [
         {"tool": "find", "input": {"entity": "bill", "query": {"contains": "meralco"}, "month": "2026-08"}},
-        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "meralco aug"}}}
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "meralco aug"}}},
+        {"tool": "findTransactions", "input": {"query": {"contains": "meralco"}, "month": "2026-08"}},
+        {"tool": "findTransactions", "input": {"query": {"contains": "meralco"}, "from": {"prefix": "2026-08"}}}
       ]}
     },
     {
@@ -64,7 +67,7 @@
       "id": "grocery-eggs",
       "source": "audit 1.4 #8",
       "question": "When was my last grocery run, and what do eggs cost?",
-      "expect": {"any": [
+      "expect": {"some": [
         {"tool": "getView", "input": {"view": "grocery"}}
       ]}
     },
@@ -131,6 +134,51 @@
           {"tool": "deleteBill", "input": {"id": "bill-gym-2026-10"}}
         ]}
       }
+    }
+  ],
+  "holdout": [
+    {
+      "id": "maya-end-august",
+      "source": "held-out: a past balance of one account",
+      "question": "How much was in my Maya account at the end of August?",
+      "expect": {"any": [
+        {"tool": "getView", "input": {"view": "history", "month": "2026-08"}}
+      ]}
+    },
+    {
+      "id": "september-bills",
+      "source": "held-out: the line items behind a past total",
+      "question": "Which bills did I pay in September, and how much was each?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "bill", "month": "2026-09"}},
+        {"tool": "getView", "input": {"view": "bills", "month": "2026-09"}}
+      ]}
+    },
+    {
+      "id": "transport-last-quarter",
+      "source": "held-out: a sum over a calendar quarter",
+      "question": "How much did I spend on transport last quarter?",
+      "expect": {"any": [
+        {"tool": "queryFinance", "input": {"metric": "spend", "category": {"contains": "transport"}, "from": "2026-07-01"}}
+      ]}
+    },
+    {
+      "id": "air-purifier-left",
+      "source": "held-out: the snapshot states it exactly",
+      "question": "How much is left to pay on my air purifier plan?",
+      "expect": {"any": [
+        {"answer": ["3,600"]},
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "purifier"}}}
+      ]}
+    },
+    {
+      "id": "globe-due",
+      "source": "held-out: the snapshot states it exactly",
+      "question": "When is my Globe bill due, and how much is it?",
+      "expect": {"any": [
+        {"answer": ["999", "22"]},
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "globe"}}}
+      ]}
     }
   ]
 }
