@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +21,7 @@ import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../utils/finance_classifier_parser.dart';
+import 'advisor_telemetry.dart';
 import 'ai_coach_service.dart';
 import '../utils/finance_entry_extraction.dart';
 
@@ -45,7 +47,7 @@ String _unreachableMessage(String subject) => kIsWeb
 /// [tokenProvider] must return the current Supabase JWT (may be null when
 /// signed out). The API Gateway JWT authorizer rejects unauthenticated calls
 /// with 401, so all ops become no-ops when the token is absent.
-class CloudAiCoachService implements AiCoachService {
+class CloudAiCoachService implements AiCoachService, AdvisorTelemetry {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
 
   /// The streaming advisor's own endpoint — a Lambda Function URL, not a route
@@ -175,6 +177,58 @@ class CloudAiCoachService implements AiCoachService {
       return 'HTTP ${response.statusCode}: $body';
     } catch (e) {
       return 'error: $e';
+    }
+  }
+
+  // ── Client events (Plan 065, phase 5) ─────────────────────────────────────
+
+  /// Transport timeout for a client event. Short: nobody waits for it.
+  static const _eventTimeoutSeconds = 10;
+
+  /// The request body of one client event. Static so a test can check it
+  /// without a network.
+  static Map<String, Object?> eventBody(
+    String event, {
+    String? traceId,
+    Map<String, Object> fields = const {},
+  }) =>
+      {
+        'op': 'logEvent',
+        'payload': {
+          'event': event,
+          if (traceId != null) 'trace_id': traceId,
+          if (fields.isNotEmpty) 'fields': fields,
+        },
+      };
+
+  /// Sends one client event to the HTTP API (op=logEvent) and returns at
+  /// once. It does not count against the daily AI cap. A failure is printed
+  /// in debug builds and otherwise dropped: an event is never worth an error
+  /// on screen.
+  ///
+  /// Gated on transport only, like the advisor itself.
+  @override
+  void record(
+    String event, {
+    String? traceId,
+    Map<String, Object> fields = const {},
+  }) {
+    if (!_hasTransport) return;
+    final body = jsonEncode(eventBody(event, traceId: traceId, fields: fields));
+    unawaited(_postEvent(event, body));
+  }
+
+  Future<void> _postEvent(String event, String body) async {
+    try {
+      final response = await http
+          .post(Uri.parse(_endpoint), headers: _headers, body: body)
+          .timeout(const Duration(seconds: _eventTimeoutSeconds));
+      if (response.statusCode != 200) {
+        debugPrint('CloudAiCoachService[logEvent $event] '
+            'HTTP ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('CloudAiCoachService[logEvent $event] error: $e');
     }
   }
 

@@ -29,11 +29,13 @@ import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
+import '../services/advisor_telemetry.dart';
 import '../services/ai_coach_service.dart';
 import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
+import '../utils/advisor_client_events.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_format.dart';
 import '../utils/finance_tool_catalogue.dart';
@@ -110,6 +112,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// never propose a change nothing is able to carry out.
   final FinanceToolExecutor? _toolExecutor;
 
+  /// Where the advisor's client events go (Plan 065, phase 5). Null sends
+  /// none. Fire-and-forget: see [AdvisorTelemetry].
+  final AdvisorTelemetry? _telemetry;
+
+  /// The trace id of the user message the running advisor turn answers, for
+  /// the client events it sends. Null outside an advisor turn's lifetime.
+  String? _turnTraceId;
+
   /// The proposal surface a confirm card binds to, when the injected executor
   /// has one. Resolved here rather than type-tested inside a `build()`.
   /// The cast is explicit because [FinanceProposalHost] is deliberately not a
@@ -173,6 +183,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? cloudFallback,
     ImageCompressor? imageCompressor,
     FinanceToolExecutor? toolExecutor,
+    AdvisorTelemetry? telemetry,
     Duration retryHorizon = defaultRetryHorizon,
   })  : _retryHorizon = retryHorizon,
         _stats = stats,
@@ -186,6 +197,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _storage = storage,
         _cloudFallback = cloudFallback,
         _toolExecutor = toolExecutor,
+        _telemetry = telemetry,
         _imageCompressor = imageCompressor ?? const ImageCompressor(),
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
@@ -475,6 +487,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// catches the rest without sending every message to the model first.
   Future<void> askNudgyInstead() async {
     if (!canAskNudgyInstead) return;
+    // No trace yet: the message's advisor turn has not started.
+    _telemetry?.record(AdvisorClientEvent.askNudgyTapped);
     final text = _routedLogText!;
     _routedLogText = null;
     _ledger!.cancelChat();
@@ -730,6 +744,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _cancelHop?.call();
     _cancelHop = null;
     final proposals = financeProposals;
+    _logEvent(AdvisorClientEvent.stopPressed,
+        {'phase': proposals?.batch != null ? 'batch' : 'reply'});
     if (proposals?.batch != null) proposals!.decline();
     _advisorStatus = null;
     _advisorAttempt = 1;
@@ -789,6 +805,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// nothing to a later turn.
   Future<void> _runAdvisorTurn(AiCoachService cloud, AiCoachContext context,
       {List<AiChatMessage>? resumeFrom}) async {
+    _turnTraceId = context.traceId;
     final historical = context.financeHistoricalSummary();
     // A resumed turn carries on from the protocol transcript saved with its
     // batch, which already ends in that batch's results.
@@ -915,7 +932,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       _advisorStatus = null;
       safeNotify();
       _saveOpenBatch(transcript, writes);
+      _logEvent(AdvisorClientEvent.batchOpened, {'items': writes.length});
       final answers = await _proposeBatch(writes);
+      _logEvent(AdvisorClientEvent.batchAnswered, batchOutcomeCounts(answers));
       // A stop while the batch was open declines it, which is what completes
       // this await. The decline is not sent anywhere: no next hop starts.
       _clearOpenBatch();
@@ -995,6 +1014,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     storage.saveAdvisorOpenBatch({
       'conversationId': conversation,
       'savedAt': DateTime.now().toIso8601String(),
+      if (_turnTraceId != null) 'traceId': _turnTraceId,
       'transcript': [for (final m in transcript) m.toJson()],
       'calls': [
         for (final c in writes) {'id': c.id, 'name': c.name, 'input': c.input},
@@ -1039,6 +1059,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final stale = savedAt == null ||
         DateTime.now().difference(savedAt) > openBatchLifetime;
     final cloud = _advisorService;
+    final savedTrace = saved['traceId'];
+    _turnTraceId = savedTrace is String ? savedTrace : null;
 
     _messages.add(AiChatMessage.assistantStreaming());
     _isResponding = true;
@@ -1048,11 +1070,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     try {
       final List<AiToolResult> answers;
       if (stale || cloud == null || _toolExecutor == null) {
+        _logEvent(AdvisorClientEvent.batchResumed,
+            {'items': writes.length, 'outcome': 'not_reviewed'});
         answers = [for (final c in writes) _notReviewed(c.id)];
         _clearOpenBatch();
       } else {
         _saveOpenBatch(transcript, writes);
+        _logEvent(AdvisorClientEvent.batchResumed,
+            {'items': writes.length, 'outcome': 'shown'});
         answers = await _proposeBatch(writes);
+        _logEvent(
+            AdvisorClientEvent.batchAnswered, batchOutcomeCounts(answers));
         _clearOpenBatch();
       }
       if (_turnOver) return;
@@ -1080,6 +1108,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       safeNotify();
     }
   }
+
+  /// One client event for the running advisor turn's message.
+  void _logEvent(String event, Map<String, Object> fields) =>
+      _telemetry?.record(event, traceId: _turnTraceId, fields: fields);
 
   static AiToolResult _notReviewed(String id) => AiToolResult(
         toolUseId: id,
