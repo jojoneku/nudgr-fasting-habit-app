@@ -1,0 +1,136 @@
+{
+  "_doc": "Plan 065 phase 2 tool-choice eval. Each question names the acceptable FIRST tool call. 'any': the first tool_use in the reply must match one option. 'all': the reply must hold a tool_use matching every option (a batch in one reply). 'then': a canned tool_result is sent back for every tool_use of the first reply, and the next reply is scored the same way. Input specs: a literal (strings compare case-insensitively), {\"contains\": s}, {\"prefix\": s}, {\"any_of\": [..]}. See README.md.",
+  "threshold": 0.8,
+  "questions": [
+    {
+      "id": "budget-left",
+      "source": "audit 1.4 #1",
+      "question": "How much budget do I have left?",
+      "expect": {"any": [
+        {"tool": "getView", "input": {"view": {"any_of": ["budget", "dashboard"]}}}
+      ]}
+    },
+    {
+      "id": "cash-next-month",
+      "source": "audit 1.4 #2",
+      "question": "Where will my cash be at the end of next month?",
+      "expect": {"any": [
+        {"tool": "getView", "input": {"view": "dashboard"}}
+      ]}
+    },
+    {
+      "id": "bpi-statement",
+      "source": "audit 1.4 #3",
+      "question": "What's on my BPI statement from last month?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}},
+        {"tool": "getView", "input": {"view": "bills"}}
+      ]}
+    },
+    {
+      "id": "mark-paid-back",
+      "source": "audit 1.4 #4",
+      "question": "Did Mark pay me back?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "receivable", "query": {"contains": "mark"}}}
+      ]}
+    },
+    {
+      "id": "meralco-august",
+      "source": "audit 1.4 #5",
+      "question": "When did I pay Meralco in August?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "meralco"}, "month": "2026-08"}},
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "meralco aug"}}}
+      ]}
+    },
+    {
+      "id": "average-spend",
+      "source": "audit 1.4 #6",
+      "question": "What's my average monthly spending since I started?",
+      "expect": {"any": [
+        {"tool": "queryFinance", "input": {"metric": "spend", "average": true}}
+      ]}
+    },
+    {
+      "id": "gcash-june",
+      "source": "audit 1.4 #7",
+      "question": "What was my GCash balance at the end of June?",
+      "expect": {"any": [
+        {"tool": "getView", "input": {"view": "history", "month": "2026-06"}}
+      ]}
+    },
+    {
+      "id": "grocery-eggs",
+      "source": "audit 1.4 #8",
+      "question": "When was my last grocery run, and what do eggs cost?",
+      "expect": {"any": [
+        {"tool": "getView", "input": {"view": "grocery"}}
+      ]}
+    },
+    {
+      "id": "iphone-installment",
+      "source": "audit 1.4 #9",
+      "question": "When does my iPhone installment end, and how much interest am I paying in total?",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "installment", "query": {"contains": "iphone"}}}
+      ]}
+    },
+    {
+      "id": "expense-not-counted",
+      "source": "audit 1.4 #10",
+      "question": "Why isn't my ₱2,450 Landers expense from Oct 3 counted in my budget?",
+      "expect": {"any": [
+        {"tool": "findTransactions", "input": {"query": {"contains": "landers"}}}
+      ]}
+    },
+    {
+      "id": "top-categories-quarter",
+      "source": "queryFinance",
+      "question": "What are my top 5 spending categories this quarter?",
+      "expect": {"any": [
+        {"tool": "queryFinance", "input": {"metric": "spend", "groupBy": "category", "top": 5, "from": {"prefix": "2026-10"}}}
+      ]}
+    },
+    {
+      "id": "review-august",
+      "source": "findTransactions",
+      "question": "Can you review my August transactions?",
+      "expect": {"any": [
+        {"tool": "findTransactions", "input": {"month": "2026-08"}},
+        {"tool": "findTransactions", "input": {"from": {"prefix": "2026-08-01"}}}
+      ]}
+    },
+    {
+      "id": "afford-phone",
+      "source": "checkAffordability",
+      "question": "Can I afford a ₱20k phone?",
+      "expect": {"any": [
+        {"tool": "checkAffordability", "input": {"amount": 20000}}
+      ]}
+    },
+    {
+      "id": "batch-bill-setaside",
+      "source": "batch (phase 4)",
+      "question": "Add an internet bill for ₱1,299 due on the 20th, and set aside ₱3,000 for braces.",
+      "expect": {"all": [
+        {"tool": "addBill", "input": {"name": {"contains": "internet"}, "amount": 1299, "dueDay": 20}},
+        {"tool": "addSetAside", "input": {"name": {"contains": "braces"}, "amount": 3000}}
+      ]}
+    },
+    {
+      "id": "delete-gym-bill",
+      "source": "find then deleteBill",
+      "question": "Delete my gym bill.",
+      "expect": {"any": [
+        {"tool": "find", "input": {"entity": "bill", "query": {"contains": "gym"}}}
+      ]},
+      "then": {
+        "tool_result": "status: found\nentity: bill · month: 2026-10 · words: gym\nid: bill-gym-2026-10\nname: Gym membership\nmonth: 2026-10\namount billed: ₱2,500\ndue: day 5\ntype: subscription\ncategory: Health\npay from: BPI Credit Card\nstatus: paid Oct 5\npaid amount: ₱2,500\npaid date: Oct 5\nrepeats: monthly (series ser-gym)",
+        "expect": {"any": [
+          {"tool": "deleteBill", "input": {"id": "bill-gym-2026-10"}}
+        ]}
+      }
+    }
+  ]
+}
