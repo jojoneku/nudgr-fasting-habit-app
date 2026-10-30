@@ -1,7 +1,8 @@
 # Plan 067 — Installment form: "Paying for someone" and a review step
 
-**Status:** approved (2026-10-30). The user chose the recommended option for
-all 4 decisions in section 6.
+**Status:** built (2026-10-30). The user chose the recommended option for all
+4 decisions in section 6. The old web v1 dialog (`web_bills_page.dart`, used
+only when `WEB_V2` is off) has no toggle or review; its saves keep the person.
 
 **Trigger.** The user buys items on installment for other people (for example
 "Papa's Xiaomi Redmi Note 15"). Today the user must add one receivable per month

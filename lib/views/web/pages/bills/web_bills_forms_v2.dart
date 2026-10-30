@@ -21,6 +21,7 @@ import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/installment_review_panel.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -1214,23 +1215,28 @@ class _SetAsideDialogState extends State<_SetAsideDialog> {
 
 // ─── Installment ──────────────────────────────────────────────────────────────
 
-/// Opens the Add (or, with [existing], Edit) Installment form.
+/// Opens the Add (or, with [existing], Edit) Installment form. Save opens a
+/// review page in the same dialog; nothing saves until it is confirmed.
+/// [receivables] supplies the review's receivables section (Plan 067).
 Future<void> showWebInstallmentDialog(
   BuildContext context, {
   required InstallmentPresenter presenter,
+  BillsReceivablesPresenter? receivables,
   Installment? existing,
 }) =>
     showWebDialog<void>(
       context,
-      builder: (_) =>
-          _InstallmentDialog(presenter: presenter, existing: existing),
+      builder: (_) => _InstallmentDialog(
+          presenter: presenter, receivables: receivables, existing: existing),
     );
 
 class _InstallmentDialog extends StatefulWidget {
   final InstallmentPresenter presenter;
+  final BillsReceivablesPresenter? receivables;
   final Installment? existing;
 
-  const _InstallmentDialog({required this.presenter, this.existing});
+  const _InstallmentDialog(
+      {required this.presenter, this.receivables, this.existing});
 
   @override
   State<_InstallmentDialog> createState() => _InstallmentDialogState();
@@ -1243,8 +1249,20 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   final _noteController = TextEditingController();
   final _customMonthsController = TextEditingController();
   final _customRateController = TextEditingController();
+  final _personController = TextEditingController();
 
   String? _nameError;
+  String? _personError;
+
+  /// "Paying for someone": the plan makes a receivable from
+  /// [_personController]'s person for each payment month.
+  bool _paidForSomeone = false;
+
+  /// The plan on the review page, or null while the form shows. Set by Save,
+  /// cleared by Back.
+  Installment? _draft;
+  InstallmentReview? _review;
+  InstallmentReceivablePreview? _receivablePreview;
   String? _cardError;
   String? _totalError;
   String? _monthlyError;
@@ -1285,6 +1303,8 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _deferralMonths = e.deferralMonths;
       _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
+      _paidForSomeone = e.isPaidForSomeone;
+      _personController.text = e.paidForName ?? '';
       _customMonthsOpen = !_monthPresets.contains(e.totalMonths);
       _customRateOpen = !InstallmentPresenter.isPresetRate(e.interestRate);
       if (_customMonthsOpen) _customMonthsController.text = '${e.totalMonths}';
@@ -1309,6 +1329,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     _noteController.dispose();
     _customMonthsController.dispose();
     _customRateController.dispose();
+    _personController.dispose();
     super.dispose();
   }
 
@@ -1387,34 +1408,71 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _cardError = _accountId == null ? 'Select an account' : null;
       _totalError = _validateAmount(_totalController.text);
       _monthlyError = _validateAmount(_monthlyController.text);
+      _personError = _paidForSomeone && _personController.text.trim().isEmpty
+          ? 'Who is it for?'
+          : null;
     });
     return _nameError == null &&
         _cardError == null &&
         _totalError == null &&
-        _monthlyError == null;
+        _monthlyError == null &&
+        _personError == null;
   }
 
-  Future<void> _submit() async {
+  /// Save on the form: show the review page for what it would save.
+  void _submit() {
     if (_isSubmitting || !_validate()) return;
+    // No category picker here: buildInstallment keeps the existing one.
+    _showReview(widget.presenter.buildInstallment(
+      existing: widget.existing,
+      name: _nameController.text,
+      accountId: _accountId!,
+      totalAmount: _parseAmount(_totalController.text)!,
+      monthlyAmount: _parseAmount(_monthlyController.text)!,
+      totalMonths: _totalMonths,
+      startMonth: _startMonth,
+      purchaseDate: _purchaseDate,
+      deferralMonths: _deferralMonths,
+      interestRate: _interestRate,
+      note: _noteController.text,
+      paidForName: _paidForSomeone ? _personController.text : null,
+    ));
+  }
+
+  void _showReview(Installment draft) {
+    setState(() {
+      _draft = draft;
+      _review = widget.presenter.reviewPlan(draft, existing: widget.existing);
+      _receivablePreview =
+          widget.receivables?.installmentReceivablePreview(draft);
+    });
+  }
+
+  /// The review's "Use Feb 2027": the form takes the month too, so Back
+  /// shows it.
+  void _useSuggestedStartMonth() {
+    final month = _review?.suggestedStartMonth;
+    final draft = _draft;
+    if (month == null || draft == null) return;
+    _startMonth = month;
+    _startMonthTouched = true;
+    _showReview(draft.copyWith(startMonth: month));
+  }
+
+  void _backToForm() => setState(() {
+        _draft = null;
+        _review = null;
+        _receivablePreview = null;
+      });
+
+  /// Confirm on the review page: the only path that saves.
+  Future<void> _confirm() async {
+    final draft = _draft;
+    if (_isSubmitting || draft == null) return;
     setState(() => _isSubmitting = true);
     try {
-      final existing = widget.existing;
-      // No category picker here: buildInstallment keeps the existing one.
-      final installment = widget.presenter.buildInstallment(
-        existing: existing,
-        name: _nameController.text,
-        accountId: _accountId!,
-        totalAmount: _parseAmount(_totalController.text)!,
-        monthlyAmount: _parseAmount(_monthlyController.text)!,
-        totalMonths: _totalMonths,
-        startMonth: _startMonth,
-        purchaseDate: _purchaseDate,
-        deferralMonths: _deferralMonths,
-        interestRate: _interestRate,
-        note: _noteController.text,
-      );
       await widget.presenter
-          .saveInstallment(installment, isEdit: existing != null);
+          .saveInstallment(draft, isEdit: widget.existing != null);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) AppToast.error(context, 'Could not save installment: $e');
@@ -1425,6 +1483,8 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final review = _review;
+    if (review != null) return _buildReview(context, review);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final creditAccounts = widget.presenter.creditAccounts;
@@ -1447,6 +1507,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       fontSize: 12.5,
       height: 1.4,
     );
+    final people = widget.presenter.knownPeople;
 
     return WebDialog(
       title: isEdit ? 'Edit installment' : 'Add installment',
@@ -1656,6 +1717,56 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
             ),
           ),
           _gap,
+          WebSwitchRow(
+            key: WebKeys.billsFormPaidFor,
+            title: 'Paying for someone',
+            subtitle: 'A receivable from them for each payment month',
+            value: _paidForSomeone,
+            onChanged: busy
+                ? null
+                : (v) => setState(() {
+                      _paidForSomeone = v;
+                      _personError = null;
+                    }),
+          ),
+          if (_paidForSomeone) ...[
+            _gap,
+            WebField(
+              label: 'Who is it for?',
+              error: _personError,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  WebInput(
+                    key: WebKeys.billsFormPaidForName,
+                    controller: _personController,
+                    hint: 'Papa',
+                    enabled: !busy,
+                    error: _personError != null,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => _personError == null
+                        ? null
+                        : setState(() => _personError = null),
+                  ),
+                  if (people.isNotEmpty) ...[
+                    const SizedBox(height: WebInsets.sm),
+                    WebChips<String>(
+                      options: [for (final n in people) WebChipOption(n, n)],
+                      value: people.contains(_personController.text.trim())
+                          ? _personController.text.trim()
+                          : null,
+                      onChanged: (n) => setState(() {
+                        _personController.text = n;
+                        _personError = null;
+                      }),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+          _gap,
           WebMoreOptions(
             key: WebKeys.billsDialogMoreOptions,
             hint: 'purchase date, deferral, note',
@@ -1714,8 +1825,40 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       primary: _submitButton(
         context,
         busy: busy,
-        label: isEdit ? 'Save' : 'Add installment',
+        label: 'Review',
         onPressed: _submit,
+      ),
+    );
+  }
+
+  /// The review page: what Confirm will save. Back returns to the form with
+  /// everything as it was typed.
+  Widget _buildReview(BuildContext context, InstallmentReview review) {
+    final busy = _isSubmitting;
+    return WebDialog(
+      title: 'Review ${_draft?.name ?? 'installment'}',
+      subtitle: 'Nothing is saved until you confirm.',
+      onSubmit: _confirm,
+      body: InstallmentReviewPanel(
+        review: review,
+        receivables: _receivablePreview,
+        onUseSuggested: busy ? null : _useSuggestedStartMonth,
+      ),
+      secondary: TextButton(
+        key: InstallmentReviewKeys.back,
+        onPressed: busy ? null : _backToForm,
+        child: const Text('Back'),
+      ),
+      primary: FilledButton(
+        key: InstallmentReviewKeys.confirm,
+        onPressed: busy ? null : _confirm,
+        child: busy
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(widget.existing != null ? 'Confirm' : 'Add installment'),
       ),
     );
   }

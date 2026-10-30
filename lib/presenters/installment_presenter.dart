@@ -499,7 +499,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Names the "Paying for someone" field offers: the people plans were bought
   /// for, then the people logged as owing a reimbursement. Each name once
-  /// (ignoring case), most recent first.
+  /// (ignoring case), most recent first, at most 8.
   List<String> get knownPeople {
     final names = <String>[];
     final seen = <String>{};
@@ -519,7 +519,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     for (final t in owing) {
       add(t.owedBy);
     }
-    return names;
+    return names.take(8).toList();
   }
 
   /// The review step for [draft], the plan the form is about to save.

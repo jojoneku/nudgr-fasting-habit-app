@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/bills/installment_review_panel.dart';
 import '../../../mocks.mocks.dart';
 
 void main() {
@@ -119,6 +120,11 @@ void main() {
     expect(find.text('January 2027'), findsOneWidget);
 
     await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+    // Save opens the review; nothing is saved until it is confirmed.
+    expect(find.byKey(InstallmentReviewKeys.panel), findsOneWidget);
+    expect(stored.single.startMonth, '2026-11');
+    await tester.tap(find.byKey(InstallmentReviewKeys.confirm));
     await tester.pumpAndSettle();
 
     expect(stored.single.startMonth, '2027-01');

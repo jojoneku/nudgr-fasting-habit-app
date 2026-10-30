@@ -57,6 +57,7 @@ class _NewEntrySheetState extends State<NewEntrySheet> {
         return AddInstallmentSheet(
             key: const ValueKey('installment'),
             presenter: widget.installmentPresenter,
+            receivables: widget.presenter,
             embedded: true);
     }
   }
