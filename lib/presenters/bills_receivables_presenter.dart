@@ -301,6 +301,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       ? creditStatementRemaining(b)
       : b.amount;
 
+  /// What [markBillsPaid] pays on [bill] when no amount is given for it: its
+  /// full amount, less anything already paid toward a credit statement.
+  double unpaidPortionOf(Bill bill) => _unpaidPortion(bill);
+
   double get totalNextMonth {
     final billsNm = _allBills
         .where((b) => b.month == _selectedMonth)
@@ -1494,6 +1498,20 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   bool billHasLedgerEntry(Bill bill) =>
       _hasPayment(bill) && _billSettlementTxnIds(bill).isNotEmpty;
 
+  /// The ledger entries [markBillUnpaid] deletes for [bill], so a caller can
+  /// name them before the undo. Empty when it has no payment to undo.
+  List<TransactionRecord> billLedgerEntries(Bill bill) {
+    if (!_hasPayment(bill)) return const [];
+    final ids = _billSettlementTxnIds(bill).toSet();
+    return [
+      for (final t in _ledger.allTransactions)
+        if (ids.contains(t.id)) t
+    ];
+  }
+
+  /// True when [bill] has a payment for [markBillUnpaid] to undo.
+  bool billHasPayment(Bill bill) => _hasPayment(bill);
+
   /// True when [bill] has a payment to undo: it is paid, or it is a credit
   /// statement paid in part.
   bool _hasPayment(Bill bill) => bill.isPaid || (bill.paidAmount ?? 0) > 0;
@@ -1564,6 +1582,17 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   bool receivableHasLedgerEntry(Receivable receivable) =>
       receivable.isReceived &&
       _receivableSettlementTxnIds(receivable).isNotEmpty;
+
+  /// The ledger entries [markReceivableUnreceived] deletes for [receivable],
+  /// so a caller can name them before the undo.
+  List<TransactionRecord> receivableLedgerEntries(Receivable receivable) {
+    if (!receivable.isReceived) return const [];
+    final ids = _receivableSettlementTxnIds(receivable).toSet();
+    return [
+      for (final t in _ledger.allTransactions)
+        if (ids.contains(t.id)) t
+    ];
+  }
 
   /// Reverses [receivableId]'s receipt: it returns to still-owed with its
   /// received date/amount and ledger link cleared, and (unless
@@ -2046,12 +2075,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Marks every still-unpaid bill in [billIds] paid for what is left on it
   /// (its full amount, less anything already paid toward a credit statement).
   /// [accountId] funds all of them (ignored, and not required, when
-  /// [recordInLedger] is false).
+  /// [recordInLedger] is false). [paidAmounts] overrides the amount for the
+  /// bills it names; the rest pay [unpaidPortionOf].
   Future<BatchResult> markBillsPaid(
     Iterable<String> billIds, {
     String? accountId,
     DateTime? paidDate,
     bool recordInLedger = true,
+    Map<String, double> paidAmounts = const {},
   }) async {
     final ids = billIds.toSet();
     final targets = _allBills.where((b) => ids.contains(b.id) && !b.isPaid);
@@ -2061,7 +2092,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       try {
         await _applyBillPayment(
           bill,
-          paidAmount: _unpaidPortion(bill),
+          paidAmount: paidAmounts[bill.id] ?? _unpaidPortion(bill),
           accountId: accountId,
           paidDate: paidDate,
           recordInLedger: recordInLedger,

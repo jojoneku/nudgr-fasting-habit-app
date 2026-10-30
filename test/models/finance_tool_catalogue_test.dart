@@ -71,7 +71,16 @@ void main() {
         final schema = tool.inputSchema;
         final requiredKeys =
             (schema['required'] as List?)?.map((k) => '$k') ?? [];
-        expect(requiredKeys, contains('id'),
+        // A bulk tool takes its ids as a required list whose every item
+        // requires one (markBillsPaid's `bills`).
+        final bulkIds = requiredKeys.any((k) {
+          final prop = (schema['properties'] as Map?)?[k];
+          if (prop is! Map || prop['type'] != 'array') return false;
+          final items = prop['items'];
+          return items is Map &&
+              ((items['required'] as List?)?.contains('id') ?? false);
+        });
+        expect(requiredKeys.contains('id') || bulkIds, isTrue,
             reason:
                 '${tool.name} is an update or destroy but does not require id');
       }
