@@ -2170,8 +2170,10 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         + f" cost_usd={'-' if cost is None else f'{cost:.6f}'}"
     )
     print(line)
+    first_hop = not _carries_tool_results({"payload": payload})
     _invocation_log(_cost_fields(line), user_id=user_id,
-                    stream=ttft_ms is not None)
+                    stream=ttft_ms is not None,
+                    briefing=_briefing_sizes(payload) if first_hop else None)
     return cost
 
 
@@ -2213,6 +2215,84 @@ _LIST_FIELDS = ("tool_names", "results")
 _USER_ID_RE = re.compile(r"[0-9a-fA-F-]{36}")
 
 
+# -- Briefing size by section (Plan 066 follow-up) ------------------------------
+#
+# How many characters each part of the briefing takes, so a smaller briefing
+# can be designed from data rather than guessed. A top-level line of the
+# snapshot (no indent) opens a section; its indented lines belong to it. The
+# section is named by a fixed key from the table below, never by the header
+# text itself: some headers carry figures ("Total liquid cash: P59,620"), and
+# the log must not. An unknown header counts as "other".
+#
+# Earlier entries win, so a longer header comes before a shorter one it starts
+# with ("Net worth by month" before "Net worth").
+
+_BRIEFING_SECTIONS = (
+    ("TODAY", "today"),
+    ("Total liquid cash", "accounts"),
+    ("Savings accounts", "accounts"),
+    ("Investments", "accounts"),
+    ("Pockets inside", "accounts"),
+    ("Net worth by month", "hist_net_worth"),
+    ("Net worth", "totals"),
+    ("Forecasted ending cash", "totals"),
+    ("Net cash flow", "totals"),
+    ("Savings rate", "totals"),
+    ("Income received", "totals"),
+    ("Savings & goals set aside", "totals"),
+    ("Days left", "totals"),
+    ("Spending pace", "totals"),
+    ("Budgets this month", "budgets"),
+    ("Budget by group", "budget_groups"),
+    ("Set-asides", "set_asides"),
+    ("Savings goals", "goals"),
+    ("Goals already reached", "goals"),
+    ("Credit cards", "credit"),
+    ("Installment / BNPL", "installments"),
+    ("Outstanding bills", "bills"),
+    ("Bills already paid", "bills"),
+    ("Bills & receivables by closed month", "hist_bills"),
+    ("Receivables", "receivables"),
+    ("Next month so far", "upcoming"),
+    ("Recurring monthly", "upcoming"),
+    ("Other obligations", "upcoming"),
+    ("Time deposits", "maturities"),
+    ("Spending by category", "categories"),
+    ("Recent spending", "recent_txns"),
+    ("Income vs expenses by month", "hist_income_expense"),
+    ("Category spend month by month", "hist_categories"),
+    ("Savings set aside month by month", "hist_savings"),
+    ("Biggest individual expenses", "hist_biggest"),
+)
+
+
+def _briefing_section(header):
+    """The fixed key of a top-level snapshot line, or "other"."""
+    return next((key for prefix, key in _BRIEFING_SECTIONS
+                 if header.startswith(prefix)), "other")
+
+
+def _briefing_sizes(payload):
+    """Characters per briefing part: the snapshot and history totals, and each
+    section by key. Counts only, never text; None with no context at all."""
+    ctx = payload.get("context") if isinstance(payload, dict) else None
+    if not isinstance(ctx, dict):
+        return None
+    sizes = {"summary": 0, "historical": 0, "sections": {}}
+    for part in ("summary", "historical"):
+        text = ctx.get(part)
+        if not isinstance(text, str):
+            continue
+        sizes[part] = len(text)
+        key = "other"
+        for line in text.split("\n"):
+            if line and not line[0].isspace():
+                key = _briefing_section(line)
+            # +1 for the newline the split removed.
+            sizes["sections"][key] = sizes["sections"].get(key, 0) + len(line) + 1
+    return sizes
+
+
 def _cost_fields(line):
     """The `key=value` pairs of a cost_line, as a dict with typed values.
 
@@ -2236,11 +2316,13 @@ def _cost_fields(line):
     return fields
 
 
-def _invocation_log(fields, *, user_id=None, stream=False, error=None):
+def _invocation_log(fields, *, user_id=None, stream=False, error=None,
+                    briefing=None):
     """Print one `advisor_invocation` JSON line.
 
     `error` is the exception a failed invocation raised. Only its class name
-    is logged: an exception message can quote the request.
+    is logged: an exception message can quote the request. `briefing` is
+    _briefing_sizes of the request, logged on a turn's first hop only.
     """
     user = user_id if (isinstance(user_id, str)
                        and _USER_ID_RE.fullmatch(user_id)) else None
@@ -2250,6 +2332,7 @@ def _invocation_log(fields, *, user_id=None, stream=False, error=None):
         "model": _ADVISOR_MODEL_ID,
         "route": None,
         **fields,
+        **({"briefing_chars": briefing} if briefing is not None else {}),
         "user": user,
         "stream": stream,
         "error_class": type(error).__name__ if error is not None else None,
