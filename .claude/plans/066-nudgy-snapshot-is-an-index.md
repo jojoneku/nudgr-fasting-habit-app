@@ -347,3 +347,48 @@ is about $0.00006 per hop.
 pass on every Sonnet run. Keep phase 4 as the backstop: build it only if
 `trace.py` shows a real push-back answered with no read after phases 2 and 3
 ship.
+
+### Phase 3b (2026-10-30, reply discipline, rules `7f24998d`)
+
+The first real trace with text (`4dcfe6598a9f6d3e`, `ADVISOR_DEBUG_USERS`) showed
+the read working, but the reply had 3 problems:
+
+1. It conceded before it read ("You're right — I'm wrong"), and the read then
+   confirmed its first answer.
+2. It moved the statement: "first payment month 2026-12" means due in December,
+   but it said the statement closes in December and is paid in January.
+3. It counted the overlap of 2 plans itself, and got it wrong (4 months, not 5).
+
+Rule changes:
+
+- A new "A FIELD MEANS WHAT ITS TOOL SAYS" block. "first payment month" is the
+  due month, and the charge is on the statement due in that month. The model
+  works out no close date or due day, and states no count, overlap or
+  cross-plan monthly total it computed. For one month, it calls getView
+  (installments).
+- The push-back rule covers doubt ("really?"). Before the read: no agreement or
+  apology, only one neutral line. After the read: lead with the answer, and say
+  the user is right only when the data shows it. No praise of the doubt.
+
+New `index` cases: `pushback-was-right` (step 1 and step 2 text must not
+concede) and `statement-timing` (the text must not say January). The scorer
+gets `text_excludes`.
+
+| Case | Baseline (rules `146cf151`) | New rules, Sonnet 4.5 | New rules, Haiku 4.5 |
+|---|---|---|---|
+| pushback-was-right | 0/2 Sonnet, 0/1 Haiku | 2/4 (+1/1 in the full run 1, 0/1 in run 2) | 0/2 |
+| statement-timing | 2/2 Sonnet, 1/1 Haiku | 4/4 (+2/2 in the full runs) | 0/2 |
+
+On Sonnet, step 1 is now always neutral ("Let me check the plan details to
+confirm."). The failures that remain are only how the reply opens after the
+read ("You're right to question it — yes, December 2026"). Haiku does not
+follow either rule. Routing is off, so production is Sonnet.
+
+The overlap count has no eval case: no tool computes it, so a case could only
+score arithmetic.
+
+Full sets, Sonnet 4.5, 2 runs: tuning 14/15 and 14/15. `index` 18/18 and
+17/18. Held-out 4/5 and 4/5: `transport-last-quarter` answered in text on both
+full runs, but passed 4 of 4 when run alone afterwards (5/7 in all). On
+the `dev` rules it passed 3 of 3, so it is a possible small regression.
+Watch it.
