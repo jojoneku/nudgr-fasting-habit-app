@@ -152,3 +152,12 @@ def test_cost_line_logs_route_and_model(fake, monkeypatch, capsys,
     line = next(l for l in capsys.readouterr().out.splitlines()
                 if l.startswith("cost_line op=adviseFinance"))
     assert line.endswith(want)
+
+
+def test_invocation_log_names_the_routed_model(fake, monkeypatch, capsys):
+    monkeypatch.setattr(lf, "_ADVISOR_HAIKU_ROUTING", True)
+    _buffered(_payload("haiku"))
+    logs = [json.loads(l) for l in capsys.readouterr().out.splitlines()
+            if l.startswith("{") and '"advisor_invocation"' in l]
+    assert logs[-1]["route"] == "haiku"
+    assert logs[-1]["model"] == HAIKU_45

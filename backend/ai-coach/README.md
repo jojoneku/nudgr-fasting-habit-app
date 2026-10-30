@@ -120,6 +120,15 @@ Supported `op` values: `respond`, `parseFoodWithCandidates`, `disambiguateFood`,
 { "response": "After 8 hours fasted, break with protein + healthy fat first..." }
 ```
 
+## Logs (metadata only)
+
+Each advisor invocation writes 2 lines to CloudWatch, on both functions:
+
+- `cost_line op=adviseFinance …` — the `key=value` text line. Its format does not change.
+- `{"event":"advisor_invocation", …}` — the same fields as JSON, plus `user` (the Supabase user id), `stream`, `model`, `route` and `error_class`. A failed Bedrock call writes this line too, with the exception class name only.
+
+Both lines carry ids, tool names, result statuses, token counts, timings, the model and short hashes. They never carry message text, snapshot text, tool inputs, tool results or auth headers. `test_invocation_log.py` sends a request full of sentinel strings and fails if one reaches stdout. Query the JSON line in Logs Insights with `filter event = "advisor_invocation"`.
+
 ## The streaming advisor (`food-advisor-stream`)
 
 `adviseFinance` runs on a **second function** with its own front door, because
