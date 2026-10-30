@@ -113,7 +113,8 @@ def _ttls(body):
 def test_off_by_default_every_breakpoint_is_five_minutes(ttl):
     controls = _cache_controls(_request())
 
-    assert len(controls) == 3
+    # Rules, profile, the history turn and the newest turn.
+    assert len(controls) == 4
     assert all(c == {"type": "ephemeral"} for c in controls)
 
 
@@ -124,8 +125,9 @@ def test_on_only_the_rules_breakpoint_gets_one_hour(ttl):
 
     assert request["system"][0]["text"] == lf._ADVISOR_SYSTEM_PREFIX
     assert controls[0] == {"type": "ephemeral", "ttl": "1h"}
-    # Profile and history stay on 5 minutes, after the 1-hour entry.
-    assert controls[1:] == [{"type": "ephemeral"}, {"type": "ephemeral"}]
+    # Profile, history and the newest turn stay on 5 minutes, after the
+    # 1-hour entry.
+    assert controls[1:] == [{"type": "ephemeral"}] * 3
 
 
 def test_on_the_longer_ttl_always_comes_first(ttl):

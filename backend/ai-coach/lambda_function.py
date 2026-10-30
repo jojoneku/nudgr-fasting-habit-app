@@ -1613,8 +1613,8 @@ def _clip(value, cap, label):
 # hiccup". Caching the stable prefix is what makes a long conversation stop
 # getting slower the longer it runs.
 #
-# The layout (Plan 065, phase 5), in prompt order. Up to three breakpoints;
-# Bedrock allows four per request:
+# The layout (Plan 065, phase 5), in prompt order. Up to four breakpoints,
+# which is all Bedrock allows per request:
 #
 #   1. tools + rules. Bedrock's cache prefix runs tools -> system -> messages,
 #      so a breakpoint at the end of the rules block also covers the tool
@@ -1631,6 +1631,14 @@ def _clip(value, cap, label):
 #      will still be a prefix next turn — cache turn N-2 now, read it back and
 #      cache N-1 on the following call. Marking the newest turn instead would
 #      write a cache entry that the next message immediately invalidates.
+#   4. The newest user turn -- for the NEXT HOP of this turn, not the next
+#      message. On the first hop that turn is the question plus the briefing.
+#      When the model calls a read tool, the next hop's breakpoint 3 lands on
+#      that same turn and reads it back at 0.1x. Without this breakpoint, the
+#      briefing went in at full price on hop 1 and was written at 1.25x on hop
+#      2, where most turns end: a read and an answer is two hops, so that write
+#      was never read (trace 61ca19b9db402e3d, 2026-10-30). A turn with no tool
+#      call pays 1.25x instead of 1x for the briefing and reads nothing back.
 #
 # The briefing -- the snapshot and the historical record, about 1k+ tokens --
 # is not cached. It changes with every ledger edit, so it sits at the end of
@@ -1642,8 +1650,8 @@ def _clip(value, cap, label):
 #
 # The tool loop: every hop of one turn sends the same briefing (the client
 # builds its context once per turn) in the same user turn, so hop 2's prefix
-# is hop 1's prefix byte for byte. Its breakpoint 3 then lands on that user
-# turn, and hop 3 reads it back.
+# is hop 1's prefix byte for byte. Breakpoint 4 caches it on hop 1, and hop
+# 2's breakpoint 3 lands on that user turn and reads it back.
 #
 # Entries live ~5 minutes and are billed at 1.25x on write, 0.1x on read, so a
 # back-and-forth conversation — every turn inside the previous turn's TTL — is
@@ -1690,36 +1698,39 @@ def _cached_system(rules, context=""):
 
 
 def _mark_conversation_cache(bedrock_messages):
-    """Put a cache breakpoint at the end of the second-to-last user turn.
+    """Put cache breakpoints at the end of the last two user turns.
 
-    Mutates and returns `bedrock_messages`. A turn's content may be a bare
-    string (the common case) or a list of blocks (the tool loop, and any turn
-    carrying an image); `cache_control` only goes on a block, so a string turn
-    is promoted to one text block first.
-
-    No-ops when there is only one user turn — there is no prefix worth caching
-    yet, and the system block already carries its own breakpoint.
+    Mutates and returns `bedrock_messages`. The second-to-last user turn is
+    breakpoint 3 and the newest is breakpoint 4 (see the layout above). With
+    one user turn, only that turn is marked.
     """
     user_positions = [
         i for i, m in enumerate(bedrock_messages) if m.get("role") == "user"
     ]
-    if len(user_positions) < 2:
-        return bedrock_messages
+    for i in user_positions[-2:]:
+        _mark_turn_end(bedrock_messages[i])
+    return bedrock_messages
 
-    target = bedrock_messages[user_positions[-2]]
-    content = target.get("content")
+
+def _mark_turn_end(turn):
+    """Put a cache breakpoint on the last block of `turn`.
+
+    A turn's content may be a bare string (the common case) or a list of blocks
+    (the tool loop, the briefing, and any turn carrying an image);
+    `cache_control` only goes on a block, so a string turn is promoted to one
+    text block first.
+    """
+    content = turn.get("content")
     if isinstance(content, str):
         content = [{"type": "text", "text": content}]
-        target["content"] = content
+        turn["content"] = content
     if not isinstance(content, list) or not content:
-        return bedrock_messages
-
+        return
     # The LAST block of the turn — a breakpoint marks the end of a prefix, so on
     # an image turn it has to sit after the image, not before it.
     last = content[-1]
     if isinstance(last, dict):
         last["cache_control"] = dict(_CACHE_CONTROL)
-    return bedrock_messages
 
 
 # The briefing's tags. The opening tag also identifies a briefing block, so one
