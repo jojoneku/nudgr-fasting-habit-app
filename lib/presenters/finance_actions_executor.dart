@@ -14,6 +14,8 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../utils/category_colors.dart';
+import '../utils/category_icon_catalog.dart';
 import '../utils/credit_cycle.dart';
 import '../utils/finance_entry_extraction.dart';
 import '../utils/finance_flows.dart';
@@ -89,6 +91,12 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// The `logTransactions` call whose rows wait on the ledger's review card,
   /// or null.
   String? _ledgerCallId;
+
+  /// Categories that an `addCategory` row EARLIER in the batch adds, by
+  /// lower-case name. Set only while rows are built or written, so a later
+  /// row of the same batch may name one (resolved in call order: its
+  /// category is saved first); empty at every other time.
+  Map<String, String> _newCategories = const {};
 
   /// True while [approveAll] commits the ledger rows, so the ledger emptying
   /// its card is not mistaken for the user removing them.
@@ -505,31 +513,45 @@ class FinanceActionsExecutor extends ChangeNotifier
     final immediate = <String, AiToolResult>{};
     final actions = <PendingFinanceAction>[];
     String? ledgerCall;
-    for (final call in calls) {
-      if (call.name == 'logTransactions') {
-        if (ledgerCall != null) {
-          immediate[call.id] = AiToolResult.failed(call.id,
-              'Put every entry in one logTransactions call, not several.');
+    final proposed = {
+      for (final c in calls)
+        if (c.name == 'addCategory') _str(c.input['name']).toLowerCase(),
+    };
+    _newCategories = {};
+    try {
+      for (final call in calls) {
+        if (call.name == 'logTransactions') {
+          if (ledgerCall != null) {
+            immediate[call.id] = AiToolResult.failed(call.id,
+                'Put every entry in one logTransactions call, not several.');
+            continue;
+          }
+          final handed = _handOffToLedger(call, proposed);
+          if (!handed.ok) {
+            immediate[call.id] = handed;
+            continue;
+          }
+          ledgerCall = call.id;
           continue;
         }
-        final handed = _handOffToLedger(call);
-        if (!handed.ok) {
-          immediate[call.id] = handed;
+        // Checked and bound before any row is shown: a change the user
+        // cannot sensibly confirm is sent back to the model with the reason,
+        // instead of being parked behind a row that would save something
+        // else.
+        final built = _build(call);
+        final error = built.error;
+        if (error != null) {
+          immediate[call.id] = AiToolResult.failed(call.id, error);
           continue;
         }
-        ledgerCall = call.id;
-        continue;
+        actions.add(built.action!);
+        if (call.name == 'addCategory') {
+          final name = _str(call.input['name']);
+          _newCategories = {..._newCategories, name.toLowerCase(): name};
+        }
       }
-      // Checked and bound before any row is shown: a change the user cannot
-      // sensibly confirm is sent back to the model with the reason, instead
-      // of being parked behind a row that would save something else.
-      final built = _build(call);
-      final error = built.error;
-      if (error != null) {
-        immediate[call.id] = AiToolResult.failed(call.id, error);
-        continue;
-      }
-      actions.add(built.action!);
+    } finally {
+      _newCategories = const {};
     }
     if (actions.isEmpty && ledgerCall == null) {
       return [for (final c in calls) immediate[c.id]!];
@@ -586,24 +608,33 @@ class FinanceActionsExecutor extends ChangeNotifier
     _batch = PendingBatch(id: batch.id, actions: const []);
     notifyListeners();
 
-    for (final action in batch.actions) {
-      final id = action.call.id;
-      try {
-        final summary = await _write(
-          action,
-          applyToFuture: applyToFuture[id] ?? false,
-          alreadyLogged:
-              alreadyLogged[id] ?? action.ledgerChoice?.alreadyLogged ?? false,
-          plan: _plans[id],
-        );
-        _answer(id, AiToolResult(toolUseId: id, ok: true, summary: summary));
-      } catch (e) {
-        debugPrint('FinanceActionsExecutor write failed: $e');
-        _answer(
-            id,
-            AiToolResult.failed(
-                id, 'Saving that failed, so nothing was changed.'));
+    // Written in call order, so a category is saved before a later row that
+    // names it. Should its save fail, that name binds to nothing and the
+    // later row fails too, rather than saving some other category.
+    _newCategories = _addedCategoriesIn(batch.actions);
+    try {
+      for (final action in batch.actions) {
+        final id = action.call.id;
+        try {
+          final summary = await _write(
+            action,
+            applyToFuture: applyToFuture[id] ?? false,
+            alreadyLogged: alreadyLogged[id] ??
+                action.ledgerChoice?.alreadyLogged ??
+                false,
+            plan: _plans[id],
+          );
+          _answer(id, AiToolResult(toolUseId: id, ok: true, summary: summary));
+        } catch (e) {
+          debugPrint('FinanceActionsExecutor write failed: $e');
+          _answer(
+              id,
+              AiToolResult.failed(
+                  id, 'Saving that failed, so nothing was changed.'));
+        }
       }
+    } finally {
+      _newCategories = const {};
     }
     final ledgerCall = _ledgerCallId;
     if (ledgerCall != null) {
@@ -629,14 +660,25 @@ class FinanceActionsExecutor extends ChangeNotifier
   @override
   void removeAction(String callId) {
     final batch = _batch;
-    if (batch == null || !batch.actions.any((a) => a.call.id == callId)) {
-      return;
-    }
+    final removed =
+        batch?.actions.where((a) => a.call.id == callId).firstOrNull;
+    if (batch == null || removed == null) return;
+    // A row that names the category this row adds goes with it: left alone,
+    // it would save without the category its row showed.
+    final added = removed.call.name == 'addCategory'
+        ? _str(removed.call.input['name'])
+        : '';
+    final dependents = [
+      for (final a in batch.actions)
+        if (added.isNotEmpty &&
+            _str(a.call.input['category']).toLowerCase() == added.toLowerCase())
+          a.call.id,
+    ];
     _batch = PendingBatch(
       id: batch.id,
       actions: [
         for (final a in batch.actions)
-          if (a.call.id != callId) a
+          if (a.call.id != callId && !dependents.contains(a.call.id)) a
       ],
     );
     _answer(
@@ -647,6 +689,16 @@ class FinanceActionsExecutor extends ChangeNotifier
           summary: 'The user removed this change from the list, so it was '
               'not saved.',
         ));
+    for (final id in dependents) {
+      _answer(
+          id,
+          AiToolResult(
+            toolUseId: id,
+            ok: false,
+            summary: 'Not saved: it used the new category "$added", which the '
+                'user removed from the list.',
+          ));
+    }
     notifyListeners();
   }
 
@@ -661,7 +713,13 @@ class FinanceActionsExecutor extends ChangeNotifier
       name: old.name,
       input: {...old.input, ...patch},
     );
-    final built = _build(edited);
+    _newCategories = _addedCategoriesIn(batch.actions.take(index));
+    final ({PendingFinanceAction? action, String? error}) built;
+    try {
+      built = _build(edited);
+    } finally {
+      _newCategories = const {};
+    }
     final error = built.error;
     if (error != null) return error;
     _batch = PendingBatch(
@@ -892,7 +950,7 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// The binding is the extractor's own, reused verbatim — an account or
   /// category name the model invented is dropped to a picker on the row rather
   /// than fabricated into an id, exactly as it is on the typed-message path.
-  AiToolResult _handOffToLedger(AiToolCall call) {
+  AiToolResult _handOffToLedger(AiToolCall call, Set<String> newCategories) {
     final ledger = _ledger;
     if (ledger == null) {
       return AiToolResult.failed(
@@ -908,6 +966,24 @@ class FinanceActionsExecutor extends ChangeNotifier
     if (raw is! List || raw.isEmpty) {
       return AiToolResult.failed(
           call.id, 'No entries were given, so there is nothing to log.');
+    }
+    // These rows live on the ledger's review card, which binds and offers
+    // only saved categories: a category this batch only proposes would show
+    // there as "Add category". So they wait for the next step.
+    for (final e in raw) {
+      final named = e is Map ? _str(e['category']) : '';
+      final lower = named.toLowerCase();
+      if (named.isEmpty ||
+          !newCategories.contains(lower) ||
+          _categories.any((c) => c.name.toLowerCase() == lower)) {
+        continue;
+      }
+      return AiToolResult.failed(
+          call.id,
+          'Nothing was logged. The entries use the category "$named", which '
+          'addCategory only proposes in this list: it is not saved yet, and '
+          'logged entries can only use a saved category. Once the user '
+          'approves the new category, call logTransactions in the next step.');
     }
 
     // parseFinanceExtractionResponse reads text, not maps: it is the extractor
@@ -973,11 +1049,31 @@ class FinanceActionsExecutor extends ChangeNotifier
             // Every row below shows what is saved: the resolved name, not the
             // model's words. A name that does not resolve never reaches here
             // (_proposalProblem refuses it).
-            if (_categoryFor(_str(i['category'])) case final c?)
-              (label: 'Category', value: c.name),
+            if (_categoryLabel(_str(i['category'])) case final c?)
+              (label: 'Category', value: c),
             if (_accountFor(_str(i['account'])) case final a?)
               (label: 'Pay from', value: a.name),
             (label: 'Repeats', value: recurring ? 'Monthly' : 'One-off'),
+          ],
+        );
+      case 'addCategory':
+        final type = _categoryType(i['type']);
+        return PendingFinanceAction(
+          call: call,
+          title: 'Add category: $name',
+          isRecurring: false,
+          details: [
+            (label: 'Name', value: name),
+            (
+              label: 'Type',
+              value: type == CategoryType.income ? 'Income' : 'Expense',
+            ),
+            (
+              label: 'In totals',
+              value: i['excludeFromTotals'] == true
+                  ? 'No — left out of totals and budget spend'
+                  : 'Yes',
+            ),
           ],
         );
       case 'addReceivable':
@@ -1066,7 +1162,7 @@ class FinanceActionsExecutor extends ChangeNotifier
         final id = _str(i['id']);
         final bill = _bills.allBills.where((b) => b.id == id).firstOrNull;
         final billName = bill?.name ?? 'Bill';
-        final newCategory = _categoryFor(_str(i['category']));
+        final newCategory = _categoryLabel(_str(i['category']));
         return PendingFinanceAction(
           call: call,
           title: 'Update bill: $billName',
@@ -1088,8 +1184,7 @@ class FinanceActionsExecutor extends ChangeNotifier
             if (newCategory != null)
               (
                 label: 'Category',
-                value: '${_categoryName(bill?.categoryId)} → '
-                    '${newCategory.name}'
+                value: '${_categoryName(bill?.categoryId)} → $newCategory'
               ),
           ],
         );
@@ -1246,10 +1341,10 @@ class FinanceActionsExecutor extends ChangeNotifier
                 label: 'Date',
                 value: '${t != null ? _day(t.date) : ""} → ${_str(i['date'])}'
               ),
-            if (_categoryFor(_str(i['category'])) case final c?)
+            if (_categoryLabel(_str(i['category'])) case final c?)
               (
                 label: 'Category',
-                value: '${_categoryName(t?.categoryId)} → ${c.name}'
+                value: '${_categoryName(t?.categoryId)} → $c'
               ),
             if (_accountFor(_str(i['account'])) case final a?)
               (
@@ -1398,6 +1493,7 @@ class FinanceActionsExecutor extends ChangeNotifier
         rate: rate,
         account: account.account!,
         category: _categoryFor(_str(i['category'])),
+        newCategory: _newCategories[_str(i['category']).toLowerCase()],
         requestedCategory: _str(i['category']),
         date: date,
         dateNote: dateNote,
@@ -1495,6 +1591,8 @@ class FinanceActionsExecutor extends ChangeNotifier
         ],
         if (category != null)
           (label: 'Category', value: category.name)
+        else if (p.newCategory case final added?)
+          (label: 'Category', value: '$added$_newMark')
         else if (p.requestedCategory.isNotEmpty)
           (
             label: 'Category',
@@ -1591,7 +1689,9 @@ class FinanceActionsExecutor extends ChangeNotifier
           dueDay: i['dueDay'] != null ? _int(i['dueDay']).clamp(1, 31) : null,
           // Null keeps the bill's category: an unknown name was refused before
           // the card, so it can never clear one here.
-          categoryId: _categoryFor(_str(i['category']))?.id,
+          categoryId: _str(i['category']).isEmpty
+              ? null
+              : _savedCategoryId(_str(i['category'])),
         );
         await _bills.updateBill(updated, applyToFuture: applyToFuture);
         return 'Updated bill "${updated.name}" ($month$scope).';
@@ -1677,7 +1777,9 @@ class FinanceActionsExecutor extends ChangeNotifier
         final newDateStr = _str(i['date']);
         final newDate =
             newDateStr.isNotEmpty ? DateTime.tryParse(newDateStr) : null;
-        final newCategory = _categoryFor(_str(i['category']))?.id;
+        final newCategory = _str(i['category']).isEmpty
+            ? null
+            : _savedCategoryId(_str(i['category']));
         final newAcc = _str(i['account']).isNotEmpty
             ? _accountFor(_str(i['account']))
             : null;
@@ -1714,7 +1816,9 @@ class FinanceActionsExecutor extends ChangeNotifier
             amount: amount,
             dueDay: _int(i['dueDay']).clamp(1, 31),
             month: month,
-            categoryId: _categoryIdFor(_str(i['category'])),
+            categoryId: _str(i['category']).isEmpty
+                ? ''
+                : _savedCategoryId(_str(i['category'])),
             accountId: _accountFor(_str(i['account']))?.id,
             isRecurring: recurring,
             recurrenceType: recurring ? RecurrenceType.monthly : null,
@@ -1722,6 +1826,27 @@ class FinanceActionsExecutor extends ChangeNotifier
           applyToFuture: applyToFuture,
         );
         return 'Added the bill "$name" for ${_peso(amount)} in $month$scope.';
+
+      case 'addCategory':
+        final ledger = _ledger;
+        if (ledger == null) throw StateError('Ledger is not available');
+        final type = _categoryType(i['type']);
+        final excluded = i['excludeFromTotals'] == true;
+        // The category sheet's own values: the "Auto" icon and the next
+        // colour of its type.
+        await ledger.addCategory(FinanceCategory(
+          id: _id(),
+          name: name,
+          type: type,
+          icon: kAutoCategoryIconKey,
+          colorHex: categoryColorAt(
+            ledger.categories.where((c) => c.type == type).length,
+            isExpense: type == CategoryType.expense,
+          ),
+          excludeFromTotals: excluded,
+        ));
+        return 'Added the ${type.name} category "$name"'
+            '${excluded ? ', left out of totals and budget spend' : ''}.';
 
       case 'addReceivable':
         await _bills.addReceivable(
@@ -1786,7 +1911,8 @@ class FinanceActionsExecutor extends ChangeNotifier
           deferralMonths: 0,
           interestRate: p.rate,
           note: p.note,
-          categoryId: p.category?.id,
+          categoryId: p.category?.id ??
+              (p.newCategory == null ? null : _savedCategoryId(p.newCategory!)),
           isActive: true,
         );
         // The same presenter call the ledger's add sheet makes. The presenter
@@ -2067,6 +2193,8 @@ class FinanceActionsExecutor extends ChangeNotifier
 
     final active = _activeAccounts;
     switch (call.name) {
+      case 'addCategory':
+        return _newCategoryProblem(i);
       case 'addBill':
         return check('account', active, 'active') ?? _categoryProblem(i);
       case 'addSetAside':
@@ -2204,11 +2332,75 @@ class FinanceActionsExecutor extends ChangeNotifier
   /// the typed name.
   String? _categoryProblem(Map<String, Object?> i) {
     final name = _str(i['category']);
-    if (name.isEmpty || _categoryFor(name) != null) return null;
+    if (name.isEmpty || _categoryLabel(name) != null) return null;
     final names = _categories.map((c) => '"${c.name}"').join(', ');
     return 'No category is named "$name". Categories: $names. Use one of '
-        'these names, or leave the category out.';
+        'these names, or leave the category out. If the user wants a new '
+        'category, call addCategory for it in this same reply, BEFORE the '
+        'rows that use it: the user approves it in the same list.';
   }
+
+  /// Why an `addCategory` call cannot be shown, or null. A name that already
+  /// exists, in any case, is refused and named: two categories the user
+  /// cannot tell apart split their spending.
+  String? _newCategoryProblem(Map<String, Object?> i) {
+    if (_ledger == null) return 'Adding categories is not available here.';
+    final name = _str(i['name']);
+    if (name.isEmpty) {
+      return 'A category needs a name, e.g. "Pets". Ask the user.';
+    }
+    final type = _str(i['type']);
+    if (type != 'expense' && type != 'income') {
+      return 'The type must be "expense" or "income". Ask the user which.';
+    }
+    final lower = name.toLowerCase();
+    final same =
+        _categories.where((c) => c.name.toLowerCase() == lower).firstOrNull;
+    if (same != null) {
+      return 'A category named "${same.name}" already exists '
+          '(${same.type.name}), so it was not added again. Use "${same.name}" '
+          'instead, and tell the user.';
+    }
+    if (_newCategories[lower] case final earlier?) {
+      return '"$earlier" is already added earlier in this list. Add each '
+          'category once.';
+    }
+    return null;
+  }
+
+  /// The names of the categories that the `addCategory` rows of [actions]
+  /// add, by lower-case name.
+  Map<String, String> _addedCategoriesIn(
+          Iterable<PendingFinanceAction> actions) =>
+      {
+        for (final a in actions)
+          if (a.call.name == 'addCategory')
+            _str(a.call.input['name']).toLowerCase():
+                _str(a.call.input['name']),
+      };
+
+  static const String _newMark = ' (new, added in this list)';
+
+  /// What a row shows for category [name]: the saved category it binds to,
+  /// a category an earlier row of the batch adds (marked new), or null.
+  String? _categoryLabel(String name) {
+    if (_categoryFor(name) case final c?) return c.name;
+    if (_newCategories[name.toLowerCase()] case final added?) {
+      return '$added$_newMark';
+    }
+    return null;
+  }
+
+  /// The id of the saved category [name] names, for a write. Throws when it
+  /// names none, rather than saving the row with no category: a name was
+  /// checked when its row was shown, so a miss here means a category this
+  /// batch added was not saved.
+  String _savedCategoryId(String name) =>
+      _categoryFor(name)?.id ??
+      (throw StateError('Category "$name" is not saved'));
+
+  static CategoryType _categoryType(Object? raw) =>
+      _str(raw) == 'income' ? CategoryType.income : CategoryType.expense;
 
   /// Why settlement [s] cannot be shown: the user would have to record the
   /// money, and no account resolves to record it against.
@@ -2238,11 +2430,6 @@ class FinanceActionsExecutor extends ChangeNotifier
           ?.name ??
       'unknown account';
 
-  /// Resolve a category NAME to its id. The model never sees ids, so it sends
-  /// names and the client binds them — the same contract the expense extractor
-  /// uses. An unresolved name leaves the category empty rather than guessing.
-  String _categoryIdFor(String name) => _categoryFor(name)?.id ?? '';
-
   FinanceCategory? _categoryFor(String name) {
     if (name.isEmpty) return null;
     final lower = name.toLowerCase();
@@ -2250,6 +2437,9 @@ class FinanceActionsExecutor extends ChangeNotifier
     for (final c in categories) {
       if (c.name.toLowerCase() == lower) return c;
     }
+    // A category an earlier row adds is that category, even before it is
+    // saved: never a longer saved name that merely starts with it.
+    if (_newCategories.containsKey(lower)) return null;
     for (final c in categories) {
       if (c.name.toLowerCase().startsWith(lower)) return c;
     }
@@ -2342,6 +2532,7 @@ class _InstallmentPlan {
     required this.rate,
     required this.account,
     required this.category,
+    required this.newCategory,
     required this.requestedCategory,
     required this.date,
     required this.dateNote,
@@ -2360,6 +2551,10 @@ class _InstallmentPlan {
 
   /// Null when no category was given or none matched [requestedCategory].
   final FinanceCategory? category;
+
+  /// Set when [requestedCategory] is a category an earlier row of the same
+  /// batch adds; it is bound by name when the plan is saved, after that row.
+  final String? newCategory;
   final String requestedCategory;
   final DateTime date;
 
