@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/ai_tool.dart';
 import '../models/finance/bill.dart';
+import '../models/finance/budget.dart';
+import '../models/finance/budget_group_def.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/extracted_entry.dart';
 import '../models/finance/finance_category.dart';
@@ -538,7 +540,7 @@ class FinanceActionsExecutor extends ChangeNotifier
         // cannot sensibly confirm is sent back to the model with the reason,
         // instead of being parked behind a row that would save something
         // else.
-        final built = _build(call);
+        final built = _build(_withoutCardControls(call));
         final error = built.error;
         if (error != null) {
           immediate[call.id] = AiToolResult.failed(call.id, error);
@@ -819,6 +821,17 @@ class FinanceActionsExecutor extends ChangeNotifier
     );
   }
 
+  /// [call] without the keys only a row's controls set (design D8): a
+  /// model that sends one is ignored, so the user ticks the box.
+  static AiToolCall _withoutCardControls(AiToolCall call) =>
+      call.input.containsKey(_addSetAsideKey)
+          ? AiToolCall(
+              id: call.id,
+              name: call.name,
+              input: {...call.input}..remove(_addSetAsideKey),
+            )
+          : call;
+
   /// Checks [call], binds it, and draws its row — or says why it cannot be
   /// shown. Used when a batch opens and again on every in-place edit.
   ({PendingFinanceAction? action, String? error}) _build(AiToolCall call) {
@@ -843,9 +856,11 @@ class FinanceActionsExecutor extends ChangeNotifier
     }
     return (
       action: described.withReview(
-        // A row that deletes something (an undo that takes its ledger entry
-        // with it) is T3 whatever its tool's kind.
-        tier: described.isDestructive
+        // A row may ask for more care than its tool does by default: a row
+        // that deletes something (an undo that takes its ledger entry with
+        // it), or an installment edit that reschedules later months, is T3.
+        tier: described.isDestructive ||
+                described.tier == ProposalTier.destructive
             ? ProposalTier.destructive
             : _tierFor(call.name),
         editable: _editableFor(call.name),
@@ -938,7 +953,21 @@ class FinanceActionsExecutor extends ChangeNotifier
             ProposalField.amount: 'amount',
             ProposalField.account: 'destinationAccount',
           },
+        'markInstallmentMonthPaid' => const {
+            ProposalField.amount: 'amount',
+            ProposalField.date: 'date',
+          },
+        'editInstallment' => const {
+            ProposalField.name: 'name',
+            ProposalField.amount: 'amount',
+            ProposalField.account: 'account',
+            ProposalField.category: 'category',
+            ProposalField.date: 'date',
+          },
         'editAccount' => const {ProposalField.name: 'name'},
+        'setBudget' || 'editBudget' => const {
+            ProposalField.amount: 'amount',
+          },
         'editTransaction' => const {
             ProposalField.name: 'description',
             ProposalField.amount: 'amount',
@@ -1446,6 +1475,131 @@ class FinanceActionsExecutor extends ChangeNotifier
               (label: 'Note', value: _str(i['note'])),
           ],
         );
+      case 'setBudget':
+        final b = _newBudget(i).plan;
+        if (b == null) return null;
+        final addsSetAside = b.offersSetAside && b.addSetAside;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Set budget: ${b.label}, ${_peso(b.amount)}',
+          isRecurring: false,
+          confirmLabel: 'Set Budget',
+          option: b.offersSetAside
+              ? RowOption(
+                  label: 'Also add a monthly set-aside in Bills',
+                  hint: 'Nothing in Bills moves money into ${b.label} yet. A '
+                      'set-aside gives you something to mark paid; you pick '
+                      'the account it comes from when you fund it.',
+                  value: b.addSetAside,
+                  inputKey: _addSetAsideKey,
+                )
+              : null,
+          details: [
+            (label: b.savings ? 'Set aside into' : 'Category', value: b.label),
+            (label: 'Amount', value: _peso(b.amount)),
+            (label: 'Month', value: b.month),
+            (label: 'Group', value: _groupName(b.groupId)),
+            (label: 'Repeats', value: 'Every month until removed'),
+            if (addsSetAside)
+              (
+                label: 'Also adds',
+                value: 'a monthly ${_peso(b.amount)} set-aside into '
+                    '${b.label} in Bills',
+              ),
+          ],
+        );
+      case 'editBudget':
+        final e = _budgetEdit(i).edit;
+        if (e == null) return null;
+        final b = e.budget;
+        final series = _isSeries(b);
+        return PendingFinanceAction(
+          call: call,
+          title: 'Edit budget: ${_budgetName(b)} (${b.month})',
+          isRecurring: false,
+          confirmLabel: 'Save Budget',
+          // No this-month-only path: an edit is the new going rate for the
+          // rest of the series (BudgetPresenter.setBudget).
+          tier: series ? ProposalTier.destructive : ProposalTier.change,
+          details: [
+            (label: 'Budget', value: _budgetName(b)),
+            (label: 'Month', value: b.month),
+            if (e.amount != b.allocatedAmount)
+              (
+                label: 'Amount',
+                value: '${_peso(b.allocatedAmount)} → ${_peso(e.amount)}',
+              ),
+            if (e.groupId != b.group)
+              (
+                label: 'Group',
+                value: '${_groupName(b.group)} → ${_groupName(e.groupId)}',
+              ),
+            if (series)
+              (
+                label: 'Also changes',
+                value: 'every later month of this budget; earlier months '
+                    'keep theirs',
+              ),
+          ],
+        );
+      case 'removeBudget':
+        final b = _budgetById(i);
+        if (b == null) return null;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Remove budget: ${_budgetName(b)} '
+              '(${_peso(b.allocatedAmount)})',
+          isRecurring: false,
+          confirmLabel: 'Remove Budget',
+          isDestructive: true,
+          details: [
+            (label: 'Budget', value: _budgetName(b)),
+            (label: 'Amount', value: _peso(b.allocatedAmount)),
+            (label: 'Month', value: b.month),
+            (
+              label: 'Also',
+              value: _isSeries(b)
+                  ? 'ends it: later months lose it too and it does not come '
+                      'back. Earlier months keep theirs.'
+                  : 'nothing else: this budget is for ${b.month} only.',
+            ),
+          ],
+        );
+      case 'markInstallmentMonthPaid':
+        final p = _monthPayment(i);
+        if (p == null) return null;
+        final total = p.plan.totalMonths;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Mark installment paid: ${p.plan.name} (${_peso(p.amount)})',
+          isRecurring: false,
+          confirmLabel: 'Mark Paid',
+          details: [
+            (label: 'Installment', value: p.plan.name),
+            (label: 'Month', value: p.month),
+            (
+              label: 'Paid',
+              value: '${p.paid} of $total → ${p.paid + 1} of $total',
+            ),
+            (label: 'Amount', value: _peso(p.amount)),
+            (
+              label: 'Charged to',
+              value: '${_accountName(p.plan.accountId)} (adds to its balance)',
+            ),
+            (label: 'Date', value: _day(p.date)),
+          ],
+        );
+      case 'editInstallment':
+        final e = _installmentEdit(i).edit;
+        if (e == null) return null;
+        return PendingFinanceAction(
+          call: call,
+          title: 'Edit installment: ${e.before.name}',
+          isRecurring: false,
+          confirmLabel: 'Save Changes',
+          tier: e.touchesMore ? ProposalTier.destructive : ProposalTier.change,
+          details: _installmentEditRows(e),
+        );
       case 'deleteTransaction':
         final id = _str(i['id']);
         final t = _ledger?.allTransactions.where((t) => t.id == id).firstOrNull;
@@ -1470,6 +1624,194 @@ class FinanceActionsExecutor extends ChangeNotifier
     }
     return null;
   }
+
+  // ── Budgets ───────────────────────────────────────────────────────────────
+
+  /// The card's input key for D8's "also add a monthly set-aside" checkbox.
+  /// Only the card sets it: [proposeBatch] drops it from a model call.
+  static const String _addSetAsideKey = '_addSetAside';
+
+  /// The budget row an id-taking budget call names, or null.
+  Budget? _budgetById(Map<String, Object?> i) =>
+      _budget?.allBudgets.where((b) => b.id == _str(i['id'])).firstOrNull;
+
+  /// What a budget row is for: the account a savings row funds, else its
+  /// category — the same name `find` prints.
+  String _budgetName(Budget b) {
+    final budget = _budget;
+    final savings = budget != null && budget.isSavingsGroup(b.group);
+    final name =
+        savings ? _accountName(b.categoryId) : _categoryName(b.categoryId);
+    return name;
+  }
+
+  String _groupName(String id) =>
+      _budget?.groupById(id)?.name ?? (id.isEmpty ? 'none' : id);
+
+  /// The budget group [name] names among [pool]: an exact name, else the one
+  /// it starts. Null when none or several match.
+  static BudgetGroupDef? _groupFor(String name, Iterable<BudgetGroupDef> pool) {
+    final q = name.trim().toLowerCase();
+    if (q.isEmpty) return null;
+    final exact = pool.where((g) => g.name.toLowerCase() == q).toList();
+    if (exact.length == 1) return exact.single;
+    final prefix = pool.where((g) => g.name.toLowerCase().startsWith(q));
+    return prefix.length == 1 ? prefix.single : null;
+  }
+
+  /// The month a new budget lands in: the one named (a slipped year
+  /// rebased), else the month the Budget tab shows.
+  String _budgetMonth(Map<String, Object?> i) {
+    final given = _str(i['month']);
+    return RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
+        ? rebaseStaleMonthKey(given, DateTime.now())
+        : (_budget?.selectedMonth ?? _bills.selectedMonth);
+  }
+
+  /// A `setBudget` call bound against the user's categories, savings
+  /// accounts and groups, or why it cannot be proposed. The row and the
+  /// write both use it.
+  ({_NewBudget? plan, String? error}) _newBudget(Map<String, Object?> i) {
+    ({_NewBudget? plan, String? error}) fail(String error) =>
+        (plan: null, error: error);
+    final budget = _budget;
+    if (budget == null) return fail('Budgets are not available here.');
+
+    final categoryName = _str(i['category']);
+    final accountName = _str(i['savingsAccount']);
+    if (categoryName.isEmpty == accountName.isEmpty) {
+      return fail('Give either a category (a spending budget) or a '
+          'savingsAccount (money to set aside into a savings or goal '
+          'account), not both and not neither.');
+    }
+    final amount = _amountOrNull(i['amount']);
+    if (amount == null) {
+      return fail('The budget amount must be in pesos, above zero. Ask the '
+          'user for it.');
+    }
+
+    final savings = accountName.isNotEmpty;
+    final String key;
+    final String label;
+    if (savings) {
+      final targets = budget.savingsTargets;
+      final account = _matchAccount(accountName, targets);
+      if (account == null) {
+        final names = targets.map((a) => '"${a.name}"').join(', ');
+        return fail('"$accountName" does not match exactly one savings or '
+            'goal account. Choices: ${names.isEmpty ? 'none' : names}. Ask '
+            'the user which one.');
+      }
+      key = account.id;
+      label = account.name;
+    } else {
+      final lower = categoryName.toLowerCase();
+      final pool = budget.expenseCategories;
+      final category = pool
+              .where((c) => c.name.toLowerCase() == lower)
+              .firstOrNull ??
+          pool.where((c) => c.name.toLowerCase().startsWith(lower)).firstOrNull;
+      if (category == null) {
+        // A budget is keyed by the category's id, which a category this
+        // list adds does not have until the user approves it.
+        if (_newCategories[lower] case final added?) {
+          return fail('"$added" is added in this same list, so it has no '
+              'budget yet. Propose the budget after the user approves the '
+              'category, in your next reply.');
+        }
+        final names = pool.map((c) => '"${c.name}"').join(', ');
+        return fail('No expense category is named "$categoryName". '
+            'Categories: $names. Use one of these names, or add the category '
+            'with addCategory first and set its budget after it is saved.');
+      }
+      key = category.id;
+      label = category.name;
+    }
+
+    final groups = budget.groups.where((g) => g.isSavings == savings);
+    final groupName = _str(i['group']);
+    final String groupId;
+    if (groupName.isEmpty) {
+      groupId = savings
+          ? BudgetGroupDef.idSavings
+          : BudgetGroupDef.idVariableOptional;
+    } else {
+      final group = _groupFor(groupName, groups);
+      if (group == null) {
+        final names = groups.map((g) => '"${g.name}"').join(', ');
+        return fail('"$groupName" does not match one '
+            '${savings ? 'savings' : 'spending'} group. Groups: $names. Use '
+            'one of these, or leave the group out.');
+      }
+      groupId = group.id;
+    }
+
+    final month = _budgetMonth(i);
+    final existing = budget.budgetFor(key, month: month);
+    if (existing != null) {
+      return fail('"$label" already has a budget in $month '
+          '(${_peso(existing.allocatedAmount)}, id=${existing.id}). To change '
+          'it, call editBudget with that id.');
+    }
+    return (
+      plan: _NewBudget(
+        key: key,
+        label: label,
+        savings: savings,
+        amount: amount,
+        groupId: groupId,
+        month: month,
+        // D8: offered only when nothing in Bills funds the account yet — the
+        // add-budget sheet's own check.
+        offersSetAside:
+            savings && budget.setAsideSourcesFor(key, month: month).isEmpty,
+        addSetAside: i[_addSetAsideKey] == true,
+      ),
+      error: null,
+    );
+  }
+
+  /// A new amount and group for an `editBudget` call, or why it cannot be
+  /// proposed.
+  ({_BudgetEdit? edit, String? error}) _budgetEdit(Map<String, Object?> i) {
+    ({_BudgetEdit? edit, String? error}) fail(String error) =>
+        (edit: null, error: error);
+    final budget = _budget;
+    final b = _budgetById(i);
+    if (budget == null || b == null) {
+      return fail('Budgets are not available here.');
+    }
+    var amount = b.allocatedAmount;
+    if (i['amount'] != null) {
+      final n = _amountOrNull(i['amount']);
+      if (n == null) return fail('The budget amount must be above zero.');
+      amount = n;
+    }
+    var groupId = b.group;
+    final groupName = _str(i['group']);
+    if (groupName.isNotEmpty) {
+      // A savings row is keyed by an account, a spending row by a category,
+      // so a row can only move to a group of its own kind.
+      final savings = budget.isSavingsGroup(b.group);
+      final groups = budget.groups.where((g) => g.isSavings == savings);
+      final group = _groupFor(groupName, groups);
+      if (group == null) {
+        final names = groups.map((g) => '"${g.name}"').join(', ');
+        return fail('"$groupName" does not match one '
+            '${savings ? 'savings' : 'spending'} group. Groups: $names.');
+      }
+      groupId = group.id;
+    }
+    if (amount == b.allocatedAmount && groupId == b.group) {
+      return fail('That changes nothing on the "${_budgetName(b)}" budget. '
+          'Ask the user what to change.');
+    }
+    return (edit: (budget: b, amount: amount, groupId: groupId), error: null);
+  }
+
+  /// True when [b] carries into later months, so an edit or a removal
+  /// reaches them too.
+  static bool _isSeries(Budget b) => b.isRecurring && b.seriesId != null;
 
   // ── Installments ──────────────────────────────────────────────────────────
 
@@ -1506,8 +1848,55 @@ class FinanceActionsExecutor extends ChangeNotifier
           'above zero. Ask the user for it.');
     }
 
-    final rawMonths = i['months'];
-    final months = _numOrNull(rawMonths);
+    final months = _installmentMonths(i['months']);
+    final monthsError = months.error;
+    if (monthsError != null) return fail(monthsError);
+
+    final rate = _installmentRate(i['interestRate']);
+    final rateError = rate.error;
+    if (rateError != null) return fail(rateError);
+
+    final account = _creditAccountFor(_str(i['account']));
+    final accountError = account.error;
+    if (accountError != null) return fail(accountError);
+
+    final now = DateTime.now();
+    var date = DateTime(now.year, now.month, now.day);
+    String? dateNote;
+    final rawDate = _str(i['date']);
+    if (rawDate.isNotEmpty) {
+      final given = _purchaseDate(rawDate);
+      final dateError = given.error;
+      if (dateError != null) return fail(dateError);
+      date = given.date!;
+      dateNote = given.note;
+    }
+
+    final note = _str(i['note']);
+    return (
+      plan: _InstallmentPlan(
+        name: name,
+        amount: amount.toDouble(),
+        months: months.months!,
+        rate: rate.rate!,
+        account: account.account!,
+        category: _categoryFor(_str(i['category'])),
+        newCategory: _newCategories[_str(i['category']).toLowerCase()],
+        requestedCategory: _str(i['category']),
+        date: date,
+        dateNote: dateNote,
+        note: note.isEmpty ? null : note,
+      ),
+      error: null,
+    );
+  }
+
+  /// The number of monthly payments in [raw], or why it is not one. Shared
+  /// by `addInstallment` and `editInstallment`, so both refuse the same terms.
+  static ({int? months, String? error}) _installmentMonths(Object? raw) {
+    ({int? months, String? error}) fail(String error) =>
+        (months: null, error: error);
+    final months = _numOrNull(raw);
     if (months == null) {
       return fail('How many monthly payments is it? Ask the user rather than '
           'guessing — e.g. 3, 6, 12 or 24.');
@@ -1525,13 +1914,18 @@ class FinanceActionsExecutor extends ChangeNotifier
           'plan ($_maxInstallmentMonths at most). Check the term with the '
           'user.');
     }
+    return (months: months.toInt(), error: null);
+  }
 
-    final rawRate = i['interestRate'];
+  /// The monthly add-on rate in [raw] (absent is 0%), or why it is not one.
+  static ({double? rate, String? error}) _installmentRate(Object? raw) {
+    ({double? rate, String? error}) fail(String error) =>
+        (rate: null, error: error);
     final double rate;
-    if (rawRate == null || (rawRate is String && rawRate.trim().isEmpty)) {
+    if (raw == null || (raw is String && raw.trim().isEmpty)) {
       rate = 0;
     } else {
-      final parsed = _numOrNull(rawRate);
+      final parsed = _numOrNull(raw);
       if (parsed == null || !parsed.isFinite) {
         return fail('The interest rate must be a number: the monthly add-on '
             'rate in percent, or 0 for a 0% plan.');
@@ -1548,50 +1942,35 @@ class FinanceActionsExecutor extends ChangeNotifier
           'user quoted a yearly rate, divide it by 12; otherwise ask them to '
           'check it.');
     }
+    return (rate: rate, error: null);
+  }
 
-    final account = _creditAccountFor(_str(i['account']));
-    final accountError = account.error;
-    if (accountError != null) return fail(accountError);
-
-    final rawDate = _str(i['date']);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    var date = today;
-    String? dateNote;
-    if (rawDate.isNotEmpty) {
-      final given = DateTime.tryParse(rawDate);
-      if (given == null) {
-        return fail('The purchase date must be YYYY-MM-DD, not "$rawDate".');
-      }
-      // The same year-slip guard every other tool applies to a model date.
-      final rebased = rebaseStaleDate(given, now);
-      date = DateTime(rebased.year, rebased.month, rebased.day);
-      if (date.isAfter(today)) {
-        return fail('The purchase date $rawDate is in the future. Use the day '
-            'it was bought, or leave the date out for today.');
-      }
-      if (date != DateTime(given.year, given.month, given.day)) {
-        dateNote = 'moved from $rawDate';
-      }
+  /// A purchase date from the model, with a slipped year rebased and a note
+  /// saying so — or why it cannot be one (not a date, or in the future).
+  static ({DateTime? date, String? note, String? error}) _purchaseDate(
+      String raw) {
+    final given = DateTime.tryParse(raw);
+    if (given == null) {
+      return (
+        date: null,
+        note: null,
+        error: 'The purchase date must be YYYY-MM-DD, not "$raw".',
+      );
     }
-
-    final note = _str(i['note']);
-    return (
-      plan: _InstallmentPlan(
-        name: name,
-        amount: amount.toDouble(),
-        months: months.toInt(),
-        rate: rate,
-        account: account.account!,
-        category: _categoryFor(_str(i['category'])),
-        newCategory: _newCategories[_str(i['category']).toLowerCase()],
-        requestedCategory: _str(i['category']),
-        date: date,
-        dateNote: dateNote,
-        note: note.isEmpty ? null : note,
-      ),
-      error: null,
-    );
+    final now = DateTime.now();
+    // The same year-slip guard every other tool applies to a model date.
+    final rebased = rebaseStaleDate(given, now);
+    final date = DateTime(rebased.year, rebased.month, rebased.day);
+    if (date.isAfter(DateTime(now.year, now.month, now.day))) {
+      return (
+        date: null,
+        note: null,
+        error: 'The purchase date $raw is in the future. Use the day it was '
+            'bought, or leave the date out for today.',
+      );
+    }
+    final moved = date != DateTime(given.year, given.month, given.day);
+    return (date: date, note: moved ? 'moved from $raw' : null, error: null);
   }
 
   /// The credit account an installment goes on, resolved only among active
@@ -1702,6 +2081,251 @@ class FinanceActionsExecutor extends ChangeNotifier
   static String _rateLabel(double rate) => rate == rate.roundToDouble()
       ? '${rate.round()}%'
       : '${rate.toStringAsFixed(2)}%';
+
+  /// A `markInstallmentMonthPaid` call bound against the live plan: the month
+  /// (the one named, else the one the tabs show), the amount (the one named,
+  /// else the monthly payment) and the date. The row and the write both use it.
+  ({Installment plan, String month, double amount, DateTime date, int paid})?
+      _monthPayment(Map<String, Object?> i) {
+    final installments = _installments;
+    final plan = installments?.findById(_str(i['id']));
+    if (installments == null || plan == null) return null;
+    final given = _str(i['month']);
+    return (
+      plan: plan,
+      month: RegExp(r'^\d{4}-\d{2}$').hasMatch(given)
+          ? rebaseStaleMonthKey(given, DateTime.now())
+          : installments.selectedMonth,
+      amount: _amountOrNull(i['amount']) ?? plan.monthlyAmount,
+      date: _settleDate(i['date']),
+      paid: installments.paidCount(plan.id),
+    );
+  }
+
+  /// Why that month cannot be marked paid — the rules behind the list's
+  /// "Mark paid" button ([InstallmentPresenter.canMarkPaid]), each with its
+  /// reason — or null.
+  String? _monthPaymentProblem(Map<String, Object?> i) {
+    final installments = _installments;
+    final p = _monthPayment(i);
+    if (installments == null || p == null) {
+      return 'Installments are not available here.';
+    }
+    final plan = p.plan;
+    if (!plan.isActive) {
+      return '"${plan.name}" is cancelled, so it has no payments to mark. '
+          'Tell the user.';
+    }
+    if (installments.billsOnStatement(plan)) {
+      return '"${plan.name}" is on ${_accountName(plan.accountId)}, which has '
+          'statements: each month is billed when the statement closes and '
+          'paid by paying the statement (payCredit). There is nothing to mark '
+          'on the plan itself — tell the user.';
+    }
+    if (plan.chargesDueBy(p.month) == 0) {
+      return '"${plan.name}" has no payment due by ${p.month}: its first '
+          'payment is in ${plan.startMonth}. Check the month with the user.';
+    }
+    if (!installments.canMarkPaid(plan, month: p.month)) {
+      return 'The ${p.month} payment of "${plan.name}" is already recorded '
+          '(${p.paid} of ${plan.totalMonths} paid). Nothing to change — tell '
+          'the user.';
+    }
+    return null;
+  }
+
+  /// An `editInstallment` call bound against the live plan, or why it cannot
+  /// be proposed. The new plan comes from [LedgerPresenter.editedPlan], the
+  /// rule the save uses, so the row shows the monthly payment and schedule
+  /// that will be saved.
+  ({_PlanEdit? edit, String? error}) _installmentEdit(Map<String, Object?> i) {
+    ({_PlanEdit? edit, String? error}) fail(String error) =>
+        (edit: null, error: error);
+    final ledger = _ledger;
+    final installments = _installments;
+    final before = installments?.findById(_str(i['id']));
+    if (ledger == null || installments == null || before == null) {
+      return fail('Installments are not available here.');
+    }
+    final purchase = ledger.allTransactions
+        .where((t) => t.isInstallment && t.installmentId == before.id)
+        .firstOrNull;
+    final paid = installments.paidCount(before.id);
+
+    var amount = before.totalAmount;
+    if (i['amount'] != null) {
+      final n = _numOrNull(i['amount']);
+      if (n == null || !n.isFinite || n <= 0) {
+        return fail('The total price must be in pesos, above zero.');
+      }
+      amount = n.toDouble();
+    }
+
+    var months = before.totalMonths;
+    if (i['months'] != null) {
+      final m = _installmentMonths(i['months']);
+      final error = m.error;
+      if (error != null) return fail(error);
+      months = m.months!;
+      if (months < paid) {
+        return fail('$paid payments of "${before.name}" are already recorded, '
+            'so the plan cannot be shorter than $paid months. Check with the '
+            'user.');
+      }
+    }
+
+    var rate = before.interestRate;
+    if (i['interestRate'] != null) {
+      final r = _installmentRate(i['interestRate']);
+      final error = r.error;
+      if (error != null) return fail(error);
+      rate = r.rate!;
+    }
+
+    var accountId = before.accountId;
+    if (_str(i['account']).isNotEmpty) {
+      final a = _creditAccountFor(_str(i['account']));
+      final error = a.error;
+      if (error != null) return fail(error);
+      accountId = a.account!.id;
+    }
+
+    // The ledger's edit measures a moved date against the purchase entry; a
+    // plan with none, against its own date (the list's form does the same).
+    final previousDate = purchase?.date ??
+        before.purchaseDate ??
+        DateTime.tryParse('${before.startMonth}-01') ??
+        DateTime.now();
+    var date = previousDate;
+    if (_str(i['date']).isNotEmpty) {
+      final d = _purchaseDate(_str(i['date']));
+      final error = d.error;
+      if (error != null) return fail(error);
+      date = d.date!;
+    }
+
+    final categoryError = _categoryProblem(i);
+    if (categoryError != null) return fail(categoryError);
+    // The ledger edits the purchase entry's category; a plan with no entry
+    // keeps its own.
+    final keptCategory = purchase == null
+        ? before.categoryId
+        : (purchase.categoryId.isEmpty ? null : purchase.categoryId);
+    final requested = _str(i['category']);
+    final bound = _categoryFor(requested);
+    final categoryId = bound?.id ?? keptCategory;
+    // A category an earlier row of this list adds is not saved yet: the row
+    // names it, and the write binds its id once it is.
+    final pendingCategory = bound == null && requested.isNotEmpty
+        ? _newCategories[requested.toLowerCase()]
+        : null;
+
+    final name = _str(i['name']).isEmpty ? before.name : _str(i['name']);
+    final note = i['note'] == null ? before.note : _str(i['note']);
+
+    final after = ledger.editedPlan(
+      before,
+      previousDate: previousDate,
+      account: ledger.accounts.where((a) => a.id == accountId).firstOrNull,
+      accountId: accountId,
+      amount: amount,
+      months: months,
+      interestRate: rate,
+      date: date,
+      name: name,
+      note: (note == null || note.isEmpty) ? null : note,
+      categoryId: categoryId,
+    );
+    final edit = _PlanEdit(
+      before: before,
+      after: after,
+      previousDate: previousDate,
+      purchase: purchase,
+      paid: paid,
+      newCategory: pendingCategory,
+    );
+    if (!edit.changesAnything) {
+      return fail('That changes nothing on "${before.name}". Ask the user '
+          'what to change.');
+    }
+    return (edit: edit, error: null);
+  }
+
+  /// The row of an installment edit: every field that changes, before →
+  /// after, then what else the save changes.
+  List<({String label, String value})> _installmentEditRows(_PlanEdit e) {
+    final b = e.before;
+    final a = e.after;
+    String rate(double r) => '${_rateLabel(r)} / mo';
+    final purchase = e.purchase;
+    return [
+      if (a.name != b.name) (label: 'Name', value: '${b.name} → ${a.name}'),
+      if (a.totalAmount != b.totalAmount)
+        (
+          label: 'Total amount',
+          value: '${_peso(b.totalAmount)} → ${_peso(a.totalAmount)}',
+        ),
+      if (a.totalMonths != b.totalMonths)
+        (
+          label: 'Duration',
+          value: '${b.totalMonths} → ${a.totalMonths} months',
+        ),
+      if (a.interestRate != b.interestRate)
+        (
+          label: 'Interest rate',
+          value: '${rate(b.interestRate)} → ${rate(a.interestRate)}',
+        ),
+      if (a.monthlyAmount != b.monthlyAmount)
+        (
+          label: 'Monthly payment',
+          value: '${_peso(b.monthlyAmount)} → ${_peso(a.monthlyAmount)}',
+        ),
+      if (a.accountId != b.accountId)
+        (
+          label: 'Account',
+          value: '${_accountName(b.accountId)} → ${_accountName(a.accountId)}',
+        ),
+      if (e.dateMoved)
+        (
+          label: 'Purchase date',
+          value: '${_day(e.previousDate)} → ${_day(a.purchaseDate!)}',
+        ),
+      if (a.startMonth != b.startMonth)
+        (label: 'First payment', value: '${b.startMonth} → ${a.startMonth}'),
+      if (e.newCategory case final added?)
+        (
+          label: 'Category',
+          value: '${_categoryName(b.categoryId)} → $added$_newMark',
+        )
+      else if (a.categoryId != b.categoryId)
+        (
+          label: 'Category',
+          value: '${_categoryName(b.categoryId)} → '
+              '${_categoryName(a.categoryId)}',
+        ),
+      if (a.note != b.note)
+        (label: 'Note', value: '${b.note ?? 'none'} → ${a.note ?? 'none'}'),
+      if (e.schedule)
+        (
+          label: 'Also changes',
+          value: 'every later month of the plan'
+              '${e.paid == 0 ? '' : '; the ${e.paid} recorded '
+                  '${e.paid == 1 ? 'payment keeps its amount' : 'payments keep their amounts'}'}',
+        ),
+      if (a.accountId != b.accountId)
+        (
+          label: 'Also moves',
+          value: 'the credit it holds, from ${_accountName(b.accountId)} to '
+              '${_accountName(a.accountId)}',
+        ),
+      if (e.recordChanges && purchase != null)
+        (
+          label: 'Also changes',
+          value: 'its purchase entry in the ledger ("${purchase.description}" '
+              '${_peso(purchase.amount)} on ${_day(purchase.date)})',
+        ),
+    ];
+  }
 
   Future<String> _write(PendingFinanceAction action,
       {required bool applyToFuture,
@@ -1952,6 +2576,115 @@ class FinanceActionsExecutor extends ChangeNotifier
           throw StateError('Edit refused for installment purchase "$id"');
         }
         return 'Updated transaction "${updated.description}" (${_peso(updated.amount)}).';
+
+      case 'setBudget':
+        final budget = _budget;
+        final b = _newBudget(i).plan;
+        if (budget == null || b == null) {
+          throw StateError('setBudget could not be bound');
+        }
+        // The add-budget sheet's own save, then its set-aside offer (D8).
+        await budget.setBudget(b.key, b.amount,
+            group: b.groupId, month: b.month);
+        if (budget.budgetFor(b.key, month: b.month) == null) {
+          throw StateError('setBudget saved nothing for ${b.key}');
+        }
+        final addsSetAside = b.offersSetAside && b.addSetAside;
+        if (addsSetAside) {
+          await budget.createRecurringSetAsideFor(b.key, b.amount,
+              month: b.month);
+        }
+        return 'Set a ${_peso(b.amount)} budget for "${b.label}" from '
+            '${b.month}, repeating monthly'
+            '${addsSetAside ? ', and added a monthly ${_peso(b.amount)} set-aside into ${b.label} in Bills' : ''}.';
+
+      case 'editBudget':
+        final budget = _budget;
+        final e = _budgetEdit(i).edit;
+        if (budget == null || e == null) {
+          throw StateError('Budget "${_str(i['id'])}" cannot be edited');
+        }
+        final b = e.budget;
+        await budget.setBudget(b.categoryId, e.amount,
+            group: e.groupId, month: b.month);
+        return 'Updated the "${_budgetName(b)}" budget to ${_peso(e.amount)} '
+            '(${_groupName(e.groupId)}) in ${b.month}'
+            '${_isSeries(b) ? ' and every later month' : ''}.';
+
+      case 'removeBudget':
+        final budget = _budget;
+        final b = _budgetById(i);
+        if (budget == null || b == null) {
+          throw StateError('Budget "${_str(i['id'])}" not found');
+        }
+        final name = _budgetName(b);
+        final series = _isSeries(b);
+        await budget.removeBudget(b.categoryId, month: b.month);
+        if (budget.allBudgets.any((x) => x.id == b.id)) {
+          throw StateError('removeBudget left ${b.id}');
+        }
+        return 'Removed the "$name" budget from ${b.month}'
+            '${series ? ' and every later month; earlier months keep theirs' : ''}.';
+
+      case 'markInstallmentMonthPaid':
+        final installments = _installments;
+        final p = _monthPayment(i);
+        if (installments == null || p == null) {
+          throw StateError('Installment "${_str(i['id'])}" not found');
+        }
+        // The Installments list's own "Mark paid".
+        await installments.markPaid(
+          p.plan.id,
+          overrideAmount: p.amount,
+          date: p.date,
+          month: p.month,
+        );
+        if (installments.paidCount(p.plan.id) <= p.paid) {
+          throw StateError('markPaid saved nothing for ${p.plan.id}');
+        }
+        return 'Marked payment ${p.paid + 1} of ${p.plan.totalMonths} of '
+            '"${p.plan.name}" paid for ${p.month}: ${_peso(p.amount)} charged '
+            'to ${_accountName(p.plan.accountId)} on ${_day(p.date)}.';
+
+      case 'editInstallment':
+        final e = _installmentEdit(i).edit;
+        final ledger = _ledger;
+        final installments = _installments;
+        if (e == null || ledger == null || installments == null) {
+          throw StateError('Installment "${_str(i['id'])}" cannot be edited');
+        }
+        if (e.newCategory != null) {
+          // Throws when the category this list adds was not saved, rather
+          // than saving the plan without it.
+          _savedCategoryId(_str(i['category']));
+        }
+        final a = e.after;
+        final purchase = e.purchase;
+        if (purchase != null) {
+          // The ledger's own edit of an installment purchase: the plan and
+          // its purchase entry change together, recorded payments stay.
+          await ledger.saveInstallmentPurchase(
+            existing: purchase,
+            accountId: a.accountId,
+            amount: a.totalAmount,
+            months: a.totalMonths,
+            interestRate: a.interestRate,
+            date: a.purchaseDate!,
+            description: a.name,
+            note: a.note,
+            categoryId: a.categoryId,
+          );
+        } else {
+          // A plan added on the Installments list has no purchase entry: the
+          // list's own save.
+          await installments.updateInstallment(a);
+        }
+        final saved = installments.findById(a.id) ?? a;
+        return 'Updated installment "${saved.name}": '
+            '${_peso(saved.totalAmount)} over ${saved.totalMonths} months at '
+            '${_peso(saved.monthlyAmount)}/mo on '
+            '${_accountName(saved.accountId)}'
+            '${purchase == null ? '' : ', and its purchase entry in the ledger'}.';
 
       case 'deleteTransaction':
         final ledger = _ledger;
@@ -2720,6 +3453,16 @@ class FinanceActionsExecutor extends ChangeNotifier
         return check('account', active, 'active') ??
             _settlementProblem(
                 _receivableSettlement(i)!, 'deposited into', active);
+      case 'setBudget':
+        return _newBudget(i).error;
+      case 'editBudget':
+        return _budgetEdit(i).error;
+      case 'removeBudget':
+        return _budget == null ? 'Budgets are not available here.' : null;
+      case 'markInstallmentMonthPaid':
+        return _monthPaymentProblem(i);
+      case 'editInstallment':
+        return _installmentEdit(i).error;
       case 'markBillUnpaid':
         final bill = _bills.allBills.firstWhere((b) => b.id == _str(i['id']));
         if (!_bills.billHasPayment(bill)) {
@@ -2812,6 +3555,18 @@ class FinanceActionsExecutor extends ChangeNotifier
           'set-aside',
           'find (entity setAside)',
           _bills.allBudgetedExpenses.any((e) => e.id == id),
+        ),
+      'editBudget' || 'removeBudget' => (
+          'budget',
+          'find (entity budget)',
+          // No presenter: let the tool say budgets are unavailable.
+          _budget == null || _budgetById(call.input) != null,
+        ),
+      'markInstallmentMonthPaid' || 'editInstallment' => (
+          'installment',
+          'find (entity installment)',
+          // No presenter: let the tool say installments are unavailable.
+          _installments?.findById(id) != null || _installments == null,
         ),
       'editAccount' => (
           'account',
@@ -3103,3 +3858,105 @@ class _InstallmentPlan {
         monthlyRate: rate,
       );
 }
+
+/// An `editInstallment` call bound against the live plan: the plan before
+/// and as it will be saved, and the ledger purchase entry that changes with
+/// it. The row and the write are both drawn from one.
+class _PlanEdit {
+  const _PlanEdit({
+    required this.before,
+    required this.after,
+    required this.previousDate,
+    required this.purchase,
+    required this.paid,
+    this.newCategory,
+  });
+
+  final Installment before;
+  final Installment after;
+
+  /// The purchase date the edit is measured from.
+  final DateTime previousDate;
+
+  /// The plan's purchase entry in the ledger, or null when the plan was
+  /// added on the Installments list and has none.
+  final TransactionRecord? purchase;
+
+  /// Payments already recorded. They keep their amounts.
+  final int paid;
+
+  /// The name of a category an earlier row of the list adds, when the edit
+  /// moves the plan to it. Not saved yet, so [after] does not carry its id.
+  final String? newCategory;
+
+  bool get dateMoved {
+    final d = after.purchaseDate!;
+    return d.year != previousDate.year ||
+        d.month != previousDate.month ||
+        d.day != previousDate.day;
+  }
+
+  /// True when later months change: the monthly payment, the number of
+  /// months or the first payment month.
+  bool get schedule =>
+      after.monthlyAmount != before.monthlyAmount ||
+      after.totalMonths != before.totalMonths ||
+      after.startMonth != before.startMonth;
+
+  /// True when the purchase entry in the ledger changes with the plan.
+  bool get recordChanges =>
+      purchase != null &&
+      (after.name != before.name ||
+          after.totalAmount != before.totalAmount ||
+          after.accountId != before.accountId ||
+          dateMoved ||
+          after.categoryId != before.categoryId ||
+          newCategory != null ||
+          after.note != before.note);
+
+  /// T3: the edit changes later months, the ledger or the card's hold.
+  bool get touchesMore =>
+      schedule || recordChanges || after.accountId != before.accountId;
+
+  bool get changesAnything =>
+      touchesMore ||
+      after.name != before.name ||
+      after.totalAmount != before.totalAmount ||
+      after.interestRate != before.interestRate ||
+      after.categoryId != before.categoryId ||
+      newCategory != null ||
+      after.note != before.note ||
+      dateMoved;
+}
+
+/// A `setBudget` call bound against the user's categories, savings accounts
+/// and groups. The row and the write are both drawn from one.
+class _NewBudget {
+  const _NewBudget({
+    required this.key,
+    required this.label,
+    required this.savings,
+    required this.amount,
+    required this.groupId,
+    required this.month,
+    required this.offersSetAside,
+    required this.addSetAside,
+  });
+
+  /// The category id, or for a savings budget the account id it funds.
+  final String key;
+  final String label;
+  final bool savings;
+  final double amount;
+  final String groupId;
+  final String month;
+
+  /// True when the row offers the matching monthly set-aside (design D8).
+  final bool offersSetAside;
+
+  /// The user ticked that offer on the row.
+  final bool addSetAside;
+}
+
+/// An `editBudget` call bound against the live row: its new amount and group.
+typedef _BudgetEdit = ({Budget budget, double amount, String groupId});

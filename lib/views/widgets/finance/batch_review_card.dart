@@ -349,6 +349,11 @@ class _ActionRow extends StatelessWidget {
               alreadyLogged: alreadyLogged ?? choice.alreadyLogged,
               onChanged: busy || !choice.canRecord ? null : onLedgerChoice,
             ),
+          if (action.option case final option?)
+            RowOptionTile(
+              option: option,
+              onChanged: busy ? null : (v) => onEdit({option.inputKey: v}),
+            ),
           if (action.isRecurring) ...[
             const SizedBox(height: 4),
             ScopeChoice(
@@ -537,6 +542,40 @@ class LedgerChoiceTile extends StatelessWidget {
       ),
       subtitle: Text(
         choice.hint,
+        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+      ),
+    );
+  }
+}
+
+/// A row's optional extra ([RowOption]) as a checkbox, e.g. "Also add a
+/// monthly set-aside in Bills" under a savings budget.
+class RowOptionTile extends StatelessWidget {
+  const RowOptionTile({
+    super.key,
+    required this.option,
+    required this.onChanged,
+  });
+
+  final RowOption option;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return CheckboxListTile(
+      value: option.value,
+      onChanged: onChanged == null ? null : (v) => onChanged!(v ?? false),
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.leading,
+      title: Text(
+        option.label,
+        style: theme.textTheme.bodySmall
+            ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        option.hint,
         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
       ),
     );

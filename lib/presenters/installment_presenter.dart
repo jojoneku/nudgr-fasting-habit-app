@@ -539,14 +539,19 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// and when [fundingAccountId] names another account, a transfer from it pays
   /// that charge off. A no-op for a cycle card ([billsOnStatement]): its months
   /// are billed when the statement closes and settled by paying the statement.
+  ///
+  /// [month] marks another month than [selectedMonth] without paging the tab
+  /// there (Nudgy names the month it means).
   Future<void> markPaid(
     String installmentId, {
     double? overrideAmount,
     DateTime? date,
     String? fundingAccountId,
+    String? month,
   }) async {
     final inst = _findById(installmentId);
-    if (!canMarkPaid(inst)) return;
+    final forMonth = month ?? _selectedMonth;
+    if (!canMarkPaid(inst, month: forMonth)) return;
     final categoryId = inst.categoryId ?? kInstallmentCategoryId;
     if (inst.categoryId == null) {
       await _ensureInstallmentCategory();
@@ -558,7 +563,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       recordId: _generateId(),
       number: count,
       date: when,
-      month: _selectedMonth,
+      month: forMonth,
       categoryId: categoryId,
       amount: overrideAmount,
     );
@@ -577,11 +582,11 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       await _awardOnce('installment.complete/$installmentId', 50);
     }
 
-    final allDuePaid = dueThisMonth.every(
-      (i) => i.id == installmentId || isPaidForMonth(i.id),
-    );
-    if (allDuePaid && dueThisMonth.isNotEmpty) {
-      await _awardOnce('installment.allDuePaid/$_selectedMonth', 20);
+    final due = dueIn(forMonth);
+    final allDuePaid =
+        due.every((i) => i.id == installmentId || isPaidIn(i.id, forMonth));
+    if (allDuePaid && due.isNotEmpty) {
+      await _awardOnce('installment.allDuePaid/$forMonth', 20);
     }
 
     safeNotify();

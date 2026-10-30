@@ -141,8 +141,10 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   /// one-off set-aside would leave next month's target derived from nothing.
   /// Written through the owner's own mutator rather than into a local copy —
   /// bills owns set-asides, and this presenter only mirrors them.
-  Future<void> createRecurringSetAsideFor(
-      String accountId, double amount) async {
+  ///
+  /// [month] is the first month of the set-aside; the shown month by default.
+  Future<void> createRecurringSetAsideFor(String accountId, double amount,
+      {String? month}) async {
     final bills = _bills;
     final account = _accounts.where((a) => a.id == accountId).firstOrNull;
     if (bills == null || account == null) return;
@@ -153,7 +155,7 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
         budgetedType: account.category == AccountCategory.goal
             ? SetAsideType.goal
             : SetAsideType.savings,
-        month: _selectedMonth,
+        month: month ?? _selectedMonth,
         allocatedAmount: amount,
         // A set-aside is a transfer between the user's own accounts, never
         // spending, so it carries no expense category — the same empty value
@@ -894,13 +896,16 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Budget upsert / remove ───────────────────────────────────────────────────
 
+  /// [month] sets another month than the shown one without paging the tab
+  /// there (Nudgy names the month of the row it edits).
   Future<void> setBudget(
     String categoryId,
     double amount, {
     String? group,
     BudgetType? budgetType,
+    String? month,
   }) async {
-    final existing = budgetFor(categoryId);
+    final existing = budgetFor(categoryId, month: month);
     if (existing != null) {
       // An edit is the new going rate: it lands on this month and every later
       // month of the same series (Plan 059). Earlier months are never touched —
@@ -932,7 +937,7 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
       final newBudget = Budget(
         id: id,
         categoryId: categoryId,
-        month: _selectedMonth,
+        month: month ?? _selectedMonth,
         allocatedAmount: amount,
         group: group ?? BudgetGroupDef.idVariableOptional,
         budgetType: budgetType ?? BudgetType.monthly,
@@ -1007,8 +1012,10 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   ///
   /// Earlier months keep their rows. They are history — the user did budget
   /// this in August, and deleting it in September should not rewrite that.
-  Future<void> removeBudget(String categoryId) async {
-    final target = budgetFor(categoryId);
+  ///
+  /// [month] removes from another month than the shown one.
+  Future<void> removeBudget(String categoryId, {String? month}) async {
+    final target = budgetFor(categoryId, month: month);
     if (target == null) return;
 
     final reach = seriesReach<Budget>(
