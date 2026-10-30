@@ -185,7 +185,7 @@ async def app(scope, receive, send):
         ],
     })
 
-    for frame in advise_finance_stream(payload, request):
+    for frame in advise_finance_stream(payload, request, user_id=user_id):
         await send({
             "type": "http.response.body",
             "body": frame.encode(),
