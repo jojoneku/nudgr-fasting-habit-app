@@ -316,6 +316,35 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'addCategory',
+    kind: AiToolKind.create,
+    description:
+        'Propose a new expense or income category. A name that already '
+        'exists (in any letter case) is refused. To use it at once in '
+        'addBill, editBill, editTransaction or addInstallment, call it in '
+        'the SAME reply, BEFORE those rows: the user approves them in one '
+        'list and the category is saved first. logTransactions can only use '
+        'a saved category, so log those entries in the next step, after the '
+        'user approves this.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['name', 'type'],
+      'properties': {
+        'name': {'type': 'string', 'description': 'e.g. "Pets".'},
+        'type': {
+          'type': 'string',
+          'enum': ['expense', 'income'],
+        },
+        'excludeFromTotals': {
+          'type': 'boolean',
+          'description': 'True to leave it out of the income and expense '
+              'totals and budget spend, e.g. a "Reimbursement" income. '
+              'Default false.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'logTransactions',
     kind: AiToolKind.create,
     description:
@@ -608,6 +637,57 @@ const List<AiTool> kFinanceTools = [
     },
   ),
   AiTool(
+    name: 'markBillsPaid',
+    kind: AiToolKind.update,
+    description:
+        'Mark SEVERAL bills paid in one step, all from one account on one '
+        'date, the way the Bills tab\'s multi-select does. Use for "paid '
+        'Meralco, water and internet from GCash". For a single bill use '
+        'markBillPaid. Call ONLY after find (entity bill) returns every id. '
+        'The user approves on the review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['bills'],
+      'properties': {
+        'bills': {
+          'type': 'array',
+          'description': 'Two or more unpaid bills, each listed once.',
+          'items': {
+            'type': 'object',
+            'required': ['id'],
+            'properties': {
+              'id': {
+                'type': 'string',
+                'description': 'The exact bill id from a preceding find '
+                    'result.',
+              },
+              'paidAmount': {
+                'type': 'number',
+                'description': 'Amount paid in pesos. Omit to pay what is '
+                    'left on the bill.',
+              },
+            },
+          },
+        },
+        'account': {
+          'type': 'string',
+          'description': 'Account NAME all of them were paid from. Omit when '
+              'the bills already share one.',
+        },
+        'paidDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD date they were paid. Defaults to today.',
+        },
+        'alreadyLogged': {
+          'type': 'boolean',
+          'description': 'True when the user says they already logged these '
+              'payments in the Ledger, so no second entries are recorded. The '
+              'card lets them change it.',
+        },
+      },
+    },
+  ),
+  AiTool(
     name: 'markReceivableReceived',
     kind: AiToolKind.update,
     description:
@@ -643,6 +723,49 @@ const List<AiTool> kFinanceTools = [
           'description': 'True when the user says they already logged this '
               'income in the Ledger, so no second entry is recorded. The '
               'card lets them change it.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markBillUnpaid',
+    kind: AiToolKind.update,
+    description:
+        'Undo a bill payment: the bill goes back to unpaid, and the ledger '
+        'entry the payment made is deleted, so the money returns to the '
+        'account it left. Use when the user says a bill was marked paid by '
+        'mistake or is not paid yet. Call ONLY after find (entity bill) '
+        'returns the id of a PAID bill. The user approves on the review list '
+        'before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact bill id from a preceding find result.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'markReceivableNotReceived',
+    kind: AiToolKind.update,
+    description:
+        'Undo a receipt: the receivable goes back to still owed, and the '
+        'ledger income entry it made is deleted, so the money leaves the '
+        'account it went into. Use when the user says money was marked '
+        'received by mistake or has not arrived. Call ONLY after find '
+        '(entity receivable) returns the id of a RECEIVED receivable. The '
+        'user approves on the review list before anything changes.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description':
+              'The exact receivable id from a preceding find result.',
         },
       },
     },
@@ -762,6 +885,52 @@ const List<AiTool> kFinanceTools = [
         'destinationAccount': {
           'type': 'string',
           'description': 'Updated destination account NAME.',
+        },
+      },
+    },
+  ),
+  AiTool(
+    name: 'editAccount',
+    kind: AiToolKind.update,
+    description:
+        'Propose an edit to an existing account: its name; for a credit '
+        'card, credit line or BNPL account its credit limit, statement day '
+        'or payment due day; for a goal its target; for a time deposit its '
+        'maturity date. Call ONLY after find (entity account) returns the '
+        'account id. Send only the fields that change. It never changes a '
+        'balance — a balance moves only through transactions (logTransactions, '
+        'payCredit) — and never the account type. The user approves on the '
+        'review list before anything is saved.',
+    inputSchema: {
+      'type': 'object',
+      'required': ['id'],
+      'properties': {
+        'id': {
+          'type': 'string',
+          'description': 'The exact account id from a preceding find call.',
+        },
+        'name': {'type': 'string', 'description': 'New account name.'},
+        'creditLimit': {
+          'type': 'number',
+          'description': 'New credit limit in pesos. Credit accounts only.',
+        },
+        'statementDay': {
+          'type': 'integer',
+          'description': 'Day of the month the statement closes, 1-28. '
+              'Credit accounts only.',
+        },
+        'paymentDueDay': {
+          'type': 'integer',
+          'description': 'Day of the month payment is due, 1-28. Credit '
+              'accounts only. It replaces a "days after the statement" rule.',
+        },
+        'goalTarget': {
+          'type': 'number',
+          'description': 'New target in pesos. Goal accounts only.',
+        },
+        'maturityDate': {
+          'type': 'string',
+          'description': 'YYYY-MM-DD, today or later. Time deposits only.',
         },
       },
     },
