@@ -42,8 +42,6 @@ import '../utils/finance_tool_catalogue.dart';
 import '../utils/planning_intent.dart';
 import '../utils/safe_notifier.dart';
 
-const int _maxHistoryMessages = 50;
-
 /// How many months of month-by-month detail the advisor snapshot carries.
 ///
 /// 18 rather than 12 so a year-over-year comparison has both endpoints: at 12
@@ -169,6 +167,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   bool _isInitializing = true;
   String? _errorMessage;
 
+  /// Reads the time for the idle-gap check. Injected so a test can move it.
+  final DateTime Function() _clock;
+
   AiCoachPresenter({
     required StatsPresenter stats,
     FastingPresenter? fasting,
@@ -185,7 +186,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     FinanceToolExecutor? toolExecutor,
     AdvisorTelemetry? telemetry,
     Duration retryHorizon = defaultRetryHorizon,
+    DateTime Function()? clock,
   })  : _retryHorizon = retryHorizon,
+        _clock = clock ?? DateTime.now,
         _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
@@ -347,6 +350,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     // Open the most recently updated non-archive chat, else create a fresh one.
     final active = _activeConversations();
     _currentConversationId = active.isNotEmpty ? active.first.id : null;
+    _conversationChosenAt = null;
     _ensureCurrentConversation();
     _messages
       ..clear()
@@ -562,6 +566,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       return;
     }
     if ((trimmed.isEmpty && images.isEmpty) || _isResponding) return;
+    if (startsFreshAfterIdleGap) startNewConversation();
 
     // Logging intent — or any reply while the ledger is mid-clarify — goes
     // through the ledger's confirm-before-commit pipeline instead of the advice
@@ -672,7 +677,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 : _service;
         _activeTier = service.tier;
         final stream = service.respond(
-          messages: _userVisibleMessages(),
+          messages: _requestTranscript(),
           context: context,
           isThinking: _isThinkingEnabled,
         );
@@ -699,7 +704,6 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     } finally {
       _isResponding = false;
       _advisorStatus = null;
-      _trimHistory();
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
         _persistAdvisor();
       }
@@ -809,7 +813,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final historical = context.financeHistoricalSummary();
     // A resumed turn carries on from the protocol transcript saved with its
     // batch, which already ends in that batch's results.
-    final transcript = resumeFrom ?? _userVisibleMessages();
+    final transcript = resumeFrom ?? _requestTranscript();
     // Tools are offered only when something can actually run them. Declaring
     // them with no executor would let the model propose changes that silently
     // never happen, which is worse than not offering.
@@ -1024,6 +1028,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   void _clearOpenBatch() => _storage?.saveAdvisorOpenBatch(null);
 
+  /// True while [resumeOpenBatch] reads storage. A saved batch belongs to the
+  /// current conversation, so no new conversation may start until it is known
+  /// whether one waits.
+  bool _checkingOpenBatch = false;
+
   /// Picks up a batch an app restart interrupted, in the conversation it
   /// belongs to. The batch is shown again; the user's answer then finishes
   /// the turn exactly as it would have. A batch that cannot be shown — too
@@ -1032,7 +1041,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> resumeOpenBatch() async {
     final storage = _storage;
     if (storage == null || _isResponding) return;
-    final saved = await storage.loadAdvisorOpenBatch();
+    _checkingOpenBatch = true;
+    final Map<String, dynamic>? saved;
+    try {
+      saved = await storage.loadAdvisorOpenBatch();
+    } finally {
+      _checkingOpenBatch = false;
+    }
     if (saved == null || isDisposed) return;
     if (saved['conversationId'] != _currentConversationId) return;
     final List<AiChatMessage> transcript;
@@ -1512,7 +1527,6 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       AiChatMessage.assistantStreaming()
           .copyWith(text: text, isStreaming: false),
     );
-    _trimHistory();
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
       _persistAdvisor();
     }
@@ -1532,6 +1546,72 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   String? get currentConversationId => _currentConversationId;
 
+  // ── Memory (Plan 065 phase 5) ─────────────────────────────────────────────
+
+  /// Silence after which the next advisor message starts a new conversation.
+  /// The old one stays in [conversations], one tap away.
+  static const idleGapForNewConversation = Duration(hours: 6);
+
+  /// A request sends at most this many messages before the oldest are dropped.
+  static const int requestTrimThreshold = 50;
+
+  /// How many of the oldest messages one trim drops.
+  static const int requestTrimChunk = 20;
+
+  /// True when the next advisor message starts a new conversation: the
+  /// current one has messages and has been silent for longer than
+  /// [idleGapForNewConversation].
+  ///
+  /// Never while a turn runs or a batch of changes waits, and never while a
+  /// saved batch is being read back: a batch belongs to the conversation it
+  /// was proposed in, and a new one would leave it without a home. Never for
+  /// the other coaches, whose threads are not saved. Never while the ledger
+  /// waits for an answer to its question, because the reply belongs to it.
+  bool get startsFreshAfterIdleGap {
+    if (_entryPoint != AiCoachEntryPoint.financeAdvisor) return false;
+    if (_isResponding || _advisorRunning || _checkingOpenBatch) return false;
+    if (financeProposals?.batch != null) return false;
+    if (_ledger?.chatState.phase == ChatPhase.clarifying) return false;
+    if (_messages.isEmpty) return false;
+    var lastActivity = _messages.last.timestamp;
+    final chosenAt = _conversationChosenAt;
+    if (chosenAt != null && chosenAt.isAfter(lastActivity)) {
+      lastActivity = chosenAt;
+    }
+    return _clock().difference(lastActivity) > idleGapForNewConversation;
+  }
+
+  /// When the user last picked the current conversation from the list, or
+  /// null when the app picked it. Picking an old chat is a choice to go on
+  /// with it, so it counts as activity: the next message stays in it.
+  DateTime? _conversationChosenAt;
+
+  /// What a request sends of [transcript].
+  ///
+  /// Up to [requestTrimThreshold] messages go as they are. Past it, the oldest
+  /// messages are dropped in whole chunks of [requestTrimChunk], so the start
+  /// of the request stays the same from one trim to the next and the prompt
+  /// cache keeps its prefix. A trim on every turn would move the start on
+  /// every turn and the cache would never hit.
+  ///
+  /// The cut never separates a user message from its reply: a cut that lands
+  /// on a reply moves forward to the next user message, which also makes the
+  /// request start with the user, as the model requires.
+  ///
+  /// There is no summary of what was dropped. A summary loses numbers, and
+  /// the numbers are what the user asks about.
+  static List<AiChatMessage> trimForRequest(List<AiChatMessage> transcript) {
+    final over = transcript.length - requestTrimThreshold;
+    if (over <= 0) return transcript;
+    final chunks = (over + requestTrimChunk - 1) ~/ requestTrimChunk;
+    final chunkCut = chunks * requestTrimChunk;
+    var cut = chunkCut;
+    while (cut < transcript.length && transcript[cut].role != AiChatRole.user) {
+      cut++;
+    }
+    return transcript.sublist(cut < transcript.length ? cut : chunkCut);
+  }
+
   /// Start a fresh chat, saving the current one first.
   void startNewConversation() {
     _persistAdvisor();
@@ -1545,6 +1625,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     );
     _conversations.add(convo);
     _currentConversationId = convo.id;
+    _conversationChosenAt = null;
     _messages.clear();
     _errorMessage = null;
     _enforceConversationCap();
@@ -1559,6 +1640,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final convo = _conversations.where((c) => c.id == id).firstOrNull;
     if (convo == null) return;
     _currentConversationId = id;
+    _conversationChosenAt = _clock();
     _messages
       ..clear()
       ..addAll(convo.messages);
@@ -1572,6 +1654,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _conversations.removeWhere((c) => c.id == id);
     if (id == _currentConversationId) {
       _currentConversationId = null;
+      _conversationChosenAt = null;
       _messages.clear();
       final active = _activeConversations();
       if (active.isNotEmpty) {
@@ -2426,15 +2509,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   List<AiChatMessage> _userVisibleMessages() =>
       _messages.where((m) => !m.isStreaming && m.text.isNotEmpty).toList();
 
+  /// The conversation as the next request sends it: every settled message,
+  /// trimmed by [trimForRequest]. The thread on screen and in storage keeps
+  /// all of it.
+  List<AiChatMessage> _requestTranscript() =>
+      trimForRequest(_userVisibleMessages());
+
   void _updateLastMessage(String text, {required bool isStreaming}) {
     if (_messages.isEmpty) return;
     _messages[_messages.length - 1] =
         _messages.last.copyWith(text: text, isStreaming: isStreaming);
-  }
-
-  void _trimHistory() {
-    if (_messages.length > _maxHistoryMessages) {
-      _messages.removeRange(0, _messages.length - _maxHistoryMessages);
-    }
   }
 }
