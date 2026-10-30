@@ -190,7 +190,7 @@ def test_a_today_line_with_no_iso_date_gets_no_calendar():
     assert lf._calendar_periods("TODAY: sometime") == "TODAY: sometime"
 
 
-def test_the_briefing_closes_the_newest_user_turn_with_no_breakpoint():
+def test_the_briefing_closes_the_newest_user_turn_and_carries_breakpoint_4():
     content = _build(_payload())["messages"][-1]["content"]
 
     question, briefing = content
@@ -198,7 +198,10 @@ def test_the_briefing_closes_the_newest_user_turn_with_no_breakpoint():
     assert question == {"type": "text", "text": "How am I doing?"}
     assert _is_briefing(briefing)
     assert briefing["text"].endswith(lf._BRIEFING_REMINDER + "\n</briefing>")
-    assert "cache_control" not in briefing
+    # Cached for the next hop of this turn, which reads it back if the model
+    # calls a tool (see the layout comment, breakpoint 4).
+    assert briefing["cache_control"] == {"type": "ephemeral"}
+    assert "cache_control" not in question
 
 
 def test_the_briefing_holds_the_snapshot_then_the_history():
@@ -251,17 +254,19 @@ def test_tools_carry_no_breakpoint_of_their_own():
     assert all("cache_control" not in t for t in request["tools"])
 
 
-def test_a_first_turn_has_only_the_two_system_breakpoints():
-    assert _breakpoints(_build(_payload())) == [("system", 0), ("system", 1)]
+def test_a_first_turn_marks_the_system_and_its_only_user_turn():
+    assert _breakpoints(_build(_payload())) == [
+        ("system", 0), ("system", 1), ("messages", 0)]
 
 
-def test_the_history_breakpoint_sits_on_the_second_to_last_user_turn():
+def test_the_history_and_newest_breakpoints_sit_on_the_last_two_user_turns():
     messages = _HISTORY + [{"role": "user", "text": "What about bills?"}]
     request = _build(_payload(messages=messages))
 
     assert _breakpoints(request) == [
-        ("system", 0), ("system", 1), ("messages", 2)]
-    # The briefing is past the breakpoint, so it is never cached.
+        ("system", 0), ("system", 1), ("messages", 2), ("messages", 4)]
+    # Only the newest turn carries the briefing; the next message strips it,
+    # so the history breakpoint (3) never covers a briefing.
     assert _briefing_turns(request) == [4]
 
 
@@ -269,10 +274,11 @@ def test_a_long_tool_loop_stays_within_bedrocks_breakpoint_limit():
     request = _build(_payload(messages=_tool_loop(hops=4)))
     found = _breakpoints(request)
 
-    assert len(found) <= _BEDROCK_MAX_BREAKPOINTS
+    assert len(found) == _BEDROCK_MAX_BREAKPOINTS
     assert found[:2] == [("system", 0), ("system", 1)]
-    # Second-to-last user turn: the results of hop 3.
-    assert found[2:] == [("messages", len(request["messages"]) - 3)]
+    # The results of hop 3 (breakpoint 3) and of hop 4 (breakpoint 4).
+    n = len(request["messages"])
+    assert found[2:] == [("messages", n - 3), ("messages", n - 1)]
 
 
 def test_cached_system_with_no_context_is_one_block():
@@ -362,11 +368,19 @@ def test_each_hop_keeps_the_previous_hops_prompt_as_its_prefix():
         assert _canonical(after["messages"][:n]) == _canonical(before["messages"])
 
 
-def test_hop_two_caches_through_the_question_and_its_briefing():
-    request = _build(_payload(messages=_tool_loop(hops=1)))
+def test_hop_two_reads_the_question_and_briefing_hop_one_cached():
+    first = _build(_payload(messages=_tool_loop(hops=0)))
+    second = _build(_payload(messages=_tool_loop(hops=1)))
 
-    # The second-to-last user turn is the question: hop 3 reads it back.
-    assert _breakpoints(request)[2:] == [("messages", len(_HISTORY))]
+    question = len(_HISTORY)
+    # Hop 1 marks the question turn as its newest turn (breakpoint 4) ...
+    assert ("messages", question) in _breakpoints(first)
+    # ... and hop 2 marks the same turn as breakpoint 3, plus its own results.
+    assert _breakpoints(second)[2:] == [
+        ("messages", question), ("messages", question + 2)]
+    # The marked prefix is byte-identical, so hop 2 reads what hop 1 wrote.
+    assert (_canonical(first["messages"][:question + 1])
+            == _canonical(second["messages"][:question + 1]))
 
 
 def test_a_resumed_turn_of_only_tool_results_puts_the_briefing_last():
