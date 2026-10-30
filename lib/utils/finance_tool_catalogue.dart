@@ -27,12 +27,17 @@ const List<AiTool> kFinanceTools = [
     name: 'find',
     kind: AiToolKind.read,
     description:
-        'Look up the user\'s named records: bills, receivables (money owed '
-        'to them), set-asides, budgets, budget groups, installment plans and '
-        'accounts (with balances, credit limits and open statements). Use it '
-        'for "a named record and its details" and to get the id an edit, '
-        'delete or settlement needs. The query matches on all its words in '
-        'any order ("meralco aug", "bpi card"); a month name in it sets the '
+        'Look up the user\'s named records: bills (a card statement bill '
+        'lists its charges), receivables (money owed to them), set-asides, '
+        'budgets, budget groups, installment plans (first and last payment '
+        'month, interest, total interest and total payable) and accounts '
+        '(balance now, credit limit, and the open statement\'s totals but '
+        'not its charges). Use it for "a named record and its details" and '
+        'to get the id an edit, delete or settlement needs. The snapshot '
+        'names this month\'s records and their amounts only: for any other '
+        'detail, or a record from another month, call find instead of '
+        'working it out. The query matches on all its words in any order '
+        '("meralco aug", "bpi card"); a month name in it sets the '
         'month. Every reply starts with a status: found (exactly one match '
         'comes back with ALL its fields — paid date, paid amount, account, '
         'note, linked ledger entry, series — so do not look it up again), '
@@ -190,7 +195,10 @@ const List<AiTool> kFinanceTools = [
         },
         'from': {
           'type': 'string',
-          'description': 'YYYY-MM-DD, inclusive. Overrides month.',
+          'description': 'YYYY-MM-DD, inclusive. Overrides month. A named '
+              'period is a calendar period: "this quarter" starts on the '
+              'first day of its quarter (Q1 Jan, Q2 Apr, Q3 Jul, Q4 Oct), '
+              '"this year" on Jan 1.',
         },
         'to': {
           'type': 'string',
@@ -522,7 +530,9 @@ const List<AiTool> kFinanceTools = [
         '"a screen\'s figure" questions: "how much budget do I have left", '
         '"where will my cash be at the end of next month", "am I on pace", '
         '"what does the History tab say I average", "what is on my card '
-        'statement", "how much do I hold for others". Quote the figures; '
+        'statement", "how much do I hold for others". The snapshot holds '
+        'only this month\'s headline totals: for a screen\'s own label, a '
+        'breakdown, or another month, call getView. Quote the figures; '
         'never add or subtract them yourself. For a named record use find; '
         'for rows in a period use findTransactions; for a sum or group-by no '
         'screen shows use queryFinance.',
@@ -547,10 +557,12 @@ const List<AiTool> kFinanceTools = [
               'budgeted, pace, every group and row. bills: pending/paid, '
               'coming up, statement line items, receivables, set-asides. '
               'ledger: month in/out/net, owed, daily average. history: '
-              'averages, % saved, a month\'s closed summary and balances at '
-              'close. accounts: every balance, held, yours, credit limit, '
-              'statement/due days. installments: every plan. grocery: cart, '
-              'price book, last trips.',
+              'averages, % saved, a month\'s closed summary and every '
+              'account\'s balance at that month\'s close. accounts: every '
+              'balance now, held, yours, credit limit, statement and due '
+              'days (no statement charges: those are in bills). '
+              'installments: every plan. grocery: cart, price book (each '
+              'item\'s last price), last trips (date, store, total).',
         },
         'month': {
           'type': 'string',

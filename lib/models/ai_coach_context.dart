@@ -851,7 +851,9 @@ class AiCoachContext {
           'meaning; name the one you quote:');
       buf.writeln('  - Expense budgets: ${_peso(expSpent)} spent of '
           '${_peso(expAlloc)} (${_peso(expAlloc - expSpent)} left). This is '
-          'the Dashboard\'s Budget overview total.');
+          'the Dashboard\'s Budget overview total. It is not the Month-End '
+          'Outlook\'s "Budget Left", which also takes out what bills and '
+          'set-asides already reserve: read that with getView.');
       if (savAlloc > 0) {
         buf.writeln('  - Savings budgets: ${_peso(savFunded)} funded of '
             '${_peso(savAlloc)} — money to set aside, not spending.');

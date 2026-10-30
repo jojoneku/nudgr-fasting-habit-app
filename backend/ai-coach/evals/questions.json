@@ -23,7 +23,6 @@
       "source": "audit 1.4 #3",
       "question": "What's on my BPI statement from last month?",
       "expect": {"any": [
-        {"tool": "find", "input": {"entity": "account", "query": {"contains": "bpi"}}},
         {"tool": "find", "input": {"entity": "bill", "query": {"contains": "bpi"}}},
         {"tool": "getView", "input": {"view": "bills"}}
       ]}
