@@ -262,6 +262,14 @@ final _context = AiCoachContext(
         remainingMonths: 3,
         remainingAmount: 3600,
         account: 'BPI Credit Card'),
+    // Deferred: its first payment is after this month, so it is not in
+    // installmentsMonthlyLoad. The snapshot cannot say so (Plan 066).
+    AdvisorInstallmentLine(
+        name: 'Panasonic Refrigerator',
+        monthlyAmount: 2499,
+        remainingMonths: 12,
+        remainingAmount: 29988,
+        account: 'BPI Credit Card'),
   ],
   maturities: const [
     AdvisorMaturityLine(
@@ -463,12 +471,14 @@ void main() {
 
   test('snapshot.json is the context the app sends for the fixture', () {
     // The same payload builder the app uses, so the eval sends what the
-    // phone sends. Messages and tools are left out: the eval supplies its own
-    // questions, and tools.json carries the catalogue.
+    // phone sends. Only the context is kept: the eval supplies its own
+    // questions, and tools.json carries the catalogue. The tools still go in,
+    // because with them the snapshot carries its read hints (Plan 066).
     final payload = CloudAiCoachService.advisorPayload(
       messages: const [],
       context: _context,
       historical: _context.financeHistoricalSummary(),
+      tools: kFinanceTools,
     );
     _expectFixture('snapshot.json', {
       'today': '2026-10-15',

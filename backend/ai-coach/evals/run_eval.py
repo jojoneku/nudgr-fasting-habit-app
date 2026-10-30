@@ -107,9 +107,14 @@ class Usage:
                 + t["cache_read_input_tokens"] * price[3]) / 1e6
 
 
+def _first_messages(q):
+    """The earlier turns of the question (its `history`), then the question."""
+    return list(q.get("history") or []) + [{"role": "user", "text": q["question"]}]
+
+
 def run_question(q, *, call, lf, model_id, snapshot, tools):
     """Score one question. `call(body)` returns the Bedrock reply as a dict."""
-    messages = [{"role": "user", "text": q["question"]}]
+    messages = _first_messages(q)
     reply = call(build_body(lf, model_id, snapshot, tools, messages))
     content = lf._without_thinking(reply.get("content") or [])
     calls = scoring.tool_calls(content)
@@ -142,8 +147,7 @@ def _dry_run(questions, lf, model_id, snapshot, tools):
     """Print every request. System and tools are the same for all of them, so
     they are printed once, with the first request."""
     for i, q in enumerate(questions):
-        body = build_body(lf, model_id, snapshot, tools,
-                          [{"role": "user", "text": q["question"]}])
+        body = build_body(lf, model_id, snapshot, tools, _first_messages(q))
         if i:
             body["system"] = "(same as the first request)"
             body["tools"] = "(same as the first request)"
@@ -163,10 +167,12 @@ def main(argv=None):
     parser.add_argument("--region", default="ap-southeast-1")
     parser.add_argument("--only", nargs="*", metavar="ID",
                         help="run only these question ids")
-    parser.add_argument("--set", choices=["tuning", "holdout", "all"], default="all",
+    parser.add_argument("--set", choices=["tuning", "holdout", "index", "all"],
+                        default="all",
                         help="tuning: the questions used to tune the prompt; "
-                             "holdout: the held-out questions; all: both, "
-                             "reported apart (default)")
+                             "holdout: the held-out questions; index: the "
+                             "snapshot-vs-read questions (Plan 066); all: every "
+                             "set, reported apart (default)")
     parser.add_argument("--threshold", type=float,
                         help="pass rate needed (default: questions.json)")
     parser.add_argument("--dry-run", action="store_true",
@@ -177,7 +183,8 @@ def main(argv=None):
 
     model_id = MODEL_ALIASES.get(args.model, args.model)
     spec = _load("questions.json")
-    sets = {"tuning": spec["questions"], "holdout": spec.get("holdout", [])}
+    sets = {"tuning": spec["questions"], "holdout": spec.get("holdout", []),
+            "index": spec.get("index", [])}
     if args.set != "all":
         sets = {args.set: sets[args.set]}
     if args.only:
@@ -223,7 +230,8 @@ def main(argv=None):
               file=sys.stderr)
 
     print(f"Model: `{model_id}`")
-    titles = {"tuning": "Tuning questions", "holdout": "Held-out questions"}
+    titles = {"tuning": "Tuning questions", "holdout": "Held-out questions",
+              "index": "Snapshot-vs-read questions (Plan 066)"}
     rates = {}
     for name, rows in results.items():
         rates[name] = rate = scoring.pass_rate(rows)
@@ -239,8 +247,8 @@ def main(argv=None):
           f"{t['cache_read_input_tokens']} cache read"
           + (f" — about ${cost:.2f}" if cost is not None else "")
           + f"; {time.monotonic() - started:.0f}s")
-    # The tuning set decides the exit code; the held-out set only when run alone.
-    rate = rates.get("tuning", rates.get("holdout", 0.0))
+    # The tuning set decides the exit code; another set only when run alone.
+    rate = rates.get("tuning", next(iter(rates.values()), 0.0))
     return 0 if rate >= threshold else 1
 
 

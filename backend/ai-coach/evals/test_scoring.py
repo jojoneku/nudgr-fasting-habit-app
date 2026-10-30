@@ -53,6 +53,15 @@ def test_a_required_input_key_must_be_present():
     assert not scoring.match_call(option, _call("findTransactions", entity="bill"))
 
 
+def test_an_absent_key_must_be_left_out():
+    option = {"tool": "find", "input": {"entity": "installment",
+                                        "query": {"absent": True}}}
+    assert scoring.match_call(option, _call("find", entity="installment"))
+    assert not scoring.match_call(option, _call("find", entity="installment",
+                                                query="fridge"))
+    assert scoring.describe_option(option) == "find(entity='installment', no query)"
+
+
 # ── score_reply ──────────────────────────────────────────────────────────────
 
 _ANY = {"any": [
@@ -167,7 +176,7 @@ def _options(expect):
 
 def _all_questions():
     spec = _fixture("questions.json")
-    return spec["questions"] + spec.get("holdout", [])
+    return spec["questions"] + spec.get("holdout", []) + spec.get("index", [])
 
 
 def test_every_expected_tool_and_input_exists_in_the_catalogue():
@@ -244,6 +253,39 @@ def test_a_two_step_question_replays_the_first_reply(ctx):
     assert second[2]["content"][0]["type"] == "tool_result"
     assert second[2]["content"][0]["tool_use_id"] == "tu-find"
     assert "→" in result["expected"] and "deleteBill" in result["got"]
+
+
+def test_the_history_goes_before_the_question(ctx):
+    q = {
+        "id": "dispute", "question": "you can't see it?",
+        "history": [{"role": "user", "text": "When does the fridge plan start?"},
+                    {"role": "assistant", "text": "I can't see that."}],
+        "expect": {"any": [{"tool": "find", "input": {"entity": "installment"}}]},
+    }
+    sent = []
+
+    def call(body):
+        sent.append(body)
+        return _reply(_tool_use("find", entity="installment"))
+
+    result = run_eval.run_question(q, call=call, **ctx)
+    assert result["passed"], result
+    messages = sent[0]["messages"]
+    assert [m["role"] for m in messages] == ["user", "assistant", "user"]
+    assert messages[1]["content"] == "I can't see that."
+    # The cache breakpoint marks the earlier user turn, as in production.
+    assert messages[0]["content"][-1]["text"] == "When does the fridge plan start?"
+    # The newest turn carries the question, then the briefing.
+    assert messages[2]["content"][0]["text"] == "you can't see it?"
+    assert messages[2]["content"][-1]["text"].startswith("<briefing>")
+
+
+def test_every_history_alternates_and_ends_with_the_assistant():
+    for q in (q for q in _all_questions() if q.get("history")):
+        roles = [m["role"] for m in q["history"]]
+        assert roles[::2] == ["user"] * len(roles[::2]), q["id"]
+        assert roles[1::2] == ["assistant"] * len(roles[1::2]), q["id"]
+        assert roles[-1] == "assistant", q["id"]
 
 
 def test_a_failed_first_step_skips_the_second(ctx):
