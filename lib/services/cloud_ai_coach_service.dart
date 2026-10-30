@@ -258,6 +258,7 @@ class CloudAiCoachService implements AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   }) async* {
     // Advisor gates on the Cloud AI opt-in (unlike the classifier) — it's an
     // explicit conversational feature the user opted into.
@@ -274,6 +275,7 @@ class CloudAiCoachService implements AiCoachService {
         profile: profile,
         historical: historical,
         tools: tools,
+        route: route,
       ),
     });
 
@@ -301,6 +303,7 @@ class CloudAiCoachService implements AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   }) {
     final mime = context.imageMimeType ?? 'image/jpeg';
     final images = [for (final img in context.images) base64Encode(img)];
@@ -325,6 +328,9 @@ class CloudAiCoachService implements AiCoachService {
       // Groups the server's cost lines for one user message: every hop and
       // retry of it sends the same id. An older Lambda ignores it.
       if (context.traceId != null) 'trace_id': context.traceId,
+      // The conversation's model route (Plan 065, phase 5). The Lambda reads it
+      // only while ADVISOR_HAIKU_ROUTING is on; an older Lambda ignores it.
+      if (route != null) 'route': route,
       if (tools.isNotEmpty) 'tools': [for (final t in tools) t.toRequestJson()],
       // This client asks again for a tool call the server's time budget cut
       // off mid-input, so the server may report it instead of ending the turn

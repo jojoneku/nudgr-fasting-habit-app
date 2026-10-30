@@ -15,6 +15,15 @@ _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 # The financial advisor (op=adviseFinance) reasons better on a stronger model.
 # Falls back to the base model when unset so the op still works pre-config.
 _ADVISOR_MODEL_ID = os.environ.get("ADVISOR_MODEL_ID", _MODEL_ID)
+# Haiku routing (Plan 065, phase 5). OFF by default: with the flag off, every
+# advisor request runs on _ADVISOR_MODEL_ID exactly as before, whatever `route`
+# the client sends. See _advisor_model_id and the README to turn it on.
+_ADVISOR_HAIKU_ROUTING = os.environ.get(
+    "ADVISOR_HAIKU_ROUTING", "").lower() in ("1", "true", "yes")
+# The model a `route: "haiku"` conversation runs on. A setting, so Haiku 5.5
+# can replace Haiku 4.5 by config once the account has quota for it.
+_ADVISOR_ROUTE_MODEL_ID = os.environ.get(
+    "ADVISOR_ROUTE_MODEL_ID", "global.anthropic.claude-haiku-4-5-20251001-v1:0")
 # Effort for models that take one (see _generation_params). Every Haiku-tier op
 # is short extraction or a 2-3 sentence chat reply, which is what `low` is for.
 _EFFORT = os.environ.get("BEDROCK_EFFORT", "low")
@@ -1838,6 +1847,7 @@ def _cost_line(*, request, usage, stop_reason, calls, payload, latency_ms,
         f"calls={len(calls)} "
         f"hop={'cont' if _carries_tool_results({'payload': payload}) else 'first'} "
         + _trace_fields(request=request, calls=calls, payload=payload)
+        + f" route={_advisor_route(payload)} model={_advisor_model_id(payload)}"
     )
 
 
@@ -1860,6 +1870,46 @@ def _split_reply(content):
     return text, tool_calls
 
 
+# -- Haiku routing (Plan 065, phase 5) -----------------------------------------
+#
+# The client picks a route ONCE per conversation, when its first advisor
+# message is sent, and sends the same `route` on every request of that
+# conversation: "haiku" for a lookup-only conversation, "sonnet" for anything
+# else. Per conversation, not per turn: each model writes its own prompt cache,
+# so a route that changed turn by turn would pay for two caches of the same
+# history. The client can escalate a conversation from haiku to sonnet (never
+# back); that costs one cache rewrite of the history on Sonnet.
+#
+# Haiku 4.5 caches only a prefix of 4,096 tokens or more. The tools + rules
+# prefix (breakpoint 1) is well over that, so it caches; a breakpoint that
+# closes a shorter prefix is simply not cached, which is not an error.
+# _generation_params gives Haiku 4.5 no extra fields, and Haiku 5.5 thinking
+# off, so ADVISOR_ROUTE_MODEL_ID can move to 5.5 with no code change.
+
+def _advisor_route(payload):
+    """The route the client asked for, as a cost_line value.
+
+    Only the known values are echoed; anything else is `other`, so a client
+    string never reaches the log.
+    """
+    route = payload.get("route")
+    if route is None:
+        return "-"
+    return route if route in ("haiku", "sonnet") else "other"
+
+
+def _advisor_model_id(payload):
+    """The model this advisor request runs on.
+
+    Flag off: always _ADVISOR_MODEL_ID. Flag on: the route model for
+    `route: "haiku"`, and _ADVISOR_MODEL_ID for every other value, a missing
+    one included, so an old app or an unknown route gets the stronger model.
+    """
+    if _ADVISOR_HAIKU_ROUTING and payload.get("route") == "haiku":
+        return _ADVISOR_ROUTE_MODEL_ID
+    return _ADVISOR_MODEL_ID
+
+
 def _advise_finance(payload):
     """Financial advisor chat -- buffered. Reached via the HTTP API.
 
@@ -1872,10 +1922,11 @@ def _advise_finance(payload):
         return err
 
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     try:
         raw = _bedrock.invoke_model(
-            modelId=_ADVISOR_MODEL_ID,
+            modelId=model_id,
             contentType="application/json",
             accept="application/json",
             body=json.dumps({
@@ -1884,7 +1935,7 @@ def _advise_finance(payload):
                 "system": request["system"],
                 "messages": request["messages"],
                 **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+                **_generation_params(model_id, _ADVISOR_EFFORT),
             }),
         )
         result = json.loads(raw["body"].read())
@@ -1943,6 +1994,7 @@ def advise_finance_stream(payload, request):
     200 body, so one AdvisorReply.fromJson parses both.
     """
     tools = request["tools"]
+    model_id = _advisor_model_id(payload)
     started = time.monotonic()
     ttft_ms = None
 
@@ -1957,7 +2009,7 @@ def advise_finance_stream(payload, request):
     yield _frame({"type": "start"})
     try:
         raw = _bedrock.invoke_model_with_response_stream(
-            modelId=_ADVISOR_MODEL_ID,
+            modelId=model_id,
             contentType="application/json",
             accept="application/json",
             body=json.dumps({
@@ -1966,7 +2018,7 @@ def advise_finance_stream(payload, request):
                 "system": request["system"],
                 "messages": request["messages"],
                 **({"tools": tools} if tools else {}),
-                **_generation_params(_ADVISOR_MODEL_ID, _ADVISOR_EFFORT),
+                **_generation_params(model_id, _ADVISOR_EFFORT),
             }),
         )
 

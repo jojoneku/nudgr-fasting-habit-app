@@ -173,6 +173,7 @@ void main() {
       profile: anyNamed('profile'),
       historical: anyNamed('historical'),
       tools: anyNamed('tools'),
+      route: anyNamed('route'),
     )).thenAnswer((_) {
       final reply = script[i < script.length ? i : script.length - 1];
       i++;
@@ -186,6 +187,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       )).callCount;
 
   Future<LedgerPresenter> ledgerWith(_ExtractorOnly cloud) async {
@@ -328,6 +330,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       ));
       p.dispose();
     });
@@ -465,6 +468,7 @@ void main() {
         profile: anyNamed('profile'),
         historical: anyNamed('historical'),
         tools: anyNamed('tools'),
+        route: anyNamed('route'),
       )).captured.single as List<AiChatMessage>;
       expect(sent.last.text, 'paid 5000 bpi card');
       // The prompt shows once, not once per route.

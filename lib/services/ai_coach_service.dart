@@ -111,6 +111,7 @@ abstract class AiCoachService {
     String? profile,
     String? historical,
     List<AiTool> tools = const [],
+    String? route,
   });
 
   /// Attempt to parse [description] as a food log entry.
