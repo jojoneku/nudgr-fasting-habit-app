@@ -1,6 +1,6 @@
 # Plan 066 — Nudgy: the snapshot is an index, the tools are the record
 
-**Status:** revision 2 (2026-10-30). Phase 1 done (section 10); phase 2 next. Revision 2 is the
+**Status:** revision 2 (2026-10-30). Phases 1 and 2 built (section 10); phase 3 next. Revision 2 is the
 result of a critical review of revision 1: section 9 lists what changed and why.
 
 **Trigger.** On 2026-10-30 at about 6:42 PM Manila, the user asked Nudgy about
@@ -286,3 +286,33 @@ cases, so the pass rates above stand.
 The briefing in the newest user turn sits right after the question. That makes
 "answer from the briefing" the easy path in a dispute turn. The phase 2 footers
 go inside the briefing, next to the data, which is the right place for them.
+
+### Phase 2 (2026-10-30, read hints + `find` description, rules `80bbe004`)
+
+| # | Case | Sonnet 4.5 run 1 | Sonnet 4.5 run 2 | Haiku 4.5 |
+|---|---|---|---|---|
+| 1 | installment-deferral | pass | pass | pass |
+| 2 | installment-colloquial-name | pass | pass | pass |
+| 3 | bill-reminder | FAIL (text) | FAIL (text) | pass |
+| 4 | receivable-account | pass | pass | pass |
+| 5 | setaside-account | pass | pass | pass |
+| 6 | budget-repeats | pass | pass | pass |
+| 7 | budget-group-members | pass | pass | pass |
+| 8 | account-credit-limit | FAIL (text) | FAIL (text) | pass |
+| 9 | dispute-installment | pass | pass | pass |
+| 10 | dispute-repeated | pass | pass | pass |
+| 11 | dispute-bill | pass | pass | pass |
+| 12 | dispute-setaside | pass | pass | pass |
+| 13 | dispute-taglish | FAIL (text) | pass | pass |
+| 14 | control-meralco | pass | pass | pass |
+| 15 | control-iphone-months | pass | pass | FAIL (read it anyway) |
+| 16 | control-japan-saved | pass | pass | pass |
+| | **Pass rate** | **13/16 = 81%** | **14/16 = 88%** | **15/16 = 94%** |
+
+Older sets on Sonnet 4.5, one run: tuning 14/15 (the same as `dev` after
+PR #778), held-out 5/5. Cost: about $0.30–0.35 per Sonnet run, $0.11 on Haiku.
+
+Both installment disputes now pass on every run. Sonnet still answers the bill
+reminder and the credit limit from the snapshot. The rule rewrite (phase 3)
+targets those: a detail the line does not state, and a figure the model adds up
+itself.
