@@ -122,6 +122,18 @@ Supported `op` values: `respond`, `parseFoodWithCandidates`, `disambiguateFood`,
 { "response": "After 8 hours fasted, break with protein + healthy fat first..." }
 ```
 
+An `adviseFinance` reply (the buffered body and the streamed `end` frame) also carries the user's AI usage:
+
+```json
+"ai_usage": { "count": 7, "cap": 100, "cost_usd": 0.008775 }
+```
+
+- `count`: the user's AI requests today, this message included (what `increment_ai_usage` returned). `null` on a tool-loop hop, which is not counted again, and on a deploy without rate limiting.
+- `cap`: `DAILY_CAP`.
+- `cost_usd`: the estimated cost of this one model call (`estimated_cost_usd`, list prices), `null` for a model with no known price. The day's total cost is not known: nothing stores it. The same value goes on the `cost_line` as `cost_usd=`.
+
+The app parses it into `AdvisorReply.usage` and shows nothing yet.
+
 ## Logs (metadata only)
 
 Each advisor invocation writes 2 lines to CloudWatch, on both functions:
