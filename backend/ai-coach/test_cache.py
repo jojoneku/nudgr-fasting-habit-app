@@ -1,12 +1,12 @@
-"""Tests for the advisor's prompt-cache layout (Plan 065, phase 5).
+"""Tests for the advisor's prompt-cache layout (Plan 065 phase 5, Plan 067).
 
-The prompt runs: tools + rules (breakpoint 1), the profile (breakpoint 2),
-the chat history (breakpoint 3, on the second-to-last user turn), then the
-briefing -- snapshot and historical record -- at the end of the user turn that opened
-this turn, uncached. A ledger edit changes only the briefing, so everything
-ahead of it stays cached. These tests pin the layout, because a later edit
-that moves the briefing back would still work and only show up as a bigger
-bill.
+The prompt runs: tools + rules (breakpoint 1), the date, profile and briefing
+-- snapshot and historical record -- (breakpoint 2), the chat history
+(breakpoint 3, on the second-to-last user turn), then the newest user turn,
+which ends with the briefing reminder (breakpoint 4). The briefing rarely
+changes between messages, so a warm message reads it back at 0.1x. These
+tests pin the layout, because a later edit that moves the briefing would still
+work and only show up as a bigger bill.
 
 Run from backend/ai-coach/:
     BEDROCK_MODEL_ID=x SUPABASE_URL=https://p.supabase.co \\
@@ -83,16 +83,21 @@ def _canonical(messages):
     return out
 
 
-def _is_briefing(block):
+def _is_reminder(block):
     return (isinstance(block, dict) and block.get("type") == "text"
-            and block.get("text", "").startswith("<briefing>"))
+            and block.get("text", "").startswith("<briefing-reminder>"))
 
 
-def _briefing_turns(request):
-    """Indexes of the messages that carry a briefing block."""
+def _reminder_turns(request):
+    """Indexes of the messages that carry a reminder block."""
     return [i for i, m in enumerate(request["messages"])
             if isinstance(m["content"], list)
-            and any(_is_briefing(b) for b in m["content"])]
+            and any(_is_reminder(b) for b in m["content"])]
+
+
+def _context(request):
+    """The second system block: the date, the profile and the briefing."""
+    return request["system"][1]["text"]
 
 
 # A conversation two turns in: the user's third message is the newest.
@@ -107,40 +112,40 @@ _HISTORY = [
 # ── Layout ───────────────────────────────────────────────────────────────────
 
 
-def test_the_system_is_rules_then_profile_each_with_a_breakpoint():
+def test_the_system_is_rules_then_context_each_with_a_breakpoint():
     system = _build(_payload())["system"]
 
     assert len(system) == 2
-    rules, profile = system
+    rules, context = system
     assert rules["text"] == lf._ADVISOR_SYSTEM_PREFIX
     assert rules["cache_control"] == {"type": "ephemeral"}
-    assert profile["cache_control"] == {"type": "ephemeral"}
-    assert "Paid on the 15th." in profile["text"]
-    # The snapshot and the history are the briefing's, never the system's.
-    for block in system:
-        assert "Cash: P1,000" not in block["text"]
-        assert "Jan: P500" not in block["text"]
+    assert context["cache_control"] == {"type": "ephemeral"}
+    # The profile, then the briefing: the snapshot and the history.
+    text = context["text"]
+    assert text.index("Paid on the 15th.") < text.index("<briefing>")
+    assert text.index("Cash: P1,000") < text.index("Jan: P500")
+    assert text.endswith("</briefing>")
 
 
-def test_no_profile_leaves_the_rules_block_alone():
+def test_no_profile_still_sends_the_briefing_block():
     system = _build(_payload(profile=""))["system"]
 
-    assert system == [{"type": "text", "text": lf._ADVISOR_SYSTEM_PREFIX,
-                       "cache_control": {"type": "ephemeral"}}]
+    assert len(system) == 2
+    assert system[1]["text"].startswith("<briefing>")
+    assert "WHAT YOU REMEMBER" not in system[1]["text"]
 
 
 _TODAY = "TODAY: Thursday, 15 Oct 2026 (2026-10-15). This is the real current date."
 
 
-def test_the_today_line_moves_to_the_system_ahead_of_the_profile():
-    request = _build(_payload(summary=_TODAY + "\nCash: P1,000"))
-    system = request["system"][1]["text"]
-    briefing = request["messages"][-1]["content"][-1]["text"]
+def test_the_today_line_opens_the_context_ahead_of_the_profile_and_briefing():
+    context = _context(_build(_payload(summary=_TODAY + "\nCash: P1,000")))
 
-    assert system.startswith(_TODAY + "\nCALENDAR")
-    assert system.index("CALENDAR") < system.index("Paid on the 15th.")
-    assert "TODAY:" not in briefing
-    assert "Cash: P1,000" in briefing
+    assert context.startswith(_TODAY + "\nCALENDAR")
+    assert (context.index("CALENDAR") < context.index("Paid on the 15th.")
+            < context.index("Cash: P1,000"))
+    # Once only: the briefing's copy of the snapshot loses it.
+    assert context.count("TODAY:") == 1
 
 
 def test_the_today_line_alone_still_makes_a_second_system_block():
@@ -151,9 +156,22 @@ def test_the_today_line_alone_still_makes_a_second_system_block():
     assert system[1]["cache_control"] == {"type": "ephemeral"}
 
 
-def test_a_ledger_edit_on_the_same_day_leaves_the_system_byte_identical():
+def test_a_ledger_edit_changes_only_the_context_block():
     before = _build(_payload(summary=_TODAY + "\nCash: P1,000"))
     after = _build(_payload(summary=_TODAY + "\nCash: P1,250"))
+
+    # The tools sit ahead of the system in the cache prefix, so they and the
+    # rules stay cached.
+    assert before["tools"] == after["tools"]
+    assert before["system"][0] == after["system"][0]
+    assert before["system"][1] != after["system"][1]
+    assert before["messages"] == after["messages"]
+
+
+def test_the_same_snapshot_leaves_the_system_byte_identical():
+    before = _build(_payload(summary=_TODAY + "\nCash: P1,000"))
+    after = _build(_payload(summary=_TODAY + "\nCash: P1,000",
+                            messages=_HISTORY + [{"role": "user", "text": "Bills?"}]))
 
     assert before["system"] == after["system"]
 
@@ -161,7 +179,7 @@ def test_a_ledger_edit_on_the_same_day_leaves_the_system_byte_identical():
 def test_a_snapshot_without_a_today_line_stays_whole():
     request = _build(_payload(summary="Cash: P1,000\nTODAY: not first"))
 
-    assert "TODAY: not first" in request["messages"][-1]["content"][-1]["text"]
+    assert "TODAY: not first" in _context(request)
 
 
 @pytest.mark.parametrize("today, expected", [
@@ -190,57 +208,44 @@ def test_a_today_line_with_no_iso_date_gets_no_calendar():
     assert lf._calendar_periods("TODAY: sometime") == "TODAY: sometime"
 
 
-def test_the_briefing_closes_the_newest_user_turn_and_carries_breakpoint_4():
+def test_the_reminder_closes_the_newest_user_turn_and_carries_breakpoint_4():
     content = _build(_payload())["messages"][-1]["content"]
 
-    question, briefing = content
-    # The user's words come first, unchanged; the data and its reminder last.
+    question, reminder = content
+    # The user's words come first, unchanged; the reminder last, the final
+    # thing the model reads before it answers.
     assert question == {"type": "text", "text": "How am I doing?"}
-    assert _is_briefing(briefing)
-    assert briefing["text"].endswith(lf._BRIEFING_REMINDER + "\n</briefing>")
+    assert reminder["text"] == (
+        "<briefing-reminder>\n" + lf._BRIEFING_REMINDER + "\n</briefing-reminder>")
     # Cached for the next hop of this turn, which reads it back if the model
     # calls a tool (see the layout comment, breakpoint 4).
-    assert briefing["cache_control"] == {"type": "ephemeral"}
+    assert reminder["cache_control"] == {"type": "ephemeral"}
     assert "cache_control" not in question
 
 
 def test_the_briefing_holds_the_snapshot_then_the_history():
-    text = _build(_payload())["messages"][-1]["content"][-1]["text"]
+    text = _context(_build(_payload()))
 
-    assert "Cash: P1,000" in text
-    assert "Jan: P500" in text
-    assert "Paid on the 15th." not in text
     assert text.index("CURRENT FINANCIAL SNAPSHOT") < text.index("HISTORICAL RECORD")
+    # No snapshot in any message.
+    assert "Cash: P1,000" not in str(_build(_payload())["messages"])
 
 
 def test_no_snapshot_still_sends_a_briefing_that_says_so():
     request = _build(_payload(summary="", historical=""))
 
-    briefing = request["messages"][-1]["content"][-1]
-    assert _is_briefing(briefing)
-    assert "No financial snapshot" in briefing["text"]
+    assert "No financial snapshot" in _context(request)
     assert request["_has_summary"] is False
 
 
-def test_a_snapshot_edit_leaves_system_and_tools_byte_identical():
-    before = _build(_payload(summary="Cash: P1,000"))
-    after = _build(_payload(summary="Cash: P1,250"))
-
-    assert before["system"] == after["system"]
-    # The tools sit ahead of the system in the cache prefix, so they must not
-    # change either.
-    assert before["tools"] == after["tools"]
-    assert before["messages"] != after["messages"]
-
-
-def test_an_image_turn_reads_images_question_then_briefing():
+def test_an_image_turn_reads_images_question_then_reminder():
     request = _build(_payload(images=[
         {"base64": "aaaa", "mime_type": "image/jpeg"}]))
     content = request["messages"][-1]["content"]
 
     assert [b["type"] for b in content] == ["image", "text", "text"]
     assert content[1]["text"] == "How am I doing?"
-    assert _is_briefing(content[2])
+    assert _is_reminder(content[2])
 
 
 # ── Breakpoints ──────────────────────────────────────────────────────────────
@@ -265,9 +270,8 @@ def test_the_history_and_newest_breakpoints_sit_on_the_last_two_user_turns():
 
     assert _breakpoints(request) == [
         ("system", 0), ("system", 1), ("messages", 2), ("messages", 4)]
-    # Only the newest turn carries the briefing; the next message strips it,
-    # so the history breakpoint (3) never covers a briefing.
-    assert _briefing_turns(request) == [4]
+    # Only the newest turn carries the reminder; the next message strips it.
+    assert _reminder_turns(request) == [4]
 
 
 def test_a_long_tool_loop_stays_within_bedrocks_breakpoint_limit():
@@ -297,36 +301,41 @@ def test_the_history_is_byte_identical_across_two_turns():
         {"role": "assistant", "text": "One bill is due."},
         {"role": "user", "text": "When?"},
     ]
-    # A ledger edit between the two turns, the case the layout is for.
-    second = _build(_payload(messages=turn_n1, summary="Cash: P1,250"))
+    # The same snapshot, the common case: 14 of 15 warm messages (Plan 067).
+    second = _build(_payload(messages=turn_n1, summary="Cash: P1,000"))
 
     history = len(turn_n) - 1
     assert (_canonical(first["messages"][:history])
             == _canonical(second["messages"][:history]))
-    # Turn N's question loses its briefing and keeps the user's words.
+    # Turn N's question loses its reminder and keeps the user's words.
     assert _canonical(second["messages"][history:history + 1]) == [
         {"role": "user", "content": [{"type": "text", "text": "What about bills?"}]}]
     assert first["system"] == second["system"]
 
 
-def test_only_the_newest_user_turn_carries_a_briefing():
+def test_only_the_newest_user_turn_carries_a_reminder():
     messages = _HISTORY + [{"role": "user", "text": "What about bills?"}]
     request = _build(_payload(messages=messages))
 
-    assert _briefing_turns(request) == [len(request["messages"]) - 1]
+    assert _reminder_turns(request) == [len(request["messages"]) - 1]
 
 
-def test_a_replayed_briefing_in_an_older_turn_is_stripped():
-    old_briefing = {"type": "text", "text": "<briefing>\nCash: P9\n</briefing>"}
+@pytest.mark.parametrize("old_block", [
+    # A briefing in the user turn, from a Lambda before Plan 067.
+    "<briefing>\nCash: P9\n</briefing>",
+    "<briefing-reminder>\nCash: P9\n</briefing-reminder>",
+])
+def test_a_replayed_briefing_or_reminder_in_an_older_turn_is_stripped(old_block):
     messages = [
         {"role": "user", "content_blocks": [
-            {"type": "text", "text": "How am I doing?"}, old_briefing]},
+            {"type": "text", "text": "How am I doing?"},
+            {"type": "text", "text": old_block}]},
         {"role": "assistant", "text": "Fine."},
         {"role": "user", "text": "Thanks."},
     ]
     request = _build(_payload(messages=messages))
 
-    assert _briefing_turns(request) == [2]
+    assert _reminder_turns(request) == [2]
     assert "Cash: P9" not in str(request["messages"])
 
 
@@ -349,12 +358,12 @@ def _tool_loop(hops):
     return messages
 
 
-def test_a_continuation_hop_keeps_the_briefing_in_the_question_turn():
+def test_a_continuation_hop_keeps_the_reminder_in_the_question_turn():
     request = _build(_payload(messages=_tool_loop(hops=1)))
 
     question = len(_HISTORY)
-    assert _briefing_turns(request) == [question]
-    # Tool results open their turn; the briefing never goes there.
+    assert _reminder_turns(request) == [question]
+    # Tool results open their turn; the reminder never goes there.
     assert [b["type"] for b in request["messages"][-1]["content"]] == ["tool_result"]
 
 
@@ -368,7 +377,7 @@ def test_each_hop_keeps_the_previous_hops_prompt_as_its_prefix():
         assert _canonical(after["messages"][:n]) == _canonical(before["messages"])
 
 
-def test_hop_two_reads_the_question_and_briefing_hop_one_cached():
+def test_hop_two_reads_the_question_and_reminder_hop_one_cached():
     first = _build(_payload(messages=_tool_loop(hops=0)))
     second = _build(_payload(messages=_tool_loop(hops=1)))
 
@@ -383,7 +392,7 @@ def test_hop_two_reads_the_question_and_briefing_hop_one_cached():
             == _canonical(second["messages"][:question + 1]))
 
 
-def test_a_resumed_turn_of_only_tool_results_puts_the_briefing_last():
+def test_a_resumed_turn_of_only_tool_results_puts_the_reminder_last():
     messages = [
         {"role": "assistant", "content_blocks": [
             {"type": "tool_use", "id": "t0", "name": "findTransactions",
@@ -395,4 +404,4 @@ def test_a_resumed_turn_of_only_tool_results_puts_the_briefing_last():
     content = request["messages"][-1]["content"]
 
     assert content[0]["type"] == "tool_result"
-    assert _is_briefing(content[-1])
+    assert _is_reminder(content[-1])
