@@ -17,6 +17,9 @@ import 'package:intl/intl.dart';
 // Sentinel for [InstallmentPresenter.buildInstallment]: "keep the category".
 const Object _keepCategory = Object();
 
+// Sentinel for [InstallmentPresenter.buildInstallment]: "keep the person".
+const Object _keepPaidFor = Object();
+
 /// What the add/edit installment form shows under the interest-rate chips.
 class InstallmentInterestPreview {
   final double totalInterest;
@@ -29,6 +32,55 @@ class InstallmentInterestPreview {
     required this.totalInterest,
     required this.totalPayable,
     required this.label,
+  });
+}
+
+/// The installment form's review step (Plan 067): what saving the plan
+/// commits to, as display strings. Built by [InstallmentPresenter.reviewPlan].
+class InstallmentReview {
+  /// First and last payment month: "Feb 2027".
+  final String firstMonth;
+  final String lastMonth;
+
+  /// "₱1,250.00 × 12".
+  final String monthly;
+
+  /// Monthly × months — what the card will bill, interest included.
+  final String total;
+
+  /// "None", "1 month", "3 months".
+  final String deferral;
+
+  /// Close date of the statement that bills the first payment ("Jan 15,
+  /// 2027"), or why there is none ("No billing cycle on this card").
+  final String statementClose;
+
+  /// Due date of the first payment ("Feb 4, 2027"), or "Not set".
+  final String firstDue;
+
+  /// Edit only: the stored start month is not the month the card's cycle
+  /// gives. "Stored Dec 2026 · the card's cycle gives Feb 2027". Null when
+  /// they agree.
+  final String? startMonthWarning;
+
+  /// The month the card's cycle gives ('YYYY-MM') when [startMonthWarning]
+  /// is set, for the "Use Feb 2027" button.
+  final String? suggestedStartMonth;
+
+  /// "Use Feb 2027".
+  final String? suggestedStartLabel;
+
+  const InstallmentReview({
+    required this.firstMonth,
+    required this.lastMonth,
+    required this.monthly,
+    required this.total,
+    required this.deferral,
+    required this.statementClose,
+    required this.firstDue,
+    this.startMonthWarning,
+    this.suggestedStartMonth,
+    this.suggestedStartLabel,
   });
 }
 
@@ -312,18 +364,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     if (y == null || m == null) return null;
 
     if (account.hasBillingCycle) {
-      // Due at most kMaxDueDaysAfterStatement days after close, so the close
-      // is in this month or one of the two before it. Should two cycles fall
-      // due in one month, the later statement wins (as in cycleForStatement).
-      CreditCycle? match;
-      for (var back = 2; back >= 0; back--) {
-        final anchor = DateTime(y, m - back);
-        final cycle = account.cycleClosingIn(anchor.year, anchor.month);
-        if (cycle != null && cycle.dueMonthKey == dueMonth) {
-          match = cycle;
-        }
-      }
-      return match?.due;
+      return _cycleDueIn(account, y, m)?.due;
     }
     if (account.paymentDueDay != null) {
       final lastDay = DateTime(y, m + 1, 0).day;
@@ -415,6 +456,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// [existing]'s id and active flag. Leaving [categoryId] out keeps
   /// [existing]'s category (the web dialog has no category picker, and saving
   /// there must not wipe the one set on mobile); passing null clears it.
+  /// [paidForName] works the same way: left out keeps the person, null or
+  /// blank makes the plan your own.
   Installment buildInstallment({
     Installment? existing,
     required String name,
@@ -428,8 +471,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     double interestRate = 0.0,
     String? note,
     Object? categoryId = _keepCategory,
+    Object? paidForName = _keepPaidFor,
   }) {
     final trimmedNote = note?.trim() ?? '';
+    final person = identical(paidForName, _keepPaidFor)
+        ? existing?.paidForName
+        : (paidForName as String?)?.trim();
     return Installment(
       id: existing?.id ?? _generateId(),
       name: name.trim(),
@@ -446,6 +493,79 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
           ? existing?.categoryId
           : categoryId as String?,
       isActive: existing?.isActive ?? true,
+      paidForName: person == null || person.isEmpty ? null : person,
+    );
+  }
+
+  /// Names the "Paying for someone" field offers: the people plans were bought
+  /// for, then the people logged as owing a reimbursement. Each name once
+  /// (ignoring case), most recent first, at most 8.
+  List<String> get knownPeople {
+    final names = <String>[];
+    final seen = <String>{};
+    void add(String? name) {
+      final n = name?.trim() ?? '';
+      if (n.isEmpty || !seen.add(n.toLowerCase())) return;
+      names.add(n);
+    }
+
+    for (final p in _installments.reversed) {
+      add(p.paidForName);
+    }
+    final owing = _ledger.allTransactions
+        .where((t) => (t.owedBy?.trim() ?? '').isNotEmpty)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    for (final t in owing) {
+      add(t.owedBy);
+    }
+    return names.take(8).toList();
+  }
+
+  /// The review step for [draft], the plan the form is about to save.
+  /// [existing] is the stored plan on edit — only then is a start month that
+  /// differs from the card's cycle flagged (on add, the stepper sets it by
+  /// hand on purpose). The app never changes a stored start month itself.
+  InstallmentReview reviewPlan(Installment draft, {Installment? existing}) {
+    final account = _accountById(draft.accountId);
+    final start = DateTime.parse('${draft.startMonth}-01');
+    final cycle = account != null && account.hasBillingCycle
+        ? _cycleDueIn(account, start.year, start.month)
+        : null;
+    final due = cycle?.due ?? dueDate(draft, month: draft.startMonth);
+    final dayFmt = DateFormat('MMM d, yyyy');
+    final n = draft.deferralMonths;
+
+    String? suggested;
+    final bought = draft.purchaseDate;
+    if (existing != null && bought != null) {
+      final computed = suggestedStartMonth(
+        accountId: draft.accountId,
+        purchaseDate: bought,
+        deferralMonths: draft.deferralMonths,
+      );
+      if (computed != draft.startMonth) suggested = computed;
+    }
+
+    return InstallmentReview(
+      firstMonth: _monthYearLabel(draft.startMonth),
+      lastMonth: _monthYearLabel(draft.endMonth),
+      monthly: '${formatPeso(draft.monthlyAmount)} × ${draft.totalMonths}',
+      total: formatPeso(draft.monthlyAmount * draft.totalMonths),
+      deferral: n <= 0 ? 'None' : '$n ${n == 1 ? 'month' : 'months'}',
+      statementClose: cycle != null
+          ? dayFmt.format(cycle.close)
+          : account != null && account.hasBillingCycle
+              ? 'No statement falls due in ${_monthYearLabel(draft.startMonth)}'
+              : 'No billing cycle on this card',
+      firstDue: due != null ? dayFmt.format(due) : 'Not set',
+      startMonthWarning: suggested == null
+          ? null
+          : 'Stored ${_monthYearLabel(draft.startMonth)} · '
+              "the card's cycle gives ${_monthYearLabel(suggested)}",
+      suggestedStartMonth: suggested,
+      suggestedStartLabel:
+          suggested == null ? null : 'Use ${_monthYearLabel(suggested)}',
     );
   }
 
@@ -680,6 +800,30 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   FinancialAccount? _accountById(String? id) =>
       id == null ? null : accounts.where((a) => a.id == id).firstOrNull;
+
+  /// The cycle of [account] whose payment falls due in [year]/[month], or
+  /// null when none does.
+  ///
+  /// Due at most kMaxDueDaysAfterStatement days after close, so the close is
+  /// in this month or one of the two before it. Should two cycles fall due in
+  /// one month, the later statement wins (as in cycleForStatement).
+  static CreditCycle? _cycleDueIn(
+      FinancialAccount account, int year, int month) {
+    final dueMonth = toMonthKey(DateTime(year, month));
+    CreditCycle? match;
+    for (var back = 2; back >= 0; back--) {
+      final anchor = DateTime(year, month - back);
+      final cycle = account.cycleClosingIn(anchor.year, anchor.month);
+      if (cycle != null && cycle.dueMonthKey == dueMonth) {
+        match = cycle;
+      }
+    }
+    return match;
+  }
+
+  /// "Feb 2027" for a 'YYYY-MM' key.
+  static String _monthYearLabel(String month) =>
+      DateFormat('MMM yyyy').format(DateTime.parse('$month-01'));
 
   String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';

@@ -152,6 +152,8 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
         receivedAmount: e?.receivedAmount,
         transactionId: e?.transactionId,
         reimbursementForTxnId: e?.reimbursementForTxnId,
+        installmentId: e?.installmentId,
+        installmentNumber: e?.installmentNumber,
         nextMonthAmount: e?.nextMonthAmount,
         sortIndex: e?.sortIndex,
         // Without this the fresh Receivable would drop the series link and the
