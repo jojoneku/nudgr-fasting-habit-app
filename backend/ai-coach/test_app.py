@@ -579,9 +579,9 @@ class TestAdvisorImages:
         assert mimes == ["image/jpeg", "image/png", "image/webp"]
         # Labelled so "the second one" means the same picture to both sides.
         labels = [b["text"] for b in content if b.get("type") == "text"
-                  and not b["text"].startswith(lf._BRIEFING_OPEN)]
+                  and not b["text"].startswith(lf._REMINDER_OPEN)]
         assert labels[:3] == ["Image 1:", "Image 2:", "Image 3:"]
-        # The user's words come after every image (the briefing follows them).
+        # The user's words come after every image (the reminder follows them).
         assert content[-2] == {"type": "text", "text": "what are these?"}
 
     def test_the_old_single_image_field_still_works(self):

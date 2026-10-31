@@ -269,3 +269,17 @@ def test_without_text_the_debug_lines_stay_out(fake_logs, capsys):
     out = capsys.readouterr().out
     assert "fridge" not in out
     assert "advisor_debug" not in out
+
+
+def test_a_debug_line_with_its_hops_timestamp_still_follows_it(fake_logs, capsys):
+    hop = _hop_json("2026-10-30 10:00:04.200", **_FIRST)
+    debug = _debug_json("2026-10-30 10:00:04.200", hop="first",
+                        user_text="really? december?", tool_results=[],
+                        tool_calls=[], reply_text=None)
+    fake_logs["logs"] = _FakeLogs([[debug, hop]])
+
+    ts.main(["t1", "--text"])
+
+    lines = capsys.readouterr().out.splitlines()
+    assert "hop 0 first" in lines[1]
+    assert lines[2].strip() == "user: really? december?"
