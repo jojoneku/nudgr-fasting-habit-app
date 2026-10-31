@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -17,6 +18,9 @@ import 'package:intl/intl.dart';
 // Sentinel for [InstallmentPresenter.buildInstallment]: "keep the category".
 const Object _keepCategory = Object();
 
+// Sentinel for [InstallmentPresenter.buildInstallment]: "keep the person".
+const Object _keepPaidFor = Object();
+
 /// What the add/edit installment form shows under the interest-rate chips.
 class InstallmentInterestPreview {
   final double totalInterest;
@@ -29,6 +33,85 @@ class InstallmentInterestPreview {
     required this.totalInterest,
     required this.totalPayable,
     required this.label,
+  });
+}
+
+/// The installment form's review step (Plan 067): what saving the plan
+/// commits to, as display strings. Built by [InstallmentPresenter.reviewPlan].
+class InstallmentReview {
+  /// First and last payment month: "Feb 2027".
+  final String firstMonth;
+  final String lastMonth;
+
+  /// "₱1,250.00 × 12".
+  final String monthly;
+
+  /// Monthly × months — what the card will bill, interest included.
+  final String total;
+
+  /// "None", "1 month", "3 months".
+  final String deferral;
+
+  /// Close date of the statement that bills the first payment ("Jan 15,
+  /// 2027"), or why there is none ("No billing cycle on this card").
+  final String statementClose;
+
+  /// Due date of the first payment ("Feb 4, 2027"), or "Not set".
+  final String firstDue;
+
+  /// The first payment month is not the month the card's cycle gives: "Set
+  /// by hand: Dec 2026 · computed: Feb 2027". Null when they agree or the
+  /// card has no cycle.
+  final String? startMonthWarning;
+
+  /// The month the card's cycle gives ('YYYY-MM') when the plan may take it,
+  /// for the "Use Feb 2027" button. Null when a month is already billed.
+  final String? suggestedStartMonth;
+
+  /// "Use Feb 2027".
+  final String? suggestedStartLabel;
+
+  const InstallmentReview({
+    required this.firstMonth,
+    required this.lastMonth,
+    required this.monthly,
+    required this.total,
+    required this.deferral,
+    required this.statementClose,
+    required this.firstDue,
+    this.startMonthWarning,
+    this.suggestedStartMonth,
+    this.suggestedStartLabel,
+  });
+}
+
+/// One row of the start-month review list (Plan 068): a plan saved before
+/// start months were computed, whose month differs from its card's cycle.
+class StartMonthReviewItem {
+  final String id;
+  final String name;
+
+  /// "Madness Limit · bought Sep 25 · deferred 3 mos".
+  final String detail;
+
+  /// "Saved: Dec 2026".
+  final String stored;
+
+  /// "Card cycle: Feb 2027".
+  final String computed;
+
+  /// "Use Feb 2027" / "Keep Dec 2026".
+  final String useLabel;
+  final String keepLabel;
+
+  const StartMonthReviewItem({
+    required this.id,
+    required this.name,
+    required this.detail,
+    required this.stored,
+    required this.computed,
+    required this.useLabel,
+    required this.keepLabel,
   });
 }
 
@@ -50,6 +133,9 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _ledger.onUpdateInstallment = updateInstallment;
     _ledger.onDeleteInstallment = _removePlan;
     _ledger.installmentResolver = findById;
+    // A computed start month follows its card's cycle (Plan 068), and the
+    // cycle lives on the ledger's accounts — so watch them (rule 8).
+    _ledger.addListener(_syncStartMonths);
     load();
   }
 
@@ -70,6 +156,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   @override
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
+    _ledger.removeListener(_syncStartMonths);
     if (_ledger.onSpawnInstallment == addInstallment) {
       _ledger.onSpawnInstallment = null;
     }
@@ -312,18 +399,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     if (y == null || m == null) return null;
 
     if (account.hasBillingCycle) {
-      // Due at most kMaxDueDaysAfterStatement days after close, so the close
-      // is in this month or one of the two before it. Should two cycles fall
-      // due in one month, the later statement wins (as in cycleForStatement).
-      CreditCycle? match;
-      for (var back = 2; back >= 0; back--) {
-        final anchor = DateTime(y, m - back);
-        final cycle = account.cycleClosingIn(anchor.year, anchor.month);
-        if (cycle != null && cycle.dueMonthKey == dueMonth) {
-          match = cycle;
-        }
-      }
-      return match?.due;
+      return _cycleDueIn(account, y, m)?.due;
     }
     if (account.paymentDueDay != null) {
       final lastDay = DateTime(y, m + 1, 0).day;
@@ -415,6 +491,9 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   /// [existing]'s id and active flag. Leaving [categoryId] out keeps
   /// [existing]'s category (the web dialog has no category picker, and saving
   /// there must not wipe the one set on mobile); passing null clears it.
+  /// [paidForName] works the same way: left out keeps the person, null or
+  /// blank makes the plan your own. [startMonthSource] left out keeps
+  /// [existing]'s; the form passes `manual` once its stepper is used.
   Installment buildInstallment({
     Installment? existing,
     required String name,
@@ -428,8 +507,13 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     double interestRate = 0.0,
     String? note,
     Object? categoryId = _keepCategory,
+    Object? paidForName = _keepPaidFor,
+    StartMonthSource? startMonthSource,
   }) {
     final trimmedNote = note?.trim() ?? '';
+    final person = identical(paidForName, _keepPaidFor)
+        ? existing?.paidForName
+        : (paidForName as String?)?.trim();
     return Installment(
       id: existing?.id ?? _generateId(),
       name: name.trim(),
@@ -446,6 +530,79 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
           ? existing?.categoryId
           : categoryId as String?,
       isActive: existing?.isActive ?? true,
+      paidForName: person == null || person.isEmpty ? null : person,
+      startMonthSource: startMonthSource ?? existing?.startMonthSource,
+    );
+  }
+
+  /// Names the "Paying for someone" field offers: the people plans were bought
+  /// for, then the people logged as owing a reimbursement. Each name once
+  /// (ignoring case), most recent first, at most 8.
+  List<String> get knownPeople {
+    final names = <String>[];
+    final seen = <String>{};
+    void add(String? name) {
+      final n = name?.trim() ?? '';
+      if (n.isEmpty || !seen.add(n.toLowerCase())) return;
+      names.add(n);
+    }
+
+    for (final p in _installments.reversed) {
+      add(p.paidForName);
+    }
+    final owing = _ledger.allTransactions
+        .where((t) => (t.owedBy?.trim() ?? '').isNotEmpty)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    for (final t in owing) {
+      add(t.owedBy);
+    }
+    return names.take(8).toList();
+  }
+
+  /// The review step for [draft], the plan the form is about to save. It
+  /// shows the plan as the save will store it ([_normalized]), so a computed
+  /// month already follows the card. A month set by hand, or one waiting for
+  /// review, that differs from the card's cycle is flagged with the computed
+  /// month; a plan with a billed month is flagged without the button.
+  InstallmentReview reviewPlan(Installment input) {
+    final draft = _normalized(input);
+    final account = _accountById(draft.accountId);
+    final start = DateTime.parse('${draft.startMonth}-01');
+    final cycle = account != null && account.hasBillingCycle
+        ? _cycleDueIn(account, start.year, start.month)
+        : null;
+    final due = cycle?.due ?? dueDate(draft, month: draft.startMonth);
+    final dayFmt = DateFormat('MMM d, yyyy');
+    final n = draft.deferralMonths;
+
+    final computed = _computedStartMonth(draft);
+    final differs = computed != null && computed != draft.startMonth;
+    final billed = differs && _billed(draft);
+    final suggested = differs && !billed ? computed : null;
+
+    return InstallmentReview(
+      firstMonth: _monthYearLabel(draft.startMonth),
+      lastMonth: _monthYearLabel(draft.endMonth),
+      monthly: '${formatPeso(draft.monthlyAmount)} × ${draft.totalMonths}',
+      total: formatPeso(draft.monthlyAmount * draft.totalMonths),
+      deferral: n <= 0 ? 'None' : '$n ${n == 1 ? 'month' : 'months'}',
+      statementClose: cycle != null
+          ? dayFmt.format(cycle.close)
+          : account != null && account.hasBillingCycle
+              ? 'No statement falls due in ${_monthYearLabel(draft.startMonth)}'
+              : 'No billing cycle on this card',
+      firstDue: due != null ? dayFmt.format(due) : 'Not set',
+      startMonthWarning: !differs
+          ? null
+          : billed
+              ? 'Billed from ${_monthYearLabel(draft.startMonth)} · '
+                  "the card's cycle now gives ${_monthYearLabel(computed)}"
+              : 'Set by hand: ${_monthYearLabel(draft.startMonth)} · '
+                  'computed: ${_monthYearLabel(computed)}',
+      suggestedStartMonth: suggested,
+      suggestedStartLabel:
+          suggested == null ? null : 'Use ${_monthYearLabel(suggested)}',
     );
   }
 
@@ -453,6 +610,225 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> saveInstallment(Installment installment,
           {required bool isEdit}) =>
       isEdit ? updateInstallment(installment) : addInstallment(installment);
+
+  // ─── Computed start month (Plan 068) ──────────────────────────────────────────
+  //
+  // A plan's first payment month is worked out from its card's cycle, its
+  // purchase date and its deferral — unless it was set by hand. [_normalized]
+  // is the one place that applies that rule; every plan write and every
+  // change to a card's cycle runs through it.
+
+  /// The month the card's cycle gives [p], or null when its card has no
+  /// cycle or the plan has no purchase date.
+  String? _computedStartMonth(Installment p) {
+    final account = _accountById(p.accountId);
+    final bought = p.purchaseDate;
+    if (account == null || !account.hasBillingCycle || bought == null) {
+      return null;
+    }
+    return calculateInstallmentStartMonth(account, bought,
+        deferralMonths: p.deferralMonths);
+  }
+
+  /// True once a month of [p] is billed or paid. Moving its start then would
+  /// change which months count as billed, so it is never recomputed.
+  bool _billed(Installment p) => p.paidCount(_ledger.allTransactions) > 0;
+
+  /// [p] as it should be stored: a computed month follows the card, and a
+  /// plan with no source yet gets one. [fresh] decides the source again as
+  /// for a plan saved before Plan 068 (an account that just got a cycle).
+  ///
+  /// - No cycle on the card → `manual`, month as given.
+  /// - `manual` → unchanged.
+  /// - `review` → `computed` once the months agree, else unchanged.
+  /// - `computed` → month recomputed, unless a month is billed.
+  /// - No source → `computed` when the months agree, else `manual` when a
+  ///   month is billed, else `review`.
+  Installment _normalized(Installment p, {bool fresh = false}) {
+    if (_ledger.isLoading) return p;
+    final computed = _computedStartMonth(p);
+    if (computed == null) {
+      return p.startMonthSource == StartMonthSource.manual
+          ? p
+          : p.copyWith(startMonthSource: StartMonthSource.manual);
+    }
+    final agrees = computed == p.startMonth;
+    switch (fresh ? null : p.startMonthSource) {
+      case StartMonthSource.manual:
+        return p;
+      case StartMonthSource.review:
+        return agrees
+            ? p.copyWith(startMonthSource: StartMonthSource.computed)
+            : p;
+      case StartMonthSource.computed:
+        return agrees || _billed(p) ? p : p.copyWith(startMonth: computed);
+      case null:
+        return p.copyWith(
+          startMonthSource: agrees
+              ? StartMonthSource.computed
+              : _billed(p)
+                  ? StartMonthSource.manual
+                  : StartMonthSource.review,
+        );
+    }
+  }
+
+  /// Each account's cycle as last seen, so a ledger notify re-reads only the
+  /// plans on a card whose cycle changed. Null until the first look.
+  Map<String, (int?, int?, int?)>? _cycleSignatures;
+
+  /// The ledger notified, or plans loaded: give plans saved before Plan 068
+  /// a source, and recompute the plans on any card whose cycle changed. A
+  /// card that just got a cycle has its `manual` plans decided again — they
+  /// were manual only because it had none.
+  void _syncStartMonths() {
+    if (_isLoading || _ledger.isLoading) return;
+    final current = {
+      for (final a in _ledger.accounts)
+        a.id: (a.statementDay, a.paymentDueDay, a.dueDaysAfterStatement),
+    };
+    final seen = _cycleSignatures;
+    _cycleSignatures = current;
+    final changed = <String>{};
+    final gainedCycle = <String>{};
+    if (seen != null) {
+      for (final e in current.entries) {
+        final before = seen[e.key];
+        if (before == null || before == e.value) continue;
+        changed.add(e.key);
+        if (before.$1 == null && e.value.$1 != null) gainedCycle.add(e.key);
+      }
+    }
+    final unsourced = _installments.any((p) => p.startMonthSource == null);
+    if (changed.isEmpty && !unsourced) return;
+
+    var moved = false;
+    final next = [
+      for (final p in _installments)
+        if (p.startMonthSource == null || changed.contains(p.accountId))
+          () {
+            final n = _normalized(
+              p,
+              fresh: gainedCycle.contains(p.accountId) &&
+                  p.startMonthSource == StartMonthSource.manual,
+            );
+            if (n.startMonth != p.startMonth ||
+                n.startMonthSource != p.startMonthSource) {
+              moved = true;
+            }
+            return n;
+          }()
+        else
+          p,
+    ];
+    if (!moved) return;
+    _installments = next;
+    safeNotify();
+    unawaited(_persistStartMonths());
+  }
+
+  Future<void> _persistStartMonths() async {
+    await _storage.saveInstallments(_installments);
+    await _ledger.refreshInstallmentHolds();
+  }
+
+  /// Plans waiting for the user to pick a first payment month, as list rows.
+  List<StartMonthReviewItem> get startMonthReviewItems => [
+        for (final p in _installments)
+          if (p.isActive && p.startMonthSource == StartMonthSource.review)
+            if (_computedStartMonth(p) case final computed?)
+              StartMonthReviewItem(
+                id: p.id,
+                name: p.name,
+                detail: [
+                  accountName(p.accountId),
+                  purchasedLabel(p)?.replaceFirst('Bought', 'bought'),
+                  deferralLabel(p)?.replaceFirst('Deferred', 'deferred'),
+                ].whereType<String>().join(' · '),
+                stored: 'Saved: ${_monthYearLabel(p.startMonth)}',
+                computed: 'Card cycle: ${_monthYearLabel(computed)}',
+                useLabel: 'Use ${_monthYearLabel(computed)}',
+                keepLabel: 'Keep ${_monthYearLabel(p.startMonth)}',
+              ),
+      ];
+
+  /// The Installments tab's banner over [startMonthReviewItems], or null when
+  /// nothing waits.
+  String? get startMonthReviewBanner {
+    final n = startMonthReviewItems.length;
+    if (n == 0) return null;
+    return n == 1
+        ? "1 plan's first payment month differs from its card's cycle"
+        : "$n plans' first payment months differ from their cards' cycles";
+  }
+
+  /// The review list's "Use Feb 2027": the plan takes the computed month and
+  /// follows the card from now on.
+  Future<void> useComputedStartMonth(String id) async {
+    final p = findById(id);
+    final computed = p == null ? null : _computedStartMonth(p);
+    if (p == null || computed == null) return;
+    await updateInstallment(p.copyWith(
+        startMonth: computed, startMonthSource: StartMonthSource.computed));
+  }
+
+  /// The review list's "Keep Dec 2026": the month stays, set by hand.
+  Future<void> keepStartMonth(String id) async {
+    final p = findById(id);
+    if (p == null) return;
+    await updateInstallment(
+        p.copyWith(startMonthSource: StartMonthSource.manual));
+  }
+
+  /// Whether the form should treat [p]'s month as set by hand: a `manual` or
+  /// `review` plan on a card with a cycle, or one with no source yet whose
+  /// month differs (the migration will list it). On a card without a cycle
+  /// the form keeps suggesting a month as before.
+  bool isStartMonthPinned(Installment? p) {
+    if (p == null) return false;
+    final computed = _computedStartMonth(p);
+    if (computed == null) return false;
+    return switch (p.startMonthSource) {
+      StartMonthSource.manual || StartMonthSource.review => true,
+      StartMonthSource.computed => false,
+      null => computed != p.startMonth,
+    };
+  }
+
+  /// The form's line under a start month set by hand that differs from the
+  /// card's cycle: "Set by hand · computed: Feb 2027". Null otherwise.
+  String? pinnedStartMonthHint({
+    required String? accountId,
+    required DateTime purchaseDate,
+    required int deferralMonths,
+    required String startMonth,
+  }) {
+    final account = _accountById(accountId);
+    if (account == null || !account.hasBillingCycle) return null;
+    final computed = calculateInstallmentStartMonth(account, purchaseDate,
+        deferralMonths: deferralMonths);
+    if (computed == startMonth) return null;
+    return 'Set by hand · computed: ${_monthYearLabel(computed)}';
+  }
+
+  /// What Nudgy's `find` adds after the first payment month: where it comes
+  /// from and, when it differs, the month the card's cycle gives.
+  String? startMonthNote(Installment p) {
+    final computed = _computedStartMonth(p);
+    if (computed == null) return null;
+    if (computed == p.startMonth) {
+      return p.startMonthSource == StartMonthSource.computed
+          ? 'computed from the card cycle'
+          : null;
+    }
+    return switch (p.startMonthSource) {
+      StartMonthSource.review =>
+        'not confirmed; the card cycle gives $computed',
+      StartMonthSource.computed =>
+        'kept because a month is billed; the card cycle now gives $computed',
+      _ => 'set by hand; the card cycle gives $computed',
+    };
+  }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
@@ -473,6 +849,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _isLoading = false;
     safeNotify();
     await _ledger.refreshInstallmentHolds();
+    _syncStartMonths();
   }
 
   /// Grants [xp] for [key] at most once (persisted), so unpay/re-pay cycles
@@ -487,14 +864,16 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
-  Future<void> addInstallment(Installment i) async {
+  Future<void> addInstallment(Installment plan) async {
+    final i = _normalized(plan);
     _installments = [..._installments, i];
     safeNotify();
     await _storage.saveInstallments(_installments);
     await _ledger.refreshInstallmentHolds();
   }
 
-  Future<void> updateInstallment(Installment i) async {
+  Future<void> updateInstallment(Installment plan) async {
+    final i = _normalized(plan);
     _installments = [
       for (final inst in _installments) inst.id == i.id ? i : inst
     ];
@@ -680,6 +1059,30 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   FinancialAccount? _accountById(String? id) =>
       id == null ? null : accounts.where((a) => a.id == id).firstOrNull;
+
+  /// The cycle of [account] whose payment falls due in [year]/[month], or
+  /// null when none does.
+  ///
+  /// Due at most kMaxDueDaysAfterStatement days after close, so the close is
+  /// in this month or one of the two before it. Should two cycles fall due in
+  /// one month, the later statement wins (as in cycleForStatement).
+  static CreditCycle? _cycleDueIn(
+      FinancialAccount account, int year, int month) {
+    final dueMonth = toMonthKey(DateTime(year, month));
+    CreditCycle? match;
+    for (var back = 2; back >= 0; back--) {
+      final anchor = DateTime(year, month - back);
+      final cycle = account.cycleClosingIn(anchor.year, anchor.month);
+      if (cycle != null && cycle.dueMonthKey == dueMonth) {
+        match = cycle;
+      }
+    }
+    return match;
+  }
+
+  /// "Feb 2027" for a 'YYYY-MM' key.
+  static String _monthYearLabel(String month) =>
+      DateFormat('MMM yyyy').format(DateTime.parse('$month-01'));
 
   String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';

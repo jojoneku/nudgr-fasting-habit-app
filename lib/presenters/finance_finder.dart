@@ -421,7 +421,7 @@ class FinanceFinder {
         if (p.purchaseDate != null) 'purchase date: ${_day(p.purchaseDate!)}',
         'monthly payment: ${_peso(p.monthlyAmount)}',
         'months: ${p.totalMonths} ($paid paid)',
-        'first payment month: ${p.startMonth}',
+        'first payment month: ${p.startMonth}${_startMonthNote(p)}',
         'last payment month: ${p.endMonth}',
         if (p.deferralMonths > 0) 'deferred: ${p.deferralMonths} months',
         'interest: ${p.hasInterest ? '${p.interestRate}% a month' : '0%'}',
@@ -528,6 +528,13 @@ class FinanceFinder {
   static String _day(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+
+  /// " (set by hand; the card cycle gives 2027-02)" after an installment's
+  /// first payment month, or nothing (Plan 068).
+  String _startMonthNote(Installment p) {
+    final note = _installments?.startMonthNote(p);
+    return note == null ? '' : ' ($note)';
+  }
 
   static String _peso(double v) => '₱${v.toStringAsFixed(v % 1 == 0 ? 0 : 2)}';
 }

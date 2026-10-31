@@ -1608,7 +1608,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
           ? _roundedMonthly(amount, months, interestRate)
           : plan.monthlyAmount,
       totalMonths: months,
-      startMonth: scheduleMoved
+      // A month set by hand (or waiting for review) does not follow the
+      // purchase date (Plan 068).
+      startMonth: scheduleMoved && !_startMonthPinned(plan)
           ? calculateInstallmentStartMonth(account, date,
               deferralMonths: plan.deferralMonths)
           : plan.startMonth,
@@ -1618,9 +1620,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       note: note,
       categoryId: categoryId,
       isActive: plan.isActive,
+      paidForName: plan.paidForName,
+      startMonthSource: plan.startMonthSource,
       updatedAt: DateTime.now(),
     );
   }
+
+  static bool _startMonthPinned(Installment plan) =>
+      plan.startMonthSource == StartMonthSource.manual ||
+      plan.startMonthSource == StartMonthSource.review;
 
   static double _roundedMonthly(
           double amount, int months, double interestRate) =>

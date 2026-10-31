@@ -17,6 +17,7 @@ import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.da
 import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
+import 'package:intermittent_fasting/views/treasury/bills/start_month_review_card.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_budgeted_expense_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
@@ -237,7 +238,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => AddInstallmentSheet(
-          presenter: widget.installmentPresenter, existing: existing),
+          presenter: widget.installmentPresenter,
+          receivables: widget.presenter,
+          existing: existing),
     );
   }
 
@@ -1254,6 +1257,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                         const SizedBox(height: 18),
                         _budgetedSection(),
                         const SizedBox(height: 18),
+                        StartMonthReviewCard(
+                          presenter: widget.installmentPresenter,
+                          margin: const EdgeInsets.only(bottom: 12),
+                        ),
                         _installmentsSection(),
                       ],
                     ),

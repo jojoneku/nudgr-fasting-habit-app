@@ -658,7 +658,11 @@ void main() {
             totalAmount: 300.0,
             monthlyAmount: 100.0,
             totalMonths: 3,
-            startMonth: deferralMonths == 0 ? '2026-10' : '2026-12',
+            // As computed from the card's cycle, so the plan follows it
+            // (Plan 068).
+            startMonth: calculateInstallmentStartMonth(
+                shopeePay, DateTime(2026, 9, 6),
+                deferralMonths: deferralMonths),
             purchaseDate: DateTime(2026, 9, 6),
             deferralMonths: deferralMonths,
             categoryId: 'cat-tech',
