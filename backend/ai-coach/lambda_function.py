@@ -1627,7 +1627,7 @@ def _clip(value, cap, label):
 #      the historical record). This is the second system block. The date
 #      changes once a day, the profile when the user edits it, and the briefing
 #      with a ledger edit -- in the logs, 1 of 15 messages sent less than 5
-#      minutes after the previous one (2026-10-24 to 2026-10-31). Plan 067.
+#      minutes after the previous one (2026-10-24 to 2026-10-31). Plan 069.
 #   3. The conversation up to the second-to-last user turn. The newest turn is
 #      deliberately left outside so the prefix that gets cached is the part that
 #      will still be a prefix next turn — cache turn N-2 now, read it back and
@@ -1745,7 +1745,7 @@ _REMINDER_CLOSE = "</briefing-reminder>"
 # The briefing in the user turn read as the whole answer: with it ahead of the
 # question the eval fell from 15/15 to 10/15, on replies that called no tool.
 # With it after the question and ending in this line, 15/15. The briefing is
-# back in the system prompt (Plan 067), and this line stays after the question.
+# back in the system prompt (Plan 069), and this line stays after the question.
 _BRIEFING_REMINDER = (
     "The briefing is a SUMMARY, not the whole ledger. Before you answer, apply WHEN TO "
     "CALL A READ TOOL to the user's message: call a read tool first when the answer needs "

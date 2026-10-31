@@ -1,4 +1,4 @@
-"""Tests for the advisor's prompt-cache layout (Plan 065 phase 5, Plan 067).
+"""Tests for the advisor's prompt-cache layout (Plan 065 phase 5, Plan 069).
 
 The prompt runs: tools + rules (breakpoint 1), the date, profile and briefing
 -- snapshot and historical record -- (breakpoint 2), the chat history
@@ -301,7 +301,7 @@ def test_the_history_is_byte_identical_across_two_turns():
         {"role": "assistant", "text": "One bill is due."},
         {"role": "user", "text": "When?"},
     ]
-    # The same snapshot, the common case: 14 of 15 warm messages (Plan 067).
+    # The same snapshot, the common case: 14 of 15 warm messages (Plan 069).
     second = _build(_payload(messages=turn_n1, summary="Cash: P1,000"))
 
     history = len(turn_n) - 1
@@ -321,7 +321,7 @@ def test_only_the_newest_user_turn_carries_a_reminder():
 
 
 @pytest.mark.parametrize("old_block", [
-    # A briefing in the user turn, from a Lambda before Plan 067.
+    # A briefing in the user turn, from a Lambda before Plan 069.
     "<briefing>\nCash: P9\n</briefing>",
     "<briefing-reminder>\nCash: P9\n</briefing-reminder>",
 ])

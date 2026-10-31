@@ -1,4 +1,4 @@
-# Plan 067 — Cache the Nudgy briefing across messages, then slim it
+# Plan 069 — Cache the Nudgy briefing across messages, then slim it
 
 Date: 2026-10-31. Follows Plan 065 phase 5 and Plan 066.
 
@@ -77,3 +77,12 @@ full briefing, which also keeps answers fast.
 
 Also fix `_CHARS_PER_TOKEN` in `scripts/briefing_sizes.py` (3.5 → 2.2,
 measured from the 2026-10-31 cache writes).
+
+## Status
+
+- 2026-10-31: A in PR #805. B not built.
+- Observe 1 week of real use (to 2026-11-07), then decide B from:
+  - cache write on warm messages (expect about 1–2k, not about 11k);
+  - the share of cold first hops (was 9 of 27);
+  - the share of turns with more than 1 hop (was 7 of 19);
+  - `python scripts/briefing_sizes.py --hours 168`.
