@@ -132,7 +132,9 @@ def timeline(rows):
                 "cache_read_input_tokens": e.get("cache_read"),
                 "cache_creation_input_tokens": e.get("cache_write"),
             })
-    return sorted(entries, key=lambda e: e["time"] or "")
+    # A hop and its debug line often share a millisecond, and Insights returns
+    # equal timestamps in any order: the debug line must still follow its hop.
+    return sorted(entries, key=lambda e: (e["time"] or "", e["kind"] == "debug"))
 
 
 def _seconds(ms):
@@ -245,6 +247,8 @@ def main(argv=None):
                              "results and reply, for a user listed in the "
                              "Lambda's ADVISOR_DEBUG_USERS")
     args = parser.parse_args(argv)
+    # --text carries peso signs; a Windows console defaults to cp1252.
+    sys.stdout.reconfigure(encoding="utf-8")
 
     logs = boto3.Session(profile_name=args.profile,
                          region_name=args.region).client("logs")
