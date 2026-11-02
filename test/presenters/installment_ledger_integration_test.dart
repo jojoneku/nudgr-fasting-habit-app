@@ -152,7 +152,10 @@ void main() {
       when(mockStats.awardStat(any)).thenAnswer((_) async {});
       when(mockStats.stats).thenReturn(UserStats.initial());
 
-      ledger = LedgerPresenter(mockStorage, mockStats);
+      // Pin the ledger's month: without a clock it opens on the real current
+      // month, and every October fixture below drops out of the view.
+      ledger = LedgerPresenter(mockStorage, mockStats,
+          clock: () => DateTime(2026, 10, 5));
       installments = InstallmentPresenter(mockStorage, ledger, mockStats);
       bills = BillsReceivablesPresenter(
         mockStorage,

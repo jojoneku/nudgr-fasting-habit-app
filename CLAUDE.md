@@ -22,6 +22,7 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 - [docs/fasting_loop_spec.md](docs/fasting_loop_spec.md) — Core fasting timer loop
 - [docs/stats_spec.md](docs/stats_spec.md) — RPG stats & leveling system
 - [docs/chat_logging_coverage.md](docs/chat_logging_coverage.md) — What chat/quick-log can and can't set, vs the manual ledger form
+- [docs/capture_inbox_spec.md](docs/capture_inbox_spec.md) — Capture Inbox: Android notifications → review bucket next to the Ledger (approve/decline)
 
 ## Non-Negotiable Rules
 1. Never put calculations or conditionals in `build()` — delegate to `presenter.someGetter`

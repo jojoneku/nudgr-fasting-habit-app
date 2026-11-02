@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../presenters/ai_coach_presenter.dart';
+import '../presenters/capture_inbox_presenter.dart';
 import '../presenters/app_lock_presenter.dart';
 import '../presenters/auth_presenter.dart';
+import 'treasury/capture/capture_settings_sheet.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/onboarding_presenter.dart';
@@ -41,6 +43,7 @@ class SettingsScreen extends StatelessWidget {
     this.localStorage,
     this.onboardingPresenter,
     this.appLockPresenter,
+    this.captureInboxPresenter,
   });
 
   final FastingPresenter fastingPresenter;
@@ -63,6 +66,9 @@ class SettingsScreen extends StatelessWidget {
 
   /// The app lock (owned by FastingApp). Null hides the Security section.
   final AppLockPresenter? appLockPresenter;
+
+  /// Capture Inbox settings entry (Plan 070); hidden off Android.
+  final CaptureInboxPresenter? captureInboxPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +245,26 @@ class SettingsScreen extends StatelessWidget {
           storage: storageService!,
           notifications: notificationService ?? NotificationService(),
           onMasterReenabled: fastingPresenter.rearmAlarms,
+        ),
+      ));
+    }
+
+    // Capture transactions from bank / e-wallet notifications (Plan 070).
+    final capture = captureInboxPresenter;
+    if (capture != null && capture.isSupported) {
+      children.add(ListenableBuilder(
+        listenable: capture,
+        builder: (context, _) => AppListTile(
+          insetGrouped: true,
+          leading: const AppIconBadge(icon: Icons.move_to_inbox_outlined),
+          title: const Text('Capture transactions'),
+          subtitle: Text(capture.isEnabled
+              ? (capture.accessGranted
+                  ? 'On · ${capture.settings.sources.length} sources'
+                  : 'On · notification access needed')
+              : 'Read bank and e-wallet notifications into an inbox'),
+          trailing: const Icon(Icons.chevron_right, size: 18),
+          onTap: () => showCaptureSettingsSheet(context, presenter: capture),
         ),
       ));
     }

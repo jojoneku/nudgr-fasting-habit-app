@@ -29,6 +29,8 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/finance/captured_transaction.dart';
+import '../models/finance/capture_settings.dart';
 import '../models/grocery/cart_item.dart';
 import '../models/grocery/remembered_price.dart';
 import '../models/grocery/saved_trip.dart';
@@ -150,6 +152,8 @@ class LocalStorageService extends StorageService {
     StorageService.keyReceivables,
     StorageService.keyMonthlySummaries,
     StorageService.keyInstallments,
+    StorageService.keyCaptureInbox,
+    StorageService.keyCaptureSettings,
     StorageService.keyPersonalFoodDict,
     StorageService.keyFinanceDictionary,
     StorageService.keyFoodFeedback,
@@ -1397,6 +1401,52 @@ class LocalStorageService extends StorageService {
     } catch (e) {
       debugPrint('LocalStorageService: Error loading installments: $e');
       return [];
+    }
+  }
+
+  // ── Capture Inbox (Plan 070) ───────────────────────────────────────────────
+
+  @override
+  Future<void> saveCaptureInbox(List<CapturedTransaction> items) async {
+    final maps = items.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('captureInbox', StorageService.keyCaptureInbox,
+        'finance_capture_inbox', _financeJsonById(maps));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_k(StorageService.keyCaptureInbox), jsonEncode(maps));
+  }
+
+  @override
+  Future<List<CapturedTransaction>> loadCaptureInbox() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyCaptureInbox));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => CapturedTransaction.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading capture inbox: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveCaptureSettings(CaptureSettings settings) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _k(StorageService.keyCaptureSettings), jsonEncode(settings.toJson()));
+  }
+
+  @override
+  Future<CaptureSettings> loadCaptureSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyCaptureSettings));
+    if (raw == null) return const CaptureSettings();
+    try {
+      return CaptureSettings.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading capture settings: $e');
+      return const CaptureSettings();
     }
   }
 

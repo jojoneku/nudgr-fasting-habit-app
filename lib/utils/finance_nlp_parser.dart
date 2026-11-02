@@ -875,6 +875,26 @@ PreparseResult? _tryPayCredit(
 /// Finds an account whose [FinancialAccount.isLiability] equals [liability] that
 /// is named within [text]. Prefers the longest full-name substring (handles
 /// multi-word names like "BPI CC"), then falls back to per-token prefix matches.
+/// Public face of [_matchAccountInText] for callers outside the chat parser
+/// (the Capture Inbox parser, Plan 070): the longest account name contained in
+/// [text], falling back to a whole-word / prefix match. Searches assets and
+/// liabilities alike; pass [liability] to restrict to one pool.
+String? matchAccountNameInText(
+  String text,
+  List<FinancialAccount> accounts, {
+  bool? liability,
+}) {
+  if (liability != null) {
+    return _matchAccountInText(text, accounts, liability: liability);
+  }
+  return _matchAccountInText(text, accounts, liability: false) ??
+      _matchAccountInText(text, accounts, liability: true);
+}
+
+/// Public face of [_resolveCategoryToken]: exact name, then unique prefix.
+String? resolveCategoryByName(String token, List<FinanceCategory> categories) =>
+    _resolveCategoryToken(token, categories);
+
 String? _matchAccountInText(
   String text,
   List<FinancialAccount> accounts, {

@@ -30,3 +30,5 @@
 -dontwarn com.google.mediapipe.proto.CalculatorProfileProto$CalculatorProfile
 -dontwarn com.google.mediapipe.proto.GraphTemplateProto$CalculatorGraphTemplate
 
+# Plan 070: the notification listener is instantiated by the system by name.
+-keep class com.nudgr.app.TransactionNotificationListener { *; }
