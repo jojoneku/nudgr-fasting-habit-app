@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
+/// Visual height of the pills on the Ledger controls row.
+const double kControlPillHeight = 34;
+
 /// `‹ September ›` — the mobile counterpart to `WebMonthStepper`.
 ///
 /// Web has had chevrons for a while; mobile only had the pill, so moving one
@@ -15,6 +18,10 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 /// Uncapped in both directions, matching web. A future month is a legitimate
 /// thing to look at — you plan a budget before you live it — and the surfaces
 /// that must not accept input for a non-current month say so themselves.
+///
+/// Sized to [kControlPillHeight] so it lines up with the `Filter & sort` and
+/// `Inbox` pills on the same row; the chevrons keep a wider hit area than
+/// their icon so a 34px pill still takes a thumb.
 class MonthStepperPill extends StatelessWidget {
   /// Month key, `YYYY-MM`.
   final String month;
@@ -55,12 +62,13 @@ class MonthStepperPill extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(999),
             child: Container(
-              constraints: const BoxConstraints(minHeight: 44, minWidth: 88),
+              constraints: const BoxConstraints(
+                  minHeight: kControlPillHeight, minWidth: 80),
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 monthChipLabel(month),
-                style: theme.textTheme.titleSmall
+                style: theme.textTheme.labelLarge
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
@@ -76,8 +84,8 @@ class MonthStepperPill extends StatelessWidget {
   }
 }
 
-/// A chevron sized to the 44px minimum without widening the pill: the icon is
-/// small, the touch target is not.
+/// A chevron that matches the pill height and keeps a 40px-wide hit area: the
+/// icon is small, the touch target is not.
 class _Chevron extends StatelessWidget {
   final IconData icon;
   final String tooltip;
@@ -93,14 +101,15 @@ class _Chevron extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return SizedBox(
-      width: 44,
-      height: 44,
+      width: 40,
+      height: kControlPillHeight,
       child: IconButton(
         icon: Icon(icon, size: 20, color: cs.onSurfaceVariant),
         tooltip: tooltip,
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        splashRadius: 22,
+        constraints: const BoxConstraints(),
+        splashRadius: 18,
       ),
     );
   }

@@ -15,7 +15,10 @@ import 'finance_nlp_parser.dart'
 ///
 /// Reject first: an OTP or security prompt, a promo, a reminder, or a failed /
 /// pending / reversed transaction never becomes a row ([captureRejectReason]).
-/// Everything else does, even with no amount — the user can type one.
+/// A text that no template matched and that holds no number at all is dropped
+/// too — a money alert always carries a figure, so that one is a product
+/// nudge the cue list has not met yet. Everything else becomes a row, even
+/// with no parsed amount — the user can type one.
 ///
 /// Resolution order — each step fills only what is still null:
 ///  1. a per-app template (`capture_templates.dart`) sets direction and lifts
@@ -71,11 +74,13 @@ CapturedTransaction? parseCapture(
   }
 
   // 1. Template.
+  var templateHit = false;
   for (final t
       in kCaptureTemplates[raw.packageName] ?? const <CaptureTemplate>[]) {
     if (amount != null) break;
     final m = t.pattern.firstMatch(body) ?? t.pattern.firstMatch(text);
     if (m == null) continue;
+    templateHit = true;
     // A template without an `amount` group fixes the direction only; the
     // generic pass still looks for the number and the row keeps 0.6.
     if (t.pattern.pattern.contains('(?<amount>')) {
@@ -89,8 +94,10 @@ CapturedTransaction? parseCapture(
     break;
   }
 
-  // 2. Generic pass.
+  // 2. Generic pass. No template, no amount and not one digit anywhere:
+  //    not a money alert ("Your wallet needs a refill. Tap to start.").
   amount ??= _firstTransactionAmount(body) ?? _firstTransactionAmount(text);
+  if (!templateHit && amount == null && !_anyDigit.hasMatch(text)) return null;
   type ??= _directionOf(text);
   counterparty ??= _genericCounterparty(body, type);
   last4 ??= _ownLast4(text);
@@ -286,13 +293,15 @@ final RegExp _failedCue = RegExp(
   caseSensitive: false,
 );
 final RegExp _promoCue = RegExp(
-  r'\bpromo\b|\bvoucher\b|\bdiscount\b|\braffle\b|\bwin\b|\bGForest\b|\bGLife\b|\bGInvest\b|\bGCredit\b|\bGLoan\b|\bGGives\b|\bGSave\b|\bGInsure\b|\bexclusive\b|\blimited\s+time\b|\bapply\s+now\b|\btap\s+to\s+learn\b|\breminder\b|\bis\s+due\b|\bdue\s+(?:on|today|tomorrow)\b',
+  r'\bpromo\b|\bvoucher\b|\bdiscount\b|\braffle\b|\bwin\b|\bGForest\b|\bGLife\b|\bGInvest\b|\bGCredit\b|\bGLoan\b|\bGGives\b|\bGSave\b|\bGInsure\b|\bexclusive\b|\blimited\s+time\b|\bapply\s+now\b|\btap\s+to\s+(?:start|learn|apply|claim|try|join|explore|get)\b|\bget\s+started\b|\bturn\s+on\b|\bneeds?\s+a\s+(?:refill|top[- ]?up)\b|\breminder\b|\bis\s+due\b|\bdue\s+(?:on|today|tomorrow)\b',
   caseSensitive: false,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic pass helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+final RegExp _anyDigit = RegExp(r'\d');
 
 final RegExp _amountRe = RegExp(
   r'(?:PHP|PhP|Php|php|₱|\bP)\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)',
