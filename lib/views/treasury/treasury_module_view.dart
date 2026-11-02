@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/capture_inbox_presenter.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
@@ -49,6 +50,10 @@ class TreasuryModuleView extends StatefulWidget {
   final InstallmentPresenter installmentPresenter;
   final GroceryCartPresenter groceryCartPresenter;
 
+  /// Capture Inbox (Plan 070). Null on shells without it; the Ledger then
+  /// shows no inbox pill.
+  final CaptureInboxPresenter? captureInboxPresenter;
+
   /// Nutrition presenter, when available — lets the ledger's photo-log button
   /// offer meal logging alongside receipt scanning. Null on finance-only
   /// surfaces (e.g. the web treasury app).
@@ -83,6 +88,7 @@ class TreasuryModuleView extends StatefulWidget {
     required this.historyPresenter,
     required this.installmentPresenter,
     required this.groceryCartPresenter,
+    this.captureInboxPresenter,
     this.nutritionPresenter,
     this.syncPresenter,
     this.aiCoachPresenter,
@@ -256,6 +262,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             presenter: widget.ledgerPresenter,
             nutrition: widget.nutritionPresenter,
             aiCoach: widget.aiCoachPresenter,
+            captureInbox: widget.captureInboxPresenter,
           ),
           BillsReceivablesView(
             presenter: widget.billsPresenter,

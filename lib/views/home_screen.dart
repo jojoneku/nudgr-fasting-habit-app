@@ -9,6 +9,7 @@ import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/capture_inbox_presenter.dart';
 import '../presenters/grocery_cart_presenter.dart';
 import '../presenters/insights_presenter.dart';
 import '../presenters/installment_presenter.dart';
@@ -21,6 +22,7 @@ import '../presenters/treasury_history_presenter.dart';
 import '../presenters/treasury_presenters.dart';
 import '../services/auth_service.dart';
 import '../services/backup_service.dart';
+import '../services/capture_bridge_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
 import '../services/cloud_ai_coach_service.dart';
@@ -88,6 +90,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final TreasuryHistoryPresenter _historyPresenter;
   late final InstallmentPresenter _installmentPresenter;
   late final GroceryCartPresenter _groceryCartPresenter;
+  late final CaptureInboxPresenter _captureInboxPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
   late final InsightsPresenter _insightsPresenter;
   late final AuthPresenter _authPresenter;
@@ -144,6 +147,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       stats: _statsPresenter,
       ai: _onDeviceAi,
       cloudAi: _cloudAi,
+      // Android notification capture (Plan 070). The bridge reports itself
+      // unsupported off Android, so the inbox is inert there.
+      captureBridge: const MethodChannelCaptureBridge(),
     );
     _ledgerPresenter = _treasury.ledger;
     _treasuryPresenter = _treasury.dashboard;
@@ -152,6 +158,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter = _treasury.history;
     _installmentPresenter = _treasury.installments;
     _groceryCartPresenter = _treasury.groceryCart;
+    _captureInboxPresenter = _treasury.captureInbox;
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -522,6 +529,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // Apply any widget-tap actions queued while the app was backgrounded,
       // then refresh the widgets.
       _widgetBridge?.drainPendingActions();
+      // Capture Inbox: the user may be returning from the system notification
+      // access page, and the listener may have queued captures meanwhile.
+      unawaited(_captureInboxPresenter.refreshAccess());
+      unawaited(_captureInboxPresenter.drain());
     }
   }
 
@@ -556,6 +567,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           historyPresenter: _historyPresenter,
           installmentPresenter: _installmentPresenter,
           groceryCartPresenter: _groceryCartPresenter,
+          captureInboxPresenter: _captureInboxPresenter,
           authPresenter: _authPresenter,
           syncPresenter: _syncPresenter,
           settingsPresenter: widget.settingsPresenter,

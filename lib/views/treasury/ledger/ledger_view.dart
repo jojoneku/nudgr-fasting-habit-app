@@ -8,7 +8,9 @@ import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/capture_inbox_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/capture/capture_inbox_view.dart';
 import 'package:intermittent_fasting/views/widgets/ai_chat_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/finance/entry_review_card.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
@@ -35,11 +37,16 @@ class LedgerView extends StatefulWidget {
   /// When present, the input bar's sparkle opens Nudgy over the Ledger.
   final AiCoachPresenter? aiCoach;
 
+  /// Capture Inbox (Plan 070). When present and active, the controls row
+  /// shows an `Inbox · n` pill that opens the review list.
+  final CaptureInboxPresenter? captureInbox;
+
   const LedgerView({
     super.key,
     required this.presenter,
     this.nutrition,
     this.aiCoach,
+    this.captureInbox,
   });
 
   @override
@@ -148,6 +155,7 @@ class _LedgerViewState extends State<LedgerView> {
                 const _LedgerHeader(),
                 _LedgerControlsRow(
                   presenter: presenter,
+                  captureInbox: widget.captureInbox,
                   onOpenFilters: _showFilterSortSheet,
                 ),
                 // In / Out / Net moved to the Dashboard's cashflow strip — no
@@ -625,11 +633,13 @@ class _LedgerHeader extends StatelessWidget {
 /// month/year pill on the right, **in line** on one row (spec §2).
 class _LedgerControlsRow extends StatelessWidget {
   final LedgerPresenter presenter;
+  final CaptureInboxPresenter? captureInbox;
   final VoidCallback onOpenFilters;
 
   const _LedgerControlsRow({
     required this.presenter,
     required this.onOpenFilters,
+    this.captureInbox,
   });
 
   @override
@@ -649,6 +659,10 @@ class _LedgerControlsRow extends StatelessWidget {
               onOpenFilters: onOpenFilters,
             ),
           ),
+          if (captureInbox != null) ...[
+            const SizedBox(width: 8),
+            _InboxPill(presenter: captureInbox!),
+          ],
           const SizedBox(width: 8),
           MonthStepperPill(
             month: presenter.selectedMonth,
@@ -665,6 +679,85 @@ class _LedgerControlsRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// `Inbox · n` — the Capture Inbox entry (Plan 070). Hidden while capture is
+/// off and nothing is pending, so a user who never turned it on never sees it.
+class _InboxPill extends StatelessWidget {
+  final CaptureInboxPresenter presenter;
+  const _InboxPill({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        if (!presenter.hasPresence) return const SizedBox.shrink();
+        final count = presenter.pendingCount;
+        final active = count > 0;
+        final accent = cs.primary;
+        return Semantics(
+          button: true,
+          label: 'Capture inbox, $count waiting',
+          child: GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => CaptureInboxView(presenter: presenter),
+              ));
+            },
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: active
+                    ? accent.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: active ? accent : cs.outlineVariant),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.move_to_inbox_outlined,
+                      size: 15, color: active ? accent : cs.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Inbox',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: active ? accent : cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (active) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: cs.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

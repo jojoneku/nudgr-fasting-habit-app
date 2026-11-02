@@ -12,6 +12,7 @@ import '../presenters/auth_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/capture_inbox_presenter.dart';
 import '../presenters/grocery_cart_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/installment_presenter.dart';
@@ -77,6 +78,7 @@ class HubScreen extends StatefulWidget {
     this.historyPresenter,
     this.installmentPresenter,
     this.groceryCartPresenter,
+    this.captureInboxPresenter,
     this.authPresenter,
     this.syncPresenter,
     required this.settingsPresenter,
@@ -102,6 +104,7 @@ class HubScreen extends StatefulWidget {
   final TreasuryHistoryPresenter? historyPresenter;
   final InstallmentPresenter? installmentPresenter;
   final GroceryCartPresenter? groceryCartPresenter;
+  final CaptureInboxPresenter? captureInboxPresenter;
   final AuthPresenter? authPresenter;
   final SyncPresenter? syncPresenter;
   final SettingsPresenter settingsPresenter;
@@ -547,6 +550,7 @@ class _HubScreenState extends State<HubScreen> {
           historyPresenter: history,
           installmentPresenter: installments,
           groceryCartPresenter: groceryCart,
+          captureInboxPresenter: widget.captureInboxPresenter,
           nutritionPresenter: widget.nutritionPresenter,
           syncPresenter: widget.syncPresenter,
           aiCoachPresenter: widget.aiCoachPresenter,
@@ -593,6 +597,7 @@ class _HubScreenState extends State<HubScreen> {
           localStorage: widget.localStorage,
           onboardingPresenter: widget.onboardingPresenter,
           appLockPresenter: widget.appLockPresenter,
+          captureInboxPresenter: widget.captureInboxPresenter,
         ),
       ),
     );
