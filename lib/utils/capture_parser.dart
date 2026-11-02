@@ -304,7 +304,8 @@ final RegExp _promoCue = RegExp(
 final RegExp _anyDigit = RegExp(r'\d');
 
 final RegExp _amountRe = RegExp(
-  r'(?:PHP|PhP|Php|php|₱|\bP)\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)',
+  // The trailing guard keeps a half-cut "PHP 4,0…" from reading as 4.
+  r'(?:PHP|PhP|Php|php|₱|\bP)\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)(?![\d,])',
 );
 
 /// A number with two decimals straight after a money verb, no currency mark:
@@ -462,6 +463,8 @@ String? _cleanCounterparty(String? raw) {
   s = s.replaceFirst(_trailingDigits, '').replaceFirst(_trailingJunk, '');
   if (s.isEmpty || s.length < 2) return null;
   if (_placeholderNames.contains(s.toLowerCase())) return null;
+  // "XXXXXXXX6634 Transfer" — a masked account number is never a name.
+  if (RegExp(r'^[*xX•.]{2,}\d').hasMatch(s)) return null;
   // "up to PHP 1,000" — a currency mark is never a name.
   if (RegExp(r'^(?:PHP|Php|₱|P)\s?\d', caseSensitive: false).hasMatch(s)) {
     return null;

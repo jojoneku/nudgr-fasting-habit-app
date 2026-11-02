@@ -147,16 +147,43 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
   static const Duration twinWindow = Duration(minutes: 15);
 
   Iterable<CapturedTransaction> _twinsOf(CapturedTransaction c) {
-    final amount = c.draft.amount;
-    if (amount == null) return const [];
     return pending.where((t) {
       if (t.id == c.id || t.sourceApp == c.sourceApp) return false;
-      final a = t.draft.amount;
-      if (a == null || (a - amount).abs() >= 0.005) return false;
-      final ty = t.draft.type, cy = c.draft.type;
-      if (ty != null && cy != null && ty != cy) return false;
-      return t.capturedAt.difference(c.capturedAt).abs() <= twinWindow;
+      if (t.capturedAt.difference(c.capturedAt).abs() > twinWindow) {
+        return false;
+      }
+      return _sameAmount(t, c) || _echoOf(t, c) || _echoOf(c, t);
     });
+  }
+
+  /// Same figure, and a direction that does not contradict: equal, unknown on
+  /// one side, or a transfer on one side (a bank's inflow email and the
+  /// sender app's transfer push are the same movement).
+  static bool _sameAmount(CapturedTransaction a, CapturedTransaction b) {
+    final x = a.draft.amount, y = b.draft.amount;
+    if (x == null || y == null || (x - y).abs() >= 0.005) return false;
+    final tx = a.draft.type, ty = b.draft.type;
+    return tx == null ||
+        ty == null ||
+        tx == ty ||
+        tx == TransactionType.transfer ||
+        ty == TransactionType.transfer;
+  }
+
+  /// A bank email cut off before its figure ("Incoming Interbank Funds
+  /// Transfer … Needs amount") that lands in the same account a transfer push
+  /// already moves money into. The push carries the amount; the email does
+  /// not, so the amount rule cannot see them.
+  static bool _echoOf(CapturedTransaction echo, CapturedTransaction push) {
+    if (echo.draft.amount != null) return false;
+    final pd = push.draft, ed = echo.draft;
+    if (pd.type != TransactionType.transfer || pd.transferToAccountId == null) {
+      return false;
+    }
+    return (ed.type == TransactionType.inflow &&
+            ed.accountId == pd.transferToAccountId) ||
+        (ed.type == TransactionType.transfer &&
+            ed.transferToAccountId == pd.transferToAccountId);
   }
 
   /// Source labels of the rows the last [approve] declined as twins.

@@ -23,6 +23,7 @@ import '../mocks.mocks.dart';
 
 const _gcash = 'com.globe.gcash.android';
 const _maya = 'com.paymaya';
+const _gotyme = 'ph.com.gotyme';
 
 /// In-memory stand-in for the Android listener.
 class FakeCaptureBridge implements CaptureBridgeService {
@@ -88,12 +89,19 @@ FinanceCategory _cat(String id, String name) => FinanceCategory(
       colorHex: '#000000',
     );
 
-RawCapture _raw(String pkg, String text, {DateTime? at, String? fp}) =>
+RawCapture _raw(
+  String pkg,
+  String text, {
+  DateTime? at,
+  String? fp,
+  String title = '',
+  String? label,
+}) =>
     RawCapture(
       packageName: pkg,
-      appLabel: pkg == _gcash ? 'GCash' : 'Maya',
+      appLabel: label ?? (pkg == _gcash ? 'GCash' : 'Maya'),
       postedAt: at ?? DateTime(2026, 11, 2, 12),
-      title: '',
+      title: title,
       text: text,
       fingerprint: fp ?? 'fp${text.hashCode}',
     );
@@ -203,6 +211,61 @@ void main() {
       await inbox.undo(earlier.id);
       expect(ledger.allTransactions, isEmpty);
       expect(inbox.pendingCount, 2);
+    });
+
+    test('a bank email cut off before its amount echoes the transfer push',
+        () async {
+      // Seen on device 2026-11-02: GoTyme pushes "You sent P4000.00 to …
+      // (BPI) ••••••1637"; a minute later Gmail shows BPI's "Incoming
+      // Interbank Funds Transfer" email, whose amount sits below the fold.
+      now = DateTime(2026, 11, 2, 21);
+      storedAccounts = [
+        ...storedAccounts,
+        _acc('gotyme', 'GoTyme', 10000),
+        _acc('bpi', 'BPI', 2000),
+      ];
+      storedSettings = const CaptureSettings(
+        enabled: true,
+        sources: {_gotyme, kGmailPackage},
+        accountBySource: {_gotyme: 'gotyme', kGmailPackage: 'bpi'},
+        senderFilters: {
+          kGmailPackage: ['BPI']
+        },
+      );
+      bridge.queue = [
+        _raw(
+            _gotyme,
+            'You sent P4000.00 to Juan D. Bank Of The Philippine Islands (BPI) '
+            '••••••1637.',
+            title: 'Transfer successful',
+            label: 'GoTyme',
+            at: DateTime(2026, 11, 2, 20, 44)),
+        _raw(
+            kGmailPackage,
+            'Incoming Interbank Funds Transfer Confirmation Dear ELJON, You '
+            'have an incoming interbank funds transfer sent via Instapay with '
+            'the following details. Interbank Funds Transfer Transaction '
+            'Details Reference Number 20261102GOTYPHM2XXXB011244220000006 '
+            'Transaction Date and Time Monday, Nov 02 2026; 08:44:27 PM(GMT '
+            '+ 8) Transfer From…',
+            title: 'BPI InstaPay',
+            label: 'Gmail',
+            at: DateTime(2026, 11, 2, 20, 45)),
+      ];
+      final (ledger, inbox) = await build();
+      expect(inbox.pendingCount, 2);
+      final mail = inbox.pending.first; // newest first
+      final push = inbox.pending.last;
+      expect(mail.sourceLabel, 'BPI InstaPay');
+      expect(mail.draft.amount, isNull);
+      expect(push.draft.type, TransactionType.transfer);
+      expect(inbox.twinOf(mail)?.id, push.id);
+
+      await inbox.approve(push.id);
+      expect(inbox.pendingCount, 0);
+      expect(inbox.lastAutoDeclinedLabels, ['BPI InstaPay']);
+      expect(balanceOf(ledger, 'gotyme'), 6000);
+      expect(balanceOf(ledger, 'bpi'), 6000);
     });
 
     test('a different amount or a far-apart time is not a twin', () async {
