@@ -13,6 +13,22 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.118] - 2026-11-02
+
+### Added
+- capture inbox for Android bank notifications (Plan 070)
+- log the briefing's size per section
+- answer after the read, quote field meanings, count nothing
+- log advisor text for allowlisted users
+
+### Fixed
+- seed the selected month from the injected clock
+- trace.py --text on Windows and in hop order
+
+### Performance
+- cache the briefing across messages
+- cache the newest user turn for the next hop
+
 ## [1.1.117] - 2026-10-30
 
 ### Added
@@ -1040,7 +1056,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.117...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.118...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1159,3 +1175,4 @@ distributed via `manifest.json`.
 [1.1.115]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.115
 [1.1.116]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.116
 [1.1.117]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.117
+[1.1.118]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.118
