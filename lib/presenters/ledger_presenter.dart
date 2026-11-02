@@ -57,6 +57,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         _cloudAi = cloudAi,
         _monthScope = monthScope,
         _financeDict = financeDict ?? FinancePersonalDictionary(storage) {
+    // The month opens on the injected clock, so a test that pins the clock
+    // sees its fixtures; without a clock this is DateTime.now, as before.
+    _selectedMonth = toMonthKey(_clock());
     if (monthScope != null) {
       _selectedMonth = monthScope.month;
       monthScope.addListener(_adoptScopeMonth);
