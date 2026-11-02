@@ -710,7 +710,7 @@ class _InboxPill extends StatelessWidget {
               ));
             },
             child: Container(
-              height: 34,
+              height: kControlPillHeight,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: active

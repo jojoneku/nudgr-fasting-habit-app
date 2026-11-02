@@ -206,13 +206,21 @@ void main() {
       expect(c.missing, contains(EntryField.type));
     });
 
-    test('no amount at all still yields a row the user can fill', () {
-      final c = parse(_unknown, 'Hello! Here is an update on your account.',
+    test('a number the parser cannot read still yields a row to fill', () {
+      final c = parse(
+          _unknown, 'Hello! Here is an update on your account ending 1234.',
           title: 'Update');
       expect(c.draft.amount, isNull);
       expect(c.confidence, 0);
       expect(c.missing, contains(EntryField.amount));
       expect(c.draft.description, 'Update');
+    });
+
+    test('a text with no digit at all and no template is not a row', () {
+      expect(
+          tryParse(_unknown, 'Hello! Here is an update on your account.',
+              title: 'Update'),
+          isNull);
     });
   });
 
@@ -234,6 +242,25 @@ void main() {
           isNull);
       expect(
           tryParse(_gcash, 'Your GCredit bill of PHP 300.00 is due.'), isNull);
+    });
+
+    test('the Maya refill nudge (seen on device 2026-11-02)', () {
+      expect(
+          tryParse(
+              _maya,
+              "Turn on Auto Cash in now or transfer funds from Maya Easy Credit "
+              "so you're always ready to pay with Maya without worry. Tap to start.",
+              title: 'Your wallet needs a refill'),
+          isNull);
+      // The body alone, with the title cue gone, still falls to the no-digit
+      // floor rather than becoming an amount-less inflow row.
+      expect(
+          tryParse(
+              _maya,
+              "Transfer funds from Maya Easy Credit so you're always ready "
+              "to pay with Maya.",
+              title: 'Maya'),
+          isNull);
     });
 
     test('a failed, pending or reversed transaction', () {
