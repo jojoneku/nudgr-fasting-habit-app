@@ -53,6 +53,11 @@ Plan 065 set for Nudgy.
 Confidence: 1.0 template, 0.6 generic with direction, 0.3 amount only,
 0 no amount.
 
+Floor: when no template matched, no amount parsed and the text holds no
+digit at all, the parser returns null. A money alert always carries a figure;
+a text without one is a product nudge the promo cue list has not met yet
+(seen on device: Maya "Your wallet needs a refill … Tap to start.").
+
 ## Data Model
 
 `CapturedTransaction` (`lib/models/finance/captured_transaction.dart`):
