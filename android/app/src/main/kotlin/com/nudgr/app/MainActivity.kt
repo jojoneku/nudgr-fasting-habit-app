@@ -1,12 +1,15 @@
 package com.nudgr.app
 
 import android.app.NotificationManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.view.WindowManager
+import androidx.core.app.NotificationManagerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +19,7 @@ class MainActivity : FlutterFragmentActivity() {
     private val channel = "com.nudgr.app/health_connect"
     private val systemSettingsChannel = "com.nudgr.app/system_settings"
     private val lockScreenChannel = "com.nudgr.app/lockscreen"
+    private val captureChannel = "com.nudgr.app/capture"
 
     /** True while this launch is allowed to draw over the keyguard. */
     private var showingOverLockScreen = false
@@ -174,6 +178,63 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+        // Transaction capture (Plan 070): notification-listener access plus the
+        // queue the listener fills. Mirrors CaptureBridgeService on the Dart
+        // side; every method answers synchronously from CaptureQueue.
+        CaptureQueue.init(this)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, captureChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isAccessGranted" -> result.success(isCaptureAccessGranted())
+                    "openAccessSettings" -> {
+                        try {
+                            openCaptureAccessSettings()
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("ERROR", e.message, null)
+                        }
+                    }
+                    "requestRebind" -> {
+                        try {
+                            NotificationListenerService.requestRebind(captureListenerComponent())
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("ERROR", e.message, null)
+                        }
+                    }
+                    "setAllowlist" -> {
+                        // Either a bare package list (older Dart) or
+                        // {"packages": [...], "titleFilters": {pkg: [words]}}.
+                        val args = call.arguments
+                        val packages: Set<String>
+                        val filters = mutableMapOf<String, List<String>>()
+                        if (args is Map<*, *>) {
+                            packages = (args["packages"] as? List<*>)
+                                ?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                            (args["titleFilters"] as? Map<*, *>)?.forEach { (k, v) ->
+                                val words = (v as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                                if (k is String && words.isNotEmpty()) filters[k] = words
+                            }
+                        } else {
+                            packages = (args as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
+                        }
+                        CaptureQueue.setAllowlist(packages, filters)
+                        result.success(null)
+                    }
+                    "drainRaw" -> result.success(CaptureQueue.drain())
+                    "requeue" -> {
+                        val captures = (call.arguments as? List<*>)
+                            ?.filterIsInstance<Map<*, *>>()
+                            ?: emptyList()
+                        CaptureQueue.requeue(captures)
+                        result.success(null)
+                    }
+                    "recentApps" ->
+                        result.success(CaptureQueue.recentApps(System.currentTimeMillis()))
+                    "lastConnectedAt" -> result.success(CaptureQueue.lastConnectedAt)
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -238,5 +299,53 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    // ── Transaction capture helpers (Plan 070) ───────────────────────────
+
+    private fun captureListenerComponent() =
+        ComponentName(this, TransactionNotificationListener::class.java)
+
+    /**
+     * API 27+ asks the NotificationManager directly; the compat path reads the
+     * enabled-listeners secure setting, which is all API 26 offers.
+     */
+    private fun isCaptureAccessGranted(): Boolean {
+        val viaCompat = {
+            NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return viaCompat()
+        val nm = getSystemService(NotificationManager::class.java) ?: return viaCompat()
+        return try {
+            nm.isNotificationListenerAccessGranted(captureListenerComponent())
+        } catch (e: Exception) {
+            viaCompat()
+        }
+    }
+
+    /**
+     * Android 11+ can open our listener's own toggle page; anything older (or a
+     * ROM that lacks the detail page) gets the generic Notification access list.
+     */
+    private fun openCaptureAccessSettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                val detail = Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).apply {
+                    putExtra(
+                        Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                        captureListenerComponent().flattenToString(),
+                    )
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(detail)
+                return
+            } catch (e: Exception) {
+                // Fall through to the generic page.
+            }
+        }
+        val generic = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(generic)
     }
 }

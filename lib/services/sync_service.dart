@@ -34,6 +34,7 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/finance/captured_transaction.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
 import 'local_storage_service.dart';
@@ -722,6 +723,10 @@ class SyncService {
           for (final e in await _storage.loadMonthlySummaries())
             e.month: e.toJson()
         };
+      case 'finance_capture_inbox':
+        return {
+          for (final e in await _storage.loadCaptureInbox()) e.id: e.toJson()
+        };
       default:
         return null;
     }
@@ -1256,6 +1261,11 @@ class SyncService {
       case 'finance_monthly_summaries':
         return (await _storage.loadMonthlySummaries())
             .where((e) => e.month == recordId)
+            .firstOrNull
+            ?.toJson();
+      case 'finance_capture_inbox':
+        return (await _storage.loadCaptureInbox())
+            .where((e) => e.id == recordId)
             .firstOrNull
             ?.toJson();
       default:
@@ -1828,6 +1838,12 @@ class SyncService {
         fromJson: MonthlySummary.fromJson,
         getId: (e) => e.month,
         saveAll: _storage.saveMonthlySummaries);
+    await _pullFinanceTable<CapturedTransaction>(
+        byTable['finance_capture_inbox'] ?? [], 'finance_capture_inbox',
+        loadAll: _storage.loadCaptureInbox,
+        fromJson: CapturedTransaction.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveCaptureInbox);
   }
 
   Future<void> _pullFinanceTable<T>(

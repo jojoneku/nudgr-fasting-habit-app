@@ -23,6 +23,8 @@ import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/finance/captured_transaction.dart';
+import '../models/finance/capture_settings.dart';
 import '../models/grocery/cart_item.dart';
 import '../models/grocery/remembered_price.dart';
 import '../models/grocery/saved_trip.dart';
@@ -93,6 +95,11 @@ abstract class StorageService {
   static const String keyReceivables = 'finance_receivables';
   static const String keyMonthlySummaries = 'finance_monthly_summaries';
   static const String keyInstallments = 'finance_installments';
+  // Capture Inbox (Plan 070). The rows sync as finance records
+  // (table `finance_capture_inbox`); the settings are per device — notification
+  // access is granted per device — so they are scoped but never synced.
+  static const String keyCaptureInbox = 'finance_capture_inbox';
+  static const String keyCaptureSettings = 'finance.captureSettings';
   static const String keyPersonalFoodDict = 'personalFoodDict';
   static const String keyFinanceDictionary = 'finance.personalDict';
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
@@ -264,6 +271,13 @@ abstract class StorageService {
   Future<List<Installment>> loadInstallments();
   Future<void> saveMonthlySummaries(List<MonthlySummary> summaries);
   Future<List<MonthlySummary>> loadMonthlySummaries();
+
+  //  Capture Inbox (Plan 070)
+  Future<void> saveCaptureInbox(List<CapturedTransaction> items) async {}
+  Future<List<CapturedTransaction>> loadCaptureInbox() async => const [];
+  Future<void> saveCaptureSettings(CaptureSettings settings) async {}
+  Future<CaptureSettings> loadCaptureSettings() async =>
+      const CaptureSettings();
 
   //  Personal Food Dictionary
   Future<void> savePersonalDict(List<PersonalFoodEntry> entries);

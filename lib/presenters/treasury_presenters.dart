@@ -1,5 +1,6 @@
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/capture_inbox_presenter.dart';
 import 'package:intermittent_fasting/presenters/finance_actions_executor.dart';
 import 'package:intermittent_fasting/presenters/finance_view_reader.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
@@ -10,6 +11,7 @@ import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dar
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
+import 'package:intermittent_fasting/services/capture_bridge_service.dart';
 import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
@@ -62,6 +64,13 @@ class TreasuryPresenters {
   final InstallmentPresenter installments;
   final GroceryCartPresenter groceryCart;
 
+  /// Owns the Capture Inbox rows (Plan 070): notifications the Android
+  /// listener queued, parsed into drafts, waiting for approve / decline.
+  /// Reads accounts and categories live off [ledger]; approval posts through
+  /// [ledger]'s mutators. Web and iOS get a [NullCaptureBridge] and an inbox
+  /// that is simply empty.
+  final CaptureInboxPresenter captureInbox;
+
   /// Runs the tools Nudgy calls. Owns nothing: reads come off [bills] and
   /// [budget], `getView` reads every screen's presenter through a
   /// [FinanceViewReader], transactions go to [ledger]'s review card, and every
@@ -80,6 +89,7 @@ class TreasuryPresenters {
     required this.history,
     required this.installments,
     required this.groceryCart,
+    required this.captureInbox,
     required this.financeActions,
   });
 
@@ -100,6 +110,7 @@ class TreasuryPresenters {
     FinancePersonalDictionary? financeDict,
     NotificationService? notifications,
     TreasuryMonthScope? monthScope,
+    CaptureBridgeService? captureBridge,
   }) {
     final scope = monthScope ?? TreasuryMonthScope();
 
@@ -163,6 +174,15 @@ class TreasuryPresenters {
 
     final history = TreasuryHistoryPresenter(storage, ledger);
     final groceryCart = GroceryCartPresenter(storage, ledger: ledger);
+    // The inbox needs the ledger's accounts/categories to parse and its
+    // mutators to post; it owns only its own rows. Mobile passes the Android
+    // bridge; everywhere else the null bridge keeps the inbox inert.
+    final captureInbox = CaptureInboxPresenter(
+      storage,
+      ledger,
+      captureBridge ?? const NullCaptureBridge(),
+      dict: financeDict,
+    );
 
     return TreasuryPresenters._(
       monthScope: scope,
@@ -173,6 +193,7 @@ class TreasuryPresenters {
       history: history,
       installments: installments,
       groceryCart: groceryCart,
+      captureInbox: captureInbox,
       financeActions: FinanceActionsExecutor(
         bills: bills,
         budget: budget,
@@ -206,10 +227,12 @@ class TreasuryPresenters {
         history.load(),
         installments.load(),
         groceryCart.load(),
+        captureInbox.load(),
       ];
 
   void dispose() {
     // Dependants first, so nothing notifies into a disposed listener.
+    captureInbox.dispose();
     groceryCart.dispose();
     installments.dispose();
     history.dispose();

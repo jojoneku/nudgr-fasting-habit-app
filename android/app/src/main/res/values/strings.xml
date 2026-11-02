@@ -6,4 +6,6 @@
     <string name="widget_expense_label">Nudgr — Expenses</string>
     <string name="widget_weight_label">Nudgr — Weight</string>
     <string name="widget_quest_label">Nudgr — Quests</string>
+    <!-- Notification-access settings entry for the capture listener (Plan 070) -->
+    <string name="capture_listener_label">Nudgr transaction capture</string>
 </resources>

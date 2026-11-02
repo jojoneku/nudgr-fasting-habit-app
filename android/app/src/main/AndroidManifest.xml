@@ -130,6 +130,18 @@
                 android:resource="@xml/widget_quest_info" />
         </receiver>
 
+        <!-- Transaction capture (Plan 070): the system binds this listener once
+             the user grants Notification access. It queues allowlisted banking
+             notifications for the Capture Inbox; see CaptureQueue.kt. -->
+        <service android:name=".TransactionNotificationListener"
+            android:exported="true"
+            android:label="@string/capture_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
+
         <!-- home_widget interactive-action plumbing (inline start/end fast,
              complete quest). The background callback runs in a headless isolate. -->
         <receiver android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
