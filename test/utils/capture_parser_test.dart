@@ -226,8 +226,7 @@ void main() {
           isNull);
     });
 
-    test('a digit alone does not make a row: no amount, cue or own suffix',
-        () {
+    test('a digit alone does not make a row: no amount, cue or own suffix', () {
       // An order number is a digit, not money (Shopee, seen 2026-11-03).
       expect(
           tryParse(_shopee, 'Your order 2411031234 has been shipped.',
@@ -247,8 +246,7 @@ void main() {
               accounts: [...accounts, _acc('spay', 'ShopeePay')],
               categories: categories);
       // "Maya" the app → the Maya account, with no mapping in settings.
-      expect(
-          p(_maya, 'Maya', 'You paid PHP 80.00 to STORE.')!.draft.accountId,
+      expect(p(_maya, 'Maya', 'You paid PHP 80.00 to STORE.')!.draft.accountId,
           'maya');
       // "Shopee" the app → ShopeePay, by prefix.
       expect(
@@ -264,8 +262,7 @@ void main() {
           isNull);
     });
 
-    test('BPI app push masks to three digits (seen on device 2026-11-03)',
-        () {
+    test('BPI app push masks to three digits (seen on device 2026-11-03)', () {
       const s = CaptureSettings(
         enabled: true,
         sources: {_bpi},
@@ -350,15 +347,15 @@ void main() {
 
     test('marketing pushes seen on device 2026-11-03', () {
       expect(tryParse(_shopee, 'Over 50% OFF!', title: 'Shopee'), isNull);
-      expect(tryParse(_shopee, '70% OFF holiday deals', title: 'Shopee'),
-          isNull);
+      expect(
+          tryParse(_shopee, '70% OFF holiday deals', title: 'Shopee'), isNull);
       expect(
           tryParse(_shopee, 'see order details and track your parcel',
               title: 'Shopee'),
           isNull);
       expect(
-          tryParse(_shopee,
-              'unlock your Lucky Draw before it expires in 2 hours',
+          tryParse(
+              _shopee, 'unlock your Lucky Draw before it expires in 2 hours',
               title: 'Shopee'),
           isNull);
       expect(
@@ -502,7 +499,8 @@ void main() {
         parseCapture(_raw(pkg, text, title: title),
             settings: s, accounts: more, categories: categories)!;
 
-    test('MariBank incoming transfer from a peer at the same bank '
+    test(
+        'MariBank incoming transfer from a peer at the same bank '
         '(seen on device 2026-11-03)', () {
       final c = p(mari, 'Successful Incoming Transfer',
           "You've received PHP 40.00 from MariBank with account ending 6357.");
@@ -632,8 +630,8 @@ void main() {
     test('a debit card label lands on the bank account, not the credit card',
         () {
       // Seen on device 2026-11-03.
-      final c = w('STARBUCKS 685 CPG',
-          '₱450.00 with BPI Debit Mastercard ••6161')!;
+      final c =
+          w('STARBUCKS 685 CPG', '₱450.00 with BPI Debit Mastercard ••6161')!;
       expect(c.draft.amount, 450.0);
       expect(c.draft.type, TransactionType.outflow);
       expect(c.draft.description, 'STARBUCKS 685 CPG');

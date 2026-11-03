@@ -116,7 +116,9 @@ CapturedTransaction? parseCapture(
   // 3. Account: the learned suffix, else the card label's own name
   //    ("Visa BPI •••• 1234" → the BPI card), else the per-source default.
   String? accountId;
-  if (last4 != null) accountId = accountForSuffix(settings.accountByLast4, last4);
+  if (last4 != null) {
+    accountId = accountForSuffix(settings.accountByLast4, last4);
+  }
   if (accountId == null && cardLabel != null) {
     // "BPI Debit Mastercard" is the BPI bank account, not the BPI credit
     // card; a label that says neither is a credit card first, as Wallet

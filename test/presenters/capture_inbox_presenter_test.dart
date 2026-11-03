@@ -582,7 +582,8 @@ void main() {
       expect(storedInbox.map((i) => i.id), ['real']);
     });
 
-    test('a pending row with no account lands on the account named like '
+    test(
+        'a pending row with no account lands on the account named like '
         'its source app', () async {
       storedSettings = const CaptureSettings(
         enabled: true,
