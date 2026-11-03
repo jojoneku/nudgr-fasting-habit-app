@@ -13,6 +13,14 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.121] - 2026-11-03
+
+### Fixed
+- a no-amount row needs a figure and a cue, not either
+- rebind a dead listener on resume; BPI 3-digit mask; debit card label
+- reject marketing pushes and land rows on the account named like the source
+- reload Capture Inbox on mobile so the toggle survives a process kill
+
 ## [1.1.120] - 2026-11-03
 
 ### Fixed
@@ -1066,7 +1074,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.120...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.121...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1188,3 +1196,4 @@ distributed via `manifest.json`.
 [1.1.118]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.118
 [1.1.119]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.119
 [1.1.120]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.120
+[1.1.121]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.121
