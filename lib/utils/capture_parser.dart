@@ -15,10 +15,11 @@ import 'finance_nlp_parser.dart'
 ///
 /// Reject first: an OTP or security prompt, a promo, a reminder, or a failed /
 /// pending / reversed transaction never becomes a row ([captureRejectReason]).
-/// A text that no template matched and that holds no number at all is dropped
-/// too — a money alert always carries a figure, so that one is a product
-/// nudge the cue list has not met yet. Everything else becomes a row, even
-/// with no parsed amount — the user can type one.
+/// A text that no template matched and that holds no amount is dropped too,
+/// unless it at least carries a direction cue or the user's own card suffix —
+/// a money alert always carries a figure, so a bare "50% OFF" or "track your
+/// parcel" is a product nudge the cue list has not met yet. Everything else
+/// becomes a row, even with no parsed amount — the user can type one.
 ///
 /// Resolution order — each step fills only what is still null:
 ///  1. a per-app template (`capture_templates.dart`) sets direction and lifts
@@ -27,7 +28,9 @@ import 'finance_nlp_parser.dart'
 ///     number counts only straight after a money verb), a direction cue word,
 ///     a counterparty after `to` / `at` / `from`, and the user's own masked
 ///     card suffix (one that follows `your`, with no `to` / `from` between);
-///  3. account: the last-4 map, else the per-source default;
+///  3. account: the last-4 map, else the per-source default, else the
+///     account whose name matches the source app's name (a "Maya" push lands
+///     on the Maya account without the user mapping it first);
 ///  4. transfer: a counterparty that names one of the user's *other*
 ///     accounts, or a whole-name mention in the body that is not the user's
 ///     own instrument (`using your Maya card` is not a transfer to Maya),
@@ -94,13 +97,18 @@ CapturedTransaction? parseCapture(
     break;
   }
 
-  // 2. Generic pass. No template, no amount and not one digit anywhere:
-  //    not a money alert ("Your wallet needs a refill. Tap to start.").
+  // 2. Generic pass. No template and no amount: the text has to carry a
+  //    direction cue or the user's own card suffix to be a money alert at
+  //    all. A digit alone is not enough — "Over 50% OFF!", "70% OFF holiday
+  //    deals" and "expires in 2 hours" all hold one (seen on device from
+  //    Shopee, 2026-11-03), as does "Your wallet needs a refill" with none.
   amount ??= _firstTransactionAmount(body) ?? _firstTransactionAmount(text);
-  if (!templateHit && amount == null && !_anyDigit.hasMatch(text)) return null;
   type ??= _directionOf(text);
-  counterparty ??= _genericCounterparty(body, type);
   last4 ??= _ownLast4(text);
+  if (!templateHit && amount == null && type == null && last4 == null) {
+    return null;
+  }
+  counterparty ??= _genericCounterparty(body, type);
   if (confidence == 0 && amount != null) {
     confidence = type == null ? 0.3 : 0.6;
   }
@@ -116,6 +124,12 @@ CapturedTransaction? parseCapture(
   accountId ??= settings.accountBySource[raw.packageName];
   final liveIds = accounts.map((a) => a.id).toSet();
   if (accountId != null && !liveIds.contains(accountId)) accountId = null;
+  accountId ??= resolveSourceAccount(
+    packageName: raw.packageName,
+    appLabel: raw.appLabel,
+    settings: settings,
+    accounts: accounts,
+  );
 
   // 4. Transfer between the user's own accounts.
   String? transferTo;
@@ -185,6 +199,33 @@ CapturedTransaction? parseCapture(
     accountLast4: last4,
     updatedAt: now ?? DateTime.now(),
   );
+}
+
+/// The account a source app lands on when the user has mapped none: the
+/// account whose name matches the app's name ("Maya" → Maya, "MariBank" →
+/// MariBank, "Shopee" → ShopeePay). The user's own mapping in
+/// `accountBySource` always wins; this only fills the gap, and it never
+/// guesses for mail, where the app name says nothing about the money.
+/// Returns null when no account name matches or the account no longer exists.
+String? resolveSourceAccount({
+  required String packageName,
+  required String appLabel,
+  required CaptureSettings settings,
+  required List<FinancialAccount> accounts,
+}) {
+  if (packageName == kGmailPackage || accounts.isEmpty) return null;
+  final mapped = settings.accountBySource[packageName];
+  if (mapped != null && accounts.any((a) => a.id == mapped)) return mapped;
+  final presetLabel = settings.labelFor(packageName);
+  for (final label in {
+    appLabel.trim(),
+    if (presetLabel != packageName) presetLabel.trim(),
+  }) {
+    if (label.isEmpty) continue;
+    final id = matchAccountNameInText(label, accounts);
+    if (id != null) return id;
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -293,15 +334,21 @@ final RegExp _failedCue = RegExp(
   caseSensitive: false,
 );
 final RegExp _promoCue = RegExp(
-  r'\bpromo\b|\bvoucher\b|\bdiscount\b|\braffle\b|\bwin\b|\bGForest\b|\bGLife\b|\bGInvest\b|\bGCredit\b|\bGLoan\b|\bGGives\b|\bGSave\b|\bGInsure\b|\bexclusive\b|\blimited\s+time\b|\bapply\s+now\b|\btap\s+to\s+(?:start|learn|apply|claim|try|join|explore|get)\b|\bget\s+started\b|\bturn\s+on\b|\bneeds?\s+a\s+(?:refill|top[- ]?up)\b|\breminder\b|\bis\s+due\b|\bdue\s+(?:on|today|tomorrow)\b',
+  r'\bpromo\b|\bvoucher\b|\bdiscount\b|\braffle\b|\bwin\b|\bGForest\b|\bGLife\b|\bGInvest\b|\bGCredit\b|\bGLoan\b|\bGGives\b|\bGSave\b|\bGInsure\b|\bexclusive\b|\blimited\s+time\b|\bapply\s+now\b|\btap\s+to\s+(?:start|learn|apply|claim|try|join|explore|get)\b|\bget\s+started\b|\bturn\s+on\b|\bneeds?\s+a\s+(?:refill|top[- ]?up)\b|\breminder\b|\bis\s+due\b|\bdue\s+(?:on|today|tomorrow)\b'
+  // Marketing shapes seen on device 2026-11-03 (Shopee "Over 50% OFF!",
+  // "70% OFF holiday deals", "unlock your Lucky Draw before it expires in…";
+  // MariBank "Don't let your Wi-Fi drop!"; Maya "earn up to ₱4,000"). A
+  // percentage or an amount followed by "off", a sale or deal, "up to", an
+  // expiry, a lucky draw, an unlock / claim call-to-action, a "don't let /
+  // miss" hook, and parcel tracking are never a posted transaction. "free"
+  // stays out: "Transfer fee: Free" is printed on real GCash sends.
+  r'|(?<=\d|%)\s*off\b|\d\s?%|\bsale\b|\bdeals?\b|\bup\s+to\b|\bexpir(?:e|es|ing|y)\b|\blucky\s+draw\b|\bunlock\b|\bclaim\s+(?:your|now|it)\b|\bdon(?:\u2019|\x27)?t\s+(?:let|miss|forget)\b|\bmiss\s+out\b|\bparcel\b|\btrack\s+your\b|\bshop\s+now\b|\bbuy\s+now\b|\bhurry\b|\blast\s+(?:chance|day)\b|\btoday\s+only\b|\bt&cs?\s+apply\b|\bterms\s+apply\b|\bcongrat(?:s|ulations)\b|\brefer(?:ral)?\s+(?:a|your|now)\b|\bsurvey\b|\bintroducing\b',
   caseSensitive: false,
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic pass helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-final RegExp _anyDigit = RegExp(r'\d');
 
 final RegExp _amountRe = RegExp(
   // The trailing guard keeps a half-cut "PHP 4,0…" from reading as 4.

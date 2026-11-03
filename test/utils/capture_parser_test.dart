@@ -13,6 +13,9 @@ import 'package:intermittent_fasting/utils/capture_parser.dart';
 const _gcash = 'com.globe.gcash.android';
 const _maya = 'com.paymaya';
 const _bpi = 'com.bpi.ng.app';
+const _mari = 'ph.seabank.seabank';
+const _shopee = 'com.shopee.ph';
+const _gmail = 'com.google.android.gm';
 const _unknown = 'com.example.bank';
 
 final _posted = DateTime(2026, 11, 2, 13, 45);
@@ -222,6 +225,58 @@ void main() {
               title: 'Update'),
           isNull);
     });
+
+    test('a digit alone does not make a row: no amount, cue or own suffix',
+        () {
+      // An order number is a digit, not money (Shopee, seen 2026-11-03).
+      expect(
+          tryParse(_shopee, 'Your order 2411031234 has been shipped.',
+              title: 'Shopee'),
+          isNull);
+      // A direction cue still carries a no-amount row for the user to fill.
+      expect(
+          tryParse(_unknown, 'Payment received from PAYROLL.', title: 'Alert'),
+          isNotNull);
+    });
+
+    test('the account named like the source app fills the gap', () {
+      const bare = CaptureSettings(enabled: true, sources: {_maya, _shopee});
+      CapturedTransaction? p(String pkg, String label, String text) =>
+          parseCapture(_raw(pkg, text, label: label),
+              settings: bare,
+              accounts: [...accounts, _acc('spay', 'ShopeePay')],
+              categories: categories);
+      // "Maya" the app → the Maya account, with no mapping in settings.
+      expect(
+          p(_maya, 'Maya', 'You paid PHP 80.00 to STORE.')!.draft.accountId,
+          'maya');
+      // "Shopee" the app → ShopeePay, by prefix.
+      expect(
+          p(_shopee, 'Shopee', 'You paid ₱250.00 to SELLER via ShopeePay.')!
+              .draft
+              .accountId,
+          'spay');
+      // Mail never guesses from the app name.
+      expect(
+          p(_gmail, 'Gmail', 'Incoming Interbank Funds Transfer')!
+              .draft
+              .accountId,
+          isNull);
+    });
+
+    test('the user\'s own per-source mapping wins over the name match', () {
+      const mapped = CaptureSettings(
+        enabled: true,
+        sources: {_maya},
+        accountBySource: {_maya: 'gcash'},
+      );
+      final c = parseCapture(
+          _raw(_maya, 'You paid PHP 80.00 to STORE.', label: 'Maya'),
+          settings: mapped,
+          accounts: accounts,
+          categories: categories)!;
+      expect(c.draft.accountId, 'gcash');
+    });
   });
 
   group('reject-first filter (no row at all)', () {
@@ -260,6 +315,30 @@ void main() {
               "Transfer funds from Maya Easy Credit so you're always ready "
               "to pay with Maya.",
               title: 'Maya'),
+          isNull);
+    });
+
+    test('marketing pushes seen on device 2026-11-03', () {
+      expect(tryParse(_shopee, 'Over 50% OFF!', title: 'Shopee'), isNull);
+      expect(tryParse(_shopee, '70% OFF holiday deals', title: 'Shopee'),
+          isNull);
+      expect(
+          tryParse(_shopee, 'see order details and track your parcel',
+              title: 'Shopee'),
+          isNull);
+      expect(
+          tryParse(_shopee,
+              'unlock your Lucky Draw before it expires in 2 hours',
+              title: 'Shopee'),
+          isNull);
+      expect(
+          tryParse(_mari,
+              'Get a ₱70.00 prepaid Wi-Fi plan so you never run out of data.',
+              title: "Don't let your Wi-Fi drop!"),
+          isNull);
+      expect(
+          tryParse(_maya, 'Earn up to ₱4,000.00 when you invite a friend.',
+              title: 'earn up'),
           isNull);
     });
 

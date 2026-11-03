@@ -549,6 +549,50 @@ void main() {
     });
   });
 
+  group('load cleans the inbox', () {
+    CapturedTransaction pendingRow(String id, String pkg, String text,
+            {String? accountId}) =>
+        CapturedTransaction(
+          id: id,
+          source: CaptureSource.androidNotification,
+          sourceApp: pkg,
+          sourceLabel: pkg == _gcash ? 'GCash' : 'Maya',
+          capturedAt: now.subtract(const Duration(hours: 1)),
+          rawTitle: '',
+          rawText: text,
+          fingerprint: id,
+          draft: ParsedTransaction(accountId: accountId),
+        );
+
+    test('pending rows the reject filter now catches are dropped', () async {
+      storedInbox = [
+        pendingRow('promo', _gcash, 'Over 50% OFF this weekend!'),
+        pendingRow('real', _gcash, 'You have paid PHP 120.00 to FOOD HUB.'),
+      ];
+      final (_, inbox) = await build();
+      expect(inbox.byId('promo'), isNull);
+      expect(inbox.byId('real'), isNotNull);
+      expect(storedInbox.map((i) => i.id), ['real']);
+    });
+
+    test('a pending row with no account lands on the account named like '
+        'its source app', () async {
+      storedSettings = const CaptureSettings(
+        enabled: true,
+        sources: {_gcash, _maya},
+      );
+      storedInbox = [
+        pendingRow('m', _maya, 'You paid PHP 80.00 to STORE.'),
+        pendingRow('g', _gcash, 'You have paid PHP 120.00 to FOOD HUB.',
+            accountId: 'maya'),
+      ];
+      final (_, inbox) = await build();
+      expect(inbox.byId('m')!.draft.accountId, 'maya');
+      // A row that already has an account is left alone.
+      expect(inbox.byId('g')!.draft.accountId, 'maya');
+    });
+  });
+
   group('settings', () {
     test('enabling with no sources seeds the presets and pushes them native',
         () async {
