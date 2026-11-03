@@ -60,6 +60,7 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
   bool _isDraining = false;
   bool _loaded = false;
   DateTime? _lastConnectedAt;
+  bool _connected = false;
 
   @override
   void dispose() {
@@ -152,11 +153,14 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
   bool get isDraining => _isDraining;
   DateTime? get lastCaptureAt => _settings.lastCaptureAt;
   DateTime? get lastConnectedAt => _lastConnectedAt;
+  bool get listenerConnected => _connected;
 
-  /// Capture is on but the listener has not connected for a day: the OEM
-  /// battery manager probably killed it. Settings offers *Reconnect*.
+  /// Capture is on and access is granted, but the listener is not bound
+  /// right now (a process kill, and the rebind on resume did not take) or
+  /// it has not connected for a day. Settings offers *Reconnect*.
   bool get listenerLooksAsleep {
     if (!_settings.enabled || !_accessGranted) return false;
+    if (!_connected) return true;
     final at = _lastConnectedAt;
     if (at == null) return false;
     return _clock().difference(at) > const Duration(hours: 24);
@@ -310,18 +314,36 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
     if (_settings.enabled && _accessGranted) await drain();
   }
 
-  /// Probes system access and the listener's last connection. Called on
-  /// resume so returning from the system settings page updates the UI.
+  /// Probes system access and the listener's connection. Called on resume
+  /// so returning from the system settings page updates the UI.
+  ///
+  /// Access granted but the listener not bound means the process was killed
+  /// (a swipe from Recents on MIUI is a force-stop) and the system did not
+  /// bind it again on its own — the state behind "capture stops after I
+  /// clear the app". The fix is a rebind, asked for here without the user
+  /// having to find *Reconnect*; a short wait then re-reads the flag.
   Future<void> refreshAccess() async {
     if (!_bridge.isSupported) return;
     final granted = await _bridge.isAccessGranted();
-    final connected = await _bridge.lastConnectedAt();
-    if (granted != _accessGranted || connected != _lastConnectedAt) {
+    var bound = await _bridge.isConnected();
+    if (granted && _settings.enabled && !bound) {
+      await _bridge.requestRebind();
+      await Future<void>.delayed(rebindSettle);
+      bound = await _bridge.isConnected();
+    }
+    final connectedAt = await _bridge.lastConnectedAt();
+    if (granted != _accessGranted ||
+        bound != _connected ||
+        connectedAt != _lastConnectedAt) {
       _accessGranted = granted;
-      _lastConnectedAt = connected;
+      _connected = bound;
+      _lastConnectedAt = connectedAt;
       safeNotify();
     }
   }
+
+  /// How long a rebind request gets before the connection flag is re-read.
+  static const Duration rebindSettle = Duration(milliseconds: 700);
 
   /// Pulls the native queue, parses each capture and files it as pending.
   /// Idempotent: the native queue is cleared only after the rows persist; on

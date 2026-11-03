@@ -93,7 +93,7 @@ CapturedTransaction? parseCapture(
     }
     type = t.type;
     counterparty = _cleanCounterparty(_group(m, 'counterparty'));
-    last4 = _group(m, 'last4') ?? _group(m, 'last4b');
+    last4 = _group(m, 'last4') ?? _group(m, 'last4b') ?? _group(m, 'last4c');
     break;
   }
 
@@ -116,10 +116,15 @@ CapturedTransaction? parseCapture(
   // 3. Account: the learned suffix, else the card label's own name
   //    ("Visa BPI •••• 1234" → the BPI card), else the per-source default.
   String? accountId;
-  if (last4 != null) accountId = settings.accountByLast4[last4];
+  if (last4 != null) accountId = accountForSuffix(settings.accountByLast4, last4);
   if (accountId == null && cardLabel != null) {
-    accountId = matchAccountNameInText(cardLabel, accounts, liability: true) ??
-        matchAccountNameInText(cardLabel, accounts);
+    // "BPI Debit Mastercard" is the BPI bank account, not the BPI credit
+    // card; a label that says neither is a credit card first, as Wallet
+    // mostly carries those.
+    final debit = _debitLabel.hasMatch(cardLabel);
+    accountId =
+        matchAccountNameInText(cardLabel, accounts, liability: !debit) ??
+            matchAccountNameInText(cardLabel, accounts, liability: debit);
   }
   accountId ??= settings.accountBySource[raw.packageName];
   final liveIds = accounts.map((a) => a.id).toSet();
@@ -199,6 +204,26 @@ CapturedTransaction? parseCapture(
     accountLast4: last4,
     updatedAt: now ?? DateTime.now(),
   );
+}
+
+final RegExp _debitLabel =
+    RegExp(r'\b(?:debit|savings|prepaid|atm)\b', caseSensitive: false);
+
+/// The account learned for a masked suffix. Exact first; otherwise the one
+/// entry whose digits end with [suffix] (or that [suffix] ends with), so the
+/// BPI app's three-digit `637` finds the `1637` the BPI email taught. Two
+/// candidates mean a guess, so none is returned.
+String? accountForSuffix(Map<String, String> byLast4, String suffix) {
+  final exact = byLast4[suffix];
+  if (exact != null) return exact;
+  String? hit;
+  for (final e in byLast4.entries) {
+    if (e.key.endsWith(suffix) || suffix.endsWith(e.key)) {
+      if (hit != null && hit != e.value) return null;
+      hit = e.value;
+    }
+  }
+  return hit;
 }
 
 /// The account a source app lands on when the user has mapped none: the
@@ -472,7 +497,7 @@ String? _ownLast4(String text) {
     final your = _yourCue.allMatches(before).lastOrNull;
     if (your == null) continue;
     if (_peerCue.hasMatch(before.substring(your.end))) continue;
-    return _group(m, 'last4') ?? _group(m, 'last4b');
+    return _group(m, 'last4') ?? _group(m, 'last4b') ?? _group(m, 'last4c');
   }
   return null;
 }

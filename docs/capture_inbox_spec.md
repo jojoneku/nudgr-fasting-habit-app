@@ -44,7 +44,9 @@ Plan 065 set for Nudgy.
 1. Per-app template (direction + amount + counterparty + last-4).
 2. Generic pass: first amount that is not a balance, direction cue word,
    counterparty after `to` / `at` / `from`, masked card suffix.
-3. Account: last-4 map, else per-source default, else the account whose name
+3. Account: last-4 map (exact, else by trailing digits — the BPI app masks
+   to `XXXXXXX637` where its email shows `XXXXXX1637`), else per-source
+   default, else the account whose name
    matches the source app's name (`resolveSourceAccount`; never for mail).
    The presenter runs the same lookup over pending rows on load and whenever
    the ledger's accounts change, so a row filed before its account existed
@@ -135,8 +137,15 @@ first-log-of-the-day XP applies once. Approve and Decline award nothing.
 - A failed persist on drain pushes the raw captures back to the native queue.
 - Android 13+ marks notification access for a sideloaded app as a restricted
   setting; the disclosure sheet explains the extra step.
-- The listener may be killed by OEM battery managers; `lastConnectedAt`
-  older than 24 h shows *Reconnect*.
+- The listener dies with the process. A swipe from Recents on MIUI is a
+  force-stop, after which the system does not bind the listener again on its
+  own — captures stop until access is toggled or the phone restarts. The
+  listener keeps an in-process `connected` flag (false in a fresh process
+  until the system binds it); `refreshAccess` reads it on load and on every
+  resume and, when access is granted and capture is on but the flag is off,
+  asks for a rebind itself (`requestRebind`, plus the component off/on flip
+  OEMs need) and re-reads the flag after `rebindSettle`. The flag still off,
+  or `lastConnectedAt` older than 24 h, shows *Reconnect* in Settings.
 - Two accounts on one phone: the device queue is drained into the signed-in
   user's scoped inbox; rows sync so a sign-out wipe does not lose them.
 

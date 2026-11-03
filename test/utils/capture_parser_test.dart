@@ -264,6 +264,36 @@ void main() {
           isNull);
     });
 
+    test('BPI app push masks to three digits (seen on device 2026-11-03)',
+        () {
+      const s = CaptureSettings(
+        enabled: true,
+        sources: {_bpi},
+        accountBySource: {_bpi: 'bpi'},
+        // The BPI email taught the four-digit form of the same account.
+        accountByLast4: {'1637': 'bpicc'},
+      );
+      final c = parseCapture(
+          _raw(_bpi, 'Your account XXXXXXX637 has been credited Php 8,500.00.',
+              title: 'BPI', label: 'BPI'),
+          settings: s,
+          accounts: accounts,
+          categories: categories)!;
+      expect(c.draft.amount, 8500.0);
+      expect(c.draft.type, TransactionType.inflow);
+      expect(c.accountLast4, '637');
+      expect(c.confidence, 1.0);
+      // The suffix map matches by trailing digits.
+      expect(c.draft.accountId, 'bpicc');
+    });
+
+    test('a suffix that fits two learned entries is no guess', () {
+      expect(accountForSuffix({'1637': 'a', '2637': 'b'}, '637'), isNull);
+      expect(accountForSuffix({'1637': 'a', '2637': 'a'}, '637'), 'a');
+      expect(accountForSuffix({'637': 'a'}, '1637'), 'a');
+      expect(accountForSuffix({'1234': 'a'}, '637'), isNull);
+    });
+
     test('the user\'s own per-source mapping wins over the name match', () {
       const mapped = CaptureSettings(
         enabled: true,
@@ -472,6 +502,17 @@ void main() {
         parseCapture(_raw(pkg, text, title: title),
             settings: s, accounts: more, categories: categories)!;
 
+    test('MariBank incoming transfer from a peer at the same bank '
+        '(seen on device 2026-11-03)', () {
+      final c = p(mari, 'Successful Incoming Transfer',
+          "You've received PHP 40.00 from MariBank with account ending 6357.");
+      expect(c.draft.amount, 40.0);
+      expect(c.draft.type, TransactionType.inflow);
+      expect(c.draft.accountId, 'mari');
+      expect(c.draft.description, 'MariBank');
+      expect(c.confidence, 1.0);
+    });
+
     test('Maya "You received 500.00 in your wallet via InstaPay"', () {
       final c = p(_maya, 'Money received ↙️',
           'You received 500.00 in your wallet via InstaPay');
@@ -587,6 +628,19 @@ void main() {
     CapturedTransaction? w(String title, String text) =>
         parseCapture(_raw(wallet, text, title: title),
             settings: s, accounts: accounts, categories: categories);
+
+    test('a debit card label lands on the bank account, not the credit card',
+        () {
+      // Seen on device 2026-11-03.
+      final c = w('STARBUCKS 685 CPG',
+          '₱450.00 with BPI Debit Mastercard ••6161')!;
+      expect(c.draft.amount, 450.0);
+      expect(c.draft.type, TransactionType.outflow);
+      expect(c.draft.description, 'STARBUCKS 685 CPG');
+      expect(c.accountLast4, '6161');
+      expect(c.draft.accountId, 'bpi');
+      expect(c.confidence, 1.0);
+    });
 
     test('PH shape: amount in the text, merchant in the title', () {
       final c = w('STARBUCKS', '₱150.00 with Visa •••• 1234')!;

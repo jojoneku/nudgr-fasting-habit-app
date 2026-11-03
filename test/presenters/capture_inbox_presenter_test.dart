@@ -29,6 +29,7 @@ const _gotyme = 'ph.com.gotyme';
 class FakeCaptureBridge implements CaptureBridgeService {
   bool supported = true;
   bool granted = true;
+  bool connected = true;
   DateTime? connectedAt;
   List<RawCapture> queue = [];
   Set<String>? lastAllowlist;
@@ -44,7 +45,13 @@ class FakeCaptureBridge implements CaptureBridgeService {
   @override
   Future<void> openAccessSettings() async => settingsOpens++;
   @override
-  Future<void> requestRebind() async => rebinds++;
+  Future<bool> isConnected() async => connected;
+  @override
+  Future<void> requestRebind() async {
+    rebinds++;
+    connected = true; // the system binds again on request
+  }
+
   @override
   Future<void> setAllowlist(
     Set<String> packages, {
@@ -590,6 +597,32 @@ void main() {
       expect(inbox.byId('m')!.draft.accountId, 'maya');
       // A row that already has an account is left alone.
       expect(inbox.byId('g')!.draft.accountId, 'maya');
+    });
+  });
+
+  group('listener health', () {
+    test('a dead listener is rebound on load without the user asking',
+        () async {
+      bridge.connected = false;
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 1);
+      expect(inbox.listenerConnected, isTrue);
+      expect(inbox.listenerLooksAsleep, isFalse);
+    });
+
+    test('a bound listener is left alone', () async {
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 0);
+      expect(inbox.listenerConnected, isTrue);
+    });
+
+    test('no rebind while capture is off or access is denied', () async {
+      bridge.connected = false;
+      storedSettings = storedSettings.copyWith(enabled: false);
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 0);
+      await inbox.setEnabled(true);
+      expect(bridge.rebinds, 1);
     });
   });
 
