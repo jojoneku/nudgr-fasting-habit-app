@@ -471,13 +471,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _questPresenter.reload(),
       _activityPresenter.loadState(),
       if (_nutritionPresenter != null) _nutritionPresenter!.loadState(),
-      _ledgerPresenter.load(),
-      _treasuryPresenter.load(),
-      _budgetPresenter.load(),
-      _billsPresenter.load(),
-      _historyPresenter.load(),
-      _installmentPresenter.load(),
-      _groceryCartPresenter.load(),
+      // One list, owned by the graph (CLAUDE.md rule 9) — the web shell already
+      // reloads this way. Listing the Treasury presenters by hand here is how
+      // the Capture Inbox was left out: its settings and rows were never read
+      // back from storage on mobile, so a process kill (swipe from recents,
+      // battery saver) always brought capture back switched off.
+      ..._treasury.loadAll(),
     ];
     await Future.wait(loads.map((f) async {
       try {

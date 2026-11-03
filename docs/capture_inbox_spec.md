@@ -44,7 +44,13 @@ Plan 065 set for Nudgy.
 1. Per-app template (direction + amount + counterparty + last-4).
 2. Generic pass: first amount that is not a balance, direction cue word,
    counterparty after `to` / `at` / `from`, masked card suffix.
-3. Account: last-4 map, else per-source default.
+3. Account: last-4 map (exact, else by trailing digits — the BPI app masks
+   to `XXXXXXX637` where its email shows `XXXXXX1637`), else per-source
+   default, else the account whose name
+   matches the source app's name (`resolveSourceAccount`; never for mail).
+   The presenter runs the same lookup over pending rows on load and whenever
+   the ledger's accounts change, so a row filed before its account existed
+   still lands on it.
 4. Transfer: a counterparty naming another of the user's accounts turns the
    row into a transfer with the reserved transfer category.
 5. Category: personal dictionary, then category list by name.
@@ -53,10 +59,17 @@ Plan 065 set for Nudgy.
 Confidence: 1.0 template, 0.6 generic with direction, 0.3 amount only,
 0 no amount.
 
-Floor: when no template matched, no amount parsed and the text holds no
-digit at all, the parser returns null. A money alert always carries a figure;
-a text without one is a product nudge the promo cue list has not met yet
-(seen on device: Maya "Your wallet needs a refill … Tap to start.").
+Floor: when no template matched and no amount parsed, the parser returns
+null unless the text holds a digit *and* a direction cue or the user's own
+card suffix. A money alert always carries a figure; a digit alone is not one
+("Over 50% OFF!", "expires in 2 hours", an order number) and a cue alone is
+not one either ("Transfer funds from Maya Easy Credit"). Both are product
+nudges the promo cue list has not met yet (seen on device: Maya "Your wallet
+needs a refill … Tap to start."; Shopee "70% OFF holiday deals").
+
+On load the presenter re-runs the reject filter over pending rows and drops
+the ones it now catches, so a cue added to the list also clears the rows that
+got in before it.
 
 ## Data Model
 
@@ -125,8 +138,15 @@ first-log-of-the-day XP applies once. Approve and Decline award nothing.
 - A failed persist on drain pushes the raw captures back to the native queue.
 - Android 13+ marks notification access for a sideloaded app as a restricted
   setting; the disclosure sheet explains the extra step.
-- The listener may be killed by OEM battery managers; `lastConnectedAt`
-  older than 24 h shows *Reconnect*.
+- The listener dies with the process. A swipe from Recents on MIUI is a
+  force-stop, after which the system does not bind the listener again on its
+  own — captures stop until access is toggled or the phone restarts. The
+  listener keeps an in-process `connected` flag (false in a fresh process
+  until the system binds it); `refreshAccess` reads it on load and on every
+  resume and, when access is granted and capture is on but the flag is off,
+  asks for a rebind itself (`requestRebind`, plus the component off/on flip
+  OEMs need) and re-reads the flag after `rebindSettle`. The flag still off,
+  or `lastConnectedAt` older than 24 h, shows *Reconnect* in Settings.
 - Two accounts on one phone: the device queue is drained into the signed-in
   user's scoped inbox; rows sync so a sign-out wipe does not lose them.
 

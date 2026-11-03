@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -59,6 +60,7 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
   bool _isDraining = false;
   bool _loaded = false;
   DateTime? _lastConnectedAt;
+  bool _connected = false;
 
   @override
   void dispose() {
@@ -66,8 +68,80 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
     super.dispose();
   }
 
-  /// Account and category lists changed under the chips; repaint.
-  void _onLedgerChanged() => safeNotify();
+  /// Account and category lists changed under the chips; repaint. Pending
+  /// rows with no account also get another look: a row filed before the
+  /// ledger had loaded (load() runs alongside it) or before the matching
+  /// account existed now lands on the account named like its source app.
+  void _onLedgerChanged() {
+    unawaited(_fillSourceAccounts());
+    safeNotify();
+  }
+
+  /// Fills the account on pending rows that have none, from the per-source
+  /// mapping or the account whose name matches the source app. Persists only
+  /// when a row changed.
+  Future<void> _fillSourceAccounts() async {
+    if (!_loaded || !_applySourceAccounts()) return;
+    safeNotify();
+    await _persistItems();
+  }
+
+  /// Same, without persisting. Returns true when any row changed.
+  bool _applySourceAccounts() {
+    var changed = false;
+    _items = [
+      for (final i in _items)
+        if (i.isPending && i.draft.accountId == null)
+          _withSourceAccount(i, onChange: () => changed = true)
+        else
+          i,
+    ];
+    return changed;
+  }
+
+  CapturedTransaction _withSourceAccount(CapturedTransaction item,
+      {required void Function() onChange}) {
+    final id = resolveSourceAccount(
+      packageName: item.sourceApp,
+      appLabel: item.sourceLabel,
+      settings: _settings,
+      accounts: _ledger.accounts,
+    );
+    if (id == null || id == item.draft.transferToAccountId) return item;
+    onChange();
+    return item.copyWith(
+      draft: item.draft.copyWith(accountId: id),
+      updatedAt: _clock(),
+    );
+  }
+
+  /// Drops pending rows that [parseCapture] no longer files — the reject
+  /// filter is text-only, so a row's own raw title and text decide. Returns
+  /// true when any went.
+  bool _dropRejectedPending() {
+    final before = _items.length;
+    _items = _items.where((i) {
+      if (!i.isPending) return true;
+      final raw = RawCapture(
+        packageName: i.sourceApp,
+        appLabel: i.sourceLabel,
+        postedAt: i.capturedAt,
+        title: i.rawTitle,
+        text: i.rawText,
+        fingerprint: i.fingerprint,
+      );
+      return parseCapture(
+            raw,
+            settings: _settings,
+            accounts: _ledger.accounts,
+            categories: _ledger.categories,
+            dict: _dict,
+            now: _clock(),
+          ) !=
+          null;
+    }).toList();
+    return _items.length != before;
+  }
 
   // ── State ──────────────────────────────────────────────────────────────────
 
@@ -79,11 +153,14 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
   bool get isDraining => _isDraining;
   DateTime? get lastCaptureAt => _settings.lastCaptureAt;
   DateTime? get lastConnectedAt => _lastConnectedAt;
+  bool get listenerConnected => _connected;
 
-  /// Capture is on but the listener has not connected for a day: the OEM
-  /// battery manager probably killed it. Settings offers *Reconnect*.
+  /// Capture is on and access is granted, but the listener is not bound
+  /// right now (a process kill, and the rebind on resume did not take) or
+  /// it has not connected for a day. Settings offers *Reconnect*.
   bool get listenerLooksAsleep {
     if (!_settings.enabled || !_accessGranted) return false;
+    if (!_connected) return true;
     final at = _lastConnectedAt;
     if (at == null) return false;
     return _clock().difference(at) > const Duration(hours: 24);
@@ -222,7 +299,12 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
       debugPrint('CaptureInboxPresenter: load failed: $e');
     }
     _loaded = true;
-    if (_purgeExpired()) await _persistItems();
+    // Rows the filter would now reject (a promo cue learned since they were
+    // filed) go, so a parser fix also cleans the inbox the user is looking at.
+    var changed = _purgeExpired();
+    if (_dropRejectedPending()) changed = true;
+    if (_applySourceAccounts()) changed = true;
+    if (changed) await _persistItems();
     safeNotify();
     if (!_bridge.isSupported) return;
     // Re-assert the allowlist: a reinstall or a cleared native store must not
@@ -232,18 +314,36 @@ class CaptureInboxPresenter extends ChangeNotifier with SafeNotifier {
     if (_settings.enabled && _accessGranted) await drain();
   }
 
-  /// Probes system access and the listener's last connection. Called on
-  /// resume so returning from the system settings page updates the UI.
+  /// Probes system access and the listener's connection. Called on resume
+  /// so returning from the system settings page updates the UI.
+  ///
+  /// Access granted but the listener not bound means the process was killed
+  /// (a swipe from Recents on MIUI is a force-stop) and the system did not
+  /// bind it again on its own — the state behind "capture stops after I
+  /// clear the app". The fix is a rebind, asked for here without the user
+  /// having to find *Reconnect*; a short wait then re-reads the flag.
   Future<void> refreshAccess() async {
     if (!_bridge.isSupported) return;
     final granted = await _bridge.isAccessGranted();
-    final connected = await _bridge.lastConnectedAt();
-    if (granted != _accessGranted || connected != _lastConnectedAt) {
+    var bound = await _bridge.isConnected();
+    if (granted && _settings.enabled && !bound) {
+      await _bridge.requestRebind();
+      await Future<void>.delayed(rebindSettle);
+      bound = await _bridge.isConnected();
+    }
+    final connectedAt = await _bridge.lastConnectedAt();
+    if (granted != _accessGranted ||
+        bound != _connected ||
+        connectedAt != _lastConnectedAt) {
       _accessGranted = granted;
-      _lastConnectedAt = connected;
+      _connected = bound;
+      _lastConnectedAt = connectedAt;
       safeNotify();
     }
   }
+
+  /// How long a rebind request gets before the connection flag is re-read.
+  static const Duration rebindSettle = Duration(milliseconds: 700);
 
   /// Pulls the native queue, parses each capture and files it as pending.
   /// Idempotent: the native queue is cleared only after the rows persist; on

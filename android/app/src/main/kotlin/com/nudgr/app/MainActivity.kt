@@ -3,6 +3,7 @@ package com.nudgr.app
 import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -186,6 +187,7 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "isAccessGranted" -> result.success(isCaptureAccessGranted())
+                    "isConnected" -> result.success(TransactionNotificationListener.connected)
                     "openAccessSettings" -> {
                         try {
                             openCaptureAccessSettings()
@@ -196,7 +198,7 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "requestRebind" -> {
                         try {
-                            NotificationListenerService.requestRebind(captureListenerComponent())
+                            rebindCaptureListener()
                             result.success(null)
                         } catch (e: Exception) {
                             result.error("ERROR", e.message, null)
@@ -305,6 +307,33 @@ class MainActivity : FlutterFragmentActivity() {
 
     private fun captureListenerComponent() =
         ComponentName(this, TransactionNotificationListener::class.java)
+
+    /**
+     * Asks the system to bind the listener again. After a process kill the
+     * system is meant to rebind on its own, but OEM task killers (a swipe
+     * from Recents on MIUI counts as a force-stop) leave the listener dead
+     * until access is toggled or the phone restarts. [requestRebind] covers
+     * the stock case; flipping the component off and on is the documented
+     * workaround for the OEM case, since the system re-evaluates enabled
+     * listeners on a component change. Both are no-ops without access.
+     */
+    private fun rebindCaptureListener() {
+        val component = captureListenerComponent()
+        if (!TransactionNotificationListener.connected) {
+            val pm = packageManager
+            pm.setComponentEnabledSetting(
+                component,
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+            pm.setComponentEnabledSetting(
+                component,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+        }
+        NotificationListenerService.requestRebind(component)
+    }
 
     /**
      * API 27+ asks the NotificationManager directly; the compat path reads the

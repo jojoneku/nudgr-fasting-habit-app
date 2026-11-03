@@ -29,6 +29,7 @@ const _gotyme = 'ph.com.gotyme';
 class FakeCaptureBridge implements CaptureBridgeService {
   bool supported = true;
   bool granted = true;
+  bool connected = true;
   DateTime? connectedAt;
   List<RawCapture> queue = [];
   Set<String>? lastAllowlist;
@@ -44,7 +45,13 @@ class FakeCaptureBridge implements CaptureBridgeService {
   @override
   Future<void> openAccessSettings() async => settingsOpens++;
   @override
-  Future<void> requestRebind() async => rebinds++;
+  Future<bool> isConnected() async => connected;
+  @override
+  Future<void> requestRebind() async {
+    rebinds++;
+    connected = true; // the system binds again on request
+  }
+
   @override
   Future<void> setAllowlist(
     Set<String> packages, {
@@ -546,6 +553,77 @@ void main() {
       expect(inbox.byId('fresh-declined'), isNotNull);
       expect(inbox.byId('old-approved'), isNull);
       expect(inbox.byId('fresh-approved'), isNotNull);
+    });
+  });
+
+  group('load cleans the inbox', () {
+    CapturedTransaction pendingRow(String id, String pkg, String text,
+            {String? accountId}) =>
+        CapturedTransaction(
+          id: id,
+          source: CaptureSource.androidNotification,
+          sourceApp: pkg,
+          sourceLabel: pkg == _gcash ? 'GCash' : 'Maya',
+          capturedAt: now.subtract(const Duration(hours: 1)),
+          rawTitle: '',
+          rawText: text,
+          fingerprint: id,
+          draft: ParsedTransaction(accountId: accountId),
+        );
+
+    test('pending rows the reject filter now catches are dropped', () async {
+      storedInbox = [
+        pendingRow('promo', _gcash, 'Over 50% OFF this weekend!'),
+        pendingRow('real', _gcash, 'You have paid PHP 120.00 to FOOD HUB.'),
+      ];
+      final (_, inbox) = await build();
+      expect(inbox.byId('promo'), isNull);
+      expect(inbox.byId('real'), isNotNull);
+      expect(storedInbox.map((i) => i.id), ['real']);
+    });
+
+    test(
+        'a pending row with no account lands on the account named like '
+        'its source app', () async {
+      storedSettings = const CaptureSettings(
+        enabled: true,
+        sources: {_gcash, _maya},
+      );
+      storedInbox = [
+        pendingRow('m', _maya, 'You paid PHP 80.00 to STORE.'),
+        pendingRow('g', _gcash, 'You have paid PHP 120.00 to FOOD HUB.',
+            accountId: 'maya'),
+      ];
+      final (_, inbox) = await build();
+      expect(inbox.byId('m')!.draft.accountId, 'maya');
+      // A row that already has an account is left alone.
+      expect(inbox.byId('g')!.draft.accountId, 'maya');
+    });
+  });
+
+  group('listener health', () {
+    test('a dead listener is rebound on load without the user asking',
+        () async {
+      bridge.connected = false;
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 1);
+      expect(inbox.listenerConnected, isTrue);
+      expect(inbox.listenerLooksAsleep, isFalse);
+    });
+
+    test('a bound listener is left alone', () async {
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 0);
+      expect(inbox.listenerConnected, isTrue);
+    });
+
+    test('no rebind while capture is off or access is denied', () async {
+      bridge.connected = false;
+      storedSettings = storedSettings.copyWith(enabled: false);
+      final (_, inbox) = await build();
+      expect(bridge.rebinds, 0);
+      await inbox.setEnabled(true);
+      expect(bridge.rebinds, 1);
     });
   });
 

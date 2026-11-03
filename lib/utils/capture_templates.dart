@@ -34,9 +34,12 @@ const String kCounterpartyGroup =
     r'(?<counterparty>.+?)(?=\s+(?:(?:via|on|ref|with|using|at|for|of|was|has|is|from|to)\b|w/)|\s*(?:(?<!\s[A-Za-z])[.]|[,;:(]|$))';
 
 /// Masked account / card suffix: `ending in 1234`, `ending 1234`, `****1234`,
-/// `xxxx1234`, `(1234)` after the word account/card.
+/// `xxxx1234`, `(1234)` after the word account/card. The BPI app masks to
+/// three digits (`XXXXXXX637`, seen on device 2026-11-03) where its emails
+/// show four (`XXXXXX1637`); the `X` mask alone accepts three, since a bullet
+/// mask with three digits is a phone number (`0915••••847`).
 const String kLast4Group =
-    r'(?:ending\s+(?:in|with)?\s*\**\s*(?<last4>\d{4})|[*xX•.]{2,}\s?(?<last4b>\d{4}))';
+    r'(?:ending\s+(?:in|with)?\s*\**\s*(?<last4>\d{4})|[*xX•.]{2,}\s?(?<last4b>\d{4})|[xX]{4,}(?<last4c>\d{3})\b)';
 
 /// A bank name in a BPI email table, up to the next table label.
 const String _bankNameGroup =
