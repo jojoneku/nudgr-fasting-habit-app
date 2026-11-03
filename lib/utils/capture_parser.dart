@@ -16,10 +16,11 @@ import 'finance_nlp_parser.dart'
 /// Reject first: an OTP or security prompt, a promo, a reminder, or a failed /
 /// pending / reversed transaction never becomes a row ([captureRejectReason]).
 /// A text that no template matched and that holds no amount is dropped too,
-/// unless it at least carries a direction cue or the user's own card suffix —
-/// a money alert always carries a figure, so a bare "50% OFF" or "track your
-/// parcel" is a product nudge the cue list has not met yet. Everything else
-/// becomes a row, even with no parsed amount — the user can type one.
+/// unless it holds a digit *and* a direction cue or the user's own card
+/// suffix — a money alert always carries a figure, so "Transfer funds from
+/// Maya Easy Credit" (a cue, no figure) and "Over 50% OFF!" (a figure, no
+/// cue) are both product nudges the cue list has not met yet. Everything
+/// else becomes a row, even with no parsed amount — the user can type one.
 ///
 /// Resolution order — each step fills only what is still null:
 ///  1. a per-app template (`capture_templates.dart`) sets direction and lifts
@@ -97,15 +98,18 @@ CapturedTransaction? parseCapture(
     break;
   }
 
-  // 2. Generic pass. No template and no amount: the text has to carry a
-  //    direction cue or the user's own card suffix to be a money alert at
-  //    all. A digit alone is not enough — "Over 50% OFF!", "70% OFF holiday
-  //    deals" and "expires in 2 hours" all hold one (seen on device from
-  //    Shopee, 2026-11-03), as does "Your wallet needs a refill" with none.
+  // 2. Generic pass. No template and no amount: the text has to hold a
+  //    digit *and* a direction cue or the user's own card suffix to be a
+  //    money alert at all. A digit alone is not enough — "Over 50% OFF!",
+  //    "70% OFF holiday deals" and "expires in 2 hours" all hold one (seen
+  //    on device from Shopee, 2026-11-03); a cue alone is not either —
+  //    "Transfer funds from Maya Easy Credit" has the verb and no figure.
   amount ??= _firstTransactionAmount(body) ?? _firstTransactionAmount(text);
   type ??= _directionOf(text);
   last4 ??= _ownLast4(text);
-  if (!templateHit && amount == null && type == null && last4 == null) {
+  if (!templateHit &&
+      amount == null &&
+      (!_anyDigit.hasMatch(text) || (type == null && last4 == null))) {
     return null;
   }
   counterparty ??= _genericCounterparty(body, type);
@@ -376,6 +380,8 @@ final RegExp _promoCue = RegExp(
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic pass helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+final RegExp _anyDigit = RegExp(r'\d');
 
 final RegExp _amountRe = RegExp(
   // The trailing guard keeps a half-cut "PHP 4,0…" from reading as 4.

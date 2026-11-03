@@ -60,11 +60,12 @@ Confidence: 1.0 template, 0.6 generic with direction, 0.3 amount only,
 0 no amount.
 
 Floor: when no template matched and no amount parsed, the parser returns
-null unless the text carries a direction cue or the user's own card suffix. A
-money alert always carries a figure; a digit alone is not one ("Over 50%
-OFF!", "expires in 2 hours", an order number) and a text without one is a
-product nudge the promo cue list has not met yet (seen on device: Maya "Your
-wallet needs a refill … Tap to start."; Shopee "70% OFF holiday deals").
+null unless the text holds a digit *and* a direction cue or the user's own
+card suffix. A money alert always carries a figure; a digit alone is not one
+("Over 50% OFF!", "expires in 2 hours", an order number) and a cue alone is
+not one either ("Transfer funds from Maya Easy Credit"). Both are product
+nudges the promo cue list has not met yet (seen on device: Maya "Your wallet
+needs a refill … Tap to start."; Shopee "70% OFF holiday deals").
 
 On load the presenter re-runs the reject filter over pending rows and drops
 the ones it now catches, so a cue added to the list also clears the rows that

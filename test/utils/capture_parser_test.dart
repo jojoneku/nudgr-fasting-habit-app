@@ -232,10 +232,16 @@ void main() {
           tryParse(_shopee, 'Your order 2411031234 has been shipped.',
               title: 'Shopee'),
           isNull);
-      // A direction cue still carries a no-amount row for the user to fill.
+      // A direction cue with a figure the parser could not read still
+      // carries a no-amount row for the user to fill; the same cue with no
+      // figure at all is a nudge.
+      expect(
+          tryParse(_unknown, 'Payment received from PAYROLL. Ref 7781.',
+              title: 'Alert'),
+          isNotNull);
       expect(
           tryParse(_unknown, 'Payment received from PAYROLL.', title: 'Alert'),
-          isNotNull);
+          isNull);
     });
 
     test('the account named like the source app fills the gap', () {
