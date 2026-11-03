@@ -13,6 +13,9 @@ import 'package:intermittent_fasting/utils/capture_parser.dart';
 const _gcash = 'com.globe.gcash.android';
 const _maya = 'com.paymaya';
 const _bpi = 'com.bpi.ng.app';
+const _mari = 'ph.seabank.seabank';
+const _shopee = 'com.shopee.ph';
+const _gmail = 'com.google.android.gm';
 const _unknown = 'com.example.bank';
 
 final _posted = DateTime(2026, 11, 2, 13, 45);
@@ -222,6 +225,91 @@ void main() {
               title: 'Update'),
           isNull);
     });
+
+    test('a digit alone does not make a row: no amount, cue or own suffix', () {
+      // An order number is a digit, not money (Shopee, seen 2026-11-03).
+      expect(
+          tryParse(_shopee, 'Your order 2411031234 has been shipped.',
+              title: 'Shopee'),
+          isNull);
+      // A direction cue with a figure the parser could not read still
+      // carries a no-amount row for the user to fill; the same cue with no
+      // figure at all is a nudge.
+      expect(
+          tryParse(_unknown, 'Payment received from PAYROLL. Ref 7781.',
+              title: 'Alert'),
+          isNotNull);
+      expect(
+          tryParse(_unknown, 'Payment received from PAYROLL.', title: 'Alert'),
+          isNull);
+    });
+
+    test('the account named like the source app fills the gap', () {
+      const bare = CaptureSettings(enabled: true, sources: {_maya, _shopee});
+      CapturedTransaction? p(String pkg, String label, String text) =>
+          parseCapture(_raw(pkg, text, label: label),
+              settings: bare,
+              accounts: [...accounts, _acc('spay', 'ShopeePay')],
+              categories: categories);
+      // "Maya" the app → the Maya account, with no mapping in settings.
+      expect(p(_maya, 'Maya', 'You paid PHP 80.00 to STORE.')!.draft.accountId,
+          'maya');
+      // "Shopee" the app → ShopeePay, by prefix.
+      expect(
+          p(_shopee, 'Shopee', 'You paid ₱250.00 to SELLER via ShopeePay.')!
+              .draft
+              .accountId,
+          'spay');
+      // Mail never guesses from the app name.
+      expect(
+          p(_gmail, 'Gmail', 'Incoming Interbank Funds Transfer')!
+              .draft
+              .accountId,
+          isNull);
+    });
+
+    test('BPI app push masks to three digits (seen on device 2026-11-03)', () {
+      const s = CaptureSettings(
+        enabled: true,
+        sources: {_bpi},
+        accountBySource: {_bpi: 'bpi'},
+        // The BPI email taught the four-digit form of the same account.
+        accountByLast4: {'1637': 'bpicc'},
+      );
+      final c = parseCapture(
+          _raw(_bpi, 'Your account XXXXXXX637 has been credited Php 8,500.00.',
+              title: 'BPI', label: 'BPI'),
+          settings: s,
+          accounts: accounts,
+          categories: categories)!;
+      expect(c.draft.amount, 8500.0);
+      expect(c.draft.type, TransactionType.inflow);
+      expect(c.accountLast4, '637');
+      expect(c.confidence, 1.0);
+      // The suffix map matches by trailing digits.
+      expect(c.draft.accountId, 'bpicc');
+    });
+
+    test('a suffix that fits two learned entries is no guess', () {
+      expect(accountForSuffix({'1637': 'a', '2637': 'b'}, '637'), isNull);
+      expect(accountForSuffix({'1637': 'a', '2637': 'a'}, '637'), 'a');
+      expect(accountForSuffix({'637': 'a'}, '1637'), 'a');
+      expect(accountForSuffix({'1234': 'a'}, '637'), isNull);
+    });
+
+    test('the user\'s own per-source mapping wins over the name match', () {
+      const mapped = CaptureSettings(
+        enabled: true,
+        sources: {_maya},
+        accountBySource: {_maya: 'gcash'},
+      );
+      final c = parseCapture(
+          _raw(_maya, 'You paid PHP 80.00 to STORE.', label: 'Maya'),
+          settings: mapped,
+          accounts: accounts,
+          categories: categories)!;
+      expect(c.draft.accountId, 'gcash');
+    });
   });
 
   group('reject-first filter (no row at all)', () {
@@ -260,6 +348,30 @@ void main() {
               "Transfer funds from Maya Easy Credit so you're always ready "
               "to pay with Maya.",
               title: 'Maya'),
+          isNull);
+    });
+
+    test('marketing pushes seen on device 2026-11-03', () {
+      expect(tryParse(_shopee, 'Over 50% OFF!', title: 'Shopee'), isNull);
+      expect(
+          tryParse(_shopee, '70% OFF holiday deals', title: 'Shopee'), isNull);
+      expect(
+          tryParse(_shopee, 'see order details and track your parcel',
+              title: 'Shopee'),
+          isNull);
+      expect(
+          tryParse(
+              _shopee, 'unlock your Lucky Draw before it expires in 2 hours',
+              title: 'Shopee'),
+          isNull);
+      expect(
+          tryParse(_mari,
+              'Get a ₱70.00 prepaid Wi-Fi plan so you never run out of data.',
+              title: "Don't let your Wi-Fi drop!"),
+          isNull);
+      expect(
+          tryParse(_maya, 'Earn up to ₱4,000.00 when you invite a friend.',
+              title: 'earn up'),
           isNull);
     });
 
@@ -393,6 +505,18 @@ void main() {
         parseCapture(_raw(pkg, text, title: title),
             settings: s, accounts: more, categories: categories)!;
 
+    test(
+        'MariBank incoming transfer from a peer at the same bank '
+        '(seen on device 2026-11-03)', () {
+      final c = p(mari, 'Successful Incoming Transfer',
+          "You've received PHP 40.00 from MariBank with account ending 6357.");
+      expect(c.draft.amount, 40.0);
+      expect(c.draft.type, TransactionType.inflow);
+      expect(c.draft.accountId, 'mari');
+      expect(c.draft.description, 'MariBank');
+      expect(c.confidence, 1.0);
+    });
+
     test('Maya "You received 500.00 in your wallet via InstaPay"', () {
       final c = p(_maya, 'Money received ↙️',
           'You received 500.00 in your wallet via InstaPay');
@@ -508,6 +632,19 @@ void main() {
     CapturedTransaction? w(String title, String text) =>
         parseCapture(_raw(wallet, text, title: title),
             settings: s, accounts: accounts, categories: categories);
+
+    test('a debit card label lands on the bank account, not the credit card',
+        () {
+      // Seen on device 2026-11-03.
+      final c =
+          w('STARBUCKS 685 CPG', '₱450.00 with BPI Debit Mastercard ••6161')!;
+      expect(c.draft.amount, 450.0);
+      expect(c.draft.type, TransactionType.outflow);
+      expect(c.draft.description, 'STARBUCKS 685 CPG');
+      expect(c.accountLast4, '6161');
+      expect(c.draft.accountId, 'bpi');
+      expect(c.confidence, 1.0);
+    });
 
     test('PH shape: amount in the text, merchant in the title', () {
       final c = w('STARBUCKS', '₱150.00 with Visa •••• 1234')!;

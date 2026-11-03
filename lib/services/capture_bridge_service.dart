@@ -19,6 +19,10 @@ abstract class CaptureBridgeService {
   /// Opens the system *Notification access* page.
   Future<void> openAccessSettings();
 
+  /// True while the system holds the listener bound in this process. False
+  /// right after a process kill until the system binds it again.
+  Future<bool> isConnected();
+
   /// Asks the system to reconnect the listener (after a battery kill).
   Future<void> requestRebind();
 
@@ -72,6 +76,9 @@ class MethodChannelCaptureBridge implements CaptureBridgeService {
 
   @override
   Future<void> openAccessSettings() => _call<void>('openAccessSettings');
+
+  @override
+  Future<bool> isConnected() async => await _call<bool>('isConnected') ?? false;
 
   @override
   Future<void> requestRebind() => _call<void>('requestRebind');
@@ -133,6 +140,8 @@ class NullCaptureBridge implements CaptureBridgeService {
   Future<bool> isAccessGranted() async => false;
   @override
   Future<void> openAccessSettings() async {}
+  @override
+  Future<bool> isConnected() async => false;
   @override
   Future<void> requestRebind() async {}
   @override

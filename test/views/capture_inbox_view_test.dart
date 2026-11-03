@@ -34,6 +34,8 @@ class _Bridge implements CaptureBridgeService {
   @override
   Future<void> openAccessSettings() async {}
   @override
+  Future<bool> isConnected() async => true;
+  @override
   Future<void> requestRebind() async {}
   @override
   Future<void> setAllowlist(

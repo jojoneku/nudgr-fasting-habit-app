@@ -24,12 +24,23 @@ class TransactionNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        connected = true
         try {
             CaptureQueue.init(this)
             CaptureQueue.lastConnectedAt = System.currentTimeMillis()
         } catch (e: Throwable) {
             Log.w(TAG, "onListenerConnected failed: ${e.javaClass.simpleName}")
         }
+    }
+
+    override fun onListenerDisconnected() {
+        connected = false
+        super.onListenerDisconnected()
+    }
+
+    override fun onDestroy() {
+        connected = false
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -106,7 +117,20 @@ class TransactionNotificationListener : NotificationListenerService() {
             .digest(input.toByteArray(Charsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
 
-    private companion object {
-        const val TAG = "TxnCapture"
+    companion object {
+        private const val TAG = "TxnCapture"
+
+        /**
+         * True while the system holds this process's listener bound. Kept in
+         * memory on purpose: after the OS (or the user, swiping the app away
+         * on MIUI and friends) kills the process, the flag starts over as
+         * false in the new process until the system binds the listener
+         * again — which is exactly the state MainActivity has to detect and
+         * repair with a rebind. A persisted flag would read "connected" from
+         * before the kill.
+         */
+        @Volatile
+        var connected: Boolean = false
+            private set
     }
 }
