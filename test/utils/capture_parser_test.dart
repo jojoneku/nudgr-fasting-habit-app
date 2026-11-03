@@ -613,17 +613,54 @@ void main() {
       expect(c.missing, contains(EntryField.amount));
     });
 
-    test('with an amount line and a named own bank it is a transfer', () {
-      final c = g(
-          'BPI InstaPay',
-          'Incoming Interbank Funds Transfer Confirmation Dear ELJON, You have '
-              'an incoming interbank funds transfer sent via Instapay. Transfer '
-              'From GoTyme Bank Transfer To ELJON B Amount PHP 4,000.00 Reference '
-              'Number 2026110')!;
+    // The whole email as seen on device 2026-11-03 (the BPI side of a
+    // GoTyme → BPI InstaPay transfer; 6634 is the GoTyme deposit, 1637 BPI).
+    const whole =
+        'Incoming Interbank Funds Transfer Confirmation Dear ELJON, You have '
+        'an incoming interbank funds transfer sent via Instapay with the '
+        'following details. Interbank Funds Transfer Transaction Details '
+        'Reference Number 20261102GOTYPHM2XXXB011244220000006 Transaction '
+        'Date and Time Monday, Nov 02 2026; 08:44:27 PM(GMT + 8) Transfer '
+        'From XXXXXXXX6634 Transfer To XXXXXX1637 Bank Name GoTyme Bank '
+        'Transfer Amount PHP 4,000.00 Transfer Service INSTAPAY Important '
+        'Reminders: Successful transactions will be credited real-time.';
+
+    test('the whole body (real): own suffix, bank, amount → transfer', () {
+      final c = g('BPI InstaPay', whole)!;
       expect(c.draft.amount, 4000.0);
+      expect(c.accountLast4, '1637');
       expect(c.draft.type, TransactionType.transfer);
       expect(c.draft.accountId, 'gotyme');
       expect(c.draft.transferToAccountId, 'bpi');
+      expect(c.draft.description, 'GoTyme Bank');
+      expect(c.confidence, 1.0);
+    });
+
+    test('cut off after the bank name: a transfer that needs its amount', () {
+      final c = g('BPI InstaPay',
+          whole.substring(0, whole.indexOf(' Transfer Amount')))!;
+      expect(c.draft.amount, isNull);
+      expect(c.draft.type, TransactionType.transfer);
+      expect(c.draft.accountId, 'gotyme');
+      expect(c.draft.transferToAccountId, 'bpi');
+      expect(c.draft.description, 'GoTyme Bank');
+      expect(c.missing, contains(EntryField.amount));
+    });
+
+    test('cut off after the masked numbers: a mask is never the name', () {
+      final c =
+          g('BPI InstaPay', whole.substring(0, whole.indexOf(' Bank Name')))!;
+      expect(c.draft.amount, isNull);
+      expect(c.draft.type, TransactionType.inflow);
+      expect(c.draft.accountId, 'bpi');
+      expect(c.draft.description,
+          'Incoming Interbank Funds Transfer Confirmation');
+    });
+
+    test('a half-cut amount is not read as a smaller one', () {
+      final c = g('BPI InstaPay',
+          '${whole.substring(0, whole.indexOf('4,000.00'))}4,0…')!;
+      expect(c.draft.amount, isNull);
     });
 
     test('a reference number is never read as the amount', () {

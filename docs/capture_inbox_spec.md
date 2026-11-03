@@ -222,8 +222,16 @@ finish, behind Cloud AI (plan phase 2).
   `Transfer From <bank>` names a transfer source; `Amount PHP 4,000.00` is a
   guess until a full email head is seen. A template without an `amount` group
   fixes the direction only and leaves the row at 0.6 for the generic amount.
-- The notification carries only the head of the email; the first real sample
-  cut off before the amount, so such a row arrives with `Needs amount`.
+- The notification carries only the head of the email. The full BPI InstaPay
+  body (seen 2026-11-03) is a table: Reference Number, Transaction Date and
+  Time, `Transfer From XXXXXXXX6634` (the peer's masked number), `Transfer To
+  XXXXXX1637` (the user's own BPI suffix), `Bank Name GoTyme Bank`, `Transfer
+  Amount PHP 4,000.00`, `Transfer Service INSTAPAY`. The Gmail snippet ends
+  at "Transfer From…", so the row arrives with `Needs amount` and the bank
+  unknown. The templates read the whole table when a longer text reaches the
+  parser (a share-sheet import later): own suffix from `Transfer To`, bank
+  from `Bank Name`, amount from `Transfer Amount`; a masked number is never a
+  name, and a half-cut figure (`4,0…`) is not read as a smaller amount.
 
 ### One payment, two notifications (built 2026-11-02)
 
@@ -233,5 +241,15 @@ pending row whose amount matches an earlier pending row from a *different*
 source within 15 minutes (direction must agree when both are known). The row
 shows `Same as <source>`. Approving either row posts once and declines the
 twin with the same `resolvedAt` stamp; Undo of that approve brings the twin
-back. `Approve all ready` therefore posts one record per payment. Rows with no
-amount (a truncated email) cannot be twinned and stay for the user.
+back. `Approve all ready` therefore posts one record per payment.
+
+Two refinements (2026-11-03), from the GoTyme → BPI case on device:
+
+- Direction compatibility accepts a transfer on either side: BPI's inflow
+  email and GoTyme's transfer push are one movement.
+- An amount-less row (the truncated email) is the twin of a transfer push that
+  lands in the same account within the window (`_echoOf`): the email is an
+  inflow into BPI, or itself a transfer into BPI, and the push's
+  `transferToAccountId` is BPI. Approving the push declines the email; the
+  email cannot be approved until the user types the figure, and then the
+  amount rule takes over.

@@ -38,6 +38,10 @@ const String kCounterpartyGroup =
 const String kLast4Group =
     r'(?:ending\s+(?:in|with)?\s*\**\s*(?<last4>\d{4})|[*xX•.]{2,}\s?(?<last4b>\d{4}))';
 
+/// A bank name in a BPI email table, up to the next table label.
+const String _bankNameGroup =
+    r'(?<counterparty>.+?)(?=\s+(?:transfer|reference|transaction)\b|\s*(?:[.,;:]|$))';
+
 /// Known shapes per package.
 ///
 /// Provenance, so a shape can be re-checked when an app changes its wording:
@@ -277,30 +281,66 @@ final Map<String, List<CaptureTemplate>> kCaptureTemplates = {
   // user types the amount. A template with no `amount` group sets direction
   // and counterparty only.
   kGmailPackage: [
-    // [guess] "… Amount PHP 4,000.00 …" / "Amount: 4,000.00"
+    // [real] the whole BPI InstaPay body (a share-sheet import or a long
+    // snippet): "… Transfer From XXXXXXXX6634 Transfer To XXXXXX1637 Bank Name
+    // GoTyme Bank Transfer Amount PHP 4,000.00 Transfer Service INSTAPAY".
+    // "Transfer To" is the user's own BPI suffix; "Transfer From" is the
+    // peer's masked number, never a name.
+    CaptureTemplate(
+      r'incoming (?:interbank )?funds transfer.*?\btransfer to\s+[*xX•.]+(?<last4>\d{4}).*?\bbank name\s+(?<counterparty>.+?)\s+transfer amount\s+' +
+          kBareAmountGroup +
+          r'(?![\d,])',
+      TransactionType.inflow,
+    ),
+    // [guess] an amount line somewhere after the subject
     CaptureTemplate(
       r'incoming (?:interbank )?funds transfer.*?\bamount\b[^\d₱]{0,16}' +
-          kBareAmountGroup,
+          kBareAmountGroup +
+          r'(?![\d,])',
       TransactionType.inflow,
     ),
-    // [real] "BPI InstaPay" / "Incoming Interbank Funds Transfer Confirmation …
-    // Transfer From <bank> …"
+    // [real] the head cut off before the amount: direction, and the bank when
+    // the snippet reaches it.
     CaptureTemplate(
-      r'incoming (?:interbank )?funds transfer(?:.*?\btransfer from\s+' +
-          kCounterpartyGroup +
-          r')?',
+      r'incoming (?:interbank )?funds transfer.*?\bbank name\s+' +
+          _bankNameGroup,
       TransactionType.inflow,
     ),
-    // [guess] the outgoing twin of the same email
     CaptureTemplate(
-      r'outgoing (?:interbank )?funds transfer.*?\bamount\b[^\d₱]{0,16}' +
-          kBareAmountGroup,
+      r'incoming (?:interbank )?funds transfer.*?\btransfer from\s+(?![*xX•.\d])' +
+          kCounterpartyGroup,
+      TransactionType.inflow,
+    ),
+    CaptureTemplate(
+      r'incoming (?:interbank )?funds transfer',
+      TransactionType.inflow,
+    ),
+    // [guess] the outgoing twin of the same email, mirrored: "Transfer From"
+    // is the user's own suffix there.
+    CaptureTemplate(
+      r'outgoing (?:interbank )?funds transfer.*?\btransfer from\s+[*xX•.]+(?<last4>\d{4}).*?\bbank name\s+(?<counterparty>.+?)\s+transfer amount\s+' +
+          kBareAmountGroup +
+          r'(?![\d,])',
       TransactionType.outflow,
     ),
     CaptureTemplate(
-      r'outgoing (?:interbank )?funds transfer(?:.*?\btransfer to\s+' +
-          kCounterpartyGroup +
-          r')?',
+      r'outgoing (?:interbank )?funds transfer.*?\bamount\b[^\d₱]{0,16}' +
+          kBareAmountGroup +
+          r'(?![\d,])',
+      TransactionType.outflow,
+    ),
+    CaptureTemplate(
+      r'outgoing (?:interbank )?funds transfer.*?\bbank name\s+' +
+          _bankNameGroup,
+      TransactionType.outflow,
+    ),
+    CaptureTemplate(
+      r'outgoing (?:interbank )?funds transfer.*?\btransfer to\s+(?![*xX•.\d])' +
+          kCounterpartyGroup,
+      TransactionType.outflow,
+    ),
+    CaptureTemplate(
+      r'outgoing (?:interbank )?funds transfer',
       TransactionType.outflow,
     ),
   ],
