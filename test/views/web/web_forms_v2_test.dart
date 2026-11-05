@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart'
 import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/installment_review_panel.dart';
 import 'package:intermittent_fasting/views/treasury/bills/statement_breakdown_sheet.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
@@ -413,7 +414,59 @@ void main() {
       await focus(tester, WebKeys.billsFormNote);
       await enter(tester);
       await tester.pumpAndSettle();
+      // Enter opens the review page; nothing is saved until it is confirmed.
+      expect(find.byKey(InstallmentReviewKeys.panel), findsOneWidget);
+      expect(dialog(), findsOneWidget);
+      await tester.tap(find.byKey(InstallmentReviewKeys.confirm));
+      await tester.pumpAndSettle();
       expect(dialog(), findsNothing);
+    });
+
+    testWidgets('Installment paying for someone: review, back, confirm',
+        (tester) async {
+      final (bills, plans) = await billsAndPlans(tester);
+      final before = plans.allInstallments.length;
+      await pumpHost(
+        tester,
+        (context) => showWebInstallmentDialog(context,
+            presenter: plans, receivables: bills),
+      );
+      await tester.enterText(
+          find.byKey(WebKeys.billsFormName), 'Xiaomi Redmi Note 15');
+      await tester.enterText(find.byKey(WebKeys.billsFormTotal), '12000');
+      await tester.ensureVisible(find.byKey(WebKeys.billsFormPaidFor));
+      await tester.tap(find.byKey(WebKeys.billsFormPaidFor));
+      await tester.pumpAndSettle();
+
+      // The person is required while the toggle is on.
+      await tester.tap(find.byKey(WebKeys.billsDialogSubmit));
+      await tester.pumpAndSettle();
+      expect(find.text('Who is it for?'), findsWidgets);
+      expect(find.byKey(InstallmentReviewKeys.panel), findsNothing);
+
+      await tester.enterText(find.byKey(WebKeys.billsFormPaidForName), 'Papa');
+      await tester.tap(find.byKey(WebKeys.billsDialogSubmit));
+      await tester.pumpAndSettle();
+      expect(find.byKey(InstallmentReviewKeys.panel), findsOneWidget);
+      expect(find.text('Receivables from Papa'), findsOneWidget);
+      expect(find.text('12 new'), findsOneWidget);
+      expect(plans.allInstallments.length, before);
+
+      // Back keeps what was typed.
+      await tester.tap(find.byKey(InstallmentReviewKeys.back));
+      await tester.pumpAndSettle();
+      expect(find.byKey(InstallmentReviewKeys.panel), findsNothing);
+      expect(find.text('Xiaomi Redmi Note 15'), findsOneWidget);
+      expect(plans.allInstallments.length, before);
+
+      await tester.tap(find.byKey(WebKeys.billsDialogSubmit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(InstallmentReviewKeys.confirm));
+      await tester.pumpAndSettle();
+      expect(dialog(), findsNothing);
+      final saved = plans.allInstallments
+          .firstWhere((p) => p.name == 'Xiaomi Redmi Note 15');
+      expect(saved.paidForName, 'Papa');
     });
 
     testWidgets('Settle (mark paid)', (tester) async {

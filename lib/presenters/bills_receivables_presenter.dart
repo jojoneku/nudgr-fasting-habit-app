@@ -18,6 +18,7 @@ import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/credit_statement_breakdown.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/installment_receivables.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/statement_card_view.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
@@ -36,6 +37,46 @@ typedef BatchResult = ({int applied, int skipped});
 /// The obligation type behind one "Coming up" timeline row — drives the row's
 /// accent dot and the sheet the view routes its action to.
 enum ComingUpKind { bill, receivable, budgeted, installment }
+
+/// One receivable row of the installment form's review step (Plan 067): what
+/// saving the plan does to that month's receivable.
+class InstallmentReceivablePreviewRow {
+  /// "Feb 2027".
+  final String month;
+
+  /// "₱1,250.00".
+  final String amount;
+
+  /// "New", "Updated", "No change", "Received · kept" or "Removed".
+  final String status;
+
+  /// True for a receivable the save deletes.
+  final bool isRemoval;
+
+  const InstallmentReceivablePreviewRow({
+    required this.month,
+    required this.amount,
+    required this.status,
+    required this.isRemoval,
+  });
+}
+
+/// The receivables section of the installment form's review step.
+class InstallmentReceivablePreview {
+  /// "Receivables from Papa", or "Receivables to remove" when the plan is no
+  /// longer for someone else.
+  final String title;
+
+  /// "12 new" / "3 updated · 1 removed · 2 received, kept".
+  final String summary;
+  final List<InstallmentReceivablePreviewRow> rows;
+
+  const InstallmentReceivablePreview({
+    required this.title,
+    required this.summary,
+    required this.rows,
+  });
+}
 
 /// One entry in the unified "Coming up" timeline — a pure value type merged
 /// across bills, receivables, budgeted expenses, and installments so the view
@@ -106,6 +147,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // Statement payment progress is read off the ledger (rule 8): a payment
     // logged there — from any page — settles the statement it pays.
     _ledger.addListener(_onLedgerChanged);
+    // A plan bought for someone else owns one receivable per month here, so
+    // its receivables follow the plans (rule 8) — whichever page saved them.
+    installments?.addListener(_onInstallmentsChanged);
   }
 
   final StorageService _storage;
@@ -135,6 +179,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   void dispose() {
     _monthScope?.removeListener(_adoptScopeMonth);
     _ledger.removeListener(_onLedgerChanged);
+    _installments?.removeListener(_onInstallmentsChanged);
     super.dispose();
   }
 
@@ -703,6 +748,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allReceivables = await _storage.loadReceivables();
     _allExpenses = await _storage.loadBudgetedExpenses();
     _billsLoaded = true;
+    // Plans read before this point had nothing to compare against yet.
+    _onInstallmentsChanged();
     _awardedXpKeys
       ..clear()
       ..addAll(await _storage.loadAwardedXpKeys());
@@ -1902,6 +1949,162 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     ));
   }
 
+  // ─── Receivables of plans bought for someone else (Plan 067) ─────────────────
+  //
+  // The rules live in `planInstallmentReceivables`; this section only decides
+  // when they run and writes what they return.
+
+  /// Each plan's [_receivableSignature] as last seen, so a notify reconciles
+  /// only the plans that changed. Null until both sides have loaded: the first
+  /// look only records, so a launch or a reload never rewrites receivables (a
+  /// receivable deleted by hand stays deleted until its plan is edited).
+  Map<String, Object>? _seenPlanSignatures;
+
+  /// The plan fields its receivables are built from.
+  static Object _receivableSignature(Installment p) => (
+        p.paidForName,
+        p.name,
+        p.monthlyAmount,
+        p.totalMonths,
+        p.startMonth,
+        p.accountId,
+        p.categoryId,
+        p.isActive,
+      );
+
+  /// The installment presenter notified: reconcile every plan that was added,
+  /// removed or changed in a field its receivables use.
+  void _onInstallmentsChanged() {
+    final source = _installments;
+    if (source == null || source.isLoading || !_billsLoaded) return;
+    final current = {
+      for (final p in source.allInstallments) p.id: _receivableSignature(p),
+    };
+    final seen = _seenPlanSignatures;
+    _seenPlanSignatures = current;
+    if (seen == null) return;
+    final changed = {
+      for (final e in current.entries)
+        if (seen[e.key] != e.value) e.key,
+      for (final id in seen.keys)
+        if (!current.containsKey(id)) id,
+    };
+    if (changed.isEmpty) return;
+    unawaited(_reconcileInstallmentReceivables(changed));
+  }
+
+  /// What reconciling plan [planId] does, with [plan] as its new state (null
+  /// once deleted). The save and the form's review both read this.
+  List<InstallmentReceivableStep> _installmentReceivableSteps(
+    String planId,
+    Installment? plan,
+  ) {
+    final source = _installments;
+    return planInstallmentReceivables(
+      planId: planId,
+      plan: plan,
+      linked: _allReceivables.where((r) => r.installmentId == planId),
+      categoryId: plan?.categoryId ?? kInstallmentCategoryId,
+      dueDateFor: plan == null || source == null
+          ? null
+          : (month) => source.dueDate(plan, month: month),
+      billedCount: plan == null || plan.isActive
+          ? 0
+          : plan.paidCount(_ledger.allTransactions),
+      now: _clock(),
+    );
+  }
+
+  /// Brings the receivables of [planIds] in line with their plans, in one
+  /// save (mutate → notify → persist).
+  Future<void> _reconcileInstallmentReceivables(Set<String> planIds) async {
+    final source = _installments;
+    if (source == null) return;
+    // A plan without a category files its receivables under the installment
+    // fallback, which is created on first use.
+    final needsFallback = planIds
+        .map(source.findById)
+        .any((p) => p != null && p.isPaidForSomeone && p.categoryId == null);
+    if (needsFallback &&
+        !_ledger.categories.any((c) => c.id == kInstallmentCategoryId)) {
+      await _ledger.addCategory(installmentFallbackCategory());
+    }
+
+    // No `await` from here to the notify: the steps are computed against the
+    // list they are applied to.
+    final byId = {for (final r in _allReceivables) r.id: r};
+    var wrote = false;
+    for (final id in planIds) {
+      for (final step in _installmentReceivableSteps(id, source.findById(id))) {
+        if (!step.writes) continue;
+        wrote = true;
+        final r = step.receivable;
+        if (step.change == InstallmentReceivableChange.remove) {
+          byId.remove(r.id);
+        } else {
+          byId[r.id] = r;
+        }
+      }
+    }
+    if (!wrote) return;
+    _allReceivables = byId.values.toList();
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+  }
+
+  /// The receivables section of the installment form's review: what saving
+  /// [draft] does to its receivables. Null when there is nothing to show (a
+  /// plan for yourself that never had receivables).
+  InstallmentReceivablePreview? installmentReceivablePreview(
+      Installment draft) {
+    final steps = _installmentReceivableSteps(draft.id, draft);
+    if (steps.isEmpty) return null;
+    int count(Set<InstallmentReceivableChange> changes) =>
+        steps.where((s) => changes.contains(s.change)).length;
+    final added = count({InstallmentReceivableChange.add});
+    final updated = count({InstallmentReceivableChange.update});
+    final unchanged = count({InstallmentReceivableChange.unchanged});
+    final removed = count({InstallmentReceivableChange.remove});
+    final received = count({
+      InstallmentReceivableChange.keepReceived,
+      InstallmentReceivableChange.unlinkReceived,
+    });
+    return InstallmentReceivablePreview(
+      title: draft.isPaidForSomeone
+          ? 'Receivables from ${draft.paidForName}'
+          : 'Receivables to remove',
+      summary: [
+        if (added > 0) '$added new',
+        if (updated > 0) '$updated updated',
+        if (unchanged > 0) '$unchanged no change',
+        if (removed > 0) '$removed removed',
+        if (received > 0) '$received received, kept',
+      ].join(' · '),
+      rows: [
+        for (final s in steps)
+          InstallmentReceivablePreviewRow(
+            month: _monthYearLabel(s.receivable.month),
+            amount: formatPeso(s.receivable.amount),
+            status: switch (s.change) {
+              InstallmentReceivableChange.add => 'New',
+              InstallmentReceivableChange.update => 'Updated',
+              InstallmentReceivableChange.unchanged => 'No change',
+              InstallmentReceivableChange.keepReceived ||
+              InstallmentReceivableChange.unlinkReceived =>
+                'Received · kept',
+              InstallmentReceivableChange.remove => 'Removed',
+            },
+            isRemoval: s.change == InstallmentReceivableChange.remove,
+          ),
+      ],
+    );
+  }
+
+  /// "Feb 2027" for a 'YYYY-MM' key.
+  static String _monthYearLabel(String month) =>
+      DateFormat('MMM yyyy').format(DateTime.parse('$month-01'));
+
   // ─── Budgeted Expense CRUD ────────────────────────────────────────────────────
 
   /// Adds [expense], optionally seeding it into later months that already hold
@@ -2798,6 +3001,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         receivedAmount: target.receivedAmount,
         transactionId: target.transactionId,
         reimbursementForTxnId: target.reimbursementForTxnId,
+        installmentId: target.installmentId,
+        installmentNumber: target.installmentNumber,
         // Rank is the user's arrangement of *that* month's list, not a property
         // of the series, so it stays where they put it.
         sortIndex: target.sortIndex,

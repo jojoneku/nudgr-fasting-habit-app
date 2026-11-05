@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/installment_review_panel.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -12,6 +14,10 @@ import 'package:intl/intl.dart';
 
 class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
+
+  /// Owner of the receivables a plan bought for someone else makes; the
+  /// review step lists them. Null leaves that section out of the review.
+  final BillsReceivablesPresenter? receivables;
   final Installment? existing;
 
   /// Embedded inside `NewEntrySheet` — render only the form + Save (see
@@ -21,6 +27,7 @@ class AddInstallmentSheet extends StatefulWidget {
   const AddInstallmentSheet(
       {super.key,
       required this.presenter,
+      this.receivables,
       this.existing,
       this.embedded = false});
 
@@ -34,6 +41,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   final _totalCtrl = TextEditingController();
   final _monthlyCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _personCtrl = TextEditingController();
+
+  /// "Paying for someone": the plan makes a receivable from [_personCtrl]'s
+  /// person for each payment month.
+  bool _paidForSomeone = false;
 
   String? _accountId;
   String? _categoryId;
@@ -44,9 +56,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
 
-  /// True once the start-month stepper was used in THIS session. Until then
-  /// the start month follows account / purchase date / deferral — on edit
-  /// too, so changing the deferral saves the month the hint shows.
+  /// True while the start month is set by hand: the stepper was used, or the
+  /// plan was saved that way (Plan 068). Until then the start month follows
+  /// account / purchase date / deferral — on edit too, so changing the
+  /// deferral saves the month the hint shows. "Use computed" clears it.
   bool _startMonthTouched = false;
   bool _saving = false;
   bool _accountError = false;
@@ -128,6 +141,9 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _deferralMonths = e.deferralMonths;
       _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
+      _paidForSomeone = e.isPaidForSomeone;
+      _personCtrl.text = e.paidForName ?? '';
+      _startMonthTouched = widget.presenter.isStartMonthPinned(e);
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
@@ -186,6 +202,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     _totalCtrl.dispose();
     _monthlyCtrl.dispose();
     _noteCtrl.dispose();
+    _personCtrl.dispose();
     super.dispose();
   }
 
@@ -195,10 +212,8 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       setState(() => _accountError = true);
       return;
     }
-    setState(() => _saving = true);
-
     final e = widget.existing;
-    final installment = widget.presenter.buildInstallment(
+    final draft = widget.presenter.buildInstallment(
       existing: e,
       name: _nameCtrl.text,
       accountId: _accountId!,
@@ -211,9 +226,115 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       interestRate: _interestRate,
       note: _noteCtrl.text,
       categoryId: _categoryId,
+      paidForName: _paidForSomeone ? _personCtrl.text : null,
+      startMonthSource: _startMonthTouched
+          ? StartMonthSource.manual
+          : StartMonthSource.computed,
     );
-    await widget.presenter.saveInstallment(installment, isEdit: e != null);
+    // Nothing saves until the review is confirmed; Back keeps the input.
+    final confirmed = await showInstallmentReviewSheet(
+      context,
+      presenter: widget.presenter,
+      receivables: widget.receivables,
+      draft: draft,
+      existing: e,
+      onStartMonthChanged: (month) => setState(() {
+        _startMonth = month;
+        _startMonthTouched = false;
+      }),
+    );
+    if (confirmed == null || !mounted) return;
+    setState(() => _saving = true);
+    await widget.presenter.saveInstallment(confirmed, isEdit: e != null);
     if (mounted) Navigator.pop(context);
+  }
+
+  /// "Use computed": the start month follows the card again.
+  void _useComputedStartMonth() {
+    setState(() => _startMonthTouched = false);
+    _recalculateStartMonth();
+  }
+
+  /// "Set by hand · computed: Feb 2027" with a "Use computed" action, under a
+  /// start month set by hand that differs from the card's cycle.
+  Widget _buildPinnedHint(BuildContext context) {
+    final hint = _startMonthTouched
+        ? widget.presenter.pinnedStartMonthHint(
+            accountId: _accountId,
+            purchaseDate: _purchaseDate,
+            deferralMonths: _deferralMonths,
+            startMonth: _startMonth,
+          )
+        : null;
+    if (hint == null) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              hint,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ),
+          TextButton(
+            key: const ValueKey('installment.useComputedStart'),
+            onPressed: _useComputedStartMonth,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: const Text('Use computed'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaidFor(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final people = widget.presenter.knownPeople;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SwitchListTile(
+          key: const ValueKey('installment.paidForToggle'),
+          value: _paidForSomeone,
+          onChanged: (v) => setState(() => _paidForSomeone = v),
+          title:
+              const Text('Paying for someone', style: TextStyle(fontSize: 14)),
+          subtitle: Text('A receivable from them for each payment month',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+          contentPadding: EdgeInsets.zero,
+        ),
+        if (_paidForSomeone) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            key: const ValueKey('installment.paidForName'),
+            controller: _personCtrl,
+            decoration: sheetFieldDecoration(context, hint: 'e.g. Papa'),
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (v) => _paidForSomeone && (v == null || v.trim().isEmpty)
+                ? 'Who is it for?'
+                : null,
+          ),
+          if (people.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final name in people)
+                  ActionChip(
+                    label: Text(name),
+                    onPressed: () => setState(() => _personCtrl.text = name),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ],
+    );
   }
 
   void _adjustStartMonth(int delta) {
@@ -349,6 +470,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             selectedId: _categoryId,
             onChanged: (val) => setState(() => _categoryId = val),
           ),
+          const SizedBox(height: 8),
+
+          // Paying for someone (optional)
+          _buildPaidFor(context),
           const SizedBox(height: 16),
 
           // Purchase Date
@@ -462,6 +587,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
               ),
             ],
           ),
+          _buildPinnedHint(context),
           const SizedBox(height: 16),
 
           // Note — outline field box like the rest of the form.
