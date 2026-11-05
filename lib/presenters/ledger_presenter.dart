@@ -1621,6 +1621,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       note: note,
       categoryId: categoryId,
       isActive: plan.isActive,
+      paidForName: plan.paidForName,
       updatedAt: DateTime.now(),
     );
   }

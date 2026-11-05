@@ -662,7 +662,8 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
       case _AddKind.setAside:
         showWebSetAsideDialog(context, presenter: presenter);
       case _AddKind.installment:
-        showWebInstallmentDialog(context, presenter: installmentPresenter);
+        showWebInstallmentDialog(context,
+            presenter: installmentPresenter, receivables: presenter);
     }
   }
 
@@ -678,7 +679,9 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
       showWebSetAsideDialog(context, presenter: presenter, existing: source);
     } else if (source is Installment) {
       showWebInstallmentDialog(context,
-          presenter: installmentPresenter, existing: source);
+          presenter: installmentPresenter,
+          receivables: presenter,
+          existing: source);
     }
   }
 
@@ -2268,7 +2271,9 @@ class _InstallmentRowV2 extends StatelessWidget {
                     key: WebKeys.billsRowEdit,
                     icon: Icons.edit_outlined,
                     onTap: () => showWebInstallmentDialog(context,
-                        presenter: presenter, existing: installment),
+                        presenter: presenter,
+                        receivables: bills,
+                        existing: installment),
                   ),
                   WebMenuItem(
                     'Delete',

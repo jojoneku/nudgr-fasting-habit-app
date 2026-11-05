@@ -237,7 +237,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => AddInstallmentSheet(
-          presenter: widget.installmentPresenter, existing: existing),
+          presenter: widget.installmentPresenter,
+          receivables: widget.presenter,
+          existing: existing),
     );
   }
 

@@ -14,6 +14,10 @@ FinanceCategory installmentFallbackCategory() => FinanceCategory(
       colorHex: '#9C27B0',
     );
 
+/// copyWith sentinel: lets [Installment.copyWith] clear [paidForName] with an
+/// explicit `null`, while leaving it out keeps the current value.
+const Object _kUnset = Object();
+
 // Represents a purchase split into equal monthly payments.
 // Each month the installment is "due", and paying it creates a
 // TransactionRecord with installmentId linking back to this installment.
@@ -35,6 +39,11 @@ class Installment {
   final String?
       categoryId; // category of the original purchase (e.g. tech, food)
   final bool isActive; // false = cancelled early
+
+  /// The person this plan was bought for, who pays each month back. Null when
+  /// the plan is your own. While set, every payment month has a receivable
+  /// from this person (see `planInstallmentReceivables`).
+  final String? paidForName;
   final DateTime updatedAt;
 
   Installment({
@@ -51,8 +60,12 @@ class Installment {
     this.note,
     this.categoryId,
     this.isActive = true,
+    this.paidForName,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// True when the plan was bought for someone else ([paidForName] is set).
+  bool get isPaidForSomeone => paidForName != null;
 
   /// Whether this installment incurs interest.
   bool get hasInterest => interestRate > 0;
@@ -217,6 +230,7 @@ class Installment {
       note: json['note'] as String?,
       categoryId: json['categoryId'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      paidForName: json['paidForName'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -237,6 +251,7 @@ class Installment {
         'note': note,
         if (categoryId != null) 'categoryId': categoryId,
         'isActive': isActive,
+        if (paidForName != null) 'paidForName': paidForName,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -253,6 +268,7 @@ class Installment {
     String? note,
     String? categoryId,
     bool? isActive,
+    Object? paidForName = _kUnset,
     DateTime? updatedAt,
   }) {
     return Installment(
@@ -269,6 +285,9 @@ class Installment {
       note: note ?? this.note,
       categoryId: categoryId ?? this.categoryId,
       isActive: isActive ?? this.isActive,
+      paidForName: identical(paidForName, _kUnset)
+          ? this.paidForName
+          : paidForName as String?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

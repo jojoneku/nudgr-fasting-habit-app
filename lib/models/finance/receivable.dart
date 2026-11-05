@@ -53,6 +53,14 @@ class Receivable {
   /// receivable. Null for receivables created directly (salary, business, etc.).
   final String? reimbursementForTxnId;
 
+  /// Back-link to the installment plan bought for someone else that made this
+  /// receivable — one receivable per payment month of the plan. Null for every
+  /// other receivable. Received ones lose the link when the plan goes.
+  final String? installmentId;
+
+  /// Which payment of [installmentId]'s plan (1-based) this receivable is.
+  final int? installmentNumber;
+
   /// Manual rank inside its [month], set when the user drags the receivable
   /// somewhere. Null means "never arranged by hand" — the list falls back to its
   /// automatic order (expected date, then name) for that entry. Only meaningful
@@ -84,6 +92,8 @@ class Receivable {
     this.transactionId,
     this.accountId,
     this.reimbursementForTxnId,
+    this.installmentId,
+    this.installmentNumber,
     this.sortIndex,
     this.createdAt,
     DateTime? updatedAt,
@@ -113,6 +123,8 @@ class Receivable {
       transactionId: json['transactionId'] as String?,
       accountId: json['accountId'] as String?,
       reimbursementForTxnId: json['reimbursementForTxnId'] as String?,
+      installmentId: json['installmentId'] as String?,
+      installmentNumber: (json['installmentNumber'] as num?)?.toInt(),
       sortIndex: (json['sortIndex'] as num?)?.toInt(),
       // Tolerant: a record saved before this field shipped (or a bad value)
       // loads as null rather than failing the pull.
@@ -142,6 +154,8 @@ class Receivable {
         'transactionId': transactionId,
         'accountId': accountId,
         'reimbursementForTxnId': reimbursementForTxnId,
+        if (installmentId != null) 'installmentId': installmentId,
+        if (installmentNumber != null) 'installmentNumber': installmentNumber,
         'sortIndex': sortIndex,
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -169,6 +183,10 @@ class Receivable {
     Object? transactionId = _kUnset,
     Object? accountId = _kUnset,
     String? reimbursementForTxnId,
+    // Sentinel-guarded so a received receivable can be unlinked from a plan
+    // that was deleted or switched off.
+    Object? installmentId = _kUnset,
+    Object? installmentNumber = _kUnset,
     Object? sortIndex = _kUnset,
     // Sentinel-guarded so a presenter can carry the stored value onto an
     // edited record exactly, null included. Omitting it keeps the current one.
@@ -208,6 +226,12 @@ class Receivable {
           identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       reimbursementForTxnId:
           reimbursementForTxnId ?? this.reimbursementForTxnId,
+      installmentId: identical(installmentId, _kUnset)
+          ? this.installmentId
+          : installmentId as String?,
+      installmentNumber: identical(installmentNumber, _kUnset)
+          ? this.installmentNumber
+          : installmentNumber as int?,
       // Sentinel-guarded so an explicit null drops the entry back to automatic
       // ordering ("Reset order"), while omitting it keeps the current rank.
       sortIndex:
