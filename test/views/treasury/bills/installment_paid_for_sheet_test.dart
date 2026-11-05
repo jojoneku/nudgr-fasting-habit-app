@@ -13,6 +13,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/installment_review_panel.dart';
+import 'package:intermittent_fasting/views/treasury/bills/start_month_review_card.dart';
 import '../../../mocks.mocks.dart';
 
 /// Plan 067 on the mobile sheet: the "Paying for someone" toggle and the
@@ -109,6 +110,8 @@ void main() {
         await plans.saveInstallment(existing, isEdit: false);
       }
     });
+    // The list hands the form the stored plan, start-month source included.
+    final stored = existing == null ? null : plans.findById(existing.id);
     await tester.pumpWidget(MaterialApp(
       home: Builder(
         builder: (context) => TextButton(
@@ -117,7 +120,7 @@ void main() {
               body: AddInstallmentSheet(
                 presenter: plans,
                 receivables: bills,
-                existing: existing,
+                existing: stored,
               ),
             ),
           )),
@@ -214,13 +217,13 @@ void main() {
     await tester.tap(find.text('Save Changes'));
     await tester.pumpAndSettle();
 
-    expect(find.text("Stored Dec 2026 · the card's cycle gives Feb 2027"),
+    expect(find.text('Set by hand: Dec 2026 · computed: Feb 2027'),
         findsOneWidget);
     expect(find.text('Nov 15, 2026'), findsOneWidget);
 
     await tester.tap(find.byKey(InstallmentReviewKeys.useSuggested));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Stored Dec 2026'), findsNothing);
+    expect(find.textContaining('Set by hand'), findsNothing);
     expect(find.text('Jan 15, 2027'), findsOneWidget);
     expect(find.text('Feb 4, 2027'), findsOneWidget);
     expect(stored.single.startMonth, '2026-12',
@@ -243,5 +246,97 @@ void main() {
     // The form took the month too; nothing is saved.
     expect(find.text('February 2027'), findsOneWidget);
     expect(stored.single.startMonth, '2026-12');
+  });
+
+  // ─── Plan 068: computed unless set by hand ───────────────────────────────
+
+  testWidgets('edit: a month set by hand shows the computed one',
+      (tester) async {
+    await openSheet(tester, existing: panasonic);
+    expect(find.text('Set by hand · computed: Feb 2027'), findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const ValueKey('installment.useComputedStart')));
+    await tester.pumpAndSettle();
+    expect(find.text('February 2027'), findsOneWidget);
+    expect(find.textContaining('Set by hand'), findsNothing);
+
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(InstallmentReviewKeys.confirm));
+    await tester.pumpAndSettle();
+    expect(stored.single.startMonth, '2027-02');
+    expect(stored.single.startMonthSource, StartMonthSource.computed);
+  });
+
+  testWidgets('add: the stepper sets the month by hand', (tester) async {
+    await openSheet(tester);
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'e.g. MacBook Pro, Braces'),
+        'Laptop');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, '0.00').first, '12000');
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Set by hand · computed:'), findsOneWidget);
+
+    await tester.tap(find.text('Add Installment'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Set by hand: '), findsOneWidget);
+    await tester.tap(find.byKey(InstallmentReviewKeys.confirm));
+    await tester.pumpAndSettle();
+    expect(stored.single.startMonthSource, StartMonthSource.manual);
+  });
+
+  testWidgets('review card: "Use Feb 2027" fixes the old plan', (tester) async {
+    stored = [panasonic];
+    await tester.runAsync(() async {
+      await ledger.load();
+      await plans.load();
+      await Future<void>.delayed(Duration.zero);
+    });
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ListenableBuilder(
+          listenable: plans,
+          builder: (_, __) => StartMonthReviewCard(presenter: plans),
+        ),
+      ),
+    ));
+    expect(find.byKey(StartMonthReviewKeys.card), findsOneWidget);
+    expect(find.text('Saved: Dec 2026 · Card cycle: Feb 2027'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(StartMonthReviewKeys.use('panasonic')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byKey(StartMonthReviewKeys.card), findsNothing);
+    expect(stored.single.startMonth, '2027-02');
+  });
+
+  testWidgets('review card: "Keep Dec 2026" keeps it', (tester) async {
+    stored = [panasonic];
+    await tester.runAsync(() async {
+      await ledger.load();
+      await plans.load();
+      await Future<void>.delayed(Duration.zero);
+    });
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ListenableBuilder(
+          listenable: plans,
+          builder: (_, __) => StartMonthReviewCard(presenter: plans),
+        ),
+      ),
+    ));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(StartMonthReviewKeys.keep('panasonic')));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byKey(StartMonthReviewKeys.card), findsNothing);
+    expect(stored.single.startMonth, '2026-12');
+    expect(stored.single.startMonthSource, StartMonthSource.manual);
   });
 }

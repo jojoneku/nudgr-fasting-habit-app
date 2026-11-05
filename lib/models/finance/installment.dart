@@ -14,6 +14,29 @@ FinanceCategory installmentFallbackCategory() => FinanceCategory(
       colorHex: '#9C27B0',
     );
 
+/// Who owns an installment's [Installment.startMonth] (Plan 068).
+enum StartMonthSource {
+  /// Worked out from the card's cycle, the purchase date and the deferral.
+  /// The installment presenter recomputes it when any of them changes.
+  computed,
+
+  /// Set or kept by hand. Never recomputed.
+  manual,
+
+  /// A plan saved before this field whose month differs from the card's
+  /// cycle. Not recomputed; listed until the user picks one month.
+  review,
+}
+
+/// Parses a [StartMonthSource] name; null for a missing or unknown value, so
+/// a plan saved before the field loads as "not decided yet".
+StartMonthSource? startMonthSourceFromName(String? name) {
+  for (final s in StartMonthSource.values) {
+    if (s.name == name) return s;
+  }
+  return null;
+}
+
 /// copyWith sentinel: lets [Installment.copyWith] clear [paidForName] with an
 /// explicit `null`, while leaving it out keeps the current value.
 const Object _kUnset = Object();
@@ -44,6 +67,10 @@ class Installment {
   /// the plan is your own. While set, every payment month has a receivable
   /// from this person (see `planInstallmentReceivables`).
   final String? paidForName;
+
+  /// Who owns [startMonth]. Null on a plan saved before Plan 068 until the
+  /// installment presenter's migration decides.
+  final StartMonthSource? startMonthSource;
   final DateTime updatedAt;
 
   Installment({
@@ -61,6 +88,7 @@ class Installment {
     this.categoryId,
     this.isActive = true,
     this.paidForName,
+    this.startMonthSource,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -231,6 +259,8 @@ class Installment {
       categoryId: json['categoryId'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       paidForName: json['paidForName'] as String?,
+      startMonthSource:
+          startMonthSourceFromName(json['startMonthSource'] as String?),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -252,6 +282,8 @@ class Installment {
         if (categoryId != null) 'categoryId': categoryId,
         'isActive': isActive,
         if (paidForName != null) 'paidForName': paidForName,
+        if (startMonthSource != null)
+          'startMonthSource': startMonthSource!.name,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -269,6 +301,7 @@ class Installment {
     String? categoryId,
     bool? isActive,
     Object? paidForName = _kUnset,
+    StartMonthSource? startMonthSource,
     DateTime? updatedAt,
   }) {
     return Installment(
@@ -288,6 +321,7 @@ class Installment {
       paidForName: identical(paidForName, _kUnset)
           ? this.paidForName
           : paidForName as String?,
+      startMonthSource: startMonthSource ?? this.startMonthSource,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

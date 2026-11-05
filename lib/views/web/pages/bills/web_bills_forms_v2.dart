@@ -1277,9 +1277,10 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   bool _customMonthsOpen = false;
   bool _customRateOpen = false;
 
-  /// True once the start-month stepper was used in THIS session. Until then
-  /// the start month follows account / purchase date / deferral — on edit
-  /// too, so changing the deferral saves the month the hint shows.
+  /// True while the start month is set by hand: the stepper was used, or the
+  /// plan was saved that way (Plan 068). Until then the start month follows
+  /// account / purchase date / deferral — on edit too, so changing the
+  /// deferral saves the month the hint shows. "Use computed" clears it.
   bool _startMonthTouched = false;
   bool _isSubmitting = false;
 
@@ -1305,6 +1306,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       _monthlyManuallyEdited = true;
       _paidForSomeone = e.isPaidForSomeone;
       _personController.text = e.paidForName ?? '';
+      _startMonthTouched = widget.presenter.isStartMonthPinned(e);
       _customMonthsOpen = !_monthPresets.contains(e.totalMonths);
       _customRateOpen = !InstallmentPresenter.isPresetRate(e.interestRate);
       if (_customMonthsOpen) _customMonthsController.text = '${e.totalMonths}';
@@ -1436,13 +1438,16 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       interestRate: _interestRate,
       note: _noteController.text,
       paidForName: _paidForSomeone ? _personController.text : null,
+      startMonthSource: _startMonthTouched
+          ? StartMonthSource.manual
+          : StartMonthSource.computed,
     ));
   }
 
   void _showReview(Installment draft) {
     setState(() {
       _draft = draft;
-      _review = widget.presenter.reviewPlan(draft, existing: widget.existing);
+      _review = widget.presenter.reviewPlan(draft);
       _receivablePreview =
           widget.receivables?.installmentReceivablePreview(draft);
     });
@@ -1455,8 +1460,9 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
     final draft = _draft;
     if (month == null || draft == null) return;
     _startMonth = month;
-    _startMonthTouched = true;
-    _showReview(draft.copyWith(startMonth: month));
+    _startMonthTouched = false;
+    _showReview(draft.copyWith(
+        startMonth: month, startMonthSource: StartMonthSource.computed));
   }
 
   void _backToForm() => setState(() {
@@ -1508,6 +1514,14 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       height: 1.4,
     );
     final people = widget.presenter.knownPeople;
+    final pinnedHint = _startMonthTouched
+        ? widget.presenter.pinnedStartMonthHint(
+            accountId: _accountId,
+            purchaseDate: _purchaseDate,
+            deferralMonths: _deferralMonths,
+            startMonth: _startMonth,
+          )
+        : null;
 
     return WebDialog(
       title: isEdit ? 'Edit installment' : 'Add installment',
@@ -1592,6 +1606,22 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
               ),
             ],
           ),
+          if (pinnedHint != null)
+            Row(
+              children: [
+                Expanded(child: Text(pinnedHint, style: muted)),
+                TextButton(
+                  key: WebKeys.billsFormUseComputedStart,
+                  onPressed: busy
+                      ? null
+                      : () => setState(() {
+                            _startMonthTouched = false;
+                            _recalculateStartMonth();
+                          }),
+                  child: const Text('Use computed'),
+                ),
+              ],
+            ),
           _gap,
           WebField(
             label: 'Months',

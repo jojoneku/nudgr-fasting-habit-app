@@ -323,9 +323,9 @@ void main() {
         purchaseDate: stored.purchaseDate!,
         deferralMonths: stored.deferralMonths,
       );
-      final review = installments.reviewPlan(edit, existing: stored);
+      final review = installments.reviewPlan(edit);
       expect(review.startMonthWarning,
-          "Stored Dec 2026 · the card's cycle gives Feb 2027");
+          'Set by hand: Dec 2026 · computed: Feb 2027');
       expect(review.suggestedStartMonth, '2027-02');
       expect(review.suggestedStartLabel, 'Use Feb 2027');
       // The stored month's own statement: closes Nov 15, due Dec 4.
@@ -333,8 +333,8 @@ void main() {
       expect(review.firstDue, 'Dec 4, 2026');
 
       // Taking the suggestion clears the warning.
-      final fixed = installments
-          .reviewPlan(edit.copyWith(startMonth: '2027-02'), existing: stored);
+      final fixed =
+          installments.reviewPlan(edit.copyWith(startMonth: '2027-02'));
       expect(fixed.startMonthWarning, isNull);
       expect(fixed.statementClose, 'Jan 15, 2027');
       expect(fixed.firstDue, 'Feb 4, 2027');

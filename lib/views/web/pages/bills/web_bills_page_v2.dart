@@ -24,6 +24,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/start_month_review_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
@@ -557,8 +558,16 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
         ];
       case _BillsTab.installments:
         final rows = _installmentsDue;
-        if (rows.isEmpty) return [_EmptyHint(_tab.emptyCopy)];
+        // Plans whose first payment month differs from the card's cycle
+        // (Plan 068) — shown above the rows, even in a month with none due.
+        final review = StartMonthReviewCard(
+          presenter: installmentPresenter,
+          margin: const EdgeInsets.fromLTRB(
+              WebInsets.md, WebInsets.sm, WebInsets.md, WebInsets.sm),
+        );
+        if (rows.isEmpty) return [review, _EmptyHint(_tab.emptyCopy)];
         return [
+          review,
           for (var i = 0; i < rows.length; i++)
             _InstallmentRowV2(
               presenter: installmentPresenter,

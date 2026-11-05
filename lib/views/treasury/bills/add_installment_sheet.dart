@@ -56,9 +56,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
 
-  /// True once the start-month stepper was used in THIS session. Until then
-  /// the start month follows account / purchase date / deferral — on edit
-  /// too, so changing the deferral saves the month the hint shows.
+  /// True while the start month is set by hand: the stepper was used, or the
+  /// plan was saved that way (Plan 068). Until then the start month follows
+  /// account / purchase date / deferral — on edit too, so changing the
+  /// deferral saves the month the hint shows. "Use computed" clears it.
   bool _startMonthTouched = false;
   bool _saving = false;
   bool _accountError = false;
@@ -142,6 +143,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _monthlyManuallyEdited = true;
       _paidForSomeone = e.isPaidForSomeone;
       _personCtrl.text = e.paidForName ?? '';
+      _startMonthTouched = widget.presenter.isStartMonthPinned(e);
     } else {
       _purchaseDate = DateTime.now();
       _deferralMonths = 0;
@@ -225,6 +227,9 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       note: _noteCtrl.text,
       categoryId: _categoryId,
       paidForName: _paidForSomeone ? _personCtrl.text : null,
+      startMonthSource: _startMonthTouched
+          ? StartMonthSource.manual
+          : StartMonthSource.computed,
     );
     // Nothing saves until the review is confirmed; Back keeps the input.
     final confirmed = await showInstallmentReviewSheet(
@@ -235,13 +240,53 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       existing: e,
       onStartMonthChanged: (month) => setState(() {
         _startMonth = month;
-        _startMonthTouched = true;
+        _startMonthTouched = false;
       }),
     );
     if (confirmed == null || !mounted) return;
     setState(() => _saving = true);
     await widget.presenter.saveInstallment(confirmed, isEdit: e != null);
     if (mounted) Navigator.pop(context);
+  }
+
+  /// "Use computed": the start month follows the card again.
+  void _useComputedStartMonth() {
+    setState(() => _startMonthTouched = false);
+    _recalculateStartMonth();
+  }
+
+  /// "Set by hand · computed: Feb 2027" with a "Use computed" action, under a
+  /// start month set by hand that differs from the card's cycle.
+  Widget _buildPinnedHint(BuildContext context) {
+    final hint = _startMonthTouched
+        ? widget.presenter.pinnedStartMonthHint(
+            accountId: _accountId,
+            purchaseDate: _purchaseDate,
+            deferralMonths: _deferralMonths,
+            startMonth: _startMonth,
+          )
+        : null;
+    if (hint == null) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              hint,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ),
+          TextButton(
+            key: const ValueKey('installment.useComputedStart'),
+            onPressed: _useComputedStartMonth,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: const Text('Use computed'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPaidFor(BuildContext context) {
@@ -542,6 +587,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
               ),
             ],
           ),
+          _buildPinnedHint(context),
           const SizedBox(height: 16),
 
           // Note — outline field box like the rest of the form.
