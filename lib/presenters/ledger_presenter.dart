@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
@@ -39,6 +40,60 @@ enum ReceiptScanOutcome {
   serverError,
   unavailable,
   failed,
+}
+
+/// Which filter a [LedgerFilterChip] stands for.
+enum LedgerFilterKind { day, owed, account, category }
+
+/// One active ledger filter, shown as a removable chip under the controls
+/// row. [id] is the account or category id (null for day and owed). Pass the
+/// chip back to [LedgerPresenter.removeFilterChip] to clear just that filter.
+@immutable
+class LedgerFilterChip {
+  final LedgerFilterKind kind;
+  final String? id;
+  final String label;
+
+  const LedgerFilterChip({required this.kind, this.id, required this.label});
+
+  @override
+  bool operator ==(Object other) =>
+      other is LedgerFilterChip &&
+      other.kind == kind &&
+      other.id == id &&
+      other.label == label;
+
+  @override
+  int get hashCode => Object.hash(kind, id, label);
+}
+
+/// The optional row actions for one ledger record, shared by the mobile
+/// long-press sheet and the web v2 row menu so both show the same items.
+/// Edit, Duplicate and Delete are always offered and are not listed here.
+@immutable
+class LedgerRowActions {
+  /// "Split into installments": an expense on a credit (liability) account
+  /// that may become, or already is, an installment purchase.
+  final bool canSplit;
+
+  /// 'Edit installment plan' for an existing purchase, else
+  /// 'Split into installments'.
+  final String splitLabel;
+
+  /// "I'll get this back": an expense that is not a transfer leg and not an
+  /// installment purchase.
+  final bool canMarkReimbursable;
+
+  /// 'Edit "I'll get this back"' when already reimbursable, else
+  /// 'Mark "I'll get this back"'.
+  final String reimbursableLabel;
+
+  const LedgerRowActions({
+    required this.canSplit,
+    required this.splitLabel,
+    required this.canMarkReimbursable,
+    required this.reimbursableLabel,
+  });
 }
 
 class LedgerPresenter extends ChangeNotifier with SafeNotifier {
@@ -806,6 +861,142 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   void setOwedFilter(bool value) {
     _owedOnly = value;
     safeNotify();
+  }
+
+  // --- Ledger list helpers (Plan 071 Phase 4) ---
+
+  /// One chip per active filter, in the order day, owed, accounts,
+  /// categories. Its length always equals [activeFilterCount]; a filter on an
+  /// account or category that no longer exists still gets a chip, so it can be
+  /// removed.
+  List<LedgerFilterChip> get activeFilterChips {
+    final day = _selectedDate;
+    return [
+      if (day != null)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.day,
+          label: _filterChipDayLabel(day),
+        ),
+      if (_owedOnly)
+        const LedgerFilterChip(
+            kind: LedgerFilterKind.owed, label: 'Owed to you'),
+      for (final id in _selectedAccountIds)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.account,
+          id: id,
+          label: accountById(id)?.name ?? 'Removed account',
+        ),
+      for (final id in _selectedCategoryIds)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.category,
+          id: id,
+          label: categoryById(id)?.name ?? 'Removed category',
+        ),
+    ];
+  }
+
+  static final _filterChipDayFmt = DateFormat('MMM d');
+
+  static String _filterChipDayLabel(DateTime d) => _filterChipDayFmt.format(d);
+
+  /// Clears only the filter [chip] stands for; the others stay.
+  void removeFilterChip(LedgerFilterChip chip) {
+    switch (chip.kind) {
+      case LedgerFilterKind.day:
+        _selectedDate = null;
+      case LedgerFilterKind.owed:
+        _owedOnly = false;
+      case LedgerFilterKind.account:
+        _selectedAccountIds.remove(chip.id);
+      case LedgerFilterKind.category:
+        _selectedCategoryIds.remove(chip.id);
+    }
+    safeNotify();
+  }
+
+  /// True when at least one filter is on and nothing is left to list — the
+  /// list then says "No transactions match these filters" and offers Clear
+  /// filters, instead of claiming the month is empty.
+  bool get filtersHideEverything =>
+      activeFilterCount > 0 && _visibleTransactions.isEmpty;
+
+  /// Title of the empty list: blames the filters only when they are the cause.
+  String get emptyListTitle => filtersHideEverything
+      ? 'No transactions match these filters'
+      : 'No transactions this month';
+
+  /// The account with [id], or null when there is none (deleted, or no
+  /// account on the record).
+  FinancialAccount? accountById(String? id) {
+    if (id == null) return null;
+    for (final a in accounts) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
+
+  /// Position of the account with [id] in [accounts], or -1. The ledger's
+  /// account colour falls back to the palette slot at this index.
+  int accountIndexOf(String? id) =>
+      id == null ? -1 : accounts.indexWhere((a) => a.id == id);
+
+  /// The category with [id], or null when there is none.
+  FinanceCategory? categoryById(String? id) {
+    if (id == null || id.isEmpty) return null;
+    for (final c in _categories) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  /// Net of a day's rows for the date header badge: income adds, expense
+  /// subtracts. Transfer legs are stored as an outflow and an inflow, so a
+  /// transfer inside the list nets to zero; a leg whose partner is filtered
+  /// out counts like any other row.
+  double dailyNetOf(Iterable<TransactionRecord> txns) => txns.fold(
+        0.0,
+        (sum, t) => switch (t.type) {
+          TransactionType.inflow => sum + t.amount,
+          TransactionType.outflow => sum - t.amount,
+          TransactionType.transfer => sum,
+        },
+      );
+
+  /// The two legs of [r]'s transfer: `from` is the outflow on the source
+  /// account, `to` the inflow on the destination. Both are null when [r] is
+  /// not part of a transfer group; one is null when its partner is missing.
+  /// The edit and duplicate forms (phone sheet and web dialog) rebuild
+  /// From/To from these, since neither leg's `type` is `transfer`.
+  ({TransactionRecord? from, TransactionRecord? to}) transferLegsOf(
+      TransactionRecord r) {
+    final group = r.transferGroupId;
+    if (group == null) return (from: null, to: null);
+    TransactionRecord? from;
+    TransactionRecord? to;
+    for (final t in _allTransactions) {
+      if (t.transferGroupId != group) continue;
+      if (t.type == TransactionType.outflow) from = t;
+      if (t.type == TransactionType.inflow) to = t;
+    }
+    return (from: from, to: to);
+  }
+
+  /// Which optional row actions [t] gets (see [LedgerRowActions]). Same rules
+  /// as the web v2 row menu, which reads this too.
+  LedgerRowActions rowActionsFor(TransactionRecord t) {
+    final isExpense =
+        t.transferGroupId == null && t.type == TransactionType.outflow;
+    return LedgerRowActions(
+      canSplit: isExpense &&
+          accountById(t.accountId)?.isLiability == true &&
+          canSplitIntoInstallments(t),
+      splitLabel:
+          t.isInstallment ? 'Edit installment plan' : 'Split into installments',
+      canMarkReimbursable: isExpense && !t.isInstallment,
+      reimbursableLabel: t.reimbursable
+          ? 'Edit "I\'ll get this back"'
+          : 'Mark "I\'ll get this back"',
+    );
   }
 
   /// Reimbursement receivable ids that already have a settling inflow leg, i.e.

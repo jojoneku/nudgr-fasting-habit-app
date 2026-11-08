@@ -710,8 +710,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
                                               _categoriesFor(r.txn.type),
                                           accountOf: _accountOf,
                                           colorFor: _colorFor,
-                                          canSplit: (t) =>
-                                              _p.canSplitIntoInstallments(t),
+                                          rowActions: _p.rowActionsFor,
                                           onToggleSelect: () => setState(() {
                                             final id = r.txn.id;
                                             _selected.contains(id)
@@ -1440,7 +1439,7 @@ class _LedgerRowV2 extends StatefulWidget {
   final List<FinanceCategory> categories;
   final FinancialAccount? Function(String?) accountOf;
   final Color Function(FinanceCategory?) colorFor;
-  final bool Function(TransactionRecord) canSplit;
+  final LedgerRowActions Function(TransactionRecord) rowActions;
   final VoidCallback onToggleSelect;
   final void Function(TransactionRecord, DateTime) onDate;
   final void Function(TransactionRecord, String) onAccount;
@@ -1463,7 +1462,7 @@ class _LedgerRowV2 extends StatefulWidget {
     required this.categories,
     required this.accountOf,
     required this.colorFor,
-    required this.canSplit,
+    required this.rowActions,
     required this.onToggleSelect,
     required this.onDate,
     required this.onAccount,
@@ -1502,12 +1501,7 @@ class _LedgerRowV2State extends State<_LedgerRowV2> {
       bg = cs.onSurface.withValues(alpha: 0.06);
     }
 
-    final showSplit = !isTransfer &&
-        t.type == TransactionType.outflow &&
-        acct?.isLiability == true &&
-        widget.canSplit(t);
-    final showReimbursable =
-        !isTransfer && t.type == TransactionType.outflow && !t.isInstallment;
+    final actions = widget.rowActions(t);
 
     Widget body = Container(
       decoration: BoxDecoration(
@@ -1658,20 +1652,16 @@ class _LedgerRowV2State extends State<_LedgerRowV2> {
                     icon: Icons.content_copy_outlined,
                     onTap: () => widget.onDuplicate(t),
                   ),
-                  if (showSplit)
+                  if (actions.canSplit)
                     WebMenuItem(
-                      t.isInstallment
-                          ? 'Edit installment plan'
-                          : 'Split into installments',
+                      actions.splitLabel,
                       key: WebKeys.ledgerRowSplitInstallments,
                       icon: Icons.calendar_view_month_outlined,
                       onTap: () => widget.onSplit(t),
                     ),
-                  if (showReimbursable)
+                  if (actions.canMarkReimbursable)
                     WebMenuItem(
-                      t.reimbursable
-                          ? 'Edit "I\'ll get this back"'
-                          : 'Mark "I\'ll get this back"',
+                      actions.reimbursableLabel,
                       key: WebKeys.ledgerRowReimbursable,
                       icon: Icons.keyboard_return_rounded,
                       onTap: () => widget.onReimbursable(t),

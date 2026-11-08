@@ -28,12 +28,30 @@ class AddTransactionSheet extends StatefulWidget {
   /// without first clearing the filter. Ignored when editing an existing record.
   final DateTime? initialDate;
 
+  /// Prefills a NEW entry from this record (the row's "Duplicate" action):
+  /// amount, description, note, type, account(s), category and the "I'll get
+  /// this back" fields. The date is today, and links that belong to the
+  /// original (bill, receivable, installment plan) are not copied.
+  final TransactionRecord? duplicateOf;
+
+  /// Opens with "Split into installments" switched on (the row's Split
+  /// action). Only takes effect where the split is offered: an expense on a
+  /// credit account.
+  final bool initialSplit;
+
+  /// Opens with "I'll get this back" switched on (the row's action). Ignored
+  /// unless the entry is an expense that is not being split.
+  final bool initialReimbursable;
+
   const AddTransactionSheet({
     super.key,
     required this.presenter,
     this.existing,
     this.prefill,
     this.initialDate,
+    this.duplicateOf,
+    this.initialSplit = false,
+    this.initialReimbursable = false,
   });
 
   @override
@@ -111,15 +129,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         // reverted a transfer to Outflow on open. Detect the group instead and
         // rebuild From/To from the two legs.
         _type = TransactionType.transfer;
-        String? fromId;
-        String? toId;
-        for (final t in widget.presenter.allTransactions) {
-          if (t.transferGroupId != existing.transferGroupId) continue;
-          if (t.type == TransactionType.outflow) fromId = t.accountId;
-          if (t.type == TransactionType.inflow) toId = t.accountId;
-        }
-        _selectedAccountId = fromId ?? existing.accountId;
-        _transferToAccountId = toId ?? existing.transferToAccountId;
+        final legs = widget.presenter.transferLegsOf(existing);
+        _selectedAccountId = legs.from?.accountId ?? existing.accountId;
+        _transferToAccountId =
+            legs.to?.accountId ?? existing.transferToAccountId;
       } else {
         _type = existing.type;
         _selectedAccountId = existing.accountId;
@@ -135,6 +148,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               .reimbursementReceivableExpectedDate(receivableId);
         }
       }
+    } else if (widget.duplicateOf != null) {
+      _initFromDuplicate(widget.duplicateOf!);
     } else {
       if (widget.initialDate != null) _date = widget.initialDate!;
       final prefill = widget.prefill;
@@ -156,7 +171,53 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         }
       }
     }
+    if (widget.initialSplit) {
+      _splitInstallments = true;
+      _reimbursable = false;
+    }
+    if (widget.initialReimbursable &&
+        _type == TransactionType.outflow &&
+        !_splitInstallments) {
+      _reimbursable = true;
+    }
   }
+
+  /// Prefills from a row the user chose to duplicate: everything but the
+  /// date, which stays today, and the links (bill, receivable, installment)
+  /// that belong to the original. Mirrors the web dialog's duplicate.
+  void _initFromDuplicate(TransactionRecord t) {
+    _amountController.text = t.amount.toStringAsFixed(2);
+    _descriptionController.text = t.description;
+    _noteController.text = t.note ?? '';
+    if (t.transferGroupId != null) {
+      _type = TransactionType.transfer;
+      final legs = widget.presenter.transferLegsOf(t);
+      _selectedAccountId = _pickable(legs.from?.accountId ?? t.accountId);
+      _transferToAccountId =
+          _pickable(legs.to?.accountId ?? t.transferToAccountId);
+    } else {
+      _type = t.type;
+      _selectedAccountId = _pickable(t.accountId);
+      _selectedCategoryId = t.categoryId.isEmpty ? null : t.categoryId;
+      _reimbursable = t.reimbursable;
+      _owedByController.text = t.owedBy ?? '';
+    }
+  }
+
+  /// [id] when it names an account the picker offers, else null: a copy of
+  /// a row on an archived account must not save onto it unseen.
+  String? _pickable(String? id) => _accounts.any((a) => a.id == id) ? id : null;
+
+  /// The "More options" fold opens on its own when a field inside has a
+  /// value, so a note or an "I'll get this back" is never hidden.
+  bool get _moreOptionsHasValue =>
+      _reimbursable || _noteController.text.trim().isNotEmpty;
+
+  /// What sits inside "More options", named on its header.
+  String get _moreOptionsHint =>
+      _type == TransactionType.outflow && !_splitInstallments
+          ? "Note, I'll get this back"
+          : 'Note';
 
   void _syncFromPresenter() {
     _accounts = widget.presenter.accounts
@@ -578,40 +639,65 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             .canSplitIntoInstallments(widget.existing) &&
                         _selectedAccount?.isLiability == true) ...[
                       const SizedBox(height: 12),
-                      _InstallmentField(
-                        value: _splitInstallments,
-                        months: _installmentMonths,
-                        interestRate: _interestRate,
-                        isEdit: isEdit,
-                        amount:
-                            evalAmountExpression(_amountController.text) ?? 0.0,
-                        onChanged: (v) {
-                          setState(() {
-                            _splitInstallments = v;
-                            if (v) _reimbursable = false;
-                          });
-                        },
-                        onMonthsChanged: (m) =>
-                            setState(() => _installmentMonths = m),
-                        onInterestRateChanged: (r) =>
-                            setState(() => _interestRate = r),
-                      ),
-                    ],
-                    if (!_splitInstallments) ...[
-                      const SizedBox(height: 12),
-                      _ReimbursableField(
-                        value: _reimbursable,
-                        expectedDate: _expectedReimbursementDate,
-                        owedByController: _owedByController,
-                        onChanged: (v) => setState(() => _reimbursable = v),
-                        onPickDate: _pickExpectedReimbursementDate,
-                        onClearDate: () =>
-                            setState(() => _expectedReimbursementDate = null),
+                      AppFold(
+                        key: const ValueKey('installmentsFold'),
+                        title: 'Installments',
+                        subtitle: isEdit
+                            ? 'Turn this into a monthly plan'
+                            : 'Pay this purchase off monthly',
+                        initiallyOpen: _splitInstallments,
+                        child: _InstallmentField(
+                          value: _splitInstallments,
+                          months: _installmentMonths,
+                          interestRate: _interestRate,
+                          isEdit: isEdit,
+                          amount:
+                              evalAmountExpression(_amountController.text) ??
+                                  0.0,
+                          onChanged: (v) {
+                            setState(() {
+                              _splitInstallments = v;
+                              if (v) _reimbursable = false;
+                            });
+                          },
+                          onMonthsChanged: (m) =>
+                              setState(() => _installmentMonths = m),
+                          onInterestRateChanged: (r) =>
+                              setState(() => _interestRate = r),
+                        ),
                       ),
                     ],
                   ],
                   const SizedBox(height: 12),
-                  _NoteField(controller: _noteController),
+                  // Note and "I'll get this back" are optional: fold them so
+                  // Save stays above the keyboard on a small phone. The fold
+                  // opens on its own when either already has a value.
+                  AppFold(
+                    key: const ValueKey('moreOptionsFold'),
+                    title: 'More options',
+                    subtitle: _moreOptionsHint,
+                    initiallyOpen: _moreOptionsHasValue,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _NoteField(controller: _noteController),
+                        if (_type == TransactionType.outflow &&
+                            !_splitInstallments) ...[
+                          const SizedBox(height: 12),
+                          _ReimbursableField(
+                            value: _reimbursable,
+                            expectedDate: _expectedReimbursementDate,
+                            owedByController: _owedByController,
+                            onChanged: (v) => setState(() => _reimbursable = v),
+                            onPickDate: _pickExpectedReimbursementDate,
+                            onClearDate: () => setState(
+                                () => _expectedReimbursementDate = null),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   AppPrimaryButton(
                     label: isEdit
@@ -1065,178 +1151,174 @@ class _InstallmentField extends StatelessWidget {
     final totalPayable = monthly * months;
     final totalInterest = (totalPayable - amount).clamp(0.0, double.infinity);
 
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    // No card of its own: it sits inside the "Installments" fold, which
+    // draws the outline.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isEdit
+                        ? 'Convert to installments'
+                        : 'Split into installments',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isEdit
+                        ? 'Converts this entry into an installment plan: removes immediate lump-sum spending and bills it cycle-by-cycle.'
+                        : 'Holds credit limit now, but monthly dues are billed per cycle under this category.',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            Switch(value: value, onChanged: onChanged),
+          ],
+        ),
+        if (value) ...[
+          Divider(height: 16, color: cs.outlineVariant),
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isEdit
-                          ? 'Convert to installments'
-                          : 'Split into installments',
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isEdit
-                          ? 'Converts this entry into an installment plan: removes immediate lump-sum spending and bills it cycle-by-cycle.'
-                          : 'Holds credit limit now, but monthly dues are billed per cycle under this category.',
-                      style:
-                          TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
-                    ),
-                  ],
+              Text(
+                'Duration',
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              Switch(value: value, onChanged: onChanged),
+              const Spacer(),
+              Wrap(
+                spacing: 6,
+                children: [3, 6, 12, 24].map((m) {
+                  final selected = months == m;
+                  return InkWell(
+                    onTap: () => onMonthsChanged(m),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? cs.primary.withValues(alpha: 0.15)
+                            : cs.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: selected ? cs.primary : cs.outlineVariant,
+                        ),
+                      ),
+                      child: Text(
+                        '${m}mo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ],
           ),
-          if (value) ...[
-            Divider(height: 16, color: cs.outlineVariant),
-            Row(
-              children: [
-                Text(
-                  'Duration',
-                  style: TextStyle(
-                    color: cs.onSurfaceVariant,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Wrap(
-                  spacing: 6,
-                  children: [3, 6, 12, 24].map((m) {
-                    final selected = months == m;
-                    return InkWell(
-                      onTap: () => onMonthsChanged(m),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? cs.primary.withValues(alpha: 0.15)
-                              : cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: selected ? cs.primary : cs.outlineVariant,
-                          ),
-                        ),
-                        child: Text(
-                          '${m}mo',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? cs.primary : cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Text(
-                  'Interest / mo',
-                  style: TextStyle(
-                    color: cs.onSurfaceVariant,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Wrap(
-                  spacing: 6,
-                  children: [0.0, 1.0, 1.5, 2.0, 3.0].map((r) {
-                    final selected = (interestRate == r);
-                    final label = r == 0
-                        ? '0%'
-                        : '${r == r.roundToDouble() ? r.round() : r}%';
-                    return InkWell(
-                      onTap: () => onInterestRateChanged(r),
-                      borderRadius: BorderRadius.circular(6),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? cs.primary.withValues(alpha: 0.15)
-                              : cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: selected ? cs.primary : cs.outlineVariant,
-                          ),
-                        ),
-                        child: Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? cs.primary : cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-            if (amount > 0) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '≈ ${formatPeso(monthly)} / month for $months months',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: cs.primary,
-                      ),
-                    ),
-                    if (interestRate > 0) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Total interest: ${formatPeso(totalInterest)} · Total payable: ${formatPeso(totalPayable)}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Interest / mo',
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+              const Spacer(),
+              Wrap(
+                spacing: 6,
+                children: [0.0, 1.0, 1.5, 2.0, 3.0].map((r) {
+                  final selected = (interestRate == r);
+                  final label = r == 0
+                      ? '0%'
+                      : '${r == r.roundToDouble() ? r.round() : r}%';
+                  return InkWell(
+                    onTap: () => onInterestRateChanged(r),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? cs.primary.withValues(alpha: 0.15)
+                            : cs.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: selected ? cs.primary : cs.outlineVariant,
+                        ),
+                      ),
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? cs.primary : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ],
+          ),
+          if (amount > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(6),
+                border:
+                    Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '≈ ${formatPeso(monthly)} / month for $months months',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary,
+                    ),
+                  ),
+                  if (interestRate > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Total interest: ${formatPeso(totalInterest)} · Total payable: ${formatPeso(totalPayable)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ],
-      ),
+      ],
     );
   }
 }
