@@ -4,7 +4,7 @@ import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dar
 import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-import '../../design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import '../../design/web_breakpoints.dart';
 import '../../design/web_constants.dart';
 import '../../web_keys.dart';

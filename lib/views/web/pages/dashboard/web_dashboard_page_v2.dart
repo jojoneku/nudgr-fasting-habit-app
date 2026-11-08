@@ -12,7 +12,7 @@ import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-import '../../design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_inventory_dialog.dart';

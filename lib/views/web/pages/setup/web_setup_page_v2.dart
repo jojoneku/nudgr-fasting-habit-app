@@ -6,16 +6,16 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/account_delete_copy.dart';
+import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
-import '../../design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_form_dialog_v2.dart';
-import 'web_account_form_rules.dart';
 import 'web_categories_table_v2.dart';
 
 /// Gap between the header's blocks — the canvas grid gap (20 px).
@@ -778,9 +778,8 @@ class _TypeDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final base = account.parentAccountId == null
-        ? kWebTopLevelSwitchable
-        : kWebSubSwitchable;
+    final base =
+        account.parentAccountId == null ? kTopLevelSwitchable : kSubSwitchable;
     // Keep the current type selectable so the dropdown's value-in-items
     // invariant holds even for an unlisted current type.
     final options =

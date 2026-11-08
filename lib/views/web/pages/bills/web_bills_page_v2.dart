@@ -28,7 +28,7 @@ import 'package:intermittent_fasting/views/treasury/bills/start_month_review_car
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
-import 'package:intermittent_fasting/views/web/design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
