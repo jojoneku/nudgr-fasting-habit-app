@@ -13,6 +13,15 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.126] - 2026-11-08
+
+### Added
+- Open in Ledger from a History month (Plan 071 Phase 8)
+
+### Fixed
+- clear Ledger filters on History "Open in Ledger" (review fix)
+- theme-aware category and slice colors (Plan 071 Phase 3)
+
 ## [1.1.125] - 2026-11-08
 
 ### Added
@@ -1096,7 +1105,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.125...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.126...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1223,3 +1232,4 @@ distributed via `manifest.json`.
 [1.1.123]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.123
 [1.1.124]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.124
 [1.1.125]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.125
+[1.1.126]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.126
