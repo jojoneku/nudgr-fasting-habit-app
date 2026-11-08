@@ -5,9 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
-import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
+import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -16,14 +16,13 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.dart';
 import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';
-import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
+import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/start_month_review_card.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_budgeted_expense_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/batch_action_bar.dart';
-import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/new_entry_sheet.dart';
@@ -190,43 +189,112 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
-  void _showMarkBillPaidSheet(Bill bill) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  // Each launcher keeps its own presenter call; the Settle sheet only
+  // collects the input, and stays open with an error toast if the save fails.
+  // Each returns true once the entry was settled.
+
+  Future<bool> _showMarkBillPaidSheet(Bill bill) async {
+    final presenter = widget.presenter;
+    final result = await showSettleSheet(
+      context,
+      kind: SettleKind.bill,
+      targets: [
+        SettleTarget(
+          id: bill.id,
+          name: bill.name,
+          // A part-paid credit statement prefills what is left, not the bill.
+          amount: presenter.billAmountOwed(bill),
+          dateLabel:
+              'due ${DateFormat('MMM d').format(presenter.billDueDate(bill))}',
+          accountId: bill.accountId,
+        ),
+      ],
+      // For a card or other liability bill this is non-liability accounts only.
+      payers: presenter.payerAccountsFor(bill),
+      emptyPayersMessage: 'Add a funding account before marking paid.',
+      onConfirm: (r) => presenter.markBillPaid(
+        bill.id,
+        paidAmount: r.amount,
+        accountId: r.accountId,
+        paidDate: r.date,
+        recordInLedger: r.recordInLedger,
       ),
-      builder: (_) =>
-          _MarkBillPaidSheet(bill: bill, presenter: widget.presenter),
     );
+    return result != null;
   }
 
-  void _showMarkReceivedSheet(Receivable receivable) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Future<bool> _showMarkReceivedSheet(Receivable receivable) async {
+    final presenter = widget.presenter;
+    final expected = receivable.expectedDate;
+    final result = await showSettleSheet(
+      context,
+      kind: SettleKind.receivable,
+      targets: [
+        SettleTarget(
+          id: receivable.id,
+          name: receivable.name,
+          amount: receivable.amount,
+          dateLabel: expected == null
+              ? 'ASAP'
+              : 'expected ${DateFormat('MMM d').format(expected)}',
+        ),
+      ],
+      // The eligible set and the default live in the presenter so web and
+      // mobile can't drift.
+      payers: presenter.depositAccountsFor(receivable),
+      initialAccountId: presenter.preferredDepositAccountId(receivable),
+      emptyPayersMessage: 'Add an account before marking received.',
+      onConfirm: (r) => presenter.markReceivableReceived(
+        receivable.id,
+        receivedAmount: r.amount,
+        accountId: r.accountId,
+        receivedDate: r.date,
+        recordInLedger: r.recordInLedger,
       ),
-      builder: (_) => _MarkReceivedSheet(
-          receivable: receivable, presenter: widget.presenter),
     );
+    return result != null;
   }
 
-  void _showMarkExpensePaidSheet(BudgetedExpense expense) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Future<bool> _showMarkExpensePaidSheet(BudgetedExpense expense) async {
+    final presenter = widget.presenter;
+    final funders = presenter.setAsideFundingAccounts;
+    if (funders.isEmpty) {
+      AppToast.error(context, 'Add an account before funding.');
+      return false;
+    }
+    // Default to the account the set-aside is assigned to.
+    final fromId = funders.any((a) => a.id == expense.accountId)
+        ? expense.accountId
+        : funders.first.id;
+    // The destination comes from the set-aside itself. With none on file the
+    // field starts empty and Fund waits for an answer — a destination is never
+    // guessed.
+    final toId = presenter.preferredSetAsideDestinationId(expense,
+        fromAccountId: fromId);
+    final result = await showSettleSheet(
+      context,
+      kind: SettleKind.setAside,
+      targets: [
+        SettleTarget(
+          id: expense.id,
+          name: expense.name,
+          amount: expense.allocatedAmount,
+          accountId: fromId,
+          destinationId: toId,
+        ),
+      ],
+      payers: funders,
+      initialAccountId: fromId,
+      destinations: presenter.setAsideDestinationAccounts,
+      onConfirm: (r) => presenter.markExpensePaid(
+        expense.id,
+        paidAmount: r.amount,
+        accountId: r.accountId!,
+        toAccountId: r.destinationId,
+        paidDate: r.date,
       ),
-      builder: (_) =>
-          _MarkExpensePaidSheet(expense: expense, presenter: widget.presenter),
     );
+    return result != null;
   }
 
   void _showAddInstallmentSheet([Installment? existing]) {
@@ -244,17 +312,29 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
-  void _showMarkInstallmentPaidSheet(Installment installment) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Future<bool> _showMarkInstallmentPaidSheet(Installment installment) async {
+    final presenter = widget.installmentPresenter;
+    final next = presenter.paidCount(installment.id) + 1;
+    // No account picker: an installment is always charged to its own card.
+    final result = await showSettleSheet(
+      context,
+      kind: SettleKind.installment,
+      targets: [
+        SettleTarget(
+          id: installment.id,
+          // "Mark Laptop (3/12) paid" — which payment this is.
+          name: '${installment.name} ($next/${installment.totalMonths})',
+          amount: installment.monthlyAmount,
+        ),
+      ],
+      payers: const [],
+      onConfirm: (r) => presenter.markPaid(
+        installment.id,
+        overrideAmount: r.amount,
+        date: r.date,
       ),
-      builder: (_) => _MarkInstallmentPaidSheet(
-          installment: installment, presenter: widget.installmentPresenter),
     );
+    return result != null;
   }
 
   /// Single FAB entry point — opens the unified "New entry" sheet where the user
@@ -603,8 +683,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   }
 
   Future<void> _batchSettle() async {
-    // The batch sheet closes before the save runs, so a failure surfaces here.
-    // The selection is kept, so the user can try again.
+    // The Settle sheet runs the save and stays open with an error toast when
+    // it fails. This catch is the safety net for anything thrown outside the
+    // sheet; the selection is kept, so the user can try again.
     try {
       switch (_batchSection!) {
         case _BatchSection.bills:
@@ -621,111 +702,164 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     }
   }
 
+  /// A batch of one is the single flow — it honours an edited amount.
+  Future<void> _settleOne(Future<bool> Function() open) async {
+    if (await open()) _exitSelection();
+  }
+
   Future<void> _batchPayBills() async {
+    final presenter = widget.presenter;
     final targets = _selectedBills.where((b) => !b.isPaid).toList();
     if (targets.isEmpty) return;
-    final payers = widget.presenter.payerAccountsForAll(targets);
-    final choice = await showBatchSettleSheet(
+    if (targets.length == 1) {
+      return _settleOne(() => _showMarkBillPaidSheet(targets.single));
+    }
+    BatchResult? outcome;
+    final result = await showSettleSheet(
       context,
-      kind: BatchSettleKind.bills,
-      count: targets.length,
-      total: targets.fold(0.0, (sum, b) => sum + b.amount),
-      accounts: payers,
-      initialAccountId: widget.presenter.preferredBatchPayerAccountId(targets),
+      kind: SettleKind.bill,
+      targets: [
+        for (final b in targets)
+          SettleTarget(
+            id: b.id,
+            name: b.name,
+            amount: presenter.billAmountOwed(b),
+            dateLabel: DateFormat('MMM d').format(presenter.billDueDate(b)),
+          ),
+      ],
+      payers: presenter.payerAccountsForAll(targets),
+      initialAccountId: presenter.preferredBatchPayerAccountId(targets),
+      onConfirm: (r) async {
+        // With no eligible account there is nothing to debit, so the bills
+        // are flagged paid without a ledger entry rather than failing.
+        final record = r.recordInLedger && r.accountId != null;
+        outcome = await presenter.markBillsPaid(
+          r.targetIds,
+          accountId: record ? r.accountId : null,
+          paidDate: r.date,
+          recordInLedger: record,
+        );
+      },
     );
-    if (choice == null) return;
-    // With no eligible account there is nothing to debit, so the bills are
-    // flagged paid without a ledger entry rather than failing.
-    final record = !choice.alreadyInLedger && choice.accountId != null;
-    final result = await widget.presenter.markBillsPaid(
-      [for (final b in targets) b.id],
-      accountId: record ? choice.accountId : null,
-      paidDate: choice.date,
-      recordInLedger: record,
-    );
+    final done = outcome;
+    if (result == null || done == null) return;
     _finishBatch(
-      'Marked ${result.applied} ${_plural(result.applied, 'bill')} paid.',
-      skipped: result.skipped,
+      'Marked ${done.applied} ${_plural(done.applied, 'bill')} paid.',
+      skipped: done.skipped,
     );
   }
 
   Future<void> _batchReceiveReceivables() async {
+    final presenter = widget.presenter;
     final targets = _selectedReceivables.where((r) => !r.isReceived).toList();
     if (targets.isEmpty) return;
-    final choice = await showBatchSettleSheet(
+    if (targets.length == 1) {
+      return _settleOne(() => _showMarkReceivedSheet(targets.single));
+    }
+    BatchResult? outcome;
+    final result = await showSettleSheet(
       context,
-      kind: BatchSettleKind.receivables,
-      count: targets.length,
-      total: targets.fold(0.0, (sum, r) => sum + r.amount),
-      accounts: widget.presenter.depositAccountsFor(targets.first),
-      initialAccountId:
-          widget.presenter.preferredDepositAccountId(targets.first),
+      kind: SettleKind.receivable,
+      targets: [
+        for (final r in targets)
+          SettleTarget(
+            id: r.id,
+            name: r.name,
+            amount: r.amount,
+            dateLabel: r.expectedDate == null
+                ? 'ASAP'
+                : DateFormat('MMM d').format(r.expectedDate!),
+          ),
+      ],
+      payers: presenter.depositAccountsFor(targets.first),
+      initialAccountId: presenter.preferredDepositAccountId(targets.first),
+      onConfirm: (r) async {
+        final record = r.recordInLedger && r.accountId != null;
+        outcome = await presenter.markReceivablesReceived(
+          r.targetIds,
+          accountId: record ? r.accountId : null,
+          receivedDate: r.date,
+          recordInLedger: record,
+        );
+      },
     );
-    if (choice == null) return;
-    final record = !choice.alreadyInLedger && choice.accountId != null;
-    final result = await widget.presenter.markReceivablesReceived(
-      [for (final r in targets) r.id],
-      accountId: record ? choice.accountId : null,
-      receivedDate: choice.date,
-      recordInLedger: record,
-    );
-    _finishBatch('Marked ${result.applied} received.');
+    final done = outcome;
+    if (result == null || done == null) return;
+    _finishBatch('Marked ${done.applied} received.');
   }
 
   Future<void> _batchFundExpenses() async {
+    final presenter = widget.presenter;
     final targets = _selectedExpenses.where((e) => !e.isPaid).toList();
     if (targets.isEmpty) return;
-    final funders = widget.presenter.setAsideFundingAccounts;
+    final funders = presenter.setAsideFundingAccounts;
     if (funders.isEmpty) {
       AppToast.error(context, 'Add an account before funding.');
       return;
     }
+    if (targets.length == 1) {
+      return _settleOne(() => _showMarkExpensePaidSheet(targets.single));
+    }
     // Rows that already know where they are going keep their own destination;
     // the sheet only has to ask about the rest.
     final withDestination = targets
-        .where(
-            (e) => widget.presenter.preferredSetAsideDestinationId(e) != null)
+        .where((e) => presenter.preferredSetAsideDestinationId(e) != null)
         .length;
     final named = targets.map((e) => e.accountId).toSet();
-    final choice = await showBatchSettleSheet(
+    BatchResult? outcome;
+    final result = await showSettleSheet(
       context,
-      kind: BatchSettleKind.setAsides,
-      count: targets.length,
-      total: targets.fold(0.0, (sum, e) => sum + e.allocatedAmount),
-      accounts: funders,
-      destinations: widget.presenter.setAsideDestinationAccounts,
+      kind: SettleKind.setAside,
+      targets: [
+        for (final e in targets)
+          SettleTarget(id: e.id, name: e.name, amount: e.allocatedAmount),
+      ],
+      payers: funders,
+      destinations: presenter.setAsideDestinationAccounts,
       initialAccountId: named.length == 1 ? named.first : null,
       savedDestinationCount: withDestination,
+      onConfirm: (r) async {
+        final accountId = r.accountId;
+        if (accountId == null) return;
+        outcome = await presenter.markExpensesPaid(
+          r.targetIds,
+          accountId: accountId,
+          toAccountId: r.destinationId,
+          preferSavedDestination: r.useSavedDestinations,
+          paidDate: r.date,
+        );
+      },
     );
-    if (choice == null || choice.accountId == null) return;
-    final result = await widget.presenter.markExpensesPaid(
-      [for (final e in targets) e.id],
-      accountId: choice.accountId!,
-      toAccountId: choice.toAccountId,
-      preferSavedDestination: choice.useSavedDestinations,
-      paidDate: choice.date,
-    );
+    final done = outcome;
+    if (result == null || done == null) return;
     _finishBatch(
-      'Funded ${result.applied} ${_plural(result.applied, 'set-aside')}.',
+      'Funded ${done.applied} ${_plural(done.applied, 'set-aside')}.',
     );
   }
 
   Future<void> _batchPayInstallments() async {
-    final targets = _selectedInstallments
-        .where(widget.installmentPresenter.canMarkPaid)
-        .toList();
+    final presenter = widget.installmentPresenter;
+    final targets = _selectedInstallments.where(presenter.canMarkPaid).toList();
     if (targets.isEmpty) return;
-    final choice = await showBatchSettleSheet(
+    if (targets.length == 1) {
+      return _settleOne(() => _showMarkInstallmentPaidSheet(targets.single));
+    }
+    int? applied;
+    final result = await showSettleSheet(
       context,
-      kind: BatchSettleKind.installments,
-      count: targets.length,
-      total: targets.fold(0.0, (sum, i) => sum + i.monthlyAmount),
+      kind: SettleKind.installment,
+      targets: [
+        for (final i in targets)
+          SettleTarget(id: i.id, name: i.name, amount: i.monthlyAmount),
+      ],
+      payers: const [],
+      onConfirm: (r) async {
+        applied = await presenter.markManyPaid(r.targetIds, date: r.date);
+      },
     );
-    if (choice == null) return;
-    final applied = await widget.installmentPresenter
-        .markManyPaid([for (final i in targets) i.id], date: choice.date);
-    _finishBatch(
-        'Paid $applied ${_plural(applied, 'installment')} this month.');
+    final done = applied;
+    if (result == null || done == null) return;
+    _finishBatch('Paid $done ${_plural(done, 'installment')} this month.');
   }
 
   Future<void> _batchUndo() async {
@@ -1550,663 +1684,6 @@ class _StatChip extends StatelessWidget {
             Text(label,
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Mark Bill Paid Sheet ─────────────────────────────────────────────────────
-
-class _MarkBillPaidSheet extends StatefulWidget {
-  final Bill bill;
-  final BillsReceivablesPresenter presenter;
-
-  const _MarkBillPaidSheet({required this.bill, required this.presenter});
-
-  @override
-  State<_MarkBillPaidSheet> createState() => _MarkBillPaidSheetState();
-}
-
-class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
-  final _amountController = TextEditingController();
-  String? _selectedAccountId;
-  DateTime _paidDate = DateTime.now();
-  bool _isSubmitting = false;
-  // When true the user already logged this expense in the ledger, so marking
-  // paid should NOT create a transaction or debit an account.
-  bool _alreadyInLedger = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // A part-paid credit statement prefills what is left, not the full bill.
-    _amountController.text =
-        widget.presenter.billAmountOwed(widget.bill).toStringAsFixed(2);
-    // For CC/liability bills, restrict payer to non-liability accounts.
-    final payers = widget.presenter.payerAccountsFor(widget.bill);
-    final preferred = widget.bill.accountId;
-    if (preferred != null && payers.any((a) => a.id == preferred)) {
-      _selectedAccountId = preferred;
-    } else if (payers.isNotEmpty) {
-      _selectedAccountId = payers.first.id;
-    }
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _paidDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) setState(() => _paidDate = picked);
-  }
-
-  FinancialAccount? get _selectedAccount {
-    for (final a in widget.presenter.payerAccountsFor(widget.bill)) {
-      if (a.id == _selectedAccountId) return a;
-    }
-    return null;
-  }
-
-  Future<void> _pickAccount() async {
-    final choice = await showAccountPicker(
-      context,
-      accounts: widget.presenter.payerAccountsFor(widget.bill),
-      selectedId: _selectedAccountId,
-    );
-    if (choice != null) setState(() => _selectedAccountId = choice.id);
-  }
-
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return;
-    // An account is only needed when we're recording the payment in the ledger.
-    if (!_alreadyInLedger && _selectedAccountId == null) return;
-    setState(() => _isSubmitting = true);
-    try {
-      await widget.presenter.markBillPaid(
-        widget.bill.id,
-        paidAmount: amount,
-        accountId: _alreadyInLedger ? null : _selectedAccountId,
-        paidDate: _paidDate,
-        recordInLedger: !_alreadyInLedger,
-      );
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      // Keep the sheet open so the entry is not lost; say why it failed.
-      if (mounted) AppToast.error(context, 'Could not save: $e');
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mark Paid — ${widget.bill.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Paid',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 4),
-            CheckboxListTile(
-              value: _alreadyInLedger,
-              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Already added to ledger'),
-              subtitle: const Text(
-                  "Just mark it paid — don't record a transaction or debit an account."),
-            ),
-            if (!_alreadyInLedger) ...[
-              const SizedBox(height: 12),
-              Builder(builder: (context) {
-                final payers = widget.presenter.payerAccountsFor(widget.bill);
-                if (payers.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SheetFieldLabel('Pay from'),
-                    SheetAccountField(
-                        account: _selectedAccount, onTap: _pickAccount),
-                  ],
-                );
-              }),
-            ],
-            const SizedBox(height: 12),
-            const SheetFieldLabel('Date'),
-            SheetPickerBox(
-              onTap: _pickDate,
-              trailingIcon: Icons.calendar_today_outlined,
-              child: Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
-            ),
-            const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: 'Confirm Payment',
-              onPressed: _isSubmitting ? null : _confirm,
-              isLoading: _isSubmitting,
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Mark Received Sheet ──────────────────────────────────────────────────────
-
-class _MarkReceivedSheet extends StatefulWidget {
-  final Receivable receivable;
-  final BillsReceivablesPresenter presenter;
-
-  const _MarkReceivedSheet({required this.receivable, required this.presenter});
-
-  @override
-  State<_MarkReceivedSheet> createState() => _MarkReceivedSheetState();
-}
-
-class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
-  final _amountController = TextEditingController();
-  String? _selectedAccountId;
-  DateTime _receivedDate = DateTime.now();
-  bool _isSubmitting = false;
-  // When true the user already logged this income in the ledger, so marking
-  // received should NOT create a transaction or credit an account.
-  bool _alreadyInLedger = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _amountController.text = widget.receivable.amount.toStringAsFixed(2);
-    // Prefer the receivable's saved destination account, then a liquid one,
-    // then anything eligible. The rule lives in the presenter so web and mobile
-    // can't drift — this used to offer every account, archived and credit cards
-    // included, while web offered only bank/ewallet/cash.
-    _selectedAccountId =
-        widget.presenter.preferredDepositAccountId(widget.receivable);
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _receivedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) setState(() => _receivedDate = picked);
-  }
-
-  FinancialAccount? get _selectedAccount {
-    for (final a in widget.presenter.accounts) {
-      if (a.id == _selectedAccountId) return a;
-    }
-    return null;
-  }
-
-  Future<void> _pickAccount() async {
-    final choice = await showAccountPicker(
-      context,
-      accounts: widget.presenter.depositAccountsFor(widget.receivable),
-      selectedId: _selectedAccountId,
-    );
-    if (choice != null) setState(() => _selectedAccountId = choice.id);
-  }
-
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return;
-    // An account is only needed when we're recording the receipt in the ledger.
-    if (!_alreadyInLedger && _selectedAccountId == null) return;
-    setState(() => _isSubmitting = true);
-    try {
-      await widget.presenter.markReceivableReceived(
-        widget.receivable.id,
-        receivedAmount: amount,
-        accountId: _alreadyInLedger ? null : _selectedAccountId,
-        receivedDate: _receivedDate,
-        recordInLedger: !_alreadyInLedger,
-      );
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      // Keep the sheet open so the entry is not lost; say why it failed.
-      if (mounted) AppToast.error(context, 'Could not save: $e');
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mark Received — ${widget.receivable.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Received',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 4),
-            CheckboxListTile(
-              value: _alreadyInLedger,
-              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Already added to ledger'),
-              subtitle: const Text(
-                  "Just mark it received — don't record a transaction or credit an account."),
-            ),
-            if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const SheetFieldLabel('Account'),
-              SheetAccountField(account: _selectedAccount, onTap: _pickAccount),
-            ],
-            const SizedBox(height: 12),
-            const SheetFieldLabel('Date'),
-            SheetPickerBox(
-              onTap: _pickDate,
-              trailingIcon: Icons.calendar_today_outlined,
-              child: Text(DateFormat('MMMM d, yyyy').format(_receivedDate),
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
-            ),
-            const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: 'Confirm Receipt',
-              onPressed: _isSubmitting ? null : _confirm,
-              isLoading: _isSubmitting,
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Mark Expense Paid Sheet ──────────────────────────────────────────────────
-
-class _MarkExpensePaidSheet extends StatefulWidget {
-  final BudgetedExpense expense;
-  final BillsReceivablesPresenter presenter;
-
-  const _MarkExpensePaidSheet({required this.expense, required this.presenter});
-
-  @override
-  State<_MarkExpensePaidSheet> createState() => _MarkExpensePaidSheetState();
-}
-
-class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
-  final _amountController = TextEditingController();
-  String? _selectedAccountId;
-  String? _selectedToAccountId;
-
-  /// The destination question has been answered — with an account, or with an
-  /// explicit "spend it". Kept apart from [_selectedToAccountId] because null is
-  /// itself a valid answer.
-  bool _destinationChosen = false;
-  DateTime _paidDate = DateTime.now();
-  bool _isSubmitting = false;
-
-  /// Asset accounts money can be set aside into (savings/goals first), used to
-  /// populate the "Set aside into" transfer destination.
-  List<FinancialAccount> get _destinations =>
-      widget.presenter.setAsideDestinationAccounts;
-
-  @override
-  void initState() {
-    super.initState();
-    _amountController.text = widget.expense.allocatedAmount.toStringAsFixed(2);
-    // Default to the account the set-aside is assigned to, falling back to the
-    // first account when none is set (or it no longer exists).
-    final accounts = widget.presenter.accounts;
-    final assigned = widget.expense.accountId;
-    _selectedAccountId =
-        assigned != null && accounts.any((a) => a.id == assigned)
-            ? assigned
-            : (accounts.isNotEmpty ? accounts.first.id : null);
-    // Destination comes from the set-aside itself ("₱5k from BPI to Maya"), so
-    // a route the user already decided is just confirmed. With none on file the
-    // field stays empty and Confirm waits for an answer — this used to auto-pick
-    // the first savings account, quietly parking money somewhere never named.
-    _selectedToAccountId = widget.presenter.preferredSetAsideDestinationId(
-      widget.expense,
-      fromAccountId: _selectedAccountId,
-    );
-    _destinationChosen = _selectedToAccountId != null;
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _paidDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) setState(() => _paidDate = picked);
-  }
-
-  FinancialAccount? get _selectedFromAccount {
-    for (final a in widget.presenter.accounts) {
-      if (a.id == _selectedAccountId) return a;
-    }
-    return null;
-  }
-
-  FinancialAccount? get _selectedToAccount {
-    for (final a in _destinations) {
-      if (a.id == _selectedToAccountId) return a;
-    }
-    return null;
-  }
-
-  Future<void> _pickFrom() async {
-    final choice = await showAccountPicker(
-      context,
-      accounts: widget.presenter.accounts,
-      selectedId: _selectedAccountId,
-    );
-    if (choice != null) {
-      setState(() {
-        _selectedAccountId = choice.id;
-        if (_selectedToAccountId == _selectedAccountId) {
-          _selectedToAccountId = null; // can't transfer to itself
-        }
-      });
-    }
-  }
-
-  Future<void> _pickTo() async {
-    final dests =
-        _destinations.where((a) => a.id != _selectedAccountId).toList();
-    final choice = await showAccountPicker(
-      context,
-      accounts: dests,
-      selectedId: _destinationChosen ? _selectedToAccountId : null,
-      allowNone: true,
-      noneLabel: 'Spend it (no transfer)',
-    );
-    if (choice != null) {
-      setState(() {
-        _selectedToAccountId = choice.id;
-        _destinationChosen = true;
-      });
-    }
-  }
-
-  /// Where the money is going has to be settled before it moves — either into
-  /// an account, or explicitly spent.
-  bool get _canConfirm =>
-      !_isSubmitting &&
-      _selectedAccountId != null &&
-      (_destinationChosen || _destinations.isEmpty);
-
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return;
-    if (!_canConfirm) return;
-    setState(() => _isSubmitting = true);
-    try {
-      await widget.presenter.markExpensePaid(
-        widget.expense.id,
-        paidAmount: amount,
-        accountId: _selectedAccountId!,
-        toAccountId: _selectedToAccountId,
-        paidDate: _paidDate,
-      );
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      // Keep the sheet open so the entry is not lost; say why it failed.
-      if (mounted) AppToast.error(context, 'Could not save: $e');
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mark Paid — ${widget.expense.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Paid',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            if (widget.presenter.accounts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const SheetFieldLabel('Fund from'),
-              SheetAccountField(
-                  account: _selectedFromAccount, onTap: _pickFrom),
-              const SizedBox(height: 12),
-              const SheetFieldLabel('Set aside into'),
-              SheetAccountField(
-                account: _selectedToAccount,
-                placeholder: _destinationChosen
-                    ? 'Spend it (no transfer)'
-                    : 'Choose where it goes',
-                onTap: _pickTo,
-              ),
-            ],
-            const SizedBox(height: 12),
-            const SheetFieldLabel('Date'),
-            SheetPickerBox(
-              onTap: _pickDate,
-              trailingIcon: Icons.calendar_today_outlined,
-              child: Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
-            ),
-            const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: 'Confirm Payment',
-              onPressed: _canConfirm ? _confirm : null,
-              isLoading: _isSubmitting,
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Mark Installment Paid Sheet ──────────────────────────────────────────────
-
-class _MarkInstallmentPaidSheet extends StatefulWidget {
-  final Installment installment;
-  final InstallmentPresenter presenter;
-
-  const _MarkInstallmentPaidSheet({
-    required this.installment,
-    required this.presenter,
-  });
-
-  @override
-  State<_MarkInstallmentPaidSheet> createState() =>
-      _MarkInstallmentPaidSheetState();
-}
-
-class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
-  late final TextEditingController _amountCtrl;
-  DateTime _date = DateTime.now();
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _amountCtrl = TextEditingController(
-        text: widget.installment.monthlyAmount.toStringAsFixed(2));
-  }
-
-  @override
-  void dispose() {
-    _amountCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amountCtrl.text);
-    if (amount == null || amount <= 0) return;
-    setState(() => _saving = true);
-    try {
-      await widget.presenter.markPaid(
-        widget.installment.id,
-        overrideAmount: amount,
-        date: _date,
-      );
-      if (mounted) Navigator.pop(context);
-    } catch (e) {
-      // Keep the sheet open so the entry is not lost; say why it failed.
-      if (mounted) AppToast.error(context, 'Could not save: $e');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final count = widget.presenter.paidCount(widget.installment.id) + 1;
-
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Mark Payment $count/${widget.installment.totalMonths}',
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                widget.installment.name,
-                style: TextStyle(
-                    color: colorScheme.onSurfaceVariant, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              const SheetFieldLabel('Amount'),
-              AppTextField(
-                controller: _amountCtrl,
-                prefix: const Text('₱ '),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 16),
-              const SheetFieldLabel('Date'),
-              SheetPickerBox(
-                trailingIcon: Icons.calendar_today_outlined,
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _date,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) setState(() => _date = picked);
-                },
-                child: Text(DateFormat('MMMM d, yyyy').format(_date),
-                    style:
-                        TextStyle(color: colorScheme.onSurface, fontSize: 14)),
-              ),
-              const SizedBox(height: 20),
-              AppPrimaryButton(
-                label: 'Confirm Payment',
-                onPressed: _saving ? null : _confirm,
-                isLoading: _saving,
-              ),
-            ],
-          ),
         ),
       ),
     );

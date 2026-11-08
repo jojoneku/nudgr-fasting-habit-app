@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';

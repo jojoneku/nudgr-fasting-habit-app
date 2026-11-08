@@ -20,6 +20,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
+import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
