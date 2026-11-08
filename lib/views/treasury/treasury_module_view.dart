@@ -196,6 +196,19 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     }
   }
 
+  /// History → Ledger handoff, same as web (`treasury_web_app.dart`). The
+  /// ledger's `setMonth` writes through to the shared `TreasuryMonthScope`, so
+  /// Bills, Budget and Installments follow; it also clears any day filter so
+  /// the whole month shows.
+  void _openLedgerMonth(String month) {
+    // Drop any account / category / owed filter first: the History detail
+    // shows the whole month, so the Ledger it opens must too, or its totals
+    // stop matching. setMonth alone only clears the day filter.
+    widget.ledgerPresenter.clearAllFilters();
+    widget.ledgerPresenter.setMonth(month);
+    _tabController.animateTo(_ledgerTabIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -270,7 +283,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             installmentPresenter: widget.installmentPresenter,
           ),
           BudgetView(presenter: widget.budgetPresenter),
-          TreasuryHistoryView(presenter: widget.historyPresenter),
+          TreasuryHistoryView(
+            presenter: widget.historyPresenter,
+            onOpenLedgerMonth: _openLedgerMonth,
+          ),
           GroceryCartView(presenter: widget.groceryCartPresenter),
           GoalsSavingsScreen(presenter: widget.dashPresenter),
           for (final tab in widget.extraTabs) tab.page,

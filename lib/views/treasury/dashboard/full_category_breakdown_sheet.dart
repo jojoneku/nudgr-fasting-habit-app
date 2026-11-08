@@ -113,7 +113,8 @@ class _CategoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final color = resolveSliceColor(category.colorHex, index);
+    final color = resolveSliceColor(category.colorHex, index,
+        brightness: theme.brightness);
     final percent = total > 0 ? amount / total : 0.0;
 
     return Padding(
