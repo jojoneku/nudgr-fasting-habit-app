@@ -13,6 +13,20 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.127] - 2026-11-08
+
+### Added
+- each bill in one place on the mobile Bills tab (Plan 071 Phase 6)
+- outlook statement, one empty state and web parity on mobile (Plan 071 Phase 7)
+- one mobile Settle sheet for every pay and settle action (Plan 071 Phase 5)
+- ledger search across all months (Plan 071 Phase 10a)
+
+### Fixed
+- keep the hero bill in Upcoming so its actions stay reachable (review fix)
+- clear the search when the chat bar logs an entry (review fix)
+- flag overdrawn from the real balance with a cent tolerance (review fix)
+- name the ledger toggle's state on the collapsed More options fold (review fix)
+
 ## [1.1.126] - 2026-11-08
 
 ### Added
@@ -1105,7 +1119,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.126...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.127...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1233,3 +1247,4 @@ distributed via `manifest.json`.
 [1.1.124]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.124
 [1.1.125]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.125
 [1.1.126]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.126
+[1.1.127]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.127
