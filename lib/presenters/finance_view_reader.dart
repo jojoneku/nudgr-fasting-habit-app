@@ -146,16 +146,16 @@ class FinanceViewReader {
           'net cash flow ${formatPesoSigned(d.monthNetCashFlow)}',
       if (rate != null) 'Savings rate: ${_pct(rate)}',
       'Days left in the month: ${d.daysLeftInMonth}',
-      'Month-End Outlook ($month):',
-      '- Liquid Now: ${_peso(d.totalLiquidCash)}',
-      '- To Receive: ${_peso(d.pendingReceivables)}',
-      '- Upcoming Bills: ${_peso(d.monthUnpaidBills)}',
-      '- Budget / Savings Due: ${_peso(d.budgetedExpensesRemaining)}',
-      '- Budget Left: ${_peso(d.budgetRemainingNetOfObligations)} '
+      'Month-end outlook ($month):',
+      '- Liquid now: ${_peso(d.totalLiquidCash)}',
+      '- To receive: ${_peso(d.pendingReceivables)}',
+      '- Upcoming bills: ${_peso(d.monthUnpaidBills)}',
+      '- Set-asides due: ${_peso(d.budgetedExpensesRemaining)}',
+      '- Budget left: ${_peso(d.budgetRemainingNetOfObligations)} '
           '(budget still to spend, less what a bill or set-aside already '
           'reserves)',
-      '- Proj. Month-End Cash: ${_peso(d.forecastedNetBalance)}',
-      'Next Month Forecast (${next.monthName}, ${next.month}):',
+      '- Projected month-end: ${_peso(d.forecastedNetBalance)}',
+      'Next month forecast (${next.monthName}, ${next.month}):',
       '- Starting cash (projected end of ${monthShortLabel(next.fromMonth)}): '
           '${next.startingCashLabel}',
       '- To receive: ${_peso(next.toReceive)}',
@@ -164,7 +164,7 @@ class FinanceViewReader {
       '- Set-asides: ${_peso(next.setAsides)}',
       '- Budget: ${_peso(next.budget)} (${next.budgetCaption})',
       '- ${next.endingTitle}: ${next.endingLabel} (${next.changeLabel})',
-      'Budget This Month: spent ${_peso(d.totalExpenseBudgetSpent)} of '
+      'Budget health: spent ${_peso(d.totalExpenseBudgetSpent)} of '
           '${_peso(d.totalExpenseBudgetAllocated)} (expense budgets only)',
       'Spend pace is on the Budget screen: read view "budget".',
     ].join('\n');

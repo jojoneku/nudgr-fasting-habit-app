@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_category_breakdown_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_header_link.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class CategoryPieChartCard extends StatelessWidget {
@@ -17,34 +18,17 @@ class CategoryPieChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final slices = presenter.categorySpendThisMonth;
-    final total = slices.fold(0.0, (s, e) => s + e.$2);
-    final hasMore = presenter.allCategorySpendThisMonth.length > slices.length;
+    final total = presenter.categorySpendThisMonthTotal;
 
     return AppSection(
-      title: 'Expense Breakdown',
-      trailing: hasMore
-          ? GestureDetector(
-              onTap: () => FullCategoryBreakdownSheet.show(context, presenter),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  children: [
-                    Text(
-                      'View All',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right,
-                        color: colorScheme.primary, size: 16),
-                  ],
-                ),
-              ),
+      title: 'Expense breakdown',
+      trailing: presenter.hasMoreCategorySpend
+          ? DashboardHeaderLink(
+              key: const ValueKey('dashboard.breakdown.viewAll'),
+              label: 'View all',
+              onPressed: () =>
+                  FullCategoryBreakdownSheet.show(context, presenter),
             )
           : null,
       child: AppCard(

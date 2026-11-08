@@ -12,7 +12,7 @@ import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_accounts
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goals_savings_screen.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
-import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/month_end_outlook_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/next_month_forecast_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
@@ -55,7 +55,7 @@ class TreasuryDashboardView extends StatelessWidget {
   void _showAccountSheet(BuildContext context, [FinancialAccount? existing]) {
     AppBottomSheet.show(
       context: context,
-      title: existing == null ? 'Add Account' : 'Edit Account',
+      title: existing == null ? 'Add account' : 'Edit account',
       body: AccountSetupView(presenter: presenter, existing: existing),
     );
   }
@@ -63,7 +63,7 @@ class TreasuryDashboardView extends StatelessWidget {
   void _showGoalSavingsSheet(BuildContext context) {
     AppBottomSheet.show(
       context: context,
-      title: 'Add Goal or Savings',
+      title: 'Add goal or savings',
       body: AccountSetupView(
         presenter: presenter,
         initialCategory: AccountCategory.savings,
@@ -82,12 +82,22 @@ class TreasuryDashboardView extends StatelessWidget {
             child: CircularProgressIndicator(color: colorScheme.primary),
           );
         }
+        // No accounts: one empty state with one "Add your first account"
+        // action, and nothing else — every other card would read ₱0.00.
+        if (!presenter.hasAccounts) {
+          return Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: _DashboardEmptyBody(
+              syncPresenter: syncPresenter,
+              onAddAccount: () => _showAccountSheet(context),
+            ),
+          );
+        }
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: _DashboardScrollBody(
             presenter: presenter,
             syncPresenter: syncPresenter,
-            onAddAccount: () => _showAccountSheet(context),
             onEditAccount: (account) => _showAccountSheet(context, account),
             onAddGoalSavings: () => _showGoalSavingsSheet(context),
             onPayCredit: billsPresenter == null
@@ -118,8 +128,48 @@ class _AddAccountFab extends StatelessWidget {
       foregroundColor: colorScheme.onPrimary,
       icon: const Icon(Icons.add),
       label: const Text(
-        'Add Account',
+        'Add account',
         style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+/// The dashboard with no accounts: the greeting, then one empty state. The
+/// hero, cash flow strip, outlook, forecast and spending cards stay hidden
+/// until there is an account for them to describe.
+class _DashboardEmptyBody extends StatelessWidget {
+  final SyncPresenter? syncPresenter;
+  final VoidCallback onAddAccount;
+
+  const _DashboardEmptyBody({
+    required this.onAddAccount,
+    this.syncPresenter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _GreetingHeader(syncPresenter: syncPresenter),
+          const SizedBox(height: 14),
+          AppCard(
+            key: const ValueKey('dashboard.emptyState'),
+            variant: AppCardVariant.elevated,
+            child: AppEmptyState(
+              icon: Icons.account_balance_wallet_outlined,
+              title: 'No accounts yet',
+              body: 'Add a bank, e-wallet or cash account to see your net '
+                  'worth, cash flow and month-end outlook.',
+              actionLabel: 'Add your first account',
+              onAction: onAddAccount,
+              iconSize: 48,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -128,7 +178,6 @@ class _AddAccountFab extends StatelessWidget {
 class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final SyncPresenter? syncPresenter;
-  final VoidCallback onAddAccount;
   final ValueChanged<FinancialAccount> onEditAccount;
   final VoidCallback onAddGoalSavings;
 
@@ -140,7 +189,6 @@ class _DashboardScrollBody extends StatelessWidget {
 
   const _DashboardScrollBody({
     required this.presenter,
-    required this.onAddAccount,
     required this.onEditAccount,
     required this.onAddGoalSavings,
     this.syncPresenter,
@@ -161,16 +209,14 @@ class _DashboardScrollBody extends StatelessWidget {
           const SizedBox(height: 12),
           CashflowStrip(presenter: presenter),
           const SizedBox(height: 16),
-          if (!presenter.hasAccounts)
-            _EmptyAccountsCard(onAddAccount: onAddAccount)
-          else
-            DashboardAccountsList(
-              accounts: presenter.liquidAccounts,
-              heldByAccountId: presenter.heldAmountByAccountId,
-              yoursByAccountId: presenter.yoursByAccountId,
-              totalLiquidCash: presenter.totalLiquidCash,
-              onEdit: onEditAccount,
-            ),
+          DashboardAccountsList(
+            accounts: presenter.liquidAccounts,
+            sublineByAccountId: presenter.dashboardAccountSublines,
+            overdrawnAccountIds: presenter.overdrawnAccountIds,
+            yoursByAccountId: presenter.yoursByAccountId,
+            totalLiquidCash: presenter.totalLiquidCash,
+            onEdit: onEditAccount,
+          ),
           // Credit cards live here, directly under Accounts — a card balance is
           // an account, not a monthly bill (moved off the Bills tab).
           if (presenter.creditAccounts.isNotEmpty) ...[
@@ -182,10 +228,9 @@ class _DashboardScrollBody extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          // Retained from the pre-redesign dashboard: exact month figures plus
-          // Ending Cash / Forecast, which the hero + strip summarize but don't
-          // enumerate. Kept per the "don't drop existing features" rule.
-          MetricCardsGrid(presenter: presenter),
+          // Every term of the month-end projection, as a signed statement.
+          // The only place (with Next Month's "Starts at") that shows it.
+          MonthEndOutlookCard(presenter: presenter),
           const SizedBox(height: 16),
           // Directly under the outlook, so this month's end and next month's
           // read as a pair.
@@ -219,27 +264,6 @@ class _DashboardScrollBody extends StatelessWidget {
             _HeldFundsCard(presenter: presenter, onEdit: onEditAccount),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyAccountsCard extends StatelessWidget {
-  final VoidCallback onAddAccount;
-
-  const _EmptyAccountsCard({required this.onAddAccount});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      variant: AppCardVariant.elevated,
-      child: AppEmptyState(
-        icon: Icons.account_balance_wallet_outlined,
-        title: 'No accounts yet',
-        body: 'Add your first account to get started',
-        actionLabel: 'Add Account',
-        onAction: onAddAccount,
-        iconSize: 48,
       ),
     );
   }
@@ -390,10 +414,10 @@ class _GoalSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final goals = [...presenter.goalAccounts, ...presenter.savingsAccounts];
+    final goals = presenter.goalAndSavingsAccounts;
 
     return AppSection(
-      title: 'Goals & Savings',
+      title: 'Goals & savings',
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -413,7 +437,7 @@ class _GoalSection extends StatelessWidget {
           ),
           IconButton(
             icon: Icon(Icons.add, size: 20, color: colorScheme.primary),
-            tooltip: 'Add Goal or Savings',
+            tooltip: 'Add goal or savings',
             onPressed: onAdd,
             visualDensity: VisualDensity.compact,
           ),
@@ -427,7 +451,7 @@ class _GoalSection extends StatelessWidget {
                 title: 'No goals or savings yet',
                 body:
                     'Add a savings account or financial goal to track progress',
-                actionLabel: 'Add Goal / Savings',
+                actionLabel: 'Add goal or savings',
                 onAction: onAdd,
                 iconSize: 40,
               ),
@@ -485,15 +509,28 @@ class _CreditSection extends StatelessWidget {
 
     return AppSection(
       title: 'Credit',
-      trailing: Text(
-        'Owe ${formatPeso(presenter.totalCreditOwed)}',
-        style: theme.textTheme.labelMedium?.copyWith(color: colorScheme.error),
-      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Under the title rather than beside it: "Owe ₱X · ₱Y available"
+          // is too long to share a row with the title at 360 dp.
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              presenter.creditSummaryLabel,
+              key: const ValueKey('dashboard.credit.summary'),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           for (int i = 0; i < accounts.length; i++) ...[
             _CreditAccountCard(
               account: accounts[i],
+              availableLabel: presenter.creditAvailableLabel(accounts[i]),
+              nearLimit: presenter.creditNearLimit(accounts[i]),
+              canPay: presenter.canPayCredit(accounts[i]),
               dueInfo: presenter.creditDueInfo(accounts[i]),
               cycleNote: presenter.creditCycleNote(accounts[i]),
               onTap: () {
@@ -513,6 +550,15 @@ class _CreditSection extends StatelessWidget {
 class _CreditAccountCard extends StatelessWidget {
   final FinancialAccount account;
 
+  /// "₱A of ₱L available" under the utilization meter.
+  final String availableLabel;
+
+  /// True at 90% of the limit or more — the meter turns to the error tone.
+  final bool nearLimit;
+
+  /// False when nothing is owed: Pay stays visible but disabled.
+  final bool canPay;
+
   /// The unpaid statement's due line, self-contained ("Due Nov 4 · min ₱850",
   /// "Due Nov 4 · ₱12,000 in full") or "No payment due". Rendered as-is.
   final ({String label, bool imminent})? dueInfo;
@@ -526,6 +572,9 @@ class _CreditAccountCard extends StatelessWidget {
 
   const _CreditAccountCard({
     required this.account,
+    required this.availableLabel,
+    required this.nearLimit,
+    required this.canPay,
     required this.dueInfo,
     required this.cycleNote,
     required this.onTap,
@@ -537,7 +586,7 @@ class _CreditAccountCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final utilization = account.utilization;
-    final available = account.availableCredit;
+    final pay = onPay;
 
     return AppCard(
       variant: AppCardVariant.outlined,
@@ -566,7 +615,7 @@ class _CreditAccountCard extends StatelessWidget {
                     ),
                   ),
                   AppNumberDisplay(
-                    value: formatPeso(account.totalDebt),
+                    value: formatPesoMinus(account.totalDebt),
                     size: AppNumberSize.body,
                     color: cs.error,
                   ),
@@ -582,12 +631,12 @@ class _CreditAccountCard extends StatelessWidget {
                 value: utilization.clamp(0.0, 1.0),
                 minHeight: 6,
                 backgroundColor: cs.surfaceContainerHighest,
-                color: utilization >= 0.9 ? cs.error : cs.primary,
+                color: nearLimit ? cs.error : cs.primary,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              '${formatPeso(available ?? 0)} of ${formatPeso(account.creditLimit ?? 0)} available',
+              availableLabel,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
@@ -643,12 +692,15 @@ class _CreditAccountCard extends StatelessWidget {
               ],
             ),
           ],
-          if (onPay != null && account.currentPayable > 0) ...[
+          // Pay stays visible when nothing is owed, but disabled — same as
+          // web — so the card's layout does not jump when it is paid off.
+          if (pay != null) ...[
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton.tonalIcon(
-                onPressed: () => onPay!(account),
+                key: ValueKey('dashboard.credit.pay.${account.id}'),
+                onPressed: canPay ? () => pay(account) : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: cs.primary.withValues(alpha: 0.14),
                   foregroundColor: cs.primary,
@@ -677,7 +729,7 @@ class _HeldFundsCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final accounts = presenter.custodianAccounts;
-    final total = accounts.fold(0.0, (sum, a) => sum + a.balance);
+    final total = presenter.totalHeldForOthers;
 
     return AppSection(
       title: 'External',

@@ -486,11 +486,8 @@ class _OutlookCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final appColors = context.appColors;
-    final p = presenter;
-    final projected = p.forecastedNetBalance;
-    final projectedTone = projected >= 0 ? appColors.success : cs.error;
+    final outlook = presenter.monthEndOutlook;
+    final projectedTone = _webStatementTone(context, outlook.projectedTone)!;
 
     return WebCard(
       key: WebKeys.dashboardOutlook,
@@ -502,36 +499,12 @@ class _OutlookCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _OutlookRow(
-            label: 'Liquid now',
-            caption: 'Cash across accounts',
-            amount: formatPesoMinus(p.totalLiquidCash),
-          ),
-          _OutlookRow(
-            label: 'To receive',
-            caption: 'Money owed to you',
-            amount: '+${formatPeso(p.pendingReceivables)}',
-            color: appColors.success,
-          ),
-          _OutlookRow(
-            label: 'Upcoming bills',
-            caption: 'Unpaid this month',
-            amount: '−${formatPeso(p.monthUnpaidBills)}',
-            color: appColors.bills,
-          ),
-          _OutlookRow(
-            label: 'Set-asides due',
-            caption: 'Still to fund',
-            amount: '−${formatPeso(p.budgetedExpensesRemaining)}',
-            color: appColors.bills,
-          ),
-          _OutlookRow(
-            label: 'Budget left',
-            caption: 'Still budgeted to spend',
-            amount: '−${formatPeso(p.budgetRemainingNetOfObligations)}',
-            color: appColors.bills,
-            divider: false,
-          ),
+          for (var i = 0; i < outlook.lines.length; i++)
+            _OutlookRow.line(
+              context,
+              outlook.lines[i],
+              divider: i < outlook.lines.length - 1,
+            ),
           const SizedBox(height: WebInsets.sm),
           Container(
             padding: const EdgeInsets.all(WebInsets.md),
@@ -541,9 +514,9 @@ class _OutlookCard extends StatelessWidget {
               border: Border.all(color: projectedTone.withValues(alpha: 0.25)),
             ),
             child: _OutlookLine(
-              label: 'Projected month-end',
-              caption: 'After bills, budget & savings',
-              amount: formatPesoMinus(projected),
+              label: outlook.projectedTitle,
+              caption: outlook.projectedCaption,
+              amount: outlook.projectedLabel,
               color: projectedTone,
               emphasis: true,
             ),
@@ -552,6 +525,22 @@ class _OutlookCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Web's accent for a statement line: success for money in, the bills tone
+/// for every deduction, none for a starting balance. Null means the default.
+Color? _webStatementTone(BuildContext context, StatementTone tone) {
+  final appColors = context.appColors;
+  return switch (tone) {
+    StatementTone.neutral => null,
+    StatementTone.income => appColors.success,
+    StatementTone.bills ||
+    StatementTone.setAside ||
+    StatementTone.budget =>
+      appColors.bills,
+    StatementTone.good => appColors.success,
+    StatementTone.bad => Theme.of(context).colorScheme.error,
+  };
 }
 
 // ===========================================================================
@@ -569,10 +558,9 @@ class _NextMonthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final appColors = context.appColors;
     final f = presenter.nextMonthForecast;
-    final endingTone = f.endsNegative ? cs.error : appColors.success;
+    final lines = f.lines;
+    final endingTone = _webStatementTone(context, f.endingTone)!;
 
     return WebCard(
       key: WebKeys.dashboardNextMonth,
@@ -584,42 +572,12 @@ class _NextMonthCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _OutlookRow(
-            label: 'Starts at',
-            caption: "This month's projected end",
-            amount: f.startingCashLabel,
-          ),
-          _OutlookRow(
-            label: 'To receive',
-            caption: 'Expected next month',
-            amount: '+${formatPeso(f.toReceive)}',
-            color: appColors.success,
-          ),
-          _OutlookRow(
-            label: 'Bills',
-            caption: 'Incl. card statements',
-            amount: '−${formatPeso(f.bills)}',
-            color: appColors.bills,
-          ),
-          _OutlookRow(
-            label: 'Installments',
-            caption: 'Not on a statement yet',
-            amount: '−${formatPeso(f.installments)}',
-            color: appColors.bills,
-          ),
-          _OutlookRow(
-            label: 'Set-asides',
-            caption: 'Still to fund',
-            amount: '−${formatPeso(f.setAsides)}',
-            color: appColors.bills,
-          ),
-          _OutlookRow(
-            label: 'Budget',
-            caption: f.budgetCaption,
-            amount: '−${formatPeso(f.budget)}',
-            color: appColors.bills,
-            divider: false,
-          ),
+          for (var i = 0; i < lines.length; i++)
+            _OutlookRow.line(
+              context,
+              lines[i],
+              divider: i < lines.length - 1,
+            ),
           const SizedBox(height: WebInsets.sm),
           Container(
             padding: const EdgeInsets.all(WebInsets.md),
@@ -648,13 +606,14 @@ class _OutlookRow extends StatelessWidget {
   final String amount;
   final Color? color;
   final bool divider;
-  const _OutlookRow({
-    required this.label,
-    required this.caption,
-    required this.amount,
-    this.color,
-    this.divider = true,
-  });
+
+  /// A row for a presenter-built [StatementLine], in web's accents.
+  _OutlookRow.line(BuildContext context, StatementLine line,
+      {required this.divider})
+      : label = line.label,
+        caption = line.caption,
+        amount = line.amount,
+        color = _webStatementTone(context, line.tone);
 
   @override
   Widget build(BuildContext context) {
@@ -1052,25 +1011,16 @@ class _CashFlowCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final appColors = context.appColors;
     final p = presenter;
-    final income = p.monthTotalInflow;
-    final expenses = p.monthTotalOutflow;
-    final net = p.monthNetCashFlow;
-    final rate = p.savingsRate;
     // Each bar is sized against the larger flow, so the dominant one fills the
-    // track and the other reads in proportion (same as the mobile strip).
-    final peak = math.max(income, expenses);
-    final spentPctLabel =
-        income > 0 ? '${(expenses / income * 100).round()}%' : '—';
-
+    // track and the other reads in proportion (same presenter getters as the
+    // mobile strip).
     return WebCard(
       key: WebKeys.dashboardCashFlow,
       title: 'Cash flow',
       description: 'Income vs spending · ${monthLabel(p.currentMonth)}',
       trailing: WebBadge(
-        rate == null
-            ? 'Savings rate —'
-            : 'Savings rate ${(rate * 100).toStringAsFixed(1)}%',
-        tone: rate == null ? WebBadgeTone.neutral : WebBadgeTone.success,
+        p.savingsRateLabel,
+        tone: p.hasSavingsRate ? WebBadgeTone.success : WebBadgeTone.neutral,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1078,15 +1028,15 @@ class _CashFlowCard extends StatelessWidget {
           _FlowRow(
             label: 'Income',
             color: appColors.move,
-            fraction: peak > 0 ? income / peak : 0,
-            amount: formatPeso(income),
+            fraction: p.cashflowIncomeFraction,
+            amount: p.monthTotalInflowLabel,
           ),
           const SizedBox(height: WebInsets.md),
           _FlowRow(
             label: 'Expenses',
             color: appColors.bills,
-            fraction: peak > 0 ? expenses / peak : 0,
-            amount: formatPeso(expenses),
+            fraction: p.cashflowExpenseFraction,
+            amount: p.monthTotalOutflowLabel,
           ),
           const SizedBox(height: WebInsets.md),
           Container(
@@ -1106,7 +1056,7 @@ class _CashFlowCard extends StatelessWidget {
                             fontSize: 12.5,
                             color: cs.onSurfaceVariant,
                           )),
-                      Text('Spent $spentPctLabel of income',
+                      Text(p.spentShareOfIncomeLabel,
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontSize: 11,
                             color: appColors.textMuted,
@@ -1115,13 +1065,13 @@ class _CashFlowCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  formatPesoSigned(net),
+                  p.monthNetCashFlowLabel,
                   style: webNumericStyle(
                     theme.textTheme.titleMedium?.copyWith(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
-                    color: net >= 0 ? cs.onSurface : cs.error,
+                    color: p.monthNetCashFlowNegative ? cs.error : cs.onSurface,
                   ),
                 ),
               ],
