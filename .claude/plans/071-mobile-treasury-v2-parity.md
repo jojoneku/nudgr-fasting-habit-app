@@ -1,6 +1,6 @@
 # Plan 071 — Mobile Treasury: fix the scan bugs, then bring the web v2 ideas over
 
-> Status: IN PROGRESS (Phase 0 built 2026-11-08) · Authored: 2026-11-08 · Owner: Treasury mobile
+> Status: IN PROGRESS (Phase 0 merged PR #826; Phase 1 built 2026-11-08) · Authored: 2026-11-08 · Owner: Treasury mobile
 > Builds on: Plan 063 (Treasury web v2), Plan 056 (Nudgr tokens)
 > Source: the 2026-11-08 scan that compared each web v2 page with its mobile counterpart (Dashboard, Ledger, Bills, Budget, History, Setup, Goals). Every bug in §3 Phase 0 was checked by hand in the code.
 
@@ -59,6 +59,8 @@ Also in this phase:
 - Remove the unreachable `'Owed:'` branch in `dashboard_accounts_list.dart:142`.
 
 Tests: existing web setup tests stay green; a unit test pins each account-type label once.
+
+*Built note:* the label copy uses the web casing ("Time Deposit", "Credit Card"), so the mobile dashboard subtitle changes from "Time deposit". Web v1 files (`web_dashboard_page.dart`, `web_account_form_dialog.dart`) keep their own copies; they go with the Plan 063 v1 cleanup.
 
 ### Phase 2 — One budget status for both apps · `feat/budget-status-shared` · Effort S–M
 
