@@ -986,10 +986,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerRowActions rowActionsFor(TransactionRecord t) {
     final isExpense =
         t.transferGroupId == null && t.type == TransactionType.outflow;
+    // The add/edit form only resolves active top-level accounts, so an
+    // expense on an archived (or sub-) card can't be split there — don't
+    // offer the action.
+    final account = accountById(t.accountId);
+    final splittableAccount = account != null &&
+        account.isActive &&
+        !account.isSubAccount &&
+        account.isLiability;
     return LedgerRowActions(
-      canSplit: isExpense &&
-          accountById(t.accountId)?.isLiability == true &&
-          canSplitIntoInstallments(t),
+      canSplit: isExpense && splittableAccount && canSplitIntoInstallments(t),
       splitLabel:
           t.isInstallment ? 'Edit installment plan' : 'Split into installments',
       canMarkReimbursable: isExpense && !t.isInstallment,

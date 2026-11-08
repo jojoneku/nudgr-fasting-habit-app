@@ -4,6 +4,7 @@ import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
+import 'package:intermittent_fasting/views/treasury/shared/budget_status_color.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// One budget rendered as its own card (Nudgr budget-cards redesign,
@@ -30,23 +31,17 @@ class BudgetCard extends StatelessWidget {
       brightness: theme.brightness,
     );
 
-    // Progress/amount accent: danger when an expense is over, tertiary when a
-    // savings goal is met or the row is income, otherwise the category's color.
-    final Color accent;
-    if (row.isOver) {
-      accent = cs.error;
-    } else if (row.isSavings && row.met) {
-      accent = cs.tertiary;
-    } else if (row.isIncome) {
-      accent = cs.tertiary;
-    } else {
-      accent = identity;
-    }
+    // Progress/amount accent: the shared status color once a row needs a look
+    // or is done (Watch, Over, Funded — the same tones web uses), tertiary for
+    // income, otherwise the category's own color.
+    final flagged = row.status != BudgetStatus.onTrack;
+    final Color accent = flagged
+        ? budgetStatusColor(context, row.status)
+        : (row.isIncome ? cs.tertiary : identity);
 
     final hasBudget = row.allocated > 0;
     final pct =
         hasBudget ? '${(row.actual / row.allocated * 100).round()}%' : '—';
-    final overOrMet = row.isOver || (row.isSavings && row.met);
 
     return AppCard(
       variant: AppCardVariant.filled,
@@ -101,7 +96,7 @@ class BudgetCard extends StatelessWidget {
                       AppNumberDisplay(
                         value: formatPesoCompact(row.actual),
                         size: AppNumberSize.body,
-                        color: overOrMet ? accent : cs.onSurface,
+                        color: flagged ? accent : cs.onSurface,
                       ),
                       Text(
                         ' / ${formatPesoCompact(row.allocated)}',
@@ -139,28 +134,21 @@ class BudgetCard extends StatelessWidget {
                       Text(
                         pct,
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: overOrMet ? accent : cs.onSurfaceVariant,
+                          color: flagged ? accent : cs.onSurfaceVariant,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
                   ),
-                  // Over-budget / goal note stays inside the column so it aligns
-                  // with the name, not hanging under the icon.
-                  if (row.isOver) ...[
+                  // The status in words (Watch · 82%, Over by ₱1,200, Funded,
+                  // Received), so it is never shown by color alone. It stays
+                  // inside the column so it aligns with the name.
+                  if (flagged) ...[
                     const SizedBox(height: 6),
                     _HintLine(
-                      icon: Icons.warning_amber_rounded,
-                      color: cs.error,
-                      text:
-                          'Over by ${formatPeso(row.overBy)} — trim next week',
-                    ),
-                  ] else if (row.isSavings && row.met) ...[
-                    const SizedBox(height: 6),
-                    _HintLine(
-                      icon: Icons.check_circle_outline_rounded,
-                      color: cs.tertiary,
-                      text: 'Goal reached',
+                      icon: budgetStatusIcon(row.status),
+                      color: accent,
+                      text: row.statusLabel,
                     ),
                   ],
                   // Money drawn out of a fund no longer subtracts from its

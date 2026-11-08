@@ -62,6 +62,11 @@ String categoryColorAt(int index, {required bool isExpense}) {
 /// (luminance > 0.65) — the old default — substitutes a palette color
 /// based on [index] so existing categories always render distinctly.
 ///
+/// A blank or malformed [hex] (for example `''` for a deleted category) also
+/// gets the palette color at [index]. Only 6- or 8-digit hex is parsed: a
+/// shorter string used to parse as a near-transparent color (`'FF'` →
+/// `0x000000FF`) instead of reaching the fallback.
+///
 /// [brightness] defaults to [Brightness.dark] (the curated palettes are tuned
 /// for dark backgrounds, so existing callers are unchanged). When
 /// [Brightness.light] is passed, the resolved color is darkened/saturated so it
@@ -75,7 +80,11 @@ Color resolveSliceColor(
 }) {
   Color color;
   try {
-    color = Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+    final clean = hex.replaceFirst('#', '');
+    if (clean.length != 6 && clean.length != 8) {
+      throw FormatException('Not a hex color', hex);
+    }
+    color = Color(int.parse('FF$clean', radix: 16));
     if (color.computeLuminance() > 0.65) {
       color = _parseHex(kExpensePalette[index % kExpensePalette.length]);
     }

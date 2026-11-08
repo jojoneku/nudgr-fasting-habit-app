@@ -13,12 +13,25 @@ class MonthlySummaryDetailView extends StatelessWidget {
   final List<FinanceCategory> categories;
   final List<FinancialAccount> accounts;
 
+  /// Jumps to this month's rows in the Ledger. Null hides the button (a
+  /// standalone mount with no Ledger to hand over to).
+  final VoidCallback? onOpenInLedger;
+
   const MonthlySummaryDetailView({
     super.key,
     required this.summary,
     required this.categories,
     this.accounts = const [],
+    this.onOpenInLedger,
   });
+
+  /// The "Open in Ledger" bar, pinned to the bottom of the screen so the
+  /// action stays in thumb reach. Null when there is no handler.
+  Widget? _openInLedgerBar() {
+    final onPressed = onOpenInLedger;
+    if (onPressed == null) return null;
+    return _OpenInLedgerBar(onPressed: onPressed);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +41,7 @@ class MonthlySummaryDetailView extends StatelessWidget {
         icon: const Icon(Icons.arrow_back),
         onPressed: () => Navigator.pop(context),
       ),
+      bottomNavigationBar: _openInLedgerBar(),
       slivers: [
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -44,6 +58,29 @@ class MonthlySummaryDetailView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Open in Ledger ───────────────────────────────────────────────────────────
+
+class _OpenInLedgerBar extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _OpenInLedgerBar({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: AppSecondaryButton(
+          label: 'Open in Ledger',
+          leading: Icons.list_alt_outlined,
+          onPressed: onPressed,
+        ),
+      ),
     );
   }
 }
@@ -249,10 +286,11 @@ class _CategorySpendSection extends StatelessWidget {
                     (c) => c?.id == entry.key,
                     orElse: () => null,
                   );
-              final color = cat != null
-                  ? resolveSliceColor(cat.colorHex, i,
-                      brightness: theme.brightness)
-                  : cs.onSurfaceVariant;
+              // An unknown (deleted) category still gets a palette color by
+              // its position, as on web: an empty hex fails to parse, so
+              // `resolveSliceColor` falls back to the palette slot.
+              final color = resolveSliceColor(cat?.colorHex ?? '', i,
+                  brightness: theme.brightness);
               return AppCard(
                 variant: AppCardVariant.filled,
                 padding:

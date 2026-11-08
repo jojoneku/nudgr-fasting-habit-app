@@ -78,6 +78,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   // Installment purchase state (outflow on liability account only):
   bool _splitInstallments = false;
+  // "I'll get this back" as it was before split was switched on. Split and
+  // reimbursable can't both hold, so split clears it while on — and puts it
+  // back when switched off again, so an existing reimbursable is never
+  // dropped by a split the user then backs out of.
+  bool _reimbursableBeforeSplit = false;
   int _installmentMonths = 3;
   double _interestRate = 0.0;
 
@@ -171,10 +176,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         }
       }
     }
-    if (widget.initialSplit) {
-      _splitInstallments = true;
-      _reimbursable = false;
-    }
+    if (widget.initialSplit) _setSplit(true);
     if (widget.initialReimbursable &&
         _type == TransactionType.outflow &&
         !_splitInstallments) {
@@ -201,6 +203,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _selectedCategoryId = t.categoryId.isEmpty ? null : t.categoryId;
       _reimbursable = t.reimbursable;
       _owedByController.text = t.owedBy ?? '';
+    }
+  }
+
+  /// Switches "Split into installments" on or off — the same rule whether the
+  /// sheet opened via the row's Split action or the user flipped the switch.
+  /// On: stash "I'll get this back" and clear it (the two can't combine).
+  /// Off: restore it, so the More options fold re-opens on a reimbursable
+  /// record with its switch on rather than saving it away unseen.
+  void _setSplit(bool on) {
+    if (on == _splitInstallments) return;
+    _splitInstallments = on;
+    if (on) {
+      _reimbursableBeforeSplit = _reimbursable;
+      _reimbursable = false;
+    } else {
+      _reimbursable = _reimbursableBeforeSplit;
     }
   }
 
@@ -654,12 +672,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           amount:
                               evalAmountExpression(_amountController.text) ??
                                   0.0,
-                          onChanged: (v) {
-                            setState(() {
-                              _splitInstallments = v;
-                              if (v) _reimbursable = false;
-                            });
-                          },
+                          onChanged: (v) => setState(() => _setSplit(v)),
                           onMonthsChanged: (m) =>
                               setState(() => _installmentMonths = m),
                           onInterestRateChanged: (r) =>

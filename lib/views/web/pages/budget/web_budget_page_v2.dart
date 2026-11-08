@@ -16,6 +16,7 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_budget_amount_field.dart';
+import 'package:intermittent_fasting/views/treasury/shared/budget_status_color.dart';
 import 'web_budget_shared.dart';
 import 'web_manage_groups_dialog_v2.dart';
 import 'web_new_category_dialog.dart';
@@ -97,38 +98,13 @@ class _Section {
   double get used => allocated > 0 ? spent / allocated : 0;
 }
 
-enum _Tone { ok, watch, over, funded }
-
-/// Status of one row. Savings rows never read "Over": funding past a goal is
-/// the goal working, so they go On track → Funded.
-({_Tone tone, String label}) _statusFor(_Row row) {
-  if (row.accountBacked) {
-    return row.used >= 1
-        ? (tone: _Tone.funded, label: 'Funded')
-        : (tone: _Tone.ok, label: 'On track');
-  }
-  if (row.used >= 1 && row.allocated > 0 || row.spent > row.allocated) {
-    return (
-      tone: _Tone.over,
-      label: 'Over by ${formatPesoWhole(row.spent - row.allocated)}',
+/// Status of one row: the shared rule ([budgetStatusFor]) that the mobile
+/// Budget cards use too, so the same data reads the same on both apps.
+({BudgetStatus status, String label}) _statusFor(_Row row) => budgetStatusFor(
+      allocated: row.allocated,
+      spent: row.spent,
+      accountBacked: row.accountBacked,
     );
-  }
-  if (row.used >= kBudgetWatchThreshold) {
-    return (tone: _Tone.watch, label: 'Watch · ${(row.used * 100).round()}%');
-  }
-  return (tone: _Tone.ok, label: 'On track');
-}
-
-Color _toneColor(BuildContext context, _Tone tone) {
-  final cs = Theme.of(context).colorScheme;
-  final a = context.appColors;
-  return switch (tone) {
-    _Tone.ok => cs.tertiary,
-    _Tone.watch => a.bills,
-    _Tone.over => a.bills,
-    _Tone.funded => a.treasury,
-  };
-}
 
 /// Days left in the current calendar month, including today.
 int _daysToGo(DateTime now) {
@@ -926,7 +902,8 @@ class _DataRow extends StatelessWidget {
     final a = context.appColors;
     final status = _statusFor(row);
     final over = !row.accountBacked && row.spent > row.allocated;
-    final warn = !row.accountBacked && row.used >= kBudgetWatchThreshold;
+    final warn = status.status == BudgetStatus.watch ||
+        status.status == BudgetStatus.over;
     final barColor = warn ? a.bills : groupColor;
     final figure = webNumericStyle(
       theme.textTheme.bodyMedium?.copyWith(fontSize: 13.5),
@@ -1075,7 +1052,7 @@ class _DataRow extends StatelessWidget {
                 child: _StatusPill(
                   key: WebKeys.budgetStatus(row.id),
                   label: status.label,
-                  tone: status.tone,
+                  tone: status.status,
                 ),
               ),
             ),
@@ -1108,15 +1085,15 @@ class _DataRow extends StatelessWidget {
 /// line and double the row height.
 class _StatusPill extends StatelessWidget {
   final String label;
-  final _Tone tone;
+  final BudgetStatus tone;
 
   const _StatusPill({super.key, required this.label, required this.tone});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = _toneColor(context, tone);
-    final over = tone == _Tone.over;
+    final color = budgetStatusColor(context, tone);
+    final over = tone == BudgetStatus.over;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(

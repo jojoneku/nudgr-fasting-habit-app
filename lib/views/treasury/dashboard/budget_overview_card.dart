@@ -1,55 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/budget_status_color.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class BudgetOverviewCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
-  const BudgetOverviewCard({super.key, required this.presenter});
+  /// Switches the Treasury module to the Budget tab. Null hides the link
+  /// (e.g. a standalone mount in tests).
+  final VoidCallback? onOpenBudget;
+
+  const BudgetOverviewCard({
+    super.key,
+    required this.presenter,
+    this.onOpenBudget,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final allocated = presenter.budgetAllocatedByGroup;
-    final spent = presenter.budgetSpentByGroup;
-    // Expense-only totals so the "Total" row reconciles with the expense-group
-    // rows below it (savings budgets live in a separate card).
-    final totalAllocated = presenter.totalExpenseBudgetAllocated;
-    final totalSpent = presenter.totalExpenseBudgetSpent;
-    // Show expense groups only (exclude savings — it has a separate card).
-    final expenseGroups =
-        presenter.budgetGroups.where((g) => !g.isSavings).toList();
+    // Expense groups only (savings has its own card), with groups that have
+    // nothing allocated and nothing spent left out. The Total uses expense
+    // totals so it reconciles with the rows below it.
+    final rows = presenter.budgetHealthRows(includeSavings: false);
+    final total = presenter.budgetHealthExpenseTotal;
 
     return AppSection(
       title: 'Budget This Month',
+      trailing: onOpenBudget == null
+          ? null
+          : TextButton(
+              key: const ValueKey('dashboard.budget.open'),
+              onPressed: onOpenBudget,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+              child: const Text('Open budget'),
+            ),
       child: AppCard(
         variant: AppCardVariant.elevated,
         child: Column(
           children: [
-            _BudgetProgressRow(
-              label: 'Total',
-              allocated: totalAllocated,
-              spent: totalSpent,
-              isTotal: true,
-            ),
-            const SizedBox(height: 12),
-            Divider(
-              height: 1,
-              color: Theme.of(context)
-                  .colorScheme
-                  .outlineVariant
-                  .withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 12),
-            for (var i = 0; i < expenseGroups.length; i++) ...[
-              _BudgetProgressRow(
-                label: expenseGroups[i].name,
-                allocated: allocated[expenseGroups[i].id] ?? 0.0,
-                spent: spent[expenseGroups[i].id] ?? 0.0,
-                isTotal: false,
+            _BudgetProgressRow(row: total, isTotal: true),
+            if (rows.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Divider(
+                height: 1,
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.4),
               ),
-              if (i < expenseGroups.length - 1) const SizedBox(height: 10),
+              const SizedBox(height: 12),
+            ],
+            for (var i = 0; i < rows.length; i++) ...[
+              _BudgetProgressRow(row: rows[i], isTotal: false),
+              if (i < rows.length - 1) const SizedBox(height: 10),
             ],
           ],
         ),
@@ -59,34 +66,18 @@ class BudgetOverviewCard extends StatelessWidget {
 }
 
 class _BudgetProgressRow extends StatelessWidget {
-  final String label;
-  final double allocated;
-  final double spent;
+  final BudgetHealthRow row;
   final bool isTotal;
 
-  const _BudgetProgressRow({
-    required this.label,
-    required this.allocated,
-    required this.spent,
-    required this.isTotal,
-  });
-
-  Color _progressColor(double ratio, BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    if (ratio >= 1.0) return colorScheme.error;
-    if (ratio >= 0.75) return context.appColors.gold;
-    return colorScheme.tertiary;
-  }
+  const _BudgetProgressRow({required this.row, required this.isTotal});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final ratio = allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0;
-    final barColor =
-        _progressColor(allocated > 0 ? spent / allocated : 0.0, context);
-    final percentText =
-        allocated > 0 ? '${(spent / allocated * 100).round()}%' : '—';
+    // Same status rule and tones as the Budget tab and web: Watch and Over in
+    // the warning tone, with the status also written out below the bar.
+    final barColor = budgetStatusColor(context, row.status);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -116,7 +107,7 @@ class _BudgetProgressRow extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      label,
+                      row.name,
                       style: (isTotal
                               ? theme.textTheme.bodyMedium
                               : theme.textTheme.bodySmall)
@@ -126,7 +117,7 @@ class _BudgetProgressRow extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    percentText,
+                    row.percentLabel,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: barColor,
                       fontWeight: FontWeight.w600,
@@ -135,7 +126,7 @@ class _BudgetProgressRow extends StatelessWidget {
                   const SizedBox(width: 8),
                   AppNumberDisplay(
                     value:
-                        '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
+                        '${formatPesoCompact(row.spent)} / ${formatPesoCompact(row.allocated)}',
                     size: AppNumberSize.body,
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -143,9 +134,27 @@ class _BudgetProgressRow extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               _AnimatedProgressBar(
-                ratio: ratio,
+                ratio: row.progress,
                 color: barColor,
                 height: isTotal ? 6.0 : 4.0,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(budgetStatusIcon(row.status), size: 12, color: barColor),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      row.statusLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: barColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -10,10 +10,9 @@ import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-import '../../design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
-import 'web_account_form_rules.dart';
 
 /// The v2 Add/Edit Account form (Plan 063, Phase 8) on the kit's [WebDialog]:
 /// Name and Type side by side, the balance (with the credit limit or the goal
@@ -79,7 +78,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
   final Map<String, String> _errors = {};
 
   AccountCategory _category = AccountCategory.bank;
-  String _selectedColor = kWebAccountColorOptions[0];
+  String _selectedColor = kAccountColorOptions[0];
 
   /// Stored badge choice (catalog key / monogram sentinel / '' = default).
   String _iconKey = '';
@@ -109,7 +108,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
   bool get _isEdit => widget.existing != null;
 
   List<AccountCategory> get _availableCategories =>
-      _isPocket ? kWebSubAccountCategories : kWebTopLevelAccountCategories;
+      _isPocket ? kSubAccountCategories : kTopLevelAccountCategories;
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
@@ -227,7 +226,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
             accountId: widget.existing?.id);
     if (balance != null) errors['balance'] = balance;
     if (_isGoal) {
-      final target = webParseAmount(_goalTargetController.text);
+      final target = parseAmount(_goalTargetController.text);
       if (target == null || target <= 0) {
         errors['goalTarget'] = 'Enter a goal target';
       }
@@ -236,7 +235,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
       final limit = optionalAmountValidator(_creditLimitController.text);
       if (limit != null) errors['creditLimit'] = limit;
       if (_isFixedMinimum) {
-        final min = webPositiveAmountValidator(_minimumFixedController.text);
+        final min = positiveAmountValidator(_minimumFixedController.text);
         if (min != null) errors['minimumFixed'] = min;
       }
       final rate = optionalAmountValidator(_financeRateController.text);
@@ -259,19 +258,19 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
       final balance = widget.presenter.balanceFromField(
         _category,
-        webParseAmount(_balanceController.text) ?? 0,
+        parseAmount(_balanceController.text) ?? 0,
         accountId: widget.existing?.id,
       );
       final goalTarget = _isGoal && _goalTargetController.text.isNotEmpty
-          ? webParseAmount(_goalTargetController.text)
+          ? parseAmount(_goalTargetController.text)
           : null;
       final creditLimit = _isCredit && _creditLimitController.text.isNotEmpty
-          ? webParseAmount(_creditLimitController.text)
+          ? parseAmount(_creditLimitController.text)
           : null;
       final financeRatePercent =
-          _isCredit ? webParseAmount(_financeRateController.text) : null;
+          _isCredit ? parseAmount(_financeRateController.text) : null;
       final minimumFixedAmount = _isCredit && _isFixedMinimum
-          ? webParseAmount(_minimumFixedController.text)
+          ? parseAmount(_minimumFixedController.text)
           : null;
 
       final account = FinancialAccount(
@@ -523,7 +522,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
               spacing: WebInsets.xs,
               runSpacing: WebInsets.xs,
               children: [
-                for (final hex in kWebAccountColorOptions)
+                for (final hex in kAccountColorOptions)
                   _Swatch(
                     hex: hex,
                     selected: hex.toLowerCase() == _selectedColor.toLowerCase(),
