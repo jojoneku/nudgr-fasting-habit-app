@@ -1,9 +1,9 @@
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 
-/// Single source of the human-readable label for an [AccountCategory] on the
-/// web Treasury pages. Previously this 11-arm switch was copy-pasted in three
-/// places (the setup page's category + type labels and the account form),
-/// which would silently drift as categories were added. (Plan 052 D1)
+/// Single source of the human-readable label for an [AccountCategory], on the
+/// web Treasury pages and in the mobile app. The 11-arm switch used to be
+/// copy-pasted in several places (Plan 052 D1 for web, Plan 071 Phase 1 for
+/// mobile), and the copies drifted ("Time deposit" vs "Time Deposit").
 extension AccountCategoryLabel on AccountCategory {
   String get label => switch (this) {
         AccountCategory.bank => 'Bank',
