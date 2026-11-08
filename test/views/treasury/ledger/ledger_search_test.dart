@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
@@ -197,4 +198,31 @@ void main() {
       expect(find.text('Jollibee lunch'), findsOneWidget);
     });
   }
+
+  testWidgets(
+      'an entry logged from the chat bar clears a search it does not match, '
+      'and the field follows', (tester) async {
+    await pumpLedger(tester, ThemeData.light());
+    await tester.tap(find.byKey(_open));
+    await tester.pumpAndSettle();
+    await type(tester, 'netflix');
+    expect(find.text('No transactions match "netflix"'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await presenter.sendChatInput('-500 food gcash');
+      if (presenter.chatState.phase == ChatPhase.reviewing) {
+        await presenter.confirmEntries();
+      }
+    });
+    await tester.pumpAndSettle();
+
+    final logged = presenter.allTransactions
+        .firstWhere((t) => !{'lunch', 'grocery', 'netflix'}.contains(t.id));
+    expect(presenter.isSearching, isFalse);
+    expect(
+      tester.widget<TextField>(find.byKey(_field)).controller!.text,
+      isEmpty,
+    );
+    expect(find.text(logged.description), findsOneWidget);
+  });
 }

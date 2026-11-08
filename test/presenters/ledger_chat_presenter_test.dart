@@ -226,6 +226,23 @@ void main() {
     when(stats.stats).thenReturn(UserStats.initial());
   });
 
+  group('a chat entry is never hidden by the ledger search', () {
+    test('a search the entry does not match is cleared on commit', () async {
+      final ai = FakeAiCoachService([]);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+      presenter.setSearch('netflix');
+      expect(presenter.isSearching, isTrue);
+
+      await _logViaChat(presenter, '-500 food gcash');
+
+      final txn = presenter.allTransactions.single;
+      expect(presenter.isSearching, isFalse);
+      expect(presenter.searchQuery, isEmpty);
+      expect(presenter.sortedTransactions.map((t) => t.id), contains(txn.id));
+    });
+  });
+
   group('regex+dict fast-path', () {
     test('fully-resolved input is confirmed without an AI call', () async {
       final ai = FakeAiCoachService([]);

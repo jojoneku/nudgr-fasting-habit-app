@@ -3594,6 +3594,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // position without a word is what made this feel like a glitch.
       _lastCommitSnappedFromMonth = snappedFrom;
     }
+    // A search the entry doesn't match would hide it the same way: end it,
+    // so the row the toast announced is on screen. The phone's search field
+    // follows the cleared query.
+    if (isSearching) clearSearch();
     safeNotify();
   }
 
