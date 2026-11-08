@@ -191,6 +191,8 @@ class _SettleSheetState extends State<SettleSheet> {
 
   bool get _offersLedgerToggle => settleOffersLedgerToggle(_kind);
   bool get _recordsInLedger => !(_offersLedgerToggle && _alreadyInLedger);
+  String get _ledgerFoldSubtitle =>
+      SettleCopy.ledgerFoldSubtitle(alreadyInLedger: _alreadyInLedger);
   bool get _asksAccount =>
       settleAsksAccount(_kind, recordInLedger: _recordsInLedger);
   bool get _isSetAside => _kind == SettleKind.setAside;
@@ -469,7 +471,9 @@ class _SettleSheetState extends State<SettleSheet> {
               const SizedBox(height: 12),
               AppFold(
                 title: 'More options',
-                subtitle: 'Already added to ledger',
+                subtitle: _ledgerFoldSubtitle,
+                // Opens (and re-opens) whenever the box is ticked, so a
+                // ticked box is shown rather than tucked away.
                 initiallyOpen: _alreadyInLedger,
                 child: CheckboxListTile(
                   key: SettleSheetKeys.alreadyLogged,

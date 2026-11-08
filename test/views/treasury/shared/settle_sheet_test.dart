@@ -154,6 +154,30 @@ void main() {
       expect(r.accountId, isNull);
     });
 
+    testWidgets('a collapsed More options fold still says the box is ticked',
+        (tester) async {
+      await open(
+        tester,
+        kind: SettleKind.bill,
+        targets: const [SettleTarget(id: 'b1', name: 'Rent', amount: 15000)],
+        payers: [bpi],
+      );
+
+      expect(find.text('Already added to ledger: off'), findsOneWidget);
+      await tester.tap(find.text('More options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(SettleSheetKeys.alreadyLogged));
+      await tester.pumpAndSettle();
+
+      // Collapse the fold again: the subtitle still names the state.
+      await tester.tap(find.text('More options'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(SettleSheetKeys.alreadyLogged), findsNothing);
+      expect(find.text('Already added to ledger: on, no new entry'),
+          findsOneWidget);
+      expect(find.text('Already added to ledger: off'), findsNothing);
+    });
+
     testWidgets('set-aside: waits for a destination, then sends it',
         (tester) async {
       final run = await open(
