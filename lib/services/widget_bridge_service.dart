@@ -247,7 +247,15 @@ class WidgetBridgeService {
               break;
             case 'completequest':
               final id = parts.length > 2 ? int.tryParse(parts[2]) : null;
-              if (id != null) await quests.completeQuest(id);
+              // markQuestDone, not completeQuest: a queued "done" must never
+              // toggle a completion back off, and it counts for the day the
+              // user tapped, not the day the queue happens to drain.
+              if (id != null) {
+                await quests.markQuestDone(id,
+                    on: ts != null
+                        ? DateTime.fromMillisecondsSinceEpoch(ts)
+                        : null);
+              }
               break;
           }
         } catch (e) {

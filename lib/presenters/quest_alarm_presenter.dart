@@ -29,8 +29,9 @@ class QuestAlarmPresenter extends ChangeNotifier {
         _notifications = notifications ?? NotificationService(),
         _lockScreen = lockScreen ?? LockScreenService();
 
-  /// An alarm left untouched is auto-dismissed, so a forgotten phone does not
-  /// sit with its screen on over the lock screen indefinitely.
+  /// An alarm left untouched is silenced after this, so a forgotten phone
+  /// does not ring, or sit with its screen on over the lock screen,
+  /// indefinitely. A quest stays in the shade as a silent reminder.
   static const Duration autoDismissAfter = Duration(minutes: 2);
 
   final AlarmNotification _alarm;
@@ -60,7 +61,7 @@ class QuestAlarmPresenter extends ChangeNotifier {
   Future<void> init() async {
     _tick();
     _clock = Timer.periodic(const Duration(seconds: 10), (_) => _tick());
-    _autoDismiss = Timer(autoDismissAfter, dismiss);
+    _autoDismiss = Timer(autoDismissAfter, timeOut);
     // Backstop for the native onCreate check — see LockScreenService.acquire.
     await _lockScreen.acquire();
     _overLockScreen = await _lockScreen.isShowingOverLockScreen();
@@ -77,6 +78,7 @@ class QuestAlarmPresenter extends ChangeNotifier {
     // Claimed up front, not inside _close: these buttons get double-tapped on a
     // locked phone, and the side effect runs before the close does.
     if (!_claimClose()) return;
+    await _stopRinging();
     final questId = _alarm.questId;
     if (questId != null) {
       await _notifications.completeQuestFromAlarm(questId);
@@ -86,6 +88,7 @@ class QuestAlarmPresenter extends ChangeNotifier {
 
   Future<void> snooze() async {
     if (!_claimClose()) return;
+    await _stopRinging();
     final questId = _alarm.questId;
     if (questId != null) {
       await _notifications.showQuestSnooze(questId, title, alarmStyle: true);
@@ -95,7 +98,30 @@ class QuestAlarmPresenter extends ChangeNotifier {
 
   Future<void> dismiss() async {
     if (!_claimClose()) return;
+    await _stopRinging();
     await _close();
+  }
+
+  /// Nobody answered. Stop the tone, but do not throw the quest away: it is
+  /// replaced by a silent reminder in the shade, still with its buttons.
+  Future<void> timeOut() async {
+    if (!_claimClose()) return;
+    final questId = _alarm.questId;
+    final notificationId = _alarm.notificationId;
+    if (questId != null && notificationId != null) {
+      await _notifications.showQuestMissed(notificationId, questId, title);
+    }
+    // A milestone alarm (or one with an unknown id) is left as it is.
+    await _close();
+  }
+
+  /// Cancels the notification that raised this alarm. For an alarm-style
+  /// quest that is what stops the looping alarm tone (it rings until its
+  /// notification goes away). It also removes the shade copy, so its own
+  /// "Mark as Done" cannot be tapped a second time after this screen.
+  Future<void> _stopRinging() async {
+    final id = _alarm.notificationId;
+    if (id != null) await _notifications.cancel(id);
   }
 
   /// Returns true for the first caller only; every later one is a repeat tap

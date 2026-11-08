@@ -11,10 +11,17 @@ class AlarmNotification {
     this.questId,
     required this.title,
     required this.body,
+    this.notificationId,
   });
 
   /// Quest this alarm belongs to, or null for a fasting/eating milestone.
   final int? questId;
+
+  /// Android id of the notification that raised this alarm. The alarm screen
+  /// cancels (or replaces) it on close: a ringing quest alarm loops its sound
+  /// until its notification goes away, and a leftover "Mark as Done" button in
+  /// the shade would otherwise invite a second completion. Null when unknown.
+  final int? notificationId;
   final String title;
   final String body;
 
@@ -24,7 +31,11 @@ class AlarmNotification {
 
   /// Parses a notification payload into an alarm, or returns null when the
   /// payload is absent, not JSON, or not flagged alarm-style.
-  static AlarmNotification? fromPayload(String? payload) {
+  ///
+  /// [notificationId] is not in the payload: it comes from the notification
+  /// response that carried it.
+  static AlarmNotification? fromPayload(String? payload,
+      {int? notificationId}) {
     if (payload == null || payload.isEmpty) return null;
     Object? decoded;
     try {
@@ -39,6 +50,7 @@ class AlarmNotification {
       questId: id is int ? id : null,
       title: decoded['title'] as String? ?? 'Reminder',
       body: decoded['body'] as String? ?? '',
+      notificationId: notificationId,
     );
   }
 }

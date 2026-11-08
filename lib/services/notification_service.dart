@@ -150,6 +150,25 @@ class NotificationService {
   static const String channelIdQuests = 'quests_channel_v6';
   static const String channelNameQuests = 'Daily Quests';
 
+  /// Alarm-style quests ring on their own channel. Android fixes a channel's
+  /// sound and audio stream when the channel is first created, so the alarm
+  /// tone cannot be added to [channelIdQuests]; it needs a channel of its own.
+  static const String channelIdQuestAlarms = 'quest_alarms_channel_v1';
+  static const String channelNameQuestAlarms = 'Quest Alarms';
+
+  /// The device's default alarm tone (what the Clock app rings with).
+  static const String _alarmToneUri = 'content://settings/system/alarm_alert';
+
+  /// Android `Notification.FLAG_INSISTENT`: the sound loops until the
+  /// notification is cancelled or replaced, like a real alarm clock.
+  static const int _flagInsistent = 4;
+
+  /// Safety stop for a ringing alarm nobody answers while the alarm screen is
+  /// not up (phone unlocked, so Android shows a heads-up banner instead).
+  /// The alarm screen itself stops ringing sooner, see
+  /// `QuestAlarmPresenter.autoDismissAfter`.
+  static const Duration questAlarmRingLimit = Duration(minutes: 5);
+
   static const String channelIdAchievements = 'achievements_channel_v1';
   static const String channelNameAchievements = 'Character Achievements';
 
@@ -392,7 +411,8 @@ class NotificationService {
         // Body tap, or a full-screen intent Android fired on its own while the
         // app was already running: show the alarm screen rather than whatever
         // page the app happened to be sitting on.
-        final alarm = AlarmNotification.fromPayload(response.payload);
+        final alarm = AlarmNotification.fromPayload(response.payload,
+            notificationId: response.id);
         if (alarm != null) {
           if (onAlarmNotification != null) {
             onAlarmNotification!(alarm);
@@ -480,6 +500,24 @@ class NotificationService {
         ),
       );
 
+      // 4b. Quest Alarms — alarm-style quests. Plays the device alarm tone on
+      // the ALARM audio stream, so it rings through silent/vibrate mode the
+      // way the Clock app does (Do Not Disturb still decides, per its
+      // "Alarms" setting).
+      await androidImplementation.createNotificationChannel(
+        AndroidNotificationChannel(
+          channelIdQuestAlarms,
+          channelNameQuestAlarms,
+          description: 'Quests set to "Alarm style" — rings until answered',
+          importance: Importance.max,
+          playSound: true,
+          sound: const UriAndroidNotificationSound(_alarmToneUri),
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          enableVibration: true,
+          vibrationPattern: _alarmVibration,
+        ),
+      );
+
       // 5. Character Achievements (level-up, rank promotion)
       await androidImplementation.createNotificationChannel(
         const AndroidNotificationChannel(
@@ -542,9 +580,21 @@ class NotificationService {
       final launchDetails = await flutterLocalNotificationsPlugin
           .getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp ?? false) {
-        final payload = launchDetails!.notificationResponse?.payload;
-        if (!_handleInstallApkPayload(payload)) {
-          _pendingAlarm = AlarmNotification.fromPayload(payload);
+        final response = launchDetails!.notificationResponse;
+        final payload = response?.payload;
+        if (_handleInstallApkPayload(payload)) {
+          // handled
+        } else if (response?.actionId != null) {
+          // "Mark as Done" opens the app (showsUserInterface), so when the app
+          // was not running its tap lands here, not in
+          // onDidReceiveNotificationResponse. Queue it before init returns so
+          // the shell's first drainPendingActions applies it. Without this the
+          // cold-start tap was dropped — and for an alarm-style quest it even
+          // opened the alarm screen again instead of completing the quest.
+          await _handleQuestNotificationAction(response!);
+        } else {
+          _pendingAlarm = AlarmNotification.fromPayload(payload,
+              notificationId: response?.id);
         }
       }
     } catch (e) {
@@ -880,41 +930,70 @@ class NotificationService {
     debugPrint(
         'NotificationService: Scheduling quest notifications for ${quest.title}');
 
-    final AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      channelIdQuests,
-      channelNameQuests,
-      channelDescription: 'Recurring reminders for habits and quests',
-      importance: Importance.max,
-      priority: Priority.max,
-      // Alarm-clock behaviour is opt-in per quest. A full-screen intent wakes
-      // the screen and draws over the keyguard, which is right for a quest the
-      // user explicitly wants to be interrupted by and wrong for every other
-      // one — and Android 14+ only grants USE_FULL_SCREEN_INTENT to genuine
-      // alarm/call use anyway.
-      fullScreenIntent: quest.alarmStyle,
-      playSound: true,
-      enableVibration: true,
-      vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
-      category: quest.alarmStyle
-          ? AndroidNotificationCategory.alarm
-          : AndroidNotificationCategory.reminder,
-      visibility: NotificationVisibility.public,
-      actions: _questActions(),
-    );
-    final NotificationDetails details =
-        NotificationDetails(android: androidDetails);
+    // The quest itself rings as an alarm when the user opted in. The "Upcoming
+    // Quest" heads-up before it never does: a looping alarm tone for "15
+    // minutes to go" is the wrong level of interruption.
+    final details = _questDetails(alarm: quest.alarmStyle);
+    final reminderDetails = _questDetails(alarm: false);
 
     switch (quest.recurrenceType) {
       case RecurrenceType.daily:
-        await _scheduleDailyQuest(quest, details);
+        await _scheduleDailyQuest(quest, details, reminderDetails);
       case RecurrenceType.weekly:
-        await _scheduleWeeklyQuest(quest, details);
+        await _scheduleWeeklyQuest(quest, details, reminderDetails);
       case RecurrenceType.biweekly:
-        await _scheduleBiweeklyQuest(quest, details);
+        await _scheduleBiweeklyQuest(quest, details, reminderDetails);
       case RecurrenceType.monthly:
-        await _scheduleMonthlyQuest(quest, details);
+        await _scheduleMonthlyQuest(quest, details, reminderDetails);
     }
+  }
+
+  static final Int64List _alarmVibration =
+      Int64List.fromList([0, 500, 250, 500, 250, 500]);
+
+  /// Notification details for a quest reminder.
+  ///
+  /// [alarm] = true is the opt-in alarm-clock behaviour: the Quest Alarms
+  /// channel (device alarm tone on the alarm stream), an insistent flag so the
+  /// tone loops until the user answers, and a full-screen intent that wakes
+  /// the screen and draws over the keyguard. That is right for a quest the user
+  /// explicitly wants to be interrupted by and wrong for every other one — and
+  /// Android 14+ only grants USE_FULL_SCREEN_INTENT to real alarm/call use.
+  NotificationDetails _questDetails({required bool alarm}) {
+    final android = alarm
+        ? AndroidNotificationDetails(
+            channelIdQuestAlarms,
+            channelNameQuestAlarms,
+            channelDescription:
+                'Quests set to "Alarm style" — rings until answered',
+            importance: Importance.max,
+            priority: Priority.max,
+            fullScreenIntent: true,
+            playSound: true,
+            sound: const UriAndroidNotificationSound(_alarmToneUri),
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            enableVibration: true,
+            vibrationPattern: _alarmVibration,
+            additionalFlags: Int32List.fromList([_flagInsistent]),
+            timeoutAfter: questAlarmRingLimit.inMilliseconds,
+            category: AndroidNotificationCategory.alarm,
+            visibility: NotificationVisibility.public,
+            actions: _questActions(),
+          )
+        : AndroidNotificationDetails(
+            channelIdQuests,
+            channelNameQuests,
+            channelDescription: 'Recurring reminders for habits and quests',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: _alarmVibration,
+            category: AndroidNotificationCategory.reminder,
+            visibility: NotificationVisibility.public,
+            actions: _questActions(),
+          );
+    return NotificationDetails(android: android);
   }
 
   /// Action buttons shown on quest notifications.
@@ -953,11 +1032,15 @@ class NotificationService {
   /// JSON payload carrying the quest identity for the action handler, plus the
   /// alarm flag the app (and `MainActivity`) read to decide whether this
   /// notification may draw over the lock screen.
-  String _questPayload(Quest quest) => jsonEncode({
+  ///
+  /// [asAlarm] = false drops the alarm flag even for an alarm-style quest. The
+  /// "Upcoming Quest" reminder uses it: it is an ordinary banner, so a tap on
+  /// it must open the app normally, not the alarm screen.
+  String _questPayload(Quest quest, {bool asAlarm = true}) => jsonEncode({
         'id': quest.id,
         'title': quest.title,
         'body': questNotificationBody,
-        if (quest.alarmStyle) AlarmNotification.payloadFlag: true,
+        if (quest.alarmStyle && asAlarm) AlarmNotification.payloadFlag: true,
       });
 
   /// Body text shared by every quest reminder, so the alarm screen can show the
@@ -981,29 +1064,16 @@ class NotificationService {
     if (!_isInitialized || !_masterEnabled) return;
     final when = tz.TZDateTime.now(tz.local)
         .add(const Duration(minutes: questSnoozeMinutes));
-    final AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      channelIdQuests,
-      channelNameQuests,
-      channelDescription: 'Recurring reminders for habits and quests',
-      importance: Importance.max,
-      priority: Priority.max,
-      // A snoozed alarm is still an alarm: it must wake the screen again in 15
-      // minutes, otherwise snoozing silently downgrades it to a shade banner.
-      fullScreenIntent: alarmStyle,
-      category: alarmStyle
-          ? AndroidNotificationCategory.alarm
-          : AndroidNotificationCategory.reminder,
-      visibility: NotificationVisibility.public,
-      actions: _questActions(),
-    );
     try {
       await flutterLocalNotificationsPlugin.zonedSchedule(
         questId + _questSnoozeIdOffset,
         title,
         "It's time for your quest!",
         when,
-        NotificationDetails(android: androidDetails),
+        // A snoozed alarm is still an alarm: it must ring and wake the screen
+        // again in 15 minutes, otherwise snoozing silently downgrades it to a
+        // shade banner.
+        _questDetails(alarm: alarmStyle),
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
@@ -1019,9 +1089,49 @@ class NotificationService {
     }
   }
 
+  /// Stops a ringing quest alarm that nobody answered, but keeps the quest in
+  /// the shade.
+  ///
+  /// Re-posts notification [notificationId] as a silent, ordinary quest
+  /// reminder. Replacing the notification is what stops the looping alarm
+  /// tone; the reminder stays so the user can still mark the quest done (or
+  /// snooze it) when they pick the phone up.
+  Future<void> showQuestMissed(
+      int notificationId, int questId, String title) async {
+    if (!_isInitialized || !_masterEnabled) return;
+    try {
+      await flutterLocalNotificationsPlugin.show(
+        notificationId,
+        title,
+        'Missed alarm. Still not done for today.',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelIdQuests,
+            channelNameQuests,
+            channelDescription: 'Recurring reminders for habits and quests',
+            importance: Importance.high,
+            priority: Priority.high,
+            silent: true,
+            category: AndroidNotificationCategory.reminder,
+            visibility: NotificationVisibility.public,
+            actions: _questActions(),
+          ),
+        ),
+        // No alarm flag: a tap on a missed alarm opens the app normally.
+        payload: jsonEncode({
+          'id': questId,
+          'title': title,
+          'body': questNotificationBody,
+        }),
+      );
+    } catch (e) {
+      debugPrint('NotificationService: Error showing missed alarm: $e');
+    }
+  }
+
   /// Daily: schedule one recurring notification per enabled day-of-week.
-  Future<void> _scheduleDailyQuest(
-      Quest quest, NotificationDetails details) async {
+  Future<void> _scheduleDailyQuest(Quest quest, NotificationDetails details,
+      NotificationDetails reminderDetails) async {
     final int baseId = quest.id;
     final now = tz.TZDateTime.now(tz.local);
 
@@ -1040,7 +1150,7 @@ class NotificationService {
           now.add(const Duration(seconds: 1)),
           channelId: channelIdQuests,
           channelName: channelNameQuests,
-          actions: _questActions(),
+          detailsOverride: details,
           payload: _questPayload(quest),
         );
         scheduledDate = scheduledDate.add(const Duration(days: 7));
@@ -1065,13 +1175,13 @@ class NotificationService {
       }
 
       await _scheduleQuestReminder(quest, scheduledDate, baseId + 100 + i,
-          details, DateTimeComponents.dayOfWeekAndTime);
+          reminderDetails, DateTimeComponents.dayOfWeekAndTime);
     }
   }
 
   /// Weekly: one recurring notification on the chosen weekday.
-  Future<void> _scheduleWeeklyQuest(
-      Quest quest, NotificationDetails details) async {
+  Future<void> _scheduleWeeklyQuest(Quest quest, NotificationDetails details,
+      NotificationDetails reminderDetails) async {
     final int dayOfWeekISO = quest.weeklyWeekday + 1;
     tz.TZDateTime scheduledDate =
         _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
@@ -1085,7 +1195,7 @@ class NotificationService {
         now.add(const Duration(seconds: 1)),
         channelId: channelIdQuests,
         channelName: channelNameQuests,
-        actions: _questActions(),
+        detailsOverride: details,
         payload: _questPayload(quest),
       );
       scheduledDate = scheduledDate.add(const Duration(days: 7));
@@ -1109,13 +1219,13 @@ class NotificationService {
           'NotificationService: Error scheduling weekly quest "${quest.title}": $e');
     }
 
-    await _scheduleQuestReminder(quest, scheduledDate, quest.id + 100, details,
-        DateTimeComponents.dayOfWeekAndTime);
+    await _scheduleQuestReminder(quest, scheduledDate, quest.id + 100,
+        reminderDetails, DateTimeComponents.dayOfWeekAndTime);
   }
 
   /// Biweekly: schedule the next 6 occurrences as one-shot notifications.
-  Future<void> _scheduleBiweeklyQuest(
-      Quest quest, NotificationDetails details) async {
+  Future<void> _scheduleBiweeklyQuest(Quest quest, NotificationDetails details,
+      NotificationDetails reminderDetails) async {
     final int dayOfWeekISO = quest.weeklyWeekday + 1;
     tz.TZDateTime next =
         _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
@@ -1141,7 +1251,9 @@ class NotificationService {
         next,
         channelId: channelIdQuests,
         channelName: channelNameQuests,
-        actions: _questActions(),
+        // Biweekly goes through the one-shot path, which used to build its own
+        // plain details — so "Alarm style" was silently ignored here.
+        detailsOverride: details,
         payload: _questPayload(quest),
       );
       if (quest.reminderMinutes != null && quest.reminderMinutes! > 0) {
@@ -1154,8 +1266,8 @@ class NotificationService {
           reminderDate,
           channelId: channelIdQuests,
           channelName: channelNameQuests,
-          actions: _questActions(),
-          payload: _questPayload(quest),
+          detailsOverride: reminderDetails,
+          payload: _questPayload(quest, asAlarm: false),
         );
       }
       next = next.add(const Duration(days: 14));
@@ -1163,8 +1275,8 @@ class NotificationService {
   }
 
   /// Monthly: one recurring notification per selected day-of-month.
-  Future<void> _scheduleMonthlyQuest(
-      Quest quest, NotificationDetails details) async {
+  Future<void> _scheduleMonthlyQuest(Quest quest, NotificationDetails details,
+      NotificationDetails reminderDetails) async {
     for (int idx = 0; idx < quest.monthlyDays.length; idx++) {
       final int dayOfMonth = quest.monthlyDays[idx];
       final int notifId = quest.id + 300 + idx;
@@ -1189,8 +1301,8 @@ class NotificationService {
             'NotificationService: Error scheduling monthly quest "${quest.title}": $e');
       }
 
-      await _scheduleQuestReminder(quest, scheduledDate, notifId + 10, details,
-          DateTimeComponents.dayOfMonthAndTime);
+      await _scheduleQuestReminder(quest, scheduledDate, notifId + 10,
+          reminderDetails, DateTimeComponents.dayOfMonthAndTime);
     }
   }
 
@@ -1222,7 +1334,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: matchComponent,
-        payload: _questPayload(quest),
+        payload: _questPayload(quest, asAlarm: false),
       );
     } catch (e) {
       debugPrint(
@@ -1791,6 +1903,7 @@ class NotificationService {
     required String channelName,
     List<AndroidNotificationAction>? actions,
     String? payload,
+    NotificationDetails? detailsOverride,
   }) async {
     // Central backstop: every scheduled notification funnels through here.
     if (!_isInitialized || !_masterEnabled) return;
@@ -1820,7 +1933,7 @@ class NotificationService {
       actions: actions,
     );
     final NotificationDetails details =
-        NotificationDetails(android: androidDetails);
+        detailsOverride ?? NotificationDetails(android: androidDetails);
 
     // A full-screen one-shot (fasting goal reached, eating window over) wakes
     // the device the same way a quest alarm does, so it needs the same alarm

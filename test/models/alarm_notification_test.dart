@@ -17,6 +17,14 @@ void main() {
       expect(alarm!.questId, 7);
       expect(alarm.title, 'Take meds');
       expect(alarm.body, "It's time for your quest!");
+      expect(alarm.notificationId, isNull);
+    });
+
+    // The alarm screen needs the notification id to stop the alarm tone.
+    test('carries the notification id from the response', () {
+      final payload = jsonEncode({'id': 7, 'title': 'x', 'alarm': true});
+      final alarm = AlarmNotification.fromPayload(payload, notificationId: 42);
+      expect(alarm!.notificationId, 42);
     });
 
     test('parses a milestone alarm with no quest id', () {

@@ -2598,6 +2598,25 @@ class MockNotificationService extends _i1.Mock
       ) as _i17.Future<void>);
 
   @override
+  _i17.Future<void> showQuestMissed(
+    int? notificationId,
+    int? questId,
+    String? title,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showQuestMissed,
+          [
+            notificationId,
+            questId,
+            title,
+          ],
+        ),
+        returnValue: _i17.Future<void>.value(),
+        returnValueForMissingStub: _i17.Future<void>.value(),
+      ) as _i17.Future<void>);
+
+  @override
   _i17.Future<void> cancelQuestNotifications(_i19.Quest? quest) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -4496,6 +4515,21 @@ class MockQuestPresenter extends _i1.Mock implements _i68.QuestPresenter {
             #type: type,
             #date: date,
           },
+        ),
+        returnValue: _i17.Future<(int, bool)>.value((0, false)),
+        returnValueForMissingStub: _i17.Future<(int, bool)>.value((0, false)),
+      ) as _i17.Future<(int, bool)>);
+
+  @override
+  _i17.Future<(int, bool)> markQuestDone(
+    int? questId, {
+    DateTime? on,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #markQuestDone,
+          [questId],
+          {#on: on},
         ),
         returnValue: _i17.Future<(int, bool)>.value((0, false)),
         returnValueForMissingStub: _i17.Future<(int, bool)>.value((0, false)),
@@ -8319,6 +8353,17 @@ class MockBillsReceivablesPresenter extends _i1.Mock
         returnValue: _i17.Future<void>.value(),
         returnValueForMissingStub: _i17.Future<void>.value(),
       ) as _i17.Future<void>);
+
+  @override
+  _i77.InstallmentReceivablePreview? installmentReceivablePreview(
+          _i35.Installment? draft) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #installmentReceivablePreview,
+          [draft],
+        ),
+        returnValueForMissingStub: null,
+      ) as _i77.InstallmentReceivablePreview?);
 
   @override
   _i17.Future<void> addBudgetedExpense(

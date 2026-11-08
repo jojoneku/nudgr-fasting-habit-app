@@ -254,6 +254,42 @@ void main() {
       expect(presenter.quests.first.isCompletedToday, isFalse);
     });
 
+    test(
+        'Given already completed today, When marked done from a notification, '
+        'Then it stays completed', () async {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [
+            _quest(id: 1, completedDates: [today], streakCount: 5)
+          ]);
+
+      final (xp, _) = await presenter.markQuestDone(1);
+
+      expect(xp, 0);
+      expect(presenter.quests.first.isCompletedToday, isTrue);
+      expect(presenter.quests.first.streakCount, 5);
+    });
+
+    test(
+        'Given an uncompleted quest, When marked done twice, '
+        'Then it is completed once', () async {
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [_quest(id: 1, xpReward: 10, streakCount: 2)]);
+
+      await presenter.markQuestDone(1);
+      await presenter.markQuestDone(1);
+
+      expect(presenter.quests.first.isCompletedToday, isTrue);
+      expect(presenter.quests.first.streakCount, 3);
+      verify(mockStats.addXp(any)).called(1);
+    });
+
     test('Given full completion, When completed, Then streakCount increments',
         () async {
       final presenter = await _buildPresenter(
