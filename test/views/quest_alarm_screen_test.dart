@@ -159,6 +159,58 @@ void main() {
     });
   });
 
+  group('QuestAlarmPresenter stops the ringing', () {
+    const ringingQuest = AlarmNotification(
+      questId: 7,
+      title: 'Take meds',
+      body: "It's time for your quest!",
+      notificationId: 42,
+    );
+
+    for (final entry in <String, Future<void> Function(QuestAlarmPresenter)>{
+      'mark as done': (p) => p.markDone(),
+      'snooze': (p) => p.snooze(),
+      'dismiss': (p) => p.dismiss(),
+    }.entries) {
+      test('${entry.key} cancels the notification that rang', () async {
+        when(notifications.completeQuestFromAlarm(any))
+            .thenAnswer((_) async {});
+        when(notifications.showQuestSnooze(any, any,
+                alarmStyle: anyNamed('alarmStyle')))
+            .thenAnswer((_) async {});
+        final p = presenterFor(ringingQuest);
+        await entry.value(p);
+        verify(notifications.cancel(42)).called(1);
+        p.dispose();
+      });
+    }
+
+    test('time-out leaves a silent reminder instead of dropping the quest',
+        () async {
+      when(notifications.showQuestMissed(any, any, any))
+          .thenAnswer((_) async {});
+      final p = presenterFor(ringingQuest);
+      await p.timeOut();
+      verify(notifications.showQuestMissed(42, 7, 'Take meds')).called(1);
+      verifyNever(notifications.cancel(any));
+      expect(lockScreenCalls, contains('release'));
+      p.dispose();
+    });
+
+    test('a milestone alarm time-out leaves its notification alone', () async {
+      const milestone = AlarmNotification(
+        title: 'You did it!',
+        body: 'Fasting goal reached.',
+        notificationId: 0,
+      );
+      final p = presenterFor(milestone);
+      await p.timeOut();
+      verifyNever(notifications.showQuestMissed(any, any, any));
+      verifyNever(notifications.cancel(any));
+      p.dispose();
+    });
+  });
+
   group('QuestAlarmPresenter close routing', () {
     test('over the lock screen, closing returns to the lock screen', () async {
       overLockScreen = true;

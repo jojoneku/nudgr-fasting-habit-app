@@ -36,6 +36,11 @@
         android:allowBackup="false"
         android:fullBackupContent="false">
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <!-- Handles notification action buttons that run without opening the
+             app (quest "Snooze 15m" / "Skip today"). Without it Android has
+             nowhere to deliver the tap: the button does nothing and the
+             notification is not even dismissed. -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
