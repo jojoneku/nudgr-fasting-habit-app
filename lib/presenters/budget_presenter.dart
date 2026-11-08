@@ -17,18 +17,12 @@ import 'package:intermittent_fasting/presenters/treasury_month_scope.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
+import 'package:intermittent_fasting/utils/budget_status.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/recurring_series.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
-/// Fraction of an allocation spent from which a budget row reads "Watch".
-///
-/// One number for every surface that badges budget health — the web Budget
-/// page's status pills and bars, and the Dashboard's Budget Health card (which
-/// reads it in its v2 integration). The two used to disagree (75 % here,
-/// 85 % there), so the same row could be calm on one page and amber on the
-/// next. At or past 1.0 a row is "Over"; that boundary is not configurable.
-const double kBudgetWatchThreshold = 0.75;
+export 'package:intermittent_fasting/utils/budget_status.dart';
 
 class BudgetPresenter extends ChangeNotifier with SafeNotifier {
   BudgetPresenter(
@@ -539,6 +533,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
             isOver: false,
             overBy: 0.0,
             met: allocated > 0 && funded >= allocated,
+            status: budgetStatusFor(
+              allocated: allocated,
+              spent: funded,
+              accountBacked: true,
+            ),
             transactions: _transactionsForAccount(account.id, month),
           ));
         }
@@ -569,17 +568,29 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
             isOver: isOver,
             overBy: isOver ? actual - allocated : 0.0,
             met: false,
+            status: budgetStatusFor(
+              allocated: allocated,
+              spent: actual,
+              isIncome: isIncome,
+            ),
             transactions: transactionsForCategory(cat.id, month: month),
           ));
         }
       }
       if (rows.isEmpty) continue;
+      final allocated = sectionAllocated(group.id, month: month);
+      final spent = sectionSpent(group.id, month: month);
       sections.add(BudgetSection(
         groupId: group.id,
         name: group.name,
         isSavings: group.isSavings,
-        allocated: sectionAllocated(group.id, month: month),
-        spent: sectionSpent(group.id, month: month),
+        allocated: allocated,
+        spent: spent,
+        usedLabel: budgetGroupUsedLabel(
+          allocated: allocated,
+          spent: spent,
+          isSavings: group.isSavings,
+        ),
         rows: rows,
       ));
     }
@@ -648,6 +659,7 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
           remaining: allocated - spent,
           progress: allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0,
           isOver: allocated > 0 && spent > allocated,
+          status: budgetStatusFor(allocated: allocated, spent: spent),
         ));
       }
     }
@@ -666,6 +678,11 @@ class BudgetPresenter extends ChangeNotifier with SafeNotifier {
         progress: allocated > 0 ? (funded / allocated).clamp(0.0, 1.0) : 0.0,
         // Savings rows can never be "over" — exceeding the goal is good.
         isOver: false,
+        status: budgetStatusFor(
+          allocated: allocated,
+          spent: funded,
+          accountBacked: true,
+        ),
       ));
     }
     return rows;
@@ -1232,6 +1249,14 @@ class WebBudgetRow {
   final double progress;
   final bool isOver;
 
+  /// Shared status from [budgetStatusFor] — the same rule the mobile cards use.
+  final ({BudgetStatus status, String label}) _status;
+
+  BudgetStatus get status => _status.status;
+
+  /// 'On track' · 'Watch · 82%' · 'Over by ₱1,200' · 'Funded'.
+  String get statusLabel => _status.label;
+
   const WebBudgetRow({
     required this.targetId,
     required this.name,
@@ -1241,8 +1266,9 @@ class WebBudgetRow {
     required this.remaining,
     required this.progress,
     required this.isOver,
+    required ({BudgetStatus status, String label}) status,
     this.withdrawn = 0.0,
-  });
+  }) : _status = status;
 }
 
 /// One display-ready budget row for the mobile Budget card list
@@ -1304,6 +1330,14 @@ class BudgetSectionRow {
   final bool met;
   final List<TransactionRecord> transactions;
 
+  /// Shared status from [budgetStatusFor] — the same rule web uses.
+  final ({BudgetStatus status, String label}) _status;
+
+  BudgetStatus get status => _status.status;
+
+  /// 'On track' · 'Watch · 82%' · 'Over by ₱1,200' · 'Funded' · 'Received'.
+  String get statusLabel => _status.label;
+
   const BudgetSectionRow({
     required this.targetId,
     required this.name,
@@ -1324,8 +1358,9 @@ class BudgetSectionRow {
     required this.overBy,
     required this.met,
     required this.transactions,
+    required ({BudgetStatus status, String label}) status,
     this.withdrawn = 0.0,
-  });
+  }) : _status = status;
 
   /// What is left of [allocated]: still to spend (expense), still to receive
   /// (income) or still to fund (savings). Negative when [actual] passed it.
@@ -1341,6 +1376,10 @@ class BudgetSection {
   final bool isSavings;
   final double allocated;
   final double spent;
+
+  /// Note beside the subtotal: 'N% used', 'N% funded' or 'Funded'
+  /// ([budgetGroupUsedLabel]). Empty when nothing is allocated.
+  final String usedLabel;
   final List<BudgetSectionRow> rows;
 
   const BudgetSection({
@@ -1349,6 +1388,14 @@ class BudgetSection {
     required this.isSavings,
     required this.allocated,
     required this.spent,
+    this.usedLabel = '',
     required this.rows,
   });
+
+  /// The group header hint: '₱X / ₱Y · N% used'.
+  String get headerHint {
+    final totals =
+        '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}';
+    return usedLabel.isEmpty ? totals : '$totals · $usedLabel';
+  }
 }
