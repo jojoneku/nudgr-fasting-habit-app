@@ -26,6 +26,10 @@ class TransactionListTile extends StatelessWidget {
   final VoidCallback? onSplit;
   final VoidCallback? onReimbursable;
 
+  /// The record's date, printed after the account name. Null hides it; day
+  /// headers carry the date in the grouped list.
+  final String? dateLabel;
+
   const TransactionListTile({
     super.key,
     required this.txn,
@@ -38,6 +42,7 @@ class TransactionListTile extends StatelessWidget {
     this.onDuplicate,
     this.onSplit,
     this.onReimbursable,
+    this.dateLabel,
   });
 
   /// The record's note, trimmed, or null when there is none. Shown as one
@@ -203,6 +208,14 @@ class TransactionListTile extends StatelessWidget {
                         TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                   ),
                 ),
+                if (dateLabel != null)
+                  Text(
+                    ' · $dateLabel',
+                    key: const ValueKey('txnDateLabel'),
+                    maxLines: 1,
+                    style:
+                        TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+                  ),
                 if (txn.isInstallment) ...[
                   const SizedBox(width: 6),
                   const AppBadge(

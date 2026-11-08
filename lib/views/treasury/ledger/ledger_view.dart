@@ -25,7 +25,6 @@ import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dar
 import 'package:intermittent_fasting/views/treasury/shared/photo_log_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
-final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
 
 class LedgerView extends StatefulWidget {
@@ -177,7 +176,7 @@ class _LedgerViewState extends State<LedgerView> {
           body: SafeArea(
             child: Column(
               children: [
-                const _LedgerHeader(),
+                _LedgerHeader(presenter: presenter),
                 _LedgerControlsRow(
                   presenter: presenter,
                   captureInbox: widget.captureInbox,
@@ -620,18 +619,92 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 
 // ── Filter & Sort ─────────────────────────────────────────────────────────
 
-/// Page title row — `Ledger` on its own line, left-aligned (reference header).
-class _LedgerHeader extends StatelessWidget {
-  const _LedgerHeader();
+/// Page title row — `Ledger` on its own line, left-aligned (reference header)
+/// with a search icon on the right. The icon opens the search (Plan 071
+/// Phase 10a): the field takes the title's place and a "This month / All
+/// months" scope row appears under it, so a closed search costs no height.
+class _LedgerHeader extends StatefulWidget {
+  final LedgerPresenter presenter;
+  const _LedgerHeader({required this.presenter});
+
+  @override
+  State<_LedgerHeader> createState() => _LedgerHeaderState();
+}
+
+class _LedgerHeaderState extends State<_LedgerHeader> {
+  late final _ctrl = TextEditingController(text: widget.presenter.searchQuery);
+  final _focus = FocusNode();
+
+  /// Open while the user is searching. Starts open when the presenter still
+  /// holds a search from an earlier visit.
+  late bool _open = widget.presenter.isSearching;
+
+  @override
+  void didUpdateWidget(covariant _LedgerHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The search can be cleared from outside the field (the empty list's
+    // Clear search button). Follow it, without fighting a trailing space the
+    // user is still typing.
+    final query = widget.presenter.searchQuery;
+    if (_ctrl.text.trim() != query) _ctrl.text = query;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() {
+    HapticFeedback.selectionClick();
+    setState(() => _open = true);
+    // The field exists from the next frame on.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _ctrl.clear();
+    widget.presenter.clearSearch();
+    _focus.unfocus();
+    setState(() => _open = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: _open
+            ? _LedgerSearchBar(
+                presenter: widget.presenter,
+                controller: _ctrl,
+                focusNode: _focus,
+                onClose: _closeSearch,
+              )
+            : _LedgerTitleRow(onOpenSearch: _openSearch),
+      ),
+    );
+  }
+}
+
+class _LedgerTitleRow extends StatelessWidget {
+  final VoidCallback onOpenSearch;
+  const _LedgerTitleRow({required this.onOpenSearch});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canPop = Navigator.canPop(context);
-    return Container(
-      width: double.infinity,
-      color: theme.scaffoldBackgroundColor,
-      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 8, 20, 0),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 2, 8, 0),
       child: Row(
         children: [
           if (canPop)
@@ -640,16 +713,197 @@ class _LedgerHeader extends StatelessWidget {
               tooltip: 'Back',
               onPressed: () => Navigator.maybePop(context),
             ),
-          Text(
-            'Ledger',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontSize: 23,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              color: theme.colorScheme.onSurface,
+          Expanded(
+            child: Text(
+              'Ledger',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('ledgerSearchOpen'),
+            icon: Icon(
+              Icons.search_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            tooltip: 'Search transactions',
+            onPressed: onOpenSearch,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The open search: the field with a close button, then the scope row.
+class _LedgerSearchBar extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onClose;
+
+  const _LedgerSearchBar({
+    required this.presenter,
+    required this.controller,
+    required this.focusNode,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.only(left: 12, right: 12),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search_rounded,
+                          size: 18, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey('ledgerSearchField'),
+                          controller: controller,
+                          focusNode: focusNode,
+                          onChanged: presenter.setSearch,
+                          textInputAction: TextInputAction.search,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: cs.onSurface),
+                          decoration: const InputDecoration(
+                            hintText: 'Search description, note, amount…',
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('ledgerSearchClose'),
+                icon: Icon(Icons.close_rounded, color: cs.onSurfaceVariant),
+                tooltip: 'Close search',
+                onPressed: onClose,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              children: [
+                _SearchScopeSegment(
+                  key: const ValueKey('ledgerSearchScopeMonth'),
+                  label: 'This month',
+                  selected: !presenter.searchAllMonths,
+                  onTap: () => presenter.setSearchAllMonths(false),
+                ),
+                const SizedBox(width: 8),
+                _SearchScopeSegment(
+                  key: const ValueKey('ledgerSearchScopeAll'),
+                  label: 'All months',
+                  selected: presenter.searchAllMonths,
+                  onTap: () => presenter.setSearchAllMonths(true),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    presenter.searchSummary,
+                    key: const ValueKey('ledgerSearchSummary'),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One half of the search scope switch. The pill reads small; the tap area
+/// is the full 44 px row height.
+class _SearchScopeSegment extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SearchScopeSegment({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Search $label',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: kControlPillHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? cs.primary.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                    color: selected ? cs.primary : cs.outlineVariant),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? cs.primary : cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1328,6 +1582,7 @@ Widget _buildTxnTile(
     accountColor: _accountColorOf(context, presenter, txn.accountId),
     category: presenter.categoryById(txn.categoryId),
     actions: presenter.rowActionsFor(txn),
+    dateLabel: presenter.searchRowDateLabel(txn),
     onTap: () => handlers.onEdit(txn),
     onDuplicate: () => handlers.onDuplicate(txn),
     onSplit: () => handlers.onSplit(txn),
@@ -1397,23 +1652,28 @@ class _TransactionList extends StatelessWidget {
   }
 }
 
-/// The empty list. When filters hide every row it says so and offers Clear
-/// filters; otherwise the month really is empty. There is no + button on the
-/// Ledger, so it gives no "tap +" hint.
+/// The empty list. When a search or the filters hide every row it says so and
+/// offers to clear them; otherwise the month really is empty. There is no +
+/// button on the Ledger, so it gives no "tap +" hint.
 class _LedgerEmptyState extends StatelessWidget {
   final LedgerPresenter presenter;
   const _LedgerEmptyState({required this.presenter});
 
+  static IconData _iconFor(LedgerEmptyReason reason) => switch (reason) {
+        LedgerEmptyReason.search => Icons.search_off_rounded,
+        LedgerEmptyReason.filters => Icons.filter_alt_off_outlined,
+        LedgerEmptyReason.emptyMonth => Icons.receipt_long_outlined,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final filtered = presenter.filtersHideEverything;
     return AppEmptyState(
-      icon: filtered
-          ? Icons.filter_alt_off_outlined
-          : Icons.receipt_long_outlined,
+      icon: _iconFor(presenter.emptyListReason),
       title: presenter.emptyListTitle,
-      actionLabel: filtered ? 'Clear filters' : null,
-      onAction: filtered ? presenter.clearAllFilters : null,
+      body: presenter.emptyListBody,
+      // No label, no button: AppEmptyState needs both.
+      actionLabel: presenter.emptyListActionLabel,
+      onAction: presenter.clearEmptyListCause,
     );
   }
 }
@@ -1439,7 +1699,7 @@ class _DateGroup extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: AppSection(
-        title: _DateHeader.labelFor(date),
+        title: presenter.dateGroupLabel(date),
         trailing: dailyNet != 0 ? _DailyNetBadge(dailyNet: dailyNet) : null,
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
@@ -1451,30 +1711,6 @@ class _DateGroup extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// ── Date Header ──────────────────────────────────────────────────────────────
-
-class _DateHeader extends StatelessWidget {
-  final DateTime date;
-  final double dailyNet;
-
-  const _DateHeader({required this.date, required this.dailyNet});
-
-  static String labelFor(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final d = DateTime(date.year, date.month, date.day);
-    if (d == today) return 'Today';
-    if (d == yesterday) return 'Yesterday';
-    return _dateHeaderFmt.format(date);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(labelFor(date).toUpperCase());
   }
 }
 
