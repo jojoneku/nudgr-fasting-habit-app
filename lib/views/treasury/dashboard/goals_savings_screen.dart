@@ -178,6 +178,7 @@ class GoalsSavingsScreen extends StatelessWidget {
                         for (var i = 0; i < activeGoals.length; i++) ...[
                           GoalProgressCard(
                             account: activeGoals[i],
+                            paletteIndex: i,
                             onTap: () {
                               HapticFeedback.selectionClick();
                               _showEditSheet(context, activeGoals[i]);
