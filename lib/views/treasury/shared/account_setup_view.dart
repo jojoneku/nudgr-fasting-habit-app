@@ -62,6 +62,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   /// changes (see [_minimumRule]).
   CreditMinimumRule? _minimumRuleChoice;
   String? _creditBrand;
+
+  /// Plan 072: the lender posts charges when an order is received.
+  bool _postsOnReceipt = false;
   bool _isSubmitting = false;
 
   /// The parent this account belongs to. When editing an existing sub-account
@@ -128,6 +131,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       if (existing.creditLimit != null) {
         _creditLimitController.text = existing.creditLimit!.toStringAsFixed(2);
       }
+      _postsOnReceipt = existing.postsOnReceipt;
       if (existing.financeChargeRate != null) {
         // Stored as a fraction (0.03); edited as a percent (3).
         _financeRateController.text =
@@ -253,6 +257,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
                 ? financeRatePercent / 100
                 : null,
         creditBrand: _isCredit ? _creditBrand : null,
+        postsOnReceipt: _isCredit && _postsOnReceipt,
       );
 
       if (widget.existing != null) {
@@ -414,6 +419,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             minimumFixedController: _minimumFixedController,
             creditBrand: _creditBrand,
             onBrandChanged: _applyBrand,
+            postsOnReceipt: _postsOnReceipt,
+            onPostsOnReceiptChanged: (v) => setState(() => _postsOnReceipt = v),
             isGoal: _isGoal,
             isTimeDeposit: _isTimeDeposit,
             isCustodian: _isCustodian,
@@ -470,6 +477,8 @@ class _AccountSetupForm extends StatelessWidget {
   final TextEditingController minimumFixedController;
   final String? creditBrand;
   final ValueChanged<String?> onBrandChanged;
+  final bool postsOnReceipt;
+  final ValueChanged<bool> onPostsOnReceiptChanged;
   final bool isGoal;
   final bool isTimeDeposit;
   final bool isCustodian;
@@ -524,6 +533,8 @@ class _AccountSetupForm extends StatelessWidget {
     required this.minimumFixedController,
     required this.creditBrand,
     required this.onBrandChanged,
+    required this.postsOnReceipt,
+    required this.onPostsOnReceiptChanged,
     required this.isGoal,
     required this.isTimeDeposit,
     required this.isCustodian,
@@ -698,6 +709,8 @@ class _AccountSetupForm extends StatelessWidget {
                 minimumFixedController: minimumFixedController,
                 creditBrand: creditBrand,
                 onBrandChanged: onBrandChanged,
+                postsOnReceipt: postsOnReceipt,
+                onPostsOnReceiptChanged: onPostsOnReceiptChanged,
               ),
               const SizedBox(height: 12),
             ],
@@ -990,6 +1003,8 @@ class _CreditDetailsCard extends StatelessWidget {
   final TextEditingController minimumFixedController;
   final String? creditBrand;
   final ValueChanged<String?> onBrandChanged;
+  final bool postsOnReceipt;
+  final ValueChanged<bool> onPostsOnReceiptChanged;
 
   const _CreditDetailsCard({
     required this.creditLimitController,
@@ -1008,6 +1023,8 @@ class _CreditDetailsCard extends StatelessWidget {
     required this.minimumFixedController,
     required this.creditBrand,
     required this.onBrandChanged,
+    required this.postsOnReceipt,
+    required this.onPostsOnReceiptChanged,
   });
 
   @override
@@ -1154,6 +1171,22 @@ class _CreditDetailsCard extends StatelessWidget {
                 suffixText: '% / mo',
                 helperText: 'Interest on unpaid balance (BSP cap 3%)',
               ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Plan 072: Shopee PayLater style lenders bill an order when it is
+          // received, so its purchases get a received date.
+          SwitchListTile(
+            key: const ValueKey('account.postsOnReceipt'),
+            contentPadding: EdgeInsets.zero,
+            value: postsOnReceipt,
+            onChanged: onPostsOnReceiptChanged,
+            title: const Text('Charges post when the order is received'),
+            subtitle: Text(
+              'For Shopee PayLater, Lazada PayLater and similar. Lets you '
+              'set a received date so an order lands on the right statement.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
             ),
           ),
         ],

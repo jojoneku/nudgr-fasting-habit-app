@@ -114,6 +114,12 @@ class FinancialAccount {
   final String colorHex;
   final String icon; // MDI icon name
   final bool isActive;
+
+  /// Credit and BNPL only: the lender posts a charge when the order is
+  /// received, not when it was ordered (Shopee PayLater, Lazada PayLater).
+  /// Turns on the received date on this account's purchases and the
+  /// statement's "confirm received date" notice (Plan 072).
+  final bool postsOnReceipt;
   final double? goalTarget; // only used when category == goal
 
   /// When the balance first reached [goalTarget]. Write-once per goal cycle and
@@ -181,6 +187,7 @@ class FinancialAccount {
     required this.colorHex,
     required this.icon,
     this.isActive = true,
+    this.postsOnReceipt = false,
     this.goalTarget,
     this.goalFundedAt,
     this.goalRedeemedAt,
@@ -317,6 +324,7 @@ class FinancialAccount {
       colorHex: json['colorHex'] as String,
       icon: json['icon'] as String,
       isActive: json['isActive'] as bool? ?? true,
+      postsOnReceipt: json['postsOnReceipt'] as bool? ?? false,
       goalTarget: (json['goalTarget'] as num?)?.toDouble(),
       goalFundedAt: DateTime.tryParse(json['goalFundedAt'] as String? ?? ''),
       goalRedeemedAt:
@@ -354,6 +362,7 @@ class FinancialAccount {
         'colorHex': colorHex,
         'icon': icon,
         'isActive': isActive,
+        if (postsOnReceipt) 'postsOnReceipt': true,
         'goalTarget': goalTarget,
         'goalFundedAt': goalFundedAt?.toIso8601String(),
         'goalRedeemedAt': goalRedeemedAt?.toIso8601String(),
@@ -381,6 +390,7 @@ class FinancialAccount {
     String? colorHex,
     String? icon,
     bool? isActive,
+    bool? postsOnReceipt,
     double? goalTarget,
     // Sentinel-guarded: restarting a goal, or re-planning its target upward,
     // has to be able to clear these back to null.
@@ -412,6 +422,7 @@ class FinancialAccount {
       colorHex: colorHex ?? this.colorHex,
       icon: icon ?? this.icon,
       isActive: isActive ?? this.isActive,
+      postsOnReceipt: postsOnReceipt ?? this.postsOnReceipt,
       goalTarget: goalTarget ?? this.goalTarget,
       goalFundedAt: identical(goalFundedAt, _kUnset)
           ? this.goalFundedAt

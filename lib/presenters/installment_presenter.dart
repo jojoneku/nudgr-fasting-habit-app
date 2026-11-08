@@ -21,6 +21,10 @@ const Object _keepCategory = Object();
 // Sentinel for [InstallmentPresenter.buildInstallment]: "keep the person".
 const Object _keepPaidFor = Object();
 
+/// [InstallmentPresenter.buildInstallment] sentinel: keep the existing plan's
+/// received date (the web form has no field for it).
+const Object _keepPosted = Object();
+
 /// What the add/edit installment form shows under the interest-rate chips.
 class InstallmentInterestPreview {
   final double totalInterest;
@@ -509,6 +513,7 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     Object? categoryId = _keepCategory,
     Object? paidForName = _keepPaidFor,
     StartMonthSource? startMonthSource,
+    Object? postedDate = _keepPosted,
   }) {
     final trimmedNote = note?.trim() ?? '';
     final person = identical(paidForName, _keepPaidFor)
@@ -523,6 +528,10 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       totalMonths: totalMonths,
       startMonth: startMonth,
       purchaseDate: purchaseDate,
+      // Left out (web) keeps the received date; null clears it (Plan 072).
+      postedDate: identical(postedDate, _keepPosted)
+          ? existing?.postedDate
+          : postedDate as DateTime?,
       deferralMonths: deferralMonths,
       interestRate: interestRate,
       note: trimmedNote.isEmpty ? null : trimmedNote,
@@ -618,11 +627,18 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   // is the one place that applies that rule; every plan write and every
   // change to a card's cycle runs through it.
 
+  /// Whether account [accountId] posts charges when an order is received
+  /// (Plan 072), so the plan form offers a received date.
+  bool postsOnReceipt(String? accountId) =>
+      _accountById(accountId)?.postsOnReceipt ?? false;
+
   /// The month the card's cycle gives [p], or null when its card has no
   /// cycle or the plan has no purchase date.
   String? _computedStartMonth(Installment p) {
     final account = _accountById(p.accountId);
-    final bought = p.purchaseDate;
+    // A received date (Plan 072) is when the lender posted the purchase, so
+    // the first statement follows it.
+    final bought = p.postedDate ?? p.purchaseDate;
     if (account == null || !account.hasBillingCycle || bought == null) {
       return null;
     }

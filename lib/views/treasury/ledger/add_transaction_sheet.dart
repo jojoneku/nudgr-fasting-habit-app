@@ -72,6 +72,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   String? _selectedCategoryId;
   DateTime _date = DateTime.now();
 
+  /// Plan 072: when the lender posted this charge, on an account that posts
+  /// when an order is received. Null means the order date is used.
+  DateTime? _postedDate;
+
   // Reimbursable-expense state (outflow only): money spent now, recovered later.
   bool _reimbursable = false;
   DateTime? _expectedReimbursementDate;
@@ -142,6 +146,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _type = existing.type;
         _selectedAccountId = existing.accountId;
         _transferToAccountId = existing.transferToAccountId;
+        _postedDate = existing.postedDate;
         _reimbursable = existing.reimbursable;
         _owedByController.text = existing.owedBy ?? '';
         // The expected payback date lives on the linked receivable, not on the
@@ -229,13 +234,32 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   /// The "More options" fold opens on its own when a field inside has a
   /// value, so a note or an "I'll get this back" is never hidden.
   bool get _moreOptionsHasValue =>
-      _reimbursable || _noteController.text.trim().isNotEmpty;
+      _reimbursable ||
+      _noteController.text.trim().isNotEmpty ||
+      (_offersReceivedDate && _postedDate != null);
+
+  /// Plan 072: an expense on an account that posts when the order is
+  /// received offers a received date.
+  bool get _offersReceivedDate =>
+      _type == TransactionType.outflow &&
+      widget.presenter.postsOnReceipt(_selectedAccountId);
 
   /// What sits inside "More options", named on its header.
-  String get _moreOptionsHint =>
-      _type == TransactionType.outflow && !_splitInstallments
-          ? "Note, I'll get this back"
-          : 'Note';
+  String get _moreOptionsHint => [
+        if (_offersReceivedDate) 'Received date',
+        'Note',
+        if (_type == TransactionType.outflow && !_splitInstallments)
+          "I'll get this back",
+      ].join(', ');
+
+  /// The received date as saved: only on an expense. A received date before
+  /// the order date cannot happen, so it falls back to the order date.
+  DateTime? get _postedDateToSave {
+    final p = _postedDate;
+    if (_type != TransactionType.outflow || p == null) return null;
+    final order = DateTime(_date.year, _date.month, _date.day);
+    return p.isBefore(order) ? null : p;
+  }
 
   void _syncFromPresenter() {
     _accounts = widget.presenter.accounts
@@ -372,6 +396,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           description: description,
           note: note,
           categoryId: categoryId,
+          postedDate: _postedDateToSave,
         );
       } else {
         final id = existing?.id ?? _generateId();
@@ -396,6 +421,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           reimbursable: isReimbursable,
           reimbursementReceivableId: receivableId,
           owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
+          postedDate: _postedDateToSave,
         );
         // Null = "ASAP / no set date" — surfaces in the current month.
         final expectedDate = _expectedReimbursementDate;
@@ -462,6 +488,25 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       lastDate: DateTime(2030),
     );
     if (picked != null) setState(() => _date = picked);
+  }
+
+  /// Plan 072: picks when the order was received — from the order day to
+  /// about three months after it.
+  Future<void> _pickReceivedDate() async {
+    final order = DateTime(_date.year, _date.month, _date.day);
+    final today = DateTime.now();
+    final last = DateTime(order.year, order.month + 3, order.day);
+    var initial = _postedDate ?? DateTime(today.year, today.month, today.day);
+    if (initial.isBefore(order)) initial = order;
+    if (initial.isAfter(last)) initial = last;
+    final picked = await showDatePicker(
+      context: context,
+      helpText: 'Received on',
+      initialDate: initial,
+      firstDate: order,
+      lastDate: last,
+    );
+    if (picked != null) setState(() => _postedDate = picked);
   }
 
   Future<void> _pickExpectedReimbursementDate() async {
@@ -694,6 +739,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (_offersReceivedDate) ...[
+                          _ReceivedDateField(
+                            date: _postedDate,
+                            onPick: _pickReceivedDate,
+                            onClear: () => setState(() => _postedDate = null),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                         _NoteField(controller: _noteController),
                         if (_type == TransactionType.outflow &&
                             !_splitInstallments) ...[
@@ -1103,6 +1156,73 @@ class _DatePickerRow extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(color: cs.onSurface, fontSize: 14),
         ),
+      ),
+    );
+  }
+}
+
+// ── Received date (Plan 072) ─────────────────────────────────────────────────
+
+/// "Received on": when a Shopee PayLater style lender posted the charge. Left
+/// as "Same as order date", the statement uses the order date.
+class _ReceivedDateField extends StatelessWidget {
+  final DateTime? date;
+  final VoidCallback onPick;
+  final VoidCallback onClear;
+
+  const _ReceivedDateField({
+    required this.date,
+    required this.onPick,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final picked = date;
+    return SheetLabeledField(
+      label: 'Received on (optional)',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SheetPickerBox(
+                  key: const ValueKey('receivedDatePicker'),
+                  onTap: onPick,
+                  trailingIcon: Icons.local_shipping_outlined,
+                  child: Text(
+                    picked == null
+                        ? 'Same as order date'
+                        : DateFormat('MMMM d, yyyy').format(picked),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color:
+                          picked == null ? cs.onSurfaceVariant : cs.onSurface,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+              if (picked != null)
+                IconButton(
+                  tooltip: 'Clear received date',
+                  onPressed: onClear,
+                  icon: Icon(Icons.close_rounded, color: cs.onSurfaceVariant),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'The statement follows this date. Set it when the order arrives.',
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }

@@ -56,6 +56,28 @@ class StatementBreakdownSheet extends StatelessWidget {
     );
   }
 
+  /// Plan 072: picks when [line]'s order was received — from the order day
+  /// to about three months after it — and saves it. The statement follows.
+  Future<void> _pickReceivedDate(
+      BuildContext context, StatementLine line) async {
+    final ordered = line.txn.date;
+    final first = DateTime(ordered.year, ordered.month, ordered.day);
+    final last = DateTime(first.year, first.month + 3, first.day);
+    final today = DateTime.now();
+    var initial = DateTime(today.year, today.month, today.day);
+    if (initial.isBefore(first)) initial = first;
+    if (initial.isAfter(last)) initial = last;
+    final picked = await showDatePicker(
+      context: context,
+      helpText: 'Received on',
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (picked == null) return;
+    await presenter.ledger.setPostedDate(line.txn.id, picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -77,6 +99,14 @@ class StatementBreakdownSheet extends StatelessWidget {
               _SummaryCard(breakdown: b),
               const SizedBox(height: AppSpacing.md),
               _PeriodLine(breakdown: b),
+              if (b.receivedDateNotice case final notice?)
+                _ReceivedDateNotice(
+                  text: notice,
+                  onAllOnOrderDay: () =>
+                      presenter.ledger.markReceivedOnOrderDay(
+                    [for (final l in b.linesNeedingReceivedDate) l.txn.id],
+                  ),
+                ),
               if (b.hasCarriedOver) _CarriedOverRow(label: b.carriedOverLabel),
               if (b.isEmpty)
                 const AppEmptyState(
@@ -89,6 +119,9 @@ class StatementBreakdownSheet extends StatelessWidget {
                 _Section(
                   section: section,
                   onOpen: (line) => _openTransaction(context, line),
+                  onSetReceivedDate: (line) => _pickReceivedDate(context, line),
+                  onReceivedOnOrderDay: (line) =>
+                      presenter.ledger.markReceivedOnOrderDay([line.txn.id]),
                 ),
             ],
           ),
@@ -270,8 +303,15 @@ class _CarriedOverRow extends StatelessWidget {
 class _Section extends StatelessWidget {
   final StatementSection section;
   final ValueChanged<StatementLine> onOpen;
+  final ValueChanged<StatementLine> onSetReceivedDate;
+  final ValueChanged<StatementLine> onReceivedOnOrderDay;
 
-  const _Section({required this.section, required this.onOpen});
+  const _Section({
+    required this.section,
+    required this.onOpen,
+    required this.onSetReceivedDate,
+    required this.onReceivedOnOrderDay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +362,10 @@ class _Section extends StatelessWidget {
                   StatementLineRow(
                     line: section.lines[i],
                     onTap: () => onOpen(section.lines[i]),
+                    onSetReceivedDate: () =>
+                        onSetReceivedDate(section.lines[i]),
+                    onReceivedOnOrderDay: () =>
+                        onReceivedOnOrderDay(section.lines[i]),
                   ),
                 ],
               ],
@@ -339,14 +383,28 @@ class StatementLineRow extends StatelessWidget {
   final StatementLine line;
   final VoidCallback onTap;
 
-  const StatementLineRow({super.key, required this.line, required this.onTap});
+  /// Plan 072: shown under a purchase that still needs a received date
+  /// ([StatementLine.needsReceivedDate]). Null hides the actions (the
+  /// dashboard card and the web dialog do not offer them yet).
+  final VoidCallback? onSetReceivedDate;
+  final VoidCallback? onReceivedOnOrderDay;
+
+  const StatementLineRow({
+    super.key,
+    required this.line,
+    required this.onTap,
+    this.onSetReceivedDate,
+    this.onReceivedOnOrderDay,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final label = line.installmentLabel;
-    return InkWell(
+    final setReceived = onSetReceivedDate;
+    final onOrderDay = onReceivedOnOrderDay;
+    final row = InkWell(
       onTap: onTap,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
@@ -397,6 +455,97 @@ class StatementLineRow extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+    if (!line.needsReceivedDate || setReceived == null || onOrderDay == null) {
+      return row;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        row,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md, 0, AppSpacing.sm, AppSpacing.sm),
+          child: Wrap(
+            spacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Icon(Icons.local_shipping_outlined,
+                  size: 16, color: context.appColors.bills),
+              TextButton(
+                key: ValueKey('statement.setReceived.${line.txn.id}'),
+                onPressed: setReceived,
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: const Text('Received on…'),
+              ),
+              TextButton(
+                key: ValueKey('statement.orderDay.${line.txn.id}'),
+                onPressed: onOrderDay,
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: const Text('On order day'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Plan 072: "2 orders may post when received…" with one action to confirm
+/// every flagged order was received on its order day.
+class _ReceivedDateNotice extends StatelessWidget {
+  final String text;
+  final VoidCallback onAllOnOrderDay;
+
+  const _ReceivedDateNotice(
+      {required this.text, required this.onAllOnOrderDay});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tone = context.appColors.bills;
+    return Container(
+      key: const ValueKey('statement.receivedNotice'),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+            tone.withValues(alpha: 0.10), cs.surfaceContainerHigh),
+        borderRadius: AppRadii.mdBorder,
+        border: Border.all(color: tone.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child:
+                    Icon(Icons.local_shipping_outlined, size: 18, color: tone),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(text, style: theme.textTheme.bodySmall),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: const ValueKey('statement.allOrderDay'),
+              onPressed: onAllOnOrderDay,
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              child: const Text('All received on order day'),
+            ),
+          ),
+        ],
       ),
     );
   }
