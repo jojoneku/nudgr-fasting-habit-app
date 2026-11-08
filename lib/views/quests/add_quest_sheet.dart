@@ -632,7 +632,8 @@ class _AlarmStyleTile extends StatelessWidget {
             secondary: Icon(Icons.alarm_outlined, size: 18, color: cs.primary),
             title: Text('Alarm style', style: theme.textTheme.bodyMedium),
             subtitle: Text(
-              'Wakes the screen and shows over the lock screen.',
+              'Rings with your alarm tone, even on silent, and shows '
+              'over the lock screen.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
               ),

@@ -261,6 +261,25 @@ class QuestPresenter extends ChangeNotifier with SafeNotifier {
     return (xpGained, isCritical);
   }
 
+  /// Marks a quest done from outside the app (notification button, alarm
+  /// screen, home-screen widget). Unlike [completeQuest] it never toggles: a
+  /// quest already done on that day stays done.
+  ///
+  /// Those taps are queued and applied later, so [on] is the moment of the
+  /// tap: a 23:58 tap applied after midnight still counts for the right day.
+  ///
+  /// Without this guard a second "done" undid the first. That happened in
+  /// normal use: the "Upcoming Quest" reminder and the quest notification
+  /// both carry the button, the alarm screen left its notification in the
+  /// shade, and a quest ticked in the app still got its reminder later.
+  Future<(int, bool)> markQuestDone(int questId, {DateTime? on}) async {
+    final idx = _indexById(questId);
+    if (idx == -1) return (0, false);
+    final date = on ?? DateTime.now();
+    if (_quests[idx].isCompletedOn(date)) return (0, false);
+    return completeQuest(questId, date: date);
+  }
+
   /// Complete yesterday's quest within the 30-min grace window after midnight.
   Future<(int, bool)> graceCompleteQuest(int questId) async {
     if (!canGraceComplete(questId)) return (0, false);
