@@ -1262,6 +1262,42 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
       .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
       .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
 
+  /// The group lines of a Budget health card, in group order, with the shared
+  /// status rule ([budgetStatusFor]) already applied. Groups with nothing
+  /// allocated and nothing spent are left out. Mobile passes
+  /// `includeSavings: false` (its card lists expense groups only); web v2
+  /// passes true. Which totals the card should use is open question Q1 in
+  /// Plan 071, so both behaviours stay as they were.
+  List<BudgetHealthRow> budgetHealthRows({required bool includeSavings}) {
+    final allocated = budgetAllocatedByGroup;
+    final spent = budgetSpentByGroup;
+    final rows = <BudgetHealthRow>[];
+    for (final g in _budgetGroups) {
+      if (g.isSavings && !includeSavings) continue;
+      final a = allocated[g.id] ?? 0.0;
+      final s = spent[g.id] ?? 0.0;
+      if (a <= 0 && s <= 0) continue;
+      rows.add(BudgetHealthRow.of(
+        id: g.id,
+        name: g.name,
+        allocated: a,
+        spent: s,
+        isSavings: g.isSavings,
+      ));
+    }
+    return rows;
+  }
+
+  /// The Total line of the mobile Budget health card: expense budgets only, so
+  /// it reconciles with the expense-group rows under it.
+  BudgetHealthRow get budgetHealthExpenseTotal => BudgetHealthRow.of(
+        id: 'total',
+        name: 'Total',
+        allocated: totalExpenseBudgetAllocated,
+        spent: totalExpenseBudgetSpent,
+        isSavings: false,
+      );
+
   /// True when [leg] is one side of a transfer whose *other* side is also a
   /// savings or goal account — money shuffled between two funds rather than
   /// moved into savings from outside.
@@ -2313,4 +2349,64 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     // composition root runs backfillHistoricalSummariesOnce() AFTER all
     // presenters have loaded, to avoid a last-writer-wins race over the key.
   }
+}
+
+/// One line of a Budget health card (a group, or the total), display-ready.
+class BudgetHealthRow {
+  final String id;
+  final String name;
+  final bool isSavings;
+  final double allocated;
+  final double spent;
+  final BudgetStatus status;
+
+  /// 'On track' · 'Watch · 82%' · 'Over by ₱1,200' · 'Funded'.
+  final String statusLabel;
+
+  const BudgetHealthRow({
+    required this.id,
+    required this.name,
+    required this.isSavings,
+    required this.allocated,
+    required this.spent,
+    required this.status,
+    required this.statusLabel,
+  });
+
+  factory BudgetHealthRow.of({
+    required String id,
+    required String name,
+    required double allocated,
+    required double spent,
+    required bool isSavings,
+  }) {
+    final s = budgetStatusFor(
+      allocated: allocated,
+      spent: spent,
+      accountBacked: isSavings,
+    );
+    return BudgetHealthRow(
+      id: id,
+      name: name,
+      isSavings: isSavings,
+      allocated: allocated,
+      spent: spent,
+      status: s.status,
+      statusLabel: s.label,
+    );
+  }
+
+  /// Clamped 0.0–1.0 bar fill.
+  double get progress =>
+      allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0;
+
+  /// What is left, never below zero.
+  double get left => (allocated - spent).clamp(0.0, double.infinity);
+
+  /// '82%', or '—' when nothing is allocated.
+  String get percentLabel =>
+      allocated > 0 ? '${(spent / allocated * 100).round()}%' : '—';
+
+  /// Whole-number percent used (0 when nothing is allocated).
+  int get percentUsed => allocated > 0 ? (spent / allocated * 100).round() : 0;
 }

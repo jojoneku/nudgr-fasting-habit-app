@@ -257,6 +257,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             presenter: widget.dashPresenter,
             billsPresenter: widget.billsPresenter,
             syncPresenter: widget.syncPresenter,
+            onOpenBudget: () => _tabController.animateTo(_budgetTabIndex),
           ),
           LedgerView(
             presenter: widget.ledgerPresenter,

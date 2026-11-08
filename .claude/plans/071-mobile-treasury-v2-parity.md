@@ -1,6 +1,6 @@
 # Plan 071 — Mobile Treasury: fix the scan bugs, then bring the web v2 ideas over
 
-> Status: IN PROGRESS (Phase 0 built 2026-11-08) · Authored: 2026-11-08 · Owner: Treasury mobile
+> Status: IN PROGRESS (Phase 0 merged PR #826; Phase 1 built 2026-11-08) · Authored: 2026-11-08 · Owner: Treasury mobile
 > Builds on: Plan 063 (Treasury web v2), Plan 056 (Nudgr tokens)
 > Source: the 2026-11-08 scan that compared each web v2 page with its mobile counterpart (Dashboard, Ledger, Bills, Budget, History, Setup, Goals). Every bug in §3 Phase 0 was checked by hand in the code.
 
@@ -60,6 +60,8 @@ Also in this phase:
 
 Tests: existing web setup tests stay green; a unit test pins each account-type label once.
 
+*Built note:* the label copy uses the web casing ("Time Deposit", "Credit Card"), so the mobile dashboard subtitle changes from "Time deposit". Web v1 files (`web_dashboard_page.dart`, `web_account_form_dialog.dart`) keep their own copies; they go with the Plan 063 v1 cleanup.
+
 ### Phase 2 — One budget status for both apps · `feat/budget-status-shared` · Effort S–M
 
 Today:
@@ -76,6 +78,8 @@ Do:
 7. Group header on mobile adds "N% used" / "Funded" next to the existing subtotal.
 
 Tests: `budgetStatusFor` table test (0, 0.74, 0.75, 1.0, over, savings funded); widget test that an over row shows "Over by ₱X" text.
+
+*Built note (2026-11-08):* the rule lives in `lib/utils/budget_status.dart` (pure function), and `budget_presenter.dart` re-exports it with `kBudgetWatchThreshold`. Decisions made while building: exactly 100 % reads "Watch · 100%", not "Over by ₱0"; a ₱0 allocation with spending reads "No budget set" (watch), because `isOver` (read by Nudgy and Insights) stays `allocated > 0`; income rows read "Received" / "₱X to come". The Dashboard cards read `TreasuryDashboardPresenter.budgetHealthRows(includeSavings:)`. Mobile passes false and web passes true, so Q1 stays open. Found, not fixed: web v2 Budget builds savings rows from `budget.allocatedAmount` and ignores the Plan 060 set-aside target that mobile uses.
 
 ### Phase 3 — Category and slice colors · `fix/treasury-slice-colors` · Effort S–M
 
