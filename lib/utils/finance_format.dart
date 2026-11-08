@@ -19,6 +19,12 @@ String formatPesoSigned(double amount) {
   return '$sign${formatPeso(amount.abs())}';
 }
 
+/// Like [formatPeso] but a negative amount gets a typographic '−' before the
+/// peso symbol, not '₱-'. No sign for zero or positive amounts.
+/// e.g. 1234 → '₱1,234.00', -1234 → '−₱1,234.00'.
+String formatPesoMinus(double amount) =>
+    amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
+
 /// Formats a 0..1 [fraction] as a percentage. e.g. 0.316 → '32%'.
 String formatPercent(double fraction, {int decimals = 0}) =>
     '${(fraction * 100).toStringAsFixed(decimals)}%';

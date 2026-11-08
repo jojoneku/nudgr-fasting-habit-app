@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_delete_copy.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import '../mocks.mocks.dart';
@@ -178,5 +179,48 @@ void main() {
     final saved = captured.firstWhere((a) => a.name == 'New Line');
     expect(saved.category, AccountCategory.creditLine);
     expect(saved.minimumRule, CreditMinimumRule.payInFull);
+  });
+
+  Finder creditLimitField() => find.descendant(
+        of: find.byWidgetPredicate(
+            (w) => w is SheetLabeledField && w.label == 'Credit Limit'),
+        matching: find.byType(TextFormField),
+      );
+
+  testWidgets('Credit Limit rejects a value that does not parse',
+      (tester) async {
+    await pumpForm(tester, card);
+    clearInteractions(mockStorage);
+
+    // The amount formatter blocks "1.2.3" as it is typed, but a lone "." still
+    // gets through and used to be saved as "no limit" with no warning.
+    await tester.ensureVisible(creditLimitField());
+    await tester.enterText(creditLimitField(), '.');
+    await tapVisible(tester, find.text('Save'));
+
+    expect(find.text('Enter a valid number'), findsOneWidget);
+    verifyNever(mockStorage.saveAccounts(any));
+  });
+
+  testWidgets('a blank Credit Limit is allowed', (tester) async {
+    await pumpForm(tester, card);
+
+    await tester.ensureVisible(creditLimitField());
+    await tester.enterText(creditLimitField(), '');
+    await tapVisible(tester, find.text('Save'));
+
+    expect(find.text('Enter a valid number'), findsNothing);
+    expect(lastSaved('cc1').creditLimit, isNull);
+  });
+
+  testWidgets(
+      'the delete confirm explains the rule instead of promising a '
+      'permanent delete', (tester) async {
+    await pumpForm(tester, card);
+
+    await tapVisible(tester, find.text('Delete Account'));
+
+    expect(find.text(accountDeleteMessage(card)), findsOneWidget);
+    expect(find.textContaining('cannot be undone'), findsNothing);
   });
 }

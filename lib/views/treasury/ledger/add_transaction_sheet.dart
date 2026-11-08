@@ -207,6 +207,30 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     return _categories;
   }
 
+  /// Deletes the record being edited the same way swipe-delete does: a
+  /// transfer takes its partner leg with it (or the two balances drift), and
+  /// Undo restores every removed record. The toast is shown before the sheet
+  /// closes, so it binds to the ledger's ScaffoldMessenger while this context
+  /// is still mounted; the Undo callback only touches the presenter.
+  Future<void> _deleteExisting() async {
+    final existing = widget.existing!;
+    final presenter = widget.presenter;
+    final nav = Navigator.of(context);
+    final removed = await presenter.deleteTransactionOrGroup(existing.id);
+    if (!mounted) return;
+    if (removed.isNotEmpty) {
+      AppToast.action(
+        context,
+        message: existing.transferGroupId != null
+            ? 'Deleted transfer "${existing.description}"'
+            : 'Deleted "${existing.description}"',
+        actionLabel: 'Undo',
+        onAction: () => presenter.restoreTransactions(removed),
+      );
+    }
+    nav.pop();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     // Account fields are pickers (not form fields), so validate them here and
@@ -605,21 +629,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final nav = Navigator.of(context);
-                          final confirmed = await AppConfirmDialog.confirm(
-                            context: context,
-                            title: 'Delete Transaction',
-                            body: 'Delete "${widget.existing!.description}"?',
-                            confirmLabel: 'Delete',
-                            isDestructive: true,
-                          );
-                          if (confirmed && mounted) {
-                            await widget.presenter
-                                .deleteTransaction(widget.existing!.id);
-                            nav.pop();
-                          }
-                        },
+                        onPressed: _deleteExisting,
                         icon: Icon(Icons.delete_outline,
                             color: Theme.of(context).colorScheme.error),
                         label: Text('Delete',

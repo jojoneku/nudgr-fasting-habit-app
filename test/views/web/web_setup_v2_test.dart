@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/services/local_storage_service.dart';
+import 'package:intermittent_fasting/utils/account_delete_copy.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
@@ -310,7 +311,7 @@ void main() {
       await tester.tap(find.byKey(WebKeys.setupRowDelete));
       await tester.pumpAndSettle();
       expect(find.text('Delete ${first.name}?'), findsOneWidget);
-      expect(find.text(webAccountDeleteMessage(first)), findsOneWidget);
+      expect(find.text(accountDeleteMessage(first)), findsOneWidget);
       expect(find.textContaining('cannot be deleted'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
