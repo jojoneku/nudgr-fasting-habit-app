@@ -1284,8 +1284,8 @@ class _TrendsCardState extends State<_TrendsCard> {
     final daysTotal =
         p.last7DaysSpending.fold<double>(0, (s, d) => s + d.amount);
     final description = switch (_trend) {
-      _Trend.netWorth => 'Last 6 months · your overall position',
-      _Trend.incomeExpenses => 'Last 6 months · monthly comparison',
+      _Trend.netWorth => p.netWorthTrendSummary().caption,
+      _Trend.incomeExpenses => p.incomeExpenseTrendSummary().caption,
       _Trend.dailySpending => daysTotal > 0
           ? 'Last 7 days · ${formatPeso(daysTotal)} total'
           : 'Last 7 days',
@@ -1330,37 +1330,36 @@ class _NetWorthTrend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trend = presenter.netWorthTrend();
-    if (trend.length < 2) {
+    final trend = presenter.netWorthTrendSummary();
+    if (!trend.hasChart) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           WebBadge(
-            formatPeso(presenter.netWorth),
+            trend.currentLabel,
             tone: WebBadgeTone.info,
             icon: Icons.trending_up_rounded,
           ),
-          const _CardEmpty(
+          _CardEmpty(
             icon: Icons.show_chart_rounded,
-            text: 'Your net-worth trend will appear as months accrue.',
+            text: trend.emptyText,
           ),
         ],
       );
     }
-    final diff = trend.last.value - trend.first.value;
-    final up = diff >= 0;
+    final up = trend.isUp;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         WebBadge(
-          '${up ? '↑ ' : '↓ '}${formatPesoCompact(diff.abs())} (${trend.length} mo)',
+          trend.changeLabel,
           tone: up ? WebBadgeTone.success : WebBadgeTone.danger,
           icon: up ? Icons.trending_up_rounded : Icons.trending_down_rounded,
         ),
         const SizedBox(height: WebInsets.sm),
         WebLineChart(
-          values: trend.map((t) => t.value).toList(),
-          bottomLabels: trend.map((t) => t.label).toList(),
+          values: trend.values,
+          bottomLabels: trend.labels,
           area: true,
           leftLabelFormat: formatPesoCompact,
           height: 180,
@@ -1377,16 +1376,17 @@ class _IncomeExpensesTrend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final ie = presenter.incomeExpenseTrend();
-    if (ie.length < 2) {
-      return const _CardEmpty(
+    final ie = presenter.incomeExpenseTrendSummary();
+    if (!ie.hasChart) {
+      return _CardEmpty(
         icon: Icons.bar_chart_rounded,
-        text: 'Your income vs expenses trend will appear as months accrue.',
+        text: ie.emptyText,
       );
     }
     return WebBarPairChart(
-      groups:
-          ie.map((m) => (label: m.label, a: m.income, b: m.expense)).toList(),
+      groups: ie.months
+          .map((m) => (label: m.label, a: m.income, b: m.expense))
+          .toList(),
       aColor: cs.tertiary,
       bColor: cs.primary,
       leftLabelFormat: formatPesoCompact,
