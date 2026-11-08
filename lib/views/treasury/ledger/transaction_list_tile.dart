@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -45,13 +46,11 @@ class TransactionListTile extends StatelessWidget {
     };
   }
 
-  Color _parseColor(String hex, ColorScheme cs) {
-    try {
-      return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
-    } catch (_) {
-      return cs.primary;
-    }
-  }
+  // Same resolution as every other category swatch: near-white guard plus the
+  // light-mode deepening. Slot 0 is fine for the guard here because the ledger
+  // migrates near-white categories to palette colors on load.
+  Color _parseColor(String hex, ColorScheme cs) =>
+      resolveSliceColor(hex, 0, brightness: cs.brightness);
 
   @override
   Widget build(BuildContext context) {

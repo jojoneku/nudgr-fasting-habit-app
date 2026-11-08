@@ -286,10 +286,11 @@ class _CategorySpendSection extends StatelessWidget {
                     (c) => c?.id == entry.key,
                     orElse: () => null,
                   );
-              final color = cat != null
-                  ? resolveSliceColor(cat.colorHex, i,
-                      brightness: theme.brightness)
-                  : cs.onSurfaceVariant;
+              // An unknown (deleted) category still gets a palette color by
+              // its position, as on web: an empty hex fails to parse, so
+              // `resolveSliceColor` falls back to the palette slot.
+              final color = resolveSliceColor(cat?.colorHex ?? '', i,
+                  brightness: theme.brightness);
               return AppCard(
                 variant: AppCardVariant.filled,
                 padding:
