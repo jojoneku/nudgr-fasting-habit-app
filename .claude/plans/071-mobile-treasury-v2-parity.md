@@ -77,6 +77,8 @@ Do:
 
 Tests: `budgetStatusFor` table test (0, 0.74, 0.75, 1.0, over, savings funded); widget test that an over row shows "Over by ₱X" text.
 
+*Built note (2026-11-08):* the rule lives in `lib/utils/budget_status.dart` (pure function), and `budget_presenter.dart` re-exports it with `kBudgetWatchThreshold`. Decisions made while building: exactly 100 % reads "Watch · 100%", not "Over by ₱0"; a ₱0 allocation with spending reads "No budget set" (watch), because `isOver` (read by Nudgy and Insights) stays `allocated > 0`; income rows read "Received" / "₱X to come". The Dashboard cards read `TreasuryDashboardPresenter.budgetHealthRows(includeSavings:)`. Mobile passes false and web passes true, so Q1 stays open. Found, not fixed: web v2 Budget builds savings rows from `budget.allocatedAmount` and ignores the Plan 060 set-aside target that mobile uses.
+
 ### Phase 3 — Category and slice colors · `fix/treasury-slice-colors` · Effort S–M
 
 - `category_pie_chart_card.dart:172, 238` call `resolveSliceColor` without `brightness`. Pass `Theme.of(context).brightness`.
