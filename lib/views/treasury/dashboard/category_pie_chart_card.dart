@@ -116,7 +116,8 @@ class _PieChartState extends State<_PieChart>
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) => SizedBox(
@@ -129,6 +130,7 @@ class _PieChartState extends State<_PieChart>
             progress: _animation.value,
             textPrimaryColor: colorScheme.onSurface,
             textSecondaryColor: colorScheme.onSurfaceVariant,
+            brightness: theme.brightness,
           ),
         ),
       ),
@@ -143,6 +145,10 @@ class _PieChartPainter extends CustomPainter {
   final Color textPrimaryColor;
   final Color textSecondaryColor;
 
+  /// Light mode deepens the dark-tuned palette (see `resolveSliceColor`) so
+  /// slices stay readable on a white card.
+  final Brightness brightness;
+
   static const double _gapAngle = 0.04;
   static const double _strokeWidth = 22.0;
 
@@ -152,6 +158,7 @@ class _PieChartPainter extends CustomPainter {
     required this.progress,
     required this.textPrimaryColor,
     required this.textSecondaryColor,
+    required this.brightness,
   });
 
   @override
@@ -169,7 +176,7 @@ class _PieChartPainter extends CustomPainter {
     for (int i = 0; i < slices.length; i++) {
       final (cat, amount) = slices[i];
       final sweepAngle = (amount / total) * availableAngle;
-      final color = resolveSliceColor(cat.colorHex, i);
+      final color = resolveSliceColor(cat.colorHex, i, brightness: brightness);
 
       canvas.drawArc(
         rect,
@@ -218,7 +225,9 @@ class _PieChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PieChartPainter old) =>
-      old.progress != progress || old.total != total;
+      old.progress != progress ||
+      old.total != total ||
+      old.brightness != brightness;
 }
 
 class _Legend extends StatelessWidget {
@@ -229,13 +238,15 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (int i = 0; i < slices.length; i++) ...[
           _LegendRow(
-            color: resolveSliceColor(slices[i].$1.colorHex, i),
+            color: resolveSliceColor(slices[i].$1.colorHex, i,
+                brightness: brightness),
             name: slices[i].$1.name,
             amount: slices[i].$2,
             percent: total > 0 ? slices[i].$2 / total : 0.0,
