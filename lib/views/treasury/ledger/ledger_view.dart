@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
-import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/capture_inbox_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -24,8 +22,6 @@ import 'package:intermittent_fasting/views/treasury/shared/month_stepper_pill.da
 import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/photo_log_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-
-final _filterChipFmt = DateFormat('MMM d');
 
 class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -160,7 +156,9 @@ class _LedgerViewState extends State<LedgerView> {
     AppBottomSheet.show(
       context: context,
       title: 'Filter & sort',
+      trailing: _ResetFiltersButton(presenter: presenter),
       body: _FilterSortSheet(presenter: presenter),
+      primaryAction: _ShowResultsButton(presenter: presenter),
     );
   }
 
@@ -1272,161 +1270,544 @@ Future<void> _pickLedgerMonth(
   }
 }
 
+/// The Filter & sort sheet. Short on purpose: the order as one segmented
+/// control, then one row each for Month, Day, Accounts and Categories that
+/// shows its current value. Accounts and Categories open their own pickers
+/// instead of laying every option out here. Everything applies live; the
+/// footer button shows how many records the list will show.
 class _FilterSortSheet extends StatelessWidget {
   final LedgerPresenter presenter;
   const _FilterSortSheet({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     return ListenableBuilder(
       listenable: presenter,
-      builder: (context, _) {
-        final expense = presenter.categories
-            .where((c) => c.type == CategoryType.expense)
-            .toList();
-        final income = presenter.categories
-            .where((c) => c.type == CategoryType.income)
-            .toList();
-        return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _FilterHeading('Month'),
-              _SelectChip(
-                label: monthLabel(presenter.selectedMonth),
-                selected: false,
-                onTap: () => _pickLedgerMonth(context, presenter),
-              ),
-              const SizedBox(height: 16),
-              const _FilterHeading('Sort by'),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _SelectChip(
-                    label: 'Newest',
-                    selected: presenter.sortField == LedgerSortField.date &&
-                        presenter.sortDescending,
-                    onTap: () => presenter.setSort(LedgerSortField.date,
-                        descending: true),
-                  ),
-                  _SelectChip(
-                    label: 'Oldest',
-                    selected: presenter.sortField == LedgerSortField.date &&
-                        !presenter.sortDescending,
-                    onTap: () => presenter.setSort(LedgerSortField.date,
-                        descending: false),
-                  ),
-                  _SelectChip(
-                    label: 'Largest',
-                    selected: presenter.sortField == LedgerSortField.amount &&
-                        presenter.sortDescending,
-                    onTap: () => presenter.setSort(LedgerSortField.amount,
-                        descending: true),
-                  ),
-                  _SelectChip(
-                    label: 'Smallest',
-                    selected: presenter.sortField == LedgerSortField.amount &&
-                        !presenter.sortDescending,
-                    onTap: () => presenter.setSort(LedgerSortField.amount,
-                        descending: false),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const _FilterHeading('Day'),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _SelectChip(
-                    label: 'Any day',
-                    selected: presenter.selectedDate == null,
-                    onTap: () => presenter.setSelectedDate(null),
-                  ),
-                  _SelectChip(
-                    label: presenter.selectedDate != null
-                        ? _filterChipFmt.format(presenter.selectedDate!)
-                        : 'Pick a day…',
-                    selected: presenter.selectedDate != null,
-                    onTap: () => _pickLedgerDay(context, presenter),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
-                const _FilterHeading('Money owed to you'),
-                _SelectChip(
-                  label: 'Owed: ${formatPeso(presenter.outstandingOwedTotal)}',
-                  selected: presenter.owedOnly,
-                  onTap: () => presenter.setOwedFilter(!presenter.owedOnly),
-                ),
-                const SizedBox(height: 16),
+      builder: (context, _) => SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _FilterHeading('Sort by'),
+            AppSegmentedControl<LedgerSortOption>(
+              key: const ValueKey('ledgerSortControl'),
+              segments: [
+                for (final o in LedgerSortOption.values)
+                  (value: o, label: o.label, icon: null),
               ],
-              // Accounts + Categories always show (with an empty hint) so the
-              // filter dimensions are never a mystery — even before any account
-              // or category exists on this device.
-              const _FilterHeading('Accounts'),
-              if (presenter.accounts.isEmpty)
-                const _FilterEmptyHint('No accounts yet')
+              selected: presenter.sortOption,
+              onChanged: presenter.setSortOption,
+              // Four labels share a phone-width row: trim the side padding so
+              // "Smallest" keeps to one line at larger text sizes.
+              style: SegmentedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const _FilterHeading('Show'),
+            _FilterCard(
+              children: [
+                _FilterRow(
+                  key: const ValueKey('ledgerFilterMonth'),
+                  icon: Icons.calendar_month_outlined,
+                  label: 'Month',
+                  value: presenter.monthFilterLabel,
+                  onTap: () => _pickLedgerMonth(context, presenter),
+                ),
+                _FilterRow(
+                  key: const ValueKey('ledgerFilterDay'),
+                  icon: Icons.today_outlined,
+                  label: 'Day',
+                  value: presenter.dayFilterLabel,
+                  active: presenter.hasDayFilter,
+                  onTap: () => _pickLedgerDay(context, presenter),
+                  onClear: () => presenter.setSelectedDate(null),
+                ),
+                _FilterRow(
+                  key: const ValueKey('ledgerFilterAccounts'),
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Accounts',
+                  value: presenter.accountFilterSummary,
+                  active: presenter.hasAccountFilter,
+                  onTap: () => _showAccountFilterPicker(context, presenter),
+                  onClear: presenter.clearAccountFilters,
+                ),
+                _FilterRow(
+                  key: const ValueKey('ledgerFilterCategories'),
+                  icon: Icons.category_outlined,
+                  label: 'Categories',
+                  value: presenter.categoryFilterSummary,
+                  active: presenter.hasCategoryFilter,
+                  onTap: () => _showCategoryFilterPicker(context, presenter),
+                  onClear: presenter.clearCategoryFilters,
+                ),
+              ],
+            ),
+            if (presenter.showsOwedFilter) ...[
+              const SizedBox(height: 12),
+              _FilterCard(
+                children: [_OwedFilterRow(presenter: presenter)],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Reset" in the sheet header: clears every filter and the order. Disabled
+/// when there is nothing to reset.
+class _ResetFiltersButton extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ResetFiltersButton({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => TextButton(
+        key: const ValueKey('ledgerFilterReset'),
+        onPressed:
+            presenter.canResetFilters ? presenter.resetFiltersAndSort : null,
+        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+        child: const Text('Reset'),
+      ),
+    );
+  }
+}
+
+/// The sheet's footer button: 'Show 23 transactions', live as filters change.
+class _ShowResultsButton extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ShowResultsButton({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => AppPrimaryButton(
+        key: const ValueKey('ledgerFilterShowResults'),
+        label: presenter.showResultsLabel,
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+}
+
+/// A rounded group of rows on the sheet (card on a sheet → container high),
+/// with a hairline between rows.
+class _FilterCard extends StatelessWidget {
+  final List<Widget> children;
+  const _FilterCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: 52,
+                  color: cs.outlineVariant,
+                ),
+              children[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One row of the sheet: icon, label, the current value on the right, and a
+/// chevron — or a clear (✕) button once this filter is on.
+class _FilterRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  /// This filter is on: the value is drawn in the accent and ✕ replaces the
+  /// chevron.
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+
+  const _FilterRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.active = false,
+    required this.onTap,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final clear = onClear;
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 4),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: cs.onSurfaceVariant),
+              const SizedBox(width: 16),
+              Text(label, style: theme.textTheme.bodyLarge),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: active ? cs.primary : cs.onSurfaceVariant,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (active && clear != null)
+                IconButton(
+                  tooltip: 'Clear $label',
+                  onPressed: clear,
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: cs.onSurfaceVariant),
+                )
               else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(Icons.chevron_right_rounded,
+                      color: cs.onSurfaceVariant),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Only money owed to you" as a switch, with what is still owed under it.
+class _OwedFilterRow extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _OwedFilterRow({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return InkWell(
+      onTap: () => presenter.setOwedFilter(!presenter.owedOnly),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+          child: Row(
+            children: [
+              Icon(Icons.handshake_outlined,
+                  size: 20, color: cs.onSurfaceVariant),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    for (final a in presenter.accounts)
-                      _SelectChip(
-                        label: a.name,
-                        selected: presenter.selectedAccountIds.contains(a.id),
-                        onTap: () => presenter.toggleAccountFilter(a.id),
-                      ),
+                    Text('Only money owed to you',
+                        style: theme.textTheme.bodyLarge),
+                    Text(
+                      presenter.owedFilterDetail,
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
                   ],
                 ),
-              const SizedBox(height: 16),
-              const _FilterHeading('Categories'),
-              if (expense.isEmpty && income.isEmpty)
-                const _FilterEmptyHint('No categories yet')
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final c in [...expense, ...income])
-                      _SelectChip(
-                        label: c.name,
-                        dotColor: resolveSliceColor(c.colorHex, 0,
-                            brightness: brightness),
-                        selected: presenter.selectedCategoryIds.contains(c.id),
-                        onTap: () => presenter.toggleCategoryFilter(c.id),
-                      ),
-                  ],
-                ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppSecondaryButton(
-                      label: 'Clear all',
-                      onPressed: presenter.activeFilterCount == 0
-                          ? null
-                          : presenter.clearAllFilters,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppPrimaryButton(
-                      label: 'Done',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                ],
+              ),
+              Switch(
+                key: const ValueKey('ledgerFilterOwed'),
+                value: presenter.owedOnly,
+                onChanged: presenter.setOwedFilter,
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+/// Opens the account picker over the Filter & sort sheet.
+void _showAccountFilterPicker(BuildContext context, LedgerPresenter presenter) {
+  AppBottomSheet.show(
+    context: context,
+    title: 'Accounts',
+    trailing: _ClearPickerButton(
+      presenter: presenter,
+      enabled: () => presenter.hasAccountFilter,
+      onClear: presenter.clearAccountFilters,
+    ),
+    body: _AccountFilterPicker(presenter: presenter),
+    primaryAction: _PickerDoneButton(),
+  );
+}
+
+/// Opens the category picker over the Filter & sort sheet.
+void _showCategoryFilterPicker(
+    BuildContext context, LedgerPresenter presenter) {
+  AppBottomSheet.show(
+    context: context,
+    title: 'Categories',
+    trailing: _ClearPickerButton(
+      presenter: presenter,
+      enabled: () => presenter.hasCategoryFilter,
+      onClear: presenter.clearCategoryFilters,
+    ),
+    body: _CategoryFilterPicker(presenter: presenter),
+    primaryAction: _PickerDoneButton(),
+  );
+}
+
+/// "Clear" in a picker's header; disabled when nothing is picked.
+class _ClearPickerButton extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final bool Function() enabled;
+  final VoidCallback onClear;
+
+  const _ClearPickerButton({
+    required this.presenter,
+    required this.enabled,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => TextButton(
+        onPressed: enabled() ? onClear : null,
+        style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+        child: const Text('Clear'),
+      ),
+    );
+  }
+}
+
+class _PickerDoneButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => AppPrimaryButton(
+        label: 'Done',
+        onPressed: () => Navigator.of(context).pop(),
+      );
+}
+
+/// Accounts grouped by kind, each with a checkbox. No pick means all
+/// accounts.
+class _AccountFilterPicker extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _AccountFilterPicker({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => _FilterGroupList(
+        groups: presenter.accountFilterGroups,
+        emptyText: 'No accounts yet',
+        onToggle: presenter.toggleAccountFilter,
+      ),
+    );
+  }
+}
+
+/// Categories with "Used this month" first, plus a search box when the list
+/// is long. No pick means all categories.
+class _CategoryFilterPicker extends StatefulWidget {
+  final LedgerPresenter presenter;
+  const _CategoryFilterPicker({required this.presenter});
+
+  @override
+  State<_CategoryFilterPicker> createState() => _CategoryFilterPickerState();
+}
+
+class _CategoryFilterPickerState extends State<_CategoryFilterPicker> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final presenter = widget.presenter;
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (presenter.categoryFilterNeedsSearch) ...[
+            AppTextField(
+              key: const ValueKey('ledgerCategorySearch'),
+              controller: _search,
+              hint: 'Search categories',
+              prefixIcon: Icons.search_rounded,
+              textInputAction: TextInputAction.search,
+              onChanged: (v) => setState(() => _query = v),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Flexible(
+            child: _FilterGroupList(
+              groups: presenter.categoryFilterGroups(_query),
+              emptyText: 'No categories match',
+              onToggle: presenter.toggleCategoryFilter,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The sections of a picker, each as a heading and a card of checkbox rows.
+class _FilterGroupList extends StatelessWidget {
+  final List<LedgerFilterGroup> groups;
+  final String emptyText;
+  final ValueChanged<String> onToggle;
+
+  const _FilterGroupList({
+    required this.groups,
+    required this.emptyText,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (groups.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: _FilterEmptyHint(emptyText),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var g = 0; g < groups.length; g++) ...[
+            if (g > 0) const SizedBox(height: 20),
+            _FilterHeading(groups[g].title),
+            _FilterCard(
+              children: [
+                for (final o in groups[g].options)
+                  _FilterOptionRow(
+                    key: ValueKey('ledgerFilterOption.${o.id}'),
+                    option: o,
+                    onTap: () => onToggle(o.id),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One account or category in a picker: color swatch, name, this month's
+/// record count, and a checkbox. The whole row is the tap target.
+class _FilterOptionRow extends StatelessWidget {
+  final LedgerFilterOption option;
+  final VoidCallback onTap;
+
+  const _FilterOptionRow(
+      {super.key, required this.option, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final swatch = resolveSliceColor(
+      option.colorHex,
+      option.paletteIndex,
+      brightness: theme.brightness,
+    );
+    return Semantics(
+      checked: option.selected,
+      button: true,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: swatch,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      if (option.detail.isNotEmpty)
+                        Text(
+                          option.detail,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                    ],
+                  ),
+                ),
+                IgnorePointer(
+                  child: Checkbox(value: option.selected, onChanged: (_) {}),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1461,70 +1842,10 @@ class _FilterEmptyHint extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
       child: Text(
         text,
+        textAlign: TextAlign.center,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: context.appColors.textMuted,
             ),
-      ),
-    );
-  }
-}
-
-class _SelectChip extends StatelessWidget {
-  final String label;
-  final Color? dotColor;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _SelectChip({
-    required this.label,
-    this.dotColor,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.15)
-              : cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (dotColor != null) ...[
-              Container(
-                width: 9,
-                height: 9,
-                decoration:
-                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 7),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? cs.primary : cs.onSurface,
-              ),
-            ),
-            if (selected) ...[
-              const SizedBox(width: 6),
-              Icon(Icons.check_rounded, size: 14, color: cs.primary),
-            ],
-          ],
-        ),
       ),
     );
   }
