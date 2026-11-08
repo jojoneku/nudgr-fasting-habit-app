@@ -440,6 +440,7 @@ class _GoalSection extends StatelessWidget {
                   for (int i = 0; i < goals.length; i++) ...[
                     GoalProgressCard(
                       account: goals[i],
+                      paletteIndex: i,
                       onTap: () {
                         HapticFeedback.selectionClick();
                         onEdit(goals[i]);

@@ -9,7 +9,16 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class TreasuryHistoryView extends StatefulWidget {
   final TreasuryHistoryPresenter presenter;
 
-  const TreasuryHistoryView({super.key, required this.presenter});
+  /// Opens the Ledger on the given `YYYY-MM` month. Wired by the Treasury
+  /// module, which owns the tabs; null hides "Open in Ledger" on the detail
+  /// screen. Mirrors the web History page's `onOpenLedgerMonth`.
+  final ValueChanged<String>? onOpenLedgerMonth;
+
+  const TreasuryHistoryView({
+    super.key,
+    required this.presenter,
+    this.onOpenLedgerMonth,
+  });
 
   @override
   State<TreasuryHistoryView> createState() => _TreasuryHistoryViewState();
@@ -26,13 +35,25 @@ class _TreasuryHistoryViewState extends State<TreasuryHistoryView> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => MonthlySummaryDetailView(
+        builder: (detailContext) => MonthlySummaryDetailView(
           summary: summary,
           categories: widget.presenter.categories,
           accounts: widget.presenter.accounts,
+          onOpenInLedger: _openInLedgerFor(detailContext, summary.month),
         ),
       ),
     );
+  }
+
+  /// Closes the detail screen, then hands [month] to the module so it can
+  /// point the Ledger at it and switch tabs. Null when nothing is wired.
+  VoidCallback? _openInLedgerFor(BuildContext detailContext, String month) {
+    final open = widget.onOpenLedgerMonth;
+    if (open == null) return null;
+    return () {
+      Navigator.pop(detailContext);
+      open(month);
+    };
   }
 
   @override

@@ -27,11 +27,14 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   // (name-derived glyph) until the user explicitly picks one.
   String _iconKey = kAutoCategoryIconKey;
 
-  String _nextColor() {
-    final index =
-        widget.presenter.categories.where((c) => c.type == _type).length;
-    return categoryColorAt(index, isExpense: _type == CategoryType.expense);
-  }
+  /// The palette slot the next category of [_type] gets: its position among
+  /// the categories of that type, which is also the slot its tile resolves
+  /// against once it is added.
+  int get _nextIndex =>
+      widget.presenter.categories.where((c) => c.type == _type).length;
+
+  String _nextColor() =>
+      categoryColorAt(_nextIndex, isExpense: _type == CategoryType.expense);
 
   @override
   void initState() {
@@ -143,6 +146,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                 iconKey: _iconKey,
                 onPickIcon: _pickAddIcon,
                 previewColorHex: _nextColor(),
+                previewColorIndex: _nextIndex,
               ),
               const SizedBox(height: 28),
               if (expense.isEmpty && income.isEmpty)
@@ -160,17 +164,18 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                         count: expense.length,
                         color: Theme.of(context).colorScheme.error),
                     child: Column(
-                      children: expense
-                          .map((c) => _CategoryTile(
-                                key: ValueKey(c.id),
-                                category: c,
-                                accentColor:
-                                    Theme.of(context).colorScheme.error,
-                                onDelete: () => _confirmDelete(context, c),
-                                onToggleExclude: (v) => _toggleExclude(c, v),
-                                onChangeIcon: () => _changeCategoryIcon(c),
-                              ))
-                          .toList(),
+                      children: [
+                        for (final (i, c) in expense.indexed)
+                          _CategoryTile(
+                            key: ValueKey(c.id),
+                            category: c,
+                            paletteIndex: i,
+                            accentColor: Theme.of(context).colorScheme.error,
+                            onDelete: () => _confirmDelete(context, c),
+                            onToggleExclude: (v) => _toggleExclude(c, v),
+                            onChangeIcon: () => _changeCategoryIcon(c),
+                          ),
+                      ],
                     ),
                   ),
                 if (expense.isNotEmpty && income.isNotEmpty)
@@ -182,17 +187,18 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                         count: income.length,
                         color: Theme.of(context).colorScheme.tertiary),
                     child: Column(
-                      children: income
-                          .map((c) => _CategoryTile(
-                                key: ValueKey(c.id),
-                                category: c,
-                                accentColor:
-                                    Theme.of(context).colorScheme.tertiary,
-                                onDelete: () => _confirmDelete(context, c),
-                                onToggleExclude: (v) => _toggleExclude(c, v),
-                                onChangeIcon: () => _changeCategoryIcon(c),
-                              ))
-                          .toList(),
+                      children: [
+                        for (final (i, c) in income.indexed)
+                          _CategoryTile(
+                            key: ValueKey(c.id),
+                            category: c,
+                            paletteIndex: i,
+                            accentColor: Theme.of(context).colorScheme.tertiary,
+                            onDelete: () => _confirmDelete(context, c),
+                            onToggleExclude: (v) => _toggleExclude(c, v),
+                            onChangeIcon: () => _changeCategoryIcon(c),
+                          ),
+                      ],
                     ),
                   ),
               ],
@@ -358,6 +364,10 @@ class _AddCategoryForm extends StatelessWidget {
   /// preview so it matches how the category will look in the ledger row.
   final String previewColorHex;
 
+  /// Palette slot the new category will resolve against (see
+  /// `resolveSliceColor`), so the preview matches its tile once added.
+  final int previewColorIndex;
+
   const _AddCategoryForm({
     required this.formKey,
     required this.controller,
@@ -367,19 +377,19 @@ class _AddCategoryForm extends StatelessWidget {
     required this.iconKey,
     required this.onPickIcon,
     required this.previewColorHex,
+    required this.previewColorIndex,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final color = type == CategoryType.expense ? cs.error : cs.tertiary;
-    Color previewColor;
-    try {
-      previewColor = Color(
-          int.parse('FF${previewColorHex.replaceFirst('#', '')}', radix: 16));
-    } catch (_) {
-      previewColor = color;
-    }
+    final previewColor = resolveSliceColor(
+      previewColorHex,
+      previewColorIndex,
+      brightness: theme.brightness,
+    );
 
     return Form(
       key: formKey,
@@ -460,6 +470,10 @@ class _AddCategoryForm extends StatelessWidget {
 
 class _CategoryTile extends StatelessWidget {
   final FinanceCategory category;
+
+  /// Position among the categories of the same type — the palette slot the
+  /// near-white fallback in `resolveSliceColor` uses.
+  final int paletteIndex;
   final Color accentColor;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggleExclude;
@@ -468,27 +482,27 @@ class _CategoryTile extends StatelessWidget {
   const _CategoryTile({
     super.key,
     required this.category,
+    required this.paletteIndex,
     required this.accentColor,
     required this.onDelete,
     required this.onToggleExclude,
     required this.onChangeIcon,
   });
 
-  /// The category's own color — matches how the ledger row tints the badge, so
-  /// the icon looks identical here and in the feed. Falls back to the type
-  /// accent if the stored hex can't be parsed.
-  Color get _badgeColor {
-    try {
-      return Color(
-          int.parse('FF${category.colorHex.replaceFirst('#', '')}', radix: 16));
-    } catch (_) {
-      return accentColor;
-    }
-  }
+  /// The category's own color, resolved the same way as the ledger row and the
+  /// charts (near-white guard, light-mode deepening), so the icon looks the same
+  /// here and in the feed.
+  Color _badgeColor(Brightness brightness) => resolveSliceColor(
+        category.colorHex,
+        paletteIndex,
+        brightness: brightness,
+      );
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final badgeColor = _badgeColor(theme.brightness);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: AppListTile(
@@ -507,7 +521,7 @@ class _CategoryTile extends StatelessWidget {
                   iconKey: category.icon,
                   name: category.name,
                   type: category.type,
-                  color: _badgeColor,
+                  color: badgeColor,
                   size: 40,
                   iconSize: 18,
                 ),
