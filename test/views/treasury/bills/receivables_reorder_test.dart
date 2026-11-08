@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
+import 'package:intermittent_fasting/views/treasury/bills/bills_tab_chips.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
 import '../../../mocks.mocks.dart';
 
@@ -68,10 +69,15 @@ void main() {
     await tester.pumpAndSettle();
     await presenter.setMonth(month);
     await tester.pumpAndSettle();
+    // Receivables live on their own tab.
+    final chip = find.byKey(BillsTabKeys.chip(BillsTab.receivables));
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
   }
 
-  /// Names of the receivable cards, top to bottom. Scoped to the cards because
-  /// the "Coming up" timeline above the sections lists the same receivables.
+  /// Names of the receivable cards, top to bottom.
   List<String> order(WidgetTester tester) {
     final found = <(String, double)>[];
     for (final name in ['Aya', 'Bea', 'Chacha']) {

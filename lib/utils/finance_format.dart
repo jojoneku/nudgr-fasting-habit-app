@@ -25,6 +25,17 @@ String formatPesoSigned(double amount) {
 String formatPesoMinus(double amount) =>
     amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
 
+/// "1st", "2nd", "16th" — due days read as dates, not counts.
+String ordinalDay(int day) {
+  if (day >= 11 && day <= 13) return '${day}th';
+  return switch (day % 10) {
+    1 => '${day}st',
+    2 => '${day}nd',
+    3 => '${day}rd',
+    _ => '${day}th',
+  };
+}
+
 /// Whole-peso figure for places that drop the centavos — status labels
 /// ("Over by ₱76") and tight cells ("₱76 over") — so a label stays one line.
 /// Totals keep [formatPeso]. e.g. 1234.56 → '₱1,235'.
