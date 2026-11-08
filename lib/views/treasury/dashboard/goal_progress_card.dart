@@ -18,8 +18,8 @@ class GoalProgressCard extends StatelessWidget {
   final VoidCallback? onMarkSpent;
 
   /// Opens Start again for a goal account (Plan 071 Phase 9: active goals too,
-  /// as on web). Null hides the action (a savings account with a target has
-  /// no lifecycle to restart).
+  /// as on web). Null hides the action: a savings account with a target has
+  /// no lifecycle to restart, and a reached goal is marked spent first.
   final VoidCallback? onStartAgain;
 
   const GoalProgressCard({

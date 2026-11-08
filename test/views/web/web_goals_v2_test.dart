@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/goal_copy.dart';
 import 'package:intermittent_fasting/views/web/design/web_theme.dart';
 import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
 import 'package:intermittent_fasting/views/web/pages/goals/web_goals_page.dart';
@@ -311,11 +312,7 @@ void main() {
 
       expect(find.byKey(WebKeys.goalsStartAgainDialog), findsOneWidget);
       expect(find.text('Start ${goal.name} again'), findsOneWidget);
-      expect(
-        find.text('Clears the completed stamp and starts tracking toward a new '
-            'target. The account and everything in its history stay put.'),
-        findsOneWidget,
-      );
+      expect(find.text(kGoalRestartNote), findsOneWidget);
       // The current target is offered as the starting point.
       expect(find.text(goal.goalTarget!.toStringAsFixed(2)), findsOneWidget);
 

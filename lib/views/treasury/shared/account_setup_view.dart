@@ -296,8 +296,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     );
   }
 
-  /// Archive is a goal-lifecycle action (`archiveGoal`), offered only on an
-  /// existing goal account — the same rule as the web Setup row menu.
+  /// Archive is a goal-lifecycle action (`archiveGoal`), offered only on a
+  /// completed goal — the same rule as the Completed rows on the Goals screen
+  /// ([TreasuryDashboardPresenter.canArchiveAccount]).
   bool get _canArchive {
     final existing = widget.existing;
     return existing != null &&
@@ -478,8 +479,8 @@ class _AccountSetupForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback? onDelete;
 
-  /// Archives a goal account. Null hides the button (not a goal, or a new
-  /// account).
+  /// Archives a completed goal. Null hides the button (not a completed goal,
+  /// or a new account).
   final VoidCallback? onArchive;
 
   /// Opens a nested sub-account (pocket/goal/time deposit) form. Null when the
@@ -720,7 +721,7 @@ class _AccountSetupForm extends StatelessWidget {
               ),
             ],
 
-            // Archive (goal accounts only, edit only)
+            // Archive (completed goals only, edit only)
             if (onArchive != null) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(

@@ -114,7 +114,7 @@ class WebGoalsPage extends StatelessWidget {
     final ok = await showWebConfirm(
       context,
       title: accountArchiveTitle(account),
-      message: accountArchiveMessage(account),
+      message: accountArchiveMessage(account, onWeb: true),
       confirmLabel: 'Archive',
       destructive: false,
     );
@@ -495,7 +495,7 @@ class WebGoalCard extends StatelessWidget {
               key: WebKeys.goalsCardStartAgain,
               icon: Icons.restart_alt_rounded,
               onTap: onStartAgain),
-        if (_completed)
+        if (TreasuryDashboardPresenter.canArchiveAccount(a))
           WebMenuItem('Archive',
               key: WebKeys.goalsCardArchive,
               icon: Icons.inventory_2_outlined,
@@ -1177,8 +1177,7 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Clears the completed stamp and starts tracking toward a new '
-            'target. The account and everything in its history stay put.',
+            kGoalRestartNote,
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: cs.onSurfaceVariant, height: 1.5),
           ),

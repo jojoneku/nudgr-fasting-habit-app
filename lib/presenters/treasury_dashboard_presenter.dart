@@ -588,15 +588,26 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   // Moved out of the web Goals page (`_GoalsFigures`) so the mobile Goals
   // screen and the web page read one set of numbers and one set of rules.
 
-  /// Only a goal account can be archived ([archiveGoal]) — the rule behind
-  /// the Archive action in the mobile account form and the web Setup menu.
+  /// Only a completed goal can be archived ([archiveGoal]) — one that sits in
+  /// [completedGoalAccounts]. The rule behind the Archive action on the mobile
+  /// Completed rows, the mobile account form and the web Goals card menu.
+  ///
+  /// Archiving sets `isActive` to false, which takes a top-level goal's
+  /// balance out of total assets and net worth; on a goal still being saved
+  /// into that would quietly drop real money from the totals.
   static bool canArchiveAccount(FinancialAccount account) =>
-      account.category == AccountCategory.goal;
+      account.isActive && account.goalStage == GoalStage.redeemed;
 
-  /// Only a goal account can start again ([restartGoalAccount]), active or
-  /// completed. A savings account with a target has no lifecycle to restart.
+  /// Whether Start again ([restartGoalAccount]) is offered. Only goal
+  /// accounts have a lifecycle to restart (a savings account with a target
+  /// does not), and a goal that reached its target but is not yet marked
+  /// spent ([GoalStage.funded]) is held back: restarting it would clear the
+  /// funded stamp without writing a completed record, erasing the success.
+  /// Such a goal goes through "Mark spent" first, then Start again from the
+  /// Completed list.
   static bool canStartAgain(FinancialAccount account) =>
-      account.category == AccountCategory.goal;
+      account.category == AccountCategory.goal &&
+      account.goalStage != GoalStage.funded;
 
   /// A goal with nothing in it yet: no balance and never funded.
   static bool isGoalNotStarted(FinancialAccount account) =>
@@ -660,7 +671,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     return total > 0 ? goalsSavedTowardTargets / total : null;
   }
 
-  /// Goals Start again can offer: completed first, then live goal accounts.
+  /// Goals Start again can offer: completed first, then live goal accounts
+  /// that [canStartAgain] allows (a reached goal not yet marked spent is left
+  /// out).
   List<FinancialAccount> get restartableGoalAccounts => [
         ...completedGoalAccounts,
         ...activeGoalAccounts.where(canStartAgain),

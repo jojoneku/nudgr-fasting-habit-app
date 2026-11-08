@@ -99,8 +99,10 @@ class GoalsSavingsScreen extends StatelessWidget {
     );
   }
 
-  /// The active-goal card's Start again, or null when the account has no
-  /// lifecycle to restart (a savings account with a target).
+  /// The active-goal card's Start again, or null when
+  /// [TreasuryDashboardPresenter.canStartAgain] says no: a savings account
+  /// with a target, or a reached goal not yet marked spent (it shows
+  /// "Mark spent" instead and restarts from Completed afterwards).
   VoidCallback? _startAgainFor(
           BuildContext context, FinancialAccount account) =>
       TreasuryDashboardPresenter.canStartAgain(account)
@@ -717,8 +719,7 @@ class _RestartGoalSheetState extends State<_RestartGoalSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Clears the completed stamp and starts tracking toward a new target. '
-          'The account and everything in its history stay put.',
+          kGoalRestartNote,
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),

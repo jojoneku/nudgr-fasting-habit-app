@@ -504,7 +504,7 @@ class _AccountRow extends StatelessWidget {
     final confirmed = await showWebConfirm(
       context,
       title: accountArchiveTitle(account),
-      message: accountArchiveMessage(account),
+      message: accountArchiveMessage(account, onWeb: true),
       confirmLabel: 'Archive',
       destructive: false,
     );
@@ -682,8 +682,10 @@ class _AccountRow extends StatelessWidget {
                     existing: a)),
             // Archiving is a goal-lifecycle action on the presenter
             // (archiveGoal); other roles have no archive path, so the entry
-            // only appears on goal rows.
-            if (TreasuryDashboardPresenter.canArchiveAccount(a))
+            // only appears on goal rows. Setup has always offered it on every
+            // goal row (the Goals page keeps it to completed goals); the
+            // confirm says when money in the goal leaves the totals.
+            if (isGoal)
               WebMenuItem('Archive',
                   key: WebKeys.setupRowArchive,
                   icon: Icons.inventory_2_outlined,

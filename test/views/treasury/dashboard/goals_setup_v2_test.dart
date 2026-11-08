@@ -9,14 +9,16 @@ import 'package:intermittent_fasting/utils/account_archive_copy.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/goal_copy.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goals_savings_screen.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
 
 import '../../../mocks.mocks.dart';
 
 /// Plan 071 Phase 9 — mobile Setup and Goals: the goals hero reads the
-/// presenter's goal figures, Start again shows on active goals, the funding
-/// note links to Budget, and the account form offers Archive only for goals.
+/// presenter's goal figures, Start again shows on active goals that have not
+/// reached their target, the funding note links to Budget, and Archive is
+/// offered only on completed goals.
 void main() {
   final month = toMonthKey(DateTime.now());
 
@@ -133,18 +135,65 @@ void main() {
           ['invest', 'pocketInvest']);
       expect(p.hasGoalsOrSavings, isTrue);
       // Completed first, then live goal accounts; a savings account with a
-      // target has no lifecycle to restart.
+      // target has no lifecycle to restart, and bike (reached, not yet marked
+      // spent) goes through Mark spent first.
       expect(p.restartableGoalAccounts.map((a) => a.id),
-          ['done', 'phone', 'trip', 'bike']);
+          ['done', 'phone', 'trip']);
     });
 
-    test('Archive and Start again are goal-only rules', () {
-      expect(TreasuryDashboardPresenter.canArchiveAccount(phone), isTrue);
+    test('Archive is offered only on completed goals', () {
+      // An active goal with money in it: archiving would drop ₱2,700 from
+      // net worth, so it is not offered.
+      expect(TreasuryDashboardPresenter.canArchiveAccount(phone), isFalse);
+      expect(TreasuryDashboardPresenter.canArchiveAccount(trip), isFalse);
+      expect(TreasuryDashboardPresenter.canArchiveAccount(bike), isFalse);
       expect(TreasuryDashboardPresenter.canArchiveAccount(done), isTrue);
       expect(TreasuryDashboardPresenter.canArchiveAccount(house), isFalse);
       expect(TreasuryDashboardPresenter.canArchiveAccount(bank), isFalse);
+      // Already archived: nothing left to archive.
+      expect(
+          TreasuryDashboardPresenter.canArchiveAccount(
+              done.copyWith(isActive: false)),
+          isFalse);
+    });
+
+    test('Start again skips a reached goal not yet marked spent', () {
+      expect(TreasuryDashboardPresenter.canStartAgain(phone), isTrue);
       expect(TreasuryDashboardPresenter.canStartAgain(trip), isTrue);
+      expect(TreasuryDashboardPresenter.canStartAgain(done), isTrue);
+      expect(TreasuryDashboardPresenter.canStartAgain(bike), isFalse);
+      // Reached ₱6,000, then spent back to ₱0: still funded, still a success.
+      final spent = acct('spent', AccountCategory.goal,
+          goalTarget: 6000, fundedAt: DateTime(2026, 10, 1));
+      expect(spent.goalStage, GoalStage.funded);
+      expect(TreasuryDashboardPresenter.canStartAgain(spent), isFalse);
       expect(TreasuryDashboardPresenter.canStartAgain(house), isFalse);
+    });
+  });
+
+  group('archive copy', () {
+    test('names the balance that leaves the totals', () {
+      final msg = accountArchiveMessage(phone);
+      expect(msg, contains(formatPeso(2700)));
+      expect(msg, contains('net worth'));
+      expect(msg, isNot(contains('All accounts')));
+      // Nothing in a spent goal, nothing to warn about.
+      expect(accountArchiveMessage(done), isNot(contains('net worth')));
+      // A pocket's money is counted in its parent, which stays put.
+      final pocket = acct('pocket', AccountCategory.goal,
+          balance: 800, goalTarget: 1000, parentId: 'bpi');
+      expect(accountArchiveMessage(pocket), isNot(contains('net worth')));
+    });
+
+    test('promises no way back; web adds where it is still listed', () {
+      for (final onWeb in [false, true]) {
+        final msg = accountArchiveMessage(done, onWeb: onWeb);
+        expect(msg, isNot(contains('reactivat')));
+        expect(msg, isNot(contains('bring it back')));
+        expect(msg, contains('Nothing is deleted'));
+      }
+      expect(accountArchiveMessage(done, onWeb: true),
+          contains('Archived in "All accounts"'));
     });
   });
 
@@ -211,19 +260,40 @@ void main() {
       });
     }
 
-    testWidgets('Start again shows on active goals, not on savings',
-        (tester) async {
+    testWidgets(
+        'Start again shows on unfunded active goals and completed rows, '
+        'not on a reached goal or savings', (tester) async {
       final p = await loaded();
       await pumpScreen(tester, p);
 
-      // phone, trip and bike are goal accounts; house is savings with a
+      // phone and trip are goal accounts still being saved into; bike reached
+      // its target and offers Mark spent instead; house is savings with a
       // target and has nothing to restart.
-      expect(find.byTooltip('Start again'), findsNWidgets(3));
+      expect(find.byTooltip('Start again'), findsNWidgets(2));
+      Finder card(String id) => find.ancestor(
+          of: find.text(id), matching: find.byType(GoalProgressCard));
+      expect(
+          find.descendant(
+              of: card('bike'), matching: find.byTooltip('Start again')),
+          findsNothing);
+      expect(
+          find.descendant(
+              of: card('phone'), matching: find.byTooltip('Start again')),
+          findsOneWidget);
+      // The completed goal still restarts from its Completed row.
+      expect(find.widgetWithText(TextButton, 'Start again'), findsOneWidget);
 
       await tester.tap(find.byTooltip('Start again').first);
       await tester.pumpAndSettle();
       expect(find.text('Start phone again'), findsOneWidget);
+      expect(find.text(kGoalRestartNote), findsOneWidget);
       expect(find.text('NEW TARGET'), findsOneWidget);
+    });
+
+    testWidgets('Archive shows only on the completed row', (tester) async {
+      final p = await loaded();
+      await pumpScreen(tester, p);
+      expect(find.byTooltip('Archive'), findsOneWidget);
     });
 
     testWidgets('restarting an active goal saves the new target',
@@ -303,32 +373,36 @@ void main() {
 
     const archive = ValueKey('accountSetup.archive');
 
-    testWidgets('shows only for goal accounts', (tester) async {
+    testWidgets('shows only for completed goals', (tester) async {
       await pumpForm(tester, bank);
       expect(find.byKey(archive), findsNothing);
 
       await pumpForm(tester, house);
       expect(find.byKey(archive), findsNothing);
 
+      // An active goal with money in it: hidden.
       await pumpForm(tester, phone);
+      expect(find.byKey(archive), findsNothing);
+
+      await pumpForm(tester, done);
       expect(find.byKey(archive), findsOneWidget);
     });
 
     testWidgets('confirms, then archives through the presenter',
         (tester) async {
-      await pumpForm(tester, phone);
+      await pumpForm(tester, done);
       await tester.ensureVisible(find.byKey(archive));
       await tester.tap(find.byKey(archive));
       await tester.pumpAndSettle();
 
-      expect(find.text(accountArchiveTitle(phone)), findsOneWidget);
-      expect(find.text(accountArchiveMessage(phone)), findsOneWidget);
+      expect(find.text(accountArchiveTitle(done)), findsOneWidget);
+      expect(find.text(accountArchiveMessage(done)), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Archive'));
       await tester.pumpAndSettle();
 
       final saved = verify(storage.saveAccounts(captureAny)).captured.last
           as List<FinancialAccount>;
-      expect(saved.firstWhere((a) => a.id == 'phone').isActive, isFalse);
+      expect(saved.firstWhere((a) => a.id == 'done').isActive, isFalse);
     });
   });
 }
