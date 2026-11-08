@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.123] - 2026-11-08
+
+### Fixed
+- make notification Snooze/Skip/Done work and ring alarm-style quests
+
 ## [1.1.122] - 2026-11-05
 
 ### Added
@@ -1081,7 +1086,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.122...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.123...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1205,3 +1210,4 @@ distributed via `manifest.json`.
 [1.1.120]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.120
 [1.1.121]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.121
 [1.1.122]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.122
+[1.1.123]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.123
