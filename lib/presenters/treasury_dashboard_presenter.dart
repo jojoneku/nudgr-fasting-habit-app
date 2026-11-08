@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
@@ -379,6 +381,185 @@ class SpendingRangeSummary {
     final d = peakDay;
     return d == null ? '—' : DateFormat('EEE, MMM d').format(d);
   }
+}
+
+/// The views of the mobile Trends switch on the spending card.
+enum DashboardTrend {
+  spending('Spending', 'Spending'),
+  netWorth('Net worth', 'Net worth'),
+  incomeExpenses('In vs out', 'Income vs expenses');
+
+  const DashboardTrend(this.label, this.semanticLabel);
+
+  /// Short segment label; fits three segments at 360 dp.
+  final String label;
+
+  /// The full name, read out by screen readers.
+  final String semanticLabel;
+
+  /// Only the spending view has a full history sheet ("View full").
+  bool get hasFullHistory => this == DashboardTrend.spending;
+}
+
+/// Net worth at each month-end and the change across them. Built by
+/// [TreasuryDashboardPresenter.netWorthTrendSummary]; read by the mobile
+/// Trends switch and the web Trends card.
+@immutable
+class NetWorthTrendSummary {
+  final List<({String label, String month, double value})> points;
+
+  /// Live net worth, shown when there is no chart yet.
+  final double current;
+
+  const NetWorthTrendSummary({required this.points, required this.current});
+
+  String get caption => 'Last 6 months · your overall position';
+  String get emptyText => 'Your net-worth trend will appear as months accrue.';
+
+  /// A line needs two points.
+  bool get hasChart => points.length >= 2;
+
+  List<double> get values => [for (final p in points) p.value];
+  List<String> get labels => [for (final p in points) p.label];
+
+  /// The chart's value range. The lowest and highest points, widened to take
+  /// in zero once the series dips below it, so a negative net worth sits under
+  /// the zero line instead of looking like a small positive one.
+  (double, double) get _range {
+    final vs = values;
+    final lo = vs.reduce(math.min);
+    final hi = vs.reduce(math.max);
+    return lo < 0 ? (lo, math.max(hi, 0.0)) : (lo, hi);
+  }
+
+  /// Each value placed between the bottom (0) and the top (1) of the chart's
+  /// range: the lowest and highest points, or down to the lowest and up to at
+  /// least zero once the series goes negative. All 0.5 when the series is
+  /// flat at or above zero.
+  List<double> get normalizedValues {
+    if (points.isEmpty) return const [];
+    final (lo, hi) = _range;
+    final span = hi - lo;
+    return [for (final v in values) span == 0 ? 0.5 : (v - lo) / span];
+  }
+
+  /// Where the area fill stops, on the same 0–1 scale as [normalizedValues]:
+  /// the bottom (0) while every point is at or above zero, else the zero
+  /// line, so the fill of a negative stretch hangs below zero, not above the
+  /// lowest point.
+  double get normalizedBaseline {
+    if (points.isEmpty) return 0.0;
+    final (lo, hi) = _range;
+    final span = hi - lo;
+    if (lo >= 0 || span == 0) return 0.0;
+    return (0 - lo) / span;
+  }
+
+  /// Last point minus first; 0 without a chart.
+  double get change => hasChart ? points.last.value - points.first.value : 0;
+  bool get isUp => change >= 0;
+  StatementTone get changeTone => isUp ? StatementTone.good : StatementTone.bad;
+
+  /// "↑ ₱12.5k (6 mo)", or "—" without a chart.
+  String get changeLabel => hasChart
+      ? '${isUp ? '↑ ' : '↓ '}${formatPesoCompact(change.abs())} (${points.length} mo)'
+      : '—';
+
+  /// [current] in full: the web badge before there is a chart. A negative
+  /// net worth reads "−₱12,500.00", never "₱-12,500.00".
+  String get currentLabel => formatPesoMinus(current);
+
+  /// [current] compact: "₱45k", or "−₱12.5k" when negative.
+  String get currentCompactLabel => formatPesoCompactMinus(current);
+
+  /// The first month-end in the series ("−₱12.5k" when negative), or "—"
+  /// without a chart.
+  String get startLabel =>
+      hasChart ? formatPesoCompactMinus(points.first.value) : '—';
+}
+
+/// Income and expenses per month and their averages. Built by
+/// [TreasuryDashboardPresenter.incomeExpenseTrendSummary]; read by the
+/// mobile Trends switch and the web Trends card.
+@immutable
+class IncomeExpenseTrendSummary {
+  final List<({String month, String label, double income, double expense})>
+      months;
+
+  /// The live month's 'YYYY-MM' key. That month is still in progress, so it
+  /// stays in the chart but is left out of the averages.
+  final String? currentMonth;
+
+  const IncomeExpenseTrendSummary({required this.months, this.currentMonth});
+
+  String get caption => 'Last 6 months · monthly comparison';
+  String get emptyText =>
+      'Your income vs expenses trend will appear as months accrue.';
+
+  /// A comparison needs two months.
+  bool get hasChart => months.length >= 2;
+
+  List<String> get labels => [for (final m in months) m.label];
+
+  /// The tallest bar, income or expense; the top of the axis.
+  double get maxValue => months.fold(
+        0.0,
+        (m, e) => math.max(m, math.max(e.income, e.expense)),
+      );
+
+  /// Each month's income as a share of [maxValue] (0–1).
+  List<double> get incomeFractions => _fractions((m) => m.income);
+
+  /// Each month's expenses as a share of [maxValue] (0–1).
+  List<double> get expenseFractions => _fractions((m) => m.expense);
+
+  List<double> _fractions(
+    double Function(
+            ({String month, String label, double income, double expense}))
+        pick,
+  ) {
+    final top = maxValue;
+    return [for (final m in months) top <= 0 ? 0.0 : pick(m) / top];
+  }
+
+  /// The months the averages cover: every month but the live one. Two days
+  /// into November, a ₱0 November would drag five ₱50k months down to ₱41.7k.
+  List<({String month, String label, double income, double expense})>
+      get closedMonths => [
+            for (final m in months)
+              if (m.month != currentMonth) m,
+          ];
+
+  /// False when no month has closed yet; the averages then read "—".
+  bool get hasAverages => closedMonths.isNotEmpty;
+
+  double get avgIncome => _average((m) => m.income);
+  double get avgExpense => _average((m) => m.expense);
+  double get avgNet => avgIncome - avgExpense;
+
+  double _average(
+    double Function(
+            ({String month, String label, double income, double expense}))
+        pick,
+  ) {
+    final closed = closedMonths;
+    if (closed.isEmpty) return 0.0;
+    return closed.fold(0.0, (s, m) => s + pick(m)) / closed.length;
+  }
+
+  String get avgIncomeLabel => hasAverages ? formatPesoCompact(avgIncome) : '—';
+  String get avgExpenseLabel =>
+      hasAverages ? formatPesoCompact(avgExpense) : '—';
+
+  /// "+₱4k" or "−₱1.2k"; "—" before any month has closed.
+  String get avgNetLabel => hasAverages
+      ? '${avgNet < 0 ? '−' : '+'}${formatPesoCompact(avgNet.abs())}'
+      : '—';
+  StatementTone get avgNetTone => !hasAverages
+      ? StatementTone.neutral
+      : avgNet < 0
+          ? StatementTone.bad
+          : StatementTone.good;
 }
 
 class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
@@ -2637,6 +2818,22 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     }
     return result;
   }
+
+  /// [netWorthTrend] with the change, labels and point positions the Trends
+  /// views show (mobile spending card switch, web Trends card).
+  NetWorthTrendSummary netWorthTrendSummary({int months = 6}) =>
+      NetWorthTrendSummary(
+        points: netWorthTrend(months: months),
+        current: netWorth,
+      );
+
+  /// [incomeExpenseTrend] with the bar heights and averages the Trends views
+  /// show (mobile spending card switch, web Trends card).
+  IncomeExpenseTrendSummary incomeExpenseTrendSummary({int months = 6}) =>
+      IncomeExpenseTrendSummary(
+        months: incomeExpenseTrend(months: months),
+        currentMonth: _currentMonth,
+      );
 
   // --- One-time historical backfill (legacy spreadsheet import) ---
 

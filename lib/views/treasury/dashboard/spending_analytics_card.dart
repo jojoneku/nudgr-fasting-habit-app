@@ -1,36 +1,88 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_header_link.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_spending_history_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/statement_card.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
-/// The Spending card: a header with a "View full" link, then a body.
+/// The Trends card: a switch between Spending · Net worth · Income vs
+/// expenses, then the chosen view. Spending keeps its "View full" link.
 ///
-/// The body is its own widget ([_SpendingBody]) so another view of the
-/// trends (net worth, income vs expenses) can sit beside it under a switch
-/// without reshaping this card.
-class SpendingAnalyticsCard extends StatelessWidget {
+/// The chosen view is local state for the life of the widget; it is not
+/// stored. Every figure each view shows comes from the presenter
+/// ([TreasuryDashboardPresenter.spendingSummary],
+/// [TreasuryDashboardPresenter.netWorthTrendSummary],
+/// [TreasuryDashboardPresenter.incomeExpenseTrendSummary]).
+class SpendingAnalyticsCard extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
 
   const SpendingAnalyticsCard({super.key, required this.presenter});
 
   @override
+  State<SpendingAnalyticsCard> createState() => _SpendingAnalyticsCardState();
+}
+
+class _SpendingAnalyticsCardState extends State<SpendingAnalyticsCard> {
+  DashboardTrend _view = DashboardTrend.spending;
+
+  @override
   Widget build(BuildContext context) {
+    final presenter = widget.presenter;
     return AppSection(
-      title: 'Spending',
-      trailing: DashboardHeaderLink(
-        key: const ValueKey('dashboard.spending.viewFull'),
-        label: 'View full',
-        onPressed: () => FullSpendingHistorySheet.show(context, presenter),
-      ),
+      title: 'Trends',
+      trailing: _view.hasFullHistory
+          ? DashboardHeaderLink(
+              key: const ValueKey('dashboard.spending.viewFull'),
+              label: 'View full',
+              onPressed: () =>
+                  FullSpendingHistorySheet.show(context, presenter),
+            )
+          : null,
       child: AppCard(
         variant: AppCardVariant.elevated,
-        child: _SpendingBody(presenter: presenter),
+        child: Column(
+          children: [
+            _Segmented<DashboardTrend>(
+              values: DashboardTrend.values,
+              value: _view,
+              label: (t) => t.label,
+              semanticLabel: (t) => t.semanticLabel,
+              keyFor: (t) => ValueKey('dashboard.trend.switch.${t.name}'),
+              onChanged: (t) => setState(() => _view = t),
+            ),
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (current, previous) => Stack(
+                alignment: Alignment.topCenter,
+                children: [...previous, if (current != null) current],
+              ),
+              child: switch (_view) {
+                DashboardTrend.spending => _SpendingBody(
+                    key: const ValueKey('dashboard.trend.view.spending'),
+                    presenter: presenter,
+                  ),
+                DashboardTrend.netWorth => _NetWorthBody(
+                    key: const ValueKey('dashboard.trend.view.netWorth'),
+                    summary: presenter.netWorthTrendSummary(),
+                  ),
+                DashboardTrend.incomeExpenses => _IncomeExpensesBody(
+                    key: const ValueKey('dashboard.trend.view.incomeExpenses'),
+                    summary: presenter.incomeExpenseTrendSummary(),
+                  ),
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -43,7 +95,7 @@ class SpendingAnalyticsCard extends StatelessWidget {
 class _SpendingBody extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
 
-  const _SpendingBody({required this.presenter});
+  const _SpendingBody({super.key, required this.presenter});
 
   @override
   State<_SpendingBody> createState() => _SpendingBodyState();
@@ -59,8 +111,11 @@ class _SpendingBodyState extends State<_SpendingBody> {
 
     return Column(
       children: [
-        _RangeSelector(
+        _Segmented<SpendRange>(
+          values: SpendRange.values,
           value: _range,
+          label: (r) => r.label,
+          keyFor: (r) => ValueKey('dashboard.spending.range.${r.name}'),
           onChanged: (r) => setState(() => _range = r),
         ),
         const SizedBox(height: 14),
@@ -87,13 +142,27 @@ class _SpendingBodyState extends State<_SpendingBody> {
   }
 }
 
-/// Compact segmented control for the spending window. Each segment is at
-/// least 44 dp tall.
-class _RangeSelector extends StatelessWidget {
-  final SpendRange value;
-  final ValueChanged<SpendRange> onChanged;
+/// Compact segmented control: the trends switch and the spending window.
+/// Segments share the row equally and each is at least 44 dp tall; a label
+/// scales down rather than clipping on a narrow screen. [semanticLabel]
+/// gives a screen reader the full name when the visible label is short.
+class _Segmented<T> extends StatelessWidget {
+  final List<T> values;
+  final T value;
+  final String Function(T) label;
+  final String Function(T)? semanticLabel;
+  final Key Function(T) keyFor;
+  final ValueChanged<T> onChanged;
 
-  const _RangeSelector({required this.value, required this.onChanged});
+  const _Segmented({
+    super.key,
+    required this.values,
+    required this.value,
+    required this.label,
+    required this.keyFor,
+    required this.onChanged,
+    this.semanticLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -106,33 +175,39 @@ class _RangeSelector extends StatelessWidget {
       ),
       child: Row(
         children: [
-          for (final r in SpendRange.values)
+          for (final v in values)
             Expanded(
               child: Semantics(
                 button: true,
-                selected: r == value,
+                selected: v == value,
+                label: semanticLabel?.call(v),
+                excludeSemantics: semanticLabel != null,
                 child: GestureDetector(
-                  key: ValueKey('dashboard.spending.range.${r.name}'),
+                  key: keyFor(v),
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => onChanged(r),
+                  onTap: () => onChanged(v),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     curve: Curves.easeOut,
                     constraints: const BoxConstraints(minHeight: 44),
                     alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: r == value ? cs.primary : Colors.transparent,
+                      color: v == value ? cs.primary : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      r.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            r == value ? FontWeight.w700 : FontWeight.w600,
-                        color: r == value ? cs.onPrimary : cs.onSurfaceVariant,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label(v),
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight:
+                              v == value ? FontWeight.w700 : FontWeight.w600,
+                          color:
+                              v == value ? cs.onPrimary : cs.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
@@ -142,6 +217,415 @@ class _RangeSelector extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// A one-line caption above a trends chart ("Last 6 months · …").
+class _TrendCaption extends StatelessWidget {
+  final String text;
+
+  const _TrendCaption(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// The empty state inside a 120 dp chart slot: a small icon and one short
+/// line, so a two-line message still fits.
+class _TrendEmpty extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _TrendEmpty({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 28, color: cs.onSurfaceVariant),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Month-end net worth as a line, then now / start / change. Every figure
+/// is [NetWorthTrendSummary].
+class _NetWorthBody extends StatelessWidget {
+  final NetWorthTrendSummary summary;
+
+  const _NetWorthBody({super.key, required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        _TrendCaption(summary.caption),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 120,
+          child: summary.hasChart
+              ? _GrowIn(
+                  builder: (progress) => CustomPaint(
+                    painter: _LineChartPainter(
+                      values: summary.normalizedValues,
+                      baseline: summary.normalizedBaseline,
+                      labels: summary.labels,
+                      progress: progress,
+                      lineColor: cs.primary,
+                      labelColor: cs.onSurfaceVariant,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                )
+              : _TrendEmpty(
+                  icon: Icons.show_chart_rounded,
+                  text: summary.emptyText,
+                ),
+        ),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.4)),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _StatChip(
+              label: 'NOW',
+              value: summary.currentCompactLabel,
+              color: cs.primary,
+            ),
+            _StatDivider(),
+            _StatChip(
+              label: 'START',
+              value: summary.startLabel,
+              color: cs.onSurfaceVariant,
+            ),
+            _StatDivider(),
+            _StatChip(
+              label: 'CHANGE',
+              value: summary.changeLabel,
+              color: statementToneColor(context, summary.changeTone),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Income and expenses per month as paired bars, then the monthly averages.
+/// Every figure is [IncomeExpenseTrendSummary].
+class _IncomeExpensesBody extends StatelessWidget {
+  final IncomeExpenseTrendSummary summary;
+
+  const _IncomeExpensesBody({super.key, required this.summary});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final incomeColor = statementToneColor(context, StatementTone.income);
+    final expenseColor = cs.primary;
+    return Column(
+      children: [
+        _TrendCaption(summary.caption),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 120,
+          child: summary.hasChart
+              ? _GrowIn(
+                  builder: (progress) => CustomPaint(
+                    painter: _PairBarPainter(
+                      income: summary.incomeFractions,
+                      expense: summary.expenseFractions,
+                      labels: summary.labels,
+                      progress: progress,
+                      incomeColor: incomeColor,
+                      expenseColor: expenseColor,
+                      labelColor: cs.onSurfaceVariant,
+                    ),
+                    child: const SizedBox.expand(),
+                  ),
+                )
+              : _TrendEmpty(
+                  icon: Icons.bar_chart_rounded,
+                  text: summary.emptyText,
+                ),
+        ),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.4)),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _StatChip(
+              label: 'AVG IN',
+              value: summary.avgIncomeLabel,
+              color: incomeColor,
+            ),
+            _StatDivider(),
+            _StatChip(
+              label: 'AVG OUT',
+              value: summary.avgExpenseLabel,
+              color: expenseColor,
+            ),
+            _StatDivider(),
+            _StatChip(
+              label: 'AVG NET',
+              value: summary.avgNetLabel,
+              color: statementToneColor(context, summary.avgNetTone),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Runs [builder] from 0 to 1 over 300 ms when it first appears; straight
+/// to 1 when the platform asks for reduced motion.
+class _GrowIn extends StatelessWidget {
+  final Widget Function(double progress) builder;
+
+  const _GrowIn({required this.builder});
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.of(context).disableAnimations;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: reduce ? 1.0 : 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      builder: (context, progress, _) => builder(progress),
+    );
+  }
+}
+
+/// A line over points already placed between 0 (bottom) and 1 (top), with a
+/// soft area between it and [baseline] and a label under each point. Drawn
+/// left to right as [progress] runs.
+class _LineChartPainter extends CustomPainter {
+  final List<double> values;
+
+  /// Where the area fill stops, 0 (bottom) to 1 (top): the zero line once
+  /// the series goes negative, so a negative stretch fills downward from it.
+  final double baseline;
+  final List<String> labels;
+  final double progress;
+  final Color lineColor;
+  final Color labelColor;
+
+  static const double _labelHeight = 20.0;
+  static const double _topPad = 8.0;
+  static const double _inset = 6.0;
+
+  _LineChartPainter({
+    required this.values,
+    required this.baseline,
+    required this.labels,
+    required this.progress,
+    required this.lineColor,
+    required this.labelColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.length < 2) return;
+    const top = _topPad;
+    final bottom = size.height - _labelHeight - 4;
+    final h = bottom - top;
+    final w = size.width - _inset * 2;
+    final step = w / (values.length - 1);
+    final points = [
+      for (var i = 0; i < values.length; i++)
+        Offset(_inset + i * step, bottom - values[i] * h),
+    ];
+
+    final line = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final p in points.skip(1)) {
+      line.lineTo(p.dx, p.dy);
+    }
+    final baseY = bottom - baseline.clamp(0.0, 1.0) * h;
+    final area = Path.from(line)
+      ..lineTo(points.last.dx, baseY)
+      ..lineTo(points.first.dx, baseY)
+      ..close();
+
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width * progress, size.height));
+    canvas.drawPath(
+      area,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            lineColor.withValues(alpha: 0.28),
+            lineColor.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromLTRB(0, top, size.width, bottom)),
+    );
+    canvas.drawPath(
+      line,
+      Paint()
+        ..color = lineColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round
+        ..strokeCap = StrokeCap.round,
+    );
+    for (var i = 0; i < points.length; i++) {
+      final last = i == points.length - 1;
+      canvas.drawCircle(points[i], last ? 4 : 2.5, Paint()..color = lineColor);
+    }
+    canvas.restore();
+
+    _paintLabels(canvas, size, [for (final p in points) p.dx], labels,
+        labelColor, _labelHeight);
+  }
+
+  @override
+  bool shouldRepaint(_LineChartPainter old) =>
+      old.progress != progress ||
+      old.baseline != baseline ||
+      old.lineColor != lineColor ||
+      old.labelColor != labelColor ||
+      !listEquals(old.values, values) ||
+      !listEquals(old.labels, labels);
+}
+
+/// Income and expense bars side by side for each month, heights already
+/// given as a share (0–1) of the tallest bar. They grow as [progress] runs.
+class _PairBarPainter extends CustomPainter {
+  final List<double> income;
+  final List<double> expense;
+  final List<String> labels;
+  final double progress;
+  final Color incomeColor;
+  final Color expenseColor;
+  final Color labelColor;
+
+  static const double _labelHeight = 20.0;
+  static const double _topPad = 8.0;
+  static const double _gap = 3.0;
+  static const double _maxBar = 14.0;
+  static const double _radius = 3.0;
+
+  _PairBarPainter({
+    required this.income,
+    required this.expense,
+    required this.labels,
+    required this.progress,
+    required this.incomeColor,
+    required this.expenseColor,
+    required this.labelColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final n = income.length;
+    if (n == 0) return;
+    final bottom = size.height - _labelHeight - 4;
+    final h = bottom - _topPad;
+    final groupW = size.width / n;
+    final barW = (groupW * 0.3).clamp(2.0, _maxBar);
+    final centers = <double>[];
+
+    void bar(double left, double fraction, Color color) {
+      final barH = h * fraction * progress;
+      if (barH <= 0) return;
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTWH(left, bottom - barH, barW, barH),
+          topLeft: const Radius.circular(_radius),
+          topRight: const Radius.circular(_radius),
+        ),
+        Paint()..color = color,
+      );
+    }
+
+    for (var i = 0; i < n; i++) {
+      final center = groupW * i + groupW / 2;
+      centers.add(center);
+      bar(center - _gap / 2 - barW, income[i], incomeColor);
+      bar(center + _gap / 2, expense[i], expenseColor);
+    }
+    // Baseline.
+    canvas.drawLine(
+      Offset(0, bottom),
+      Offset(size.width, bottom),
+      Paint()
+        ..color = labelColor.withValues(alpha: 0.2)
+        ..strokeWidth = 1,
+    );
+
+    _paintLabels(canvas, size, centers, labels, labelColor, _labelHeight);
+  }
+
+  @override
+  bool shouldRepaint(_PairBarPainter old) =>
+      old.progress != progress ||
+      old.incomeColor != incomeColor ||
+      old.expenseColor != expenseColor ||
+      old.labelColor != labelColor ||
+      !listEquals(old.income, income) ||
+      !listEquals(old.expense, expense) ||
+      !listEquals(old.labels, labels);
+}
+
+/// Month labels along the bottom, each centred under its x and kept inside
+/// the chart.
+void _paintLabels(
+  Canvas canvas,
+  Size size,
+  List<double> xs,
+  List<String> labels,
+  Color color,
+  double labelHeight,
+) {
+  final style = TextStyle(
+    color: color.withValues(alpha: 0.7),
+    fontSize: 10,
+    fontWeight: FontWeight.w500,
+  );
+  for (var i = 0; i < xs.length && i < labels.length; i++) {
+    final tp = TextPainter(
+      text: TextSpan(text: labels[i], style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    final room = math.max(0.0, size.width - tp.width);
+    final x = (xs[i] - tp.width / 2).clamp(0.0, room);
+    tp.paint(canvas, Offset(x, size.height - labelHeight + 4));
   }
 }
 
