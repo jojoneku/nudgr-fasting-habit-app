@@ -445,18 +445,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Bills tab groups (Plan 071 Phase 6) ──────────────────────────────────────
   //
-  // The Bills tab shows each bill in one place: the most imminent one in the
-  // hero, the other due-soon ones at the top of Upcoming, the rest below them,
-  // and paid bills on their own tab. Web v2 reads the same lists.
+  // The Bills tab lists each bill once: the due-soon ones at the top of
+  // Upcoming, the rest below them, and paid bills on their own tab. The most
+  // imminent one is also spotlighted in the hero above the tabs, but it stays
+  // in "Due soon" so its row actions (Mark unpaid, items, delete, batch
+  // select) are always reachable. Web v2 reads the same lists.
 
   /// The one bill the Bills hero spotlights: the first of
   /// [imminentUnpaidBills]. Null when nothing is overdue or due within a week.
   Bill? get heroBill => imminentUnpaidBills.firstOrNull;
 
-  /// The other overdue or due-within-a-week bills, soonest first — the
-  /// "Due soon" group at the top of the mobile Upcoming tab. Excludes
-  /// [heroBill], so the hero bill is not listed a second time.
-  List<Bill> get unpaidDueSoon => imminentUnpaidBills.skip(1).toList();
+  /// Every overdue or due-within-a-week bill, soonest first — the "Due soon"
+  /// group at the top of the mobile Upcoming tab. Includes [heroBill]: the
+  /// hero card offers only Mark paid and Edit, so the bill's full row (and
+  /// batch selection) lives here too, as on web v2.
+  List<Bill> get unpaidDueSoon => imminentUnpaidBills;
 
   /// Unpaid bills due more than a week out, by due day — "Later this month".
   List<Bill> get unpaidLater {
@@ -464,10 +467,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return bills.where((b) => !b.isPaid && !soon.contains(b.id)).toList();
   }
 
-  /// Every unpaid bill in Upcoming order: the due-soon ones ([heroBill]
-  /// included) first, then [unpaidLater]. Web v2 lists the hero bill in its
-  /// Upcoming tab too, so it reads this.
-  List<Bill> get unpaidBills => [...imminentUnpaidBills, ...unpaidLater];
+  /// Every unpaid bill in Upcoming order: [unpaidDueSoon] ([heroBill]
+  /// included) first, then [unpaidLater]. What the Upcoming tab lists on
+  /// mobile and web v2.
+  List<Bill> get unpaidBills => [...unpaidDueSoon, ...unpaidLater];
 
   /// The month's paid bills, by due day.
   List<Bill> get paidBills => bills.where((b) => b.isPaid).toList();
@@ -481,26 +484,25 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   int get setAsidePendingCount =>
       budgetedExpenses.where((e) => !e.isPaid).length;
 
-  /// The row count of each mobile Bills tab. Each one is the length of the
-  /// list that tab shows: Upcoming is [unpaidDueSoon] + [unpaidLater] (the
-  /// hero bill sits above the tabs), Paid is [paidBills].
+  /// The row count of each Bills tab, mobile and web v2. Each one is the
+  /// length of the list that tab shows: Upcoming is [unpaidBills] (the hero
+  /// bill included, since it is listed in "Due soon" too), Paid is
+  /// [paidBills].
   ///
   /// Installments live in their own presenter, so it is passed in, the same
   /// way [comingUpItems] takes it.
   ({int upcoming, int setAsides, int receivables, int installments, int paid})
       tabCounts(InstallmentPresenter installments) => (
-            upcoming: unpaidDueSoon.length + unpaidLater.length,
+            upcoming: unpaidBills.length,
             setAsides: budgetedExpenses.length,
             receivables: receivables.length,
             installments: installments.dueThisMonth.length,
             paid: paidBills.length,
           );
 
-  /// What the Upcoming tab says when it has no rows. With a hero bill above
-  /// the tabs, "all caught up" would be wrong.
-  String get upcomingEmptyMessage => heroBill == null
-      ? 'No bills due. You are all caught up.'
-      : 'Nothing else due this month.';
+  /// What the Upcoming tab says when it has no rows. The hero bill is listed
+  /// in Upcoming too, so an empty tab means no unpaid bill at all.
+  String get upcomingEmptyMessage => 'No bills due. You are all caught up.';
 
   // ─── "This month" summary (mobile Bills tab) ──────────────────────────────────
 
@@ -3804,16 +3806,39 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   double get totalCreditAvailable => creditAccounts.fold(
       0.0, (s, c) => s + (c.availableCredit ?? 0).clamp(0, double.infinity));
 
-  /// The line under the credit cards card title: what is owed across how
-  /// many lines and what is still available. Shared by mobile and web v2.
+  /// What [creditAccounts] owe right now: the sum of each card's
+  /// [FinancialAccount.currentPayable]. The same measure picks the rows of
+  /// the credit cards card ([creditAccountsWithBalance]) and its empty state,
+  /// so the summary and the rows never disagree.
+  double get creditOwedNow =>
+      creditAccounts.fold(0.0, (s, c) => s + c.currentPayable);
+
+  /// Installment months [creditAccounts] will still bill, not yet on any
+  /// statement. Named apart from [creditOwedNow], never added to it.
+  double get creditUnbilledInstallments => creditAccounts.fold(
+      0.0,
+      (s, c) =>
+          s + (c.unbilledInstallments > 0 ? c.unbilledInstallments : 0.0));
+
+  /// The line under the credit cards card title: what is owed now across how
+  /// many lines, any installments not yet billed (named separately), and what
+  /// is still available. Shared by mobile and web v2.
   String get creditLinesDescription {
     final cards = creditAccounts;
-    final owed = totalCreditOwed(cards);
-    if (owed <= 0) return 'No outstanding balance';
-    return 'Owe ${formatPeso(owed)} across '
-        '${creditAccountsWithBalance.length} of ${cards.length} '
-        '${_plural(cards.length, 'line')} · '
-        '${formatPeso(totalCreditAvailable)} available · pay anytime';
+    final owed = creditOwedNow;
+    final unbilled = creditUnbilledInstallments;
+    if (owed <= 0 && unbilled <= 0) return 'No outstanding balance';
+    return [
+      if (owed > 0)
+        'Owe ${formatPeso(owed)} across '
+            '${creditAccountsWithBalance.length} of ${cards.length} '
+            '${_plural(cards.length, 'line')}'
+      else
+        'Nothing owed now',
+      if (unbilled > 0)
+        '${formatPeso(unbilled)} in installments not yet billed',
+      '${formatPeso(totalCreditAvailable)} available · pay anytime',
+    ].join(' · ');
   }
 
   /// The detail line under one credit card: how much of its limit is free,

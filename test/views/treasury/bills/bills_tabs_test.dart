@@ -4,6 +4,7 @@ import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
@@ -22,8 +23,8 @@ import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import '../../../mocks.mocks.dart';
 
-/// The Bills tab after Plan 071 Phase 6: each bill in one place (the hero, or
-/// one tab row), tabs with counts, a Paid tab, batch select inside one tab,
+/// The Bills tab after Plan 071 Phase 6: each bill in one tab row (the hero
+/// bill is also spotlighted above the tabs), tabs with counts, a Paid tab, batch select inside one tab,
 /// no Coming up, the This month summary, and the credit cards card.
 /// "Today" is pinned to 10 March 2026.
 void main() {
@@ -157,9 +158,14 @@ void main() {
   testWidgets('a bill appears exactly once besides the hero', (tester) async {
     await pumpView(tester);
 
-    // The hero carries the most imminent bill, and only that one.
+    // The hero carries the most imminent bill, and only that one. The bill
+    // stays in "Due soon" too, so its row actions are reachable.
     expect(inHero('Hero Bill'), findsOneWidget);
-    expect(row('Hero Bill'), findsNothing);
+    expect(row('Hero Bill'), findsOneWidget);
+    expect(find.text('Hero Bill'), findsNWidgets(2));
+    for (final name in ['Soon A', 'Soon B']) {
+      expect(inHero(name), findsNothing, reason: name);
+    }
 
     // Every other unpaid bill is one Upcoming row; the paid one is not here.
     for (final name in ['Soon A', 'Soon B', 'Later A', 'Later B']) {
@@ -185,7 +191,8 @@ void main() {
     };
     expect(expected[BillsTab.upcoming],
         presenter.unpaidDueSoon.length + presenter.unpaidLater.length);
-    expect(expected[BillsTab.upcoming], 4);
+    // The hero bill is counted: it is a "Due soon" row too.
+    expect(expected[BillsTab.upcoming], 5);
     expect(expected[BillsTab.paid], presenter.paidBills.length);
     for (final entry in expected.entries) {
       expect(
@@ -226,12 +233,12 @@ void main() {
 
     await tester.longPress(row('Soon A'));
     await tester.pumpAndSettle();
-    expect(find.text('1 of 4 selected'), findsOneWidget);
+    expect(find.text('1 of 5 selected'), findsOneWidget);
 
-    // Select all picks the tab's rows only — not the hero bill.
+    // Select all picks the tab's rows, the hero bill's row included.
     await tester.tap(find.text('Select all'));
     await tester.pumpAndSettle();
-    expect(find.text('4 of 4 selected'), findsOneWidget);
+    expect(find.text('5 of 5 selected'), findsOneWidget);
 
     // The hero and the card Pay stand down during the selection.
     final heroPay = tester.widget<FilledButton>(find.descendant(
@@ -287,6 +294,43 @@ void main() {
     final sheet = tester.widget<SettleSheet>(find.byType(SettleSheet));
     expect(sheet.kind, SettleKind.cardPayment);
     expect(find.text('Pay BPI Card'), findsOneWidget);
+  });
+
+  testWidgets(
+      'credit cards card: unbilled installments are not "owed" above the '
+      'empty state', (tester) async {
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          FinancialAccount(
+            id: 'card',
+            name: 'BPI Card',
+            category: AccountCategory.creditCard,
+            balance: 0,
+            creditLimit: 50000,
+            colorHex: '#FF0000',
+            icon: 'card',
+          ),
+        ]);
+    when(storage.loadInstallments()).thenAnswer((_) async => [
+          Installment(
+            id: 'laptop',
+            name: 'Laptop',
+            accountId: 'card',
+            totalAmount: 12000,
+            monthlyAmount: 1000,
+            totalMonths: 12,
+            startMonth: '2026-04',
+          ),
+        ]);
+    await installments.load();
+    await pumpView(tester);
+
+    final line = presenter.creditLinesDescription;
+    expect(find.text(line), findsOneWidget);
+    expect(line, isNot(contains('Owe ')));
+    expect(
+        line, contains('${formatPeso(12000)} in installments not yet billed'));
+    expect(find.byKey(CreditCardsCardKeys.empty), findsOneWidget);
+    expect(find.byKey(CreditCardsCardKeys.pay('card')), findsNothing);
   });
 
   testWidgets('renders in light mode at 360 dp', (tester) async {

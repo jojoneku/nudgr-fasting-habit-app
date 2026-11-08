@@ -398,9 +398,8 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
 
     final counts = presenter.tabCounts(installmentPresenter);
     final tabs = [
-      // The desktop list keeps the hero bill, so Upcoming counts every unpaid
-      // bill rather than the mobile count, which leaves the hero out.
-      WebTab('Upcoming', count: _unpaid.length, key: WebKeys.billsTabUpcoming),
+      // Both apps keep the hero bill in Upcoming, so they read one count.
+      WebTab('Upcoming', count: counts.upcoming, key: WebKeys.billsTabUpcoming),
       WebTab('Set-asides',
           count: counts.setAsides, key: WebKeys.billsTabSetAsides),
       WebTab('Receivables',

@@ -543,11 +543,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           .toList();
 
   /// Every row id of [tab], in display order — what "Select all" picks. The
-  /// hero bill is not in any tab, so it is never part of a batch.
+  /// hero bill is listed in Upcoming's "Due soon" too, so it can be batched.
   List<String> _tabIds(BillsTab tab) => switch (tab) {
         BillsTab.upcoming => [
-            for (final b in widget.presenter.unpaidDueSoon) b.id,
-            for (final b in widget.presenter.unpaidLater) b.id,
+            for (final b in widget.presenter.unpaidBills) b.id,
           ],
         BillsTab.paid => [for (final b in widget.presenter.paidBills) b.id],
         BillsTab.receivables => [
@@ -640,9 +639,13 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     }
   }
 
-  /// A batch of one is the single flow — it honours an edited amount.
-  Future<void> _settleOne(Future<bool> Function() open) async {
-    if (await open()) _exitSelection();
+  /// A batch of one is the single flow — it honours an edited amount. It
+  /// still reports like a batch ([message]) and leaves selection mode.
+  Future<void> _settleOne(
+    Future<bool> Function() open, {
+    required String message,
+  }) async {
+    if (await open()) _finishBatch(message);
   }
 
   Future<void> _batchPayBills() async {
@@ -650,7 +653,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final targets = _selectedBills.where((b) => !b.isPaid).toList();
     if (targets.isEmpty) return;
     if (targets.length == 1) {
-      return _settleOne(() => _showMarkBillPaidSheet(targets.single));
+      return _settleOne(
+        () => _showMarkBillPaidSheet(targets.single),
+        message: 'Marked 1 bill paid.',
+      );
     }
     BatchResult? outcome;
     final result = await showSettleSheet(
@@ -692,7 +698,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final targets = _selectedReceivables.where((r) => !r.isReceived).toList();
     if (targets.isEmpty) return;
     if (targets.length == 1) {
-      return _settleOne(() => _showMarkReceivedSheet(targets.single));
+      return _settleOne(
+        () => _showMarkReceivedSheet(targets.single),
+        message: 'Marked 1 received.',
+      );
     }
     BatchResult? outcome;
     final result = await showSettleSheet(
@@ -736,7 +745,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       return;
     }
     if (targets.length == 1) {
-      return _settleOne(() => _showMarkExpensePaidSheet(targets.single));
+      return _settleOne(
+        () => _showMarkExpensePaidSheet(targets.single),
+        message: 'Funded 1 set-aside.',
+      );
     }
     // Rows that already know where they are going keep their own destination;
     // the sheet only has to ask about the rest.
@@ -780,7 +792,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final targets = _selectedInstallments.where(presenter.canMarkPaid).toList();
     if (targets.isEmpty) return;
     if (targets.length == 1) {
-      return _settleOne(() => _showMarkInstallmentPaidSheet(targets.single));
+      return _settleOne(
+        () => _showMarkInstallmentPaidSheet(targets.single),
+        message: 'Paid 1 installment this month.',
+      );
     }
     int? applied;
     final result = await showSettleSheet(

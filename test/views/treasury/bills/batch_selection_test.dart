@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
+import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import '../../../mocks.mocks.dart';
 
 /// Multi-select on the Bills tab: long-press a row to start picking, act on the
@@ -24,9 +25,7 @@ void main() {
   late LedgerPresenter ledger;
   late BillsReceivablesPresenter presenter;
   late InstallmentPresenter installments;
-  // A month far ahead, so no bill is due soon: the hero would otherwise take
-  // the most imminent bill out of the Upcoming list these tests select in.
-  const month = '2030-03';
+  const month = '2026-03';
 
   Bill bill(String name, {double amount = 500}) => Bill(
         id: name,
@@ -221,6 +220,34 @@ void main() {
     expect(paid('Maynilad'), 300);
     expect(ledger.accounts.first.balance, 19200);
     // The batch finishes by leaving selection mode.
+    expect(find.textContaining('selected'), findsNothing);
+  });
+
+  testWidgets('a batch of one opens the single sheet and still confirms',
+      (tester) async {
+    when(storage.loadBills()).thenAnswer((_) async =>
+        [bill('Meralco', amount: 500), bill('Maynilad', amount: 300)]);
+    await pumpView(tester);
+
+    await tester.longPress(
+        find.descendant(of: card('Maynilad'), matching: find.text('Maynilad')));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 selected'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Pay'));
+    await tester.pumpAndSettle();
+    // The single flow: an editable amount, not the batch list.
+    expect(find.byKey(SettleSheetKeys.amount), findsOneWidget);
+
+    await tester.tap(find.byKey(SettleSheetKeys.confirm));
+    await tester.pumpAndSettle();
+
+    expect(
+        presenter.bills.firstWhere((b) => b.name == 'Maynilad').isPaid, isTrue);
+    expect(
+        presenter.bills.firstWhere((b) => b.name == 'Meralco').isPaid, isFalse);
+    // Same toast as a bigger batch, and selection mode is over.
+    expect(find.text('Marked 1 bill paid.'), findsOneWidget);
     expect(find.textContaining('selected'), findsNothing);
   });
 

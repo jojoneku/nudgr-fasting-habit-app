@@ -3,6 +3,7 @@ import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -109,10 +110,14 @@ void main() {
     expect(presenter.heroBill?.id, 'hero-5');
   });
 
-  test('due soon is the rest of the week, without the hero', () async {
+  test('due soon is the overdue and coming week, the hero first', () async {
     await loaded();
-    expect(presenter.unpaidDueSoon.map((b) => b.id), ['soon-12', 'soon-15']);
-    expect(presenter.unpaidDueSoon.map((b) => b.id), isNot(contains('hero-5')));
+    // The hero bill stays in "Due soon" so its row actions (Mark unpaid,
+    // items, delete, batch select) are reachable; the hero card has only
+    // Mark paid and Edit.
+    expect(presenter.unpaidDueSoon.map((b) => b.id),
+        ['hero-5', 'soon-12', 'soon-15']);
+    expect(presenter.unpaidDueSoon.first.id, presenter.heroBill!.id);
   });
 
   test('later is the unpaid bills more than a week out, by due day', () async {
@@ -120,10 +125,9 @@ void main() {
     expect(presenter.unpaidLater.map((b) => b.id), ['later-25', 'later-28']);
   });
 
-  test('every bill is in exactly one place', () async {
+  test('every bill is in exactly one list', () async {
     await loaded();
     final places = [
-      presenter.heroBill!.id,
       ...presenter.unpaidDueSoon.map((b) => b.id),
       ...presenter.unpaidLater.map((b) => b.id),
       ...presenter.paidBills.map((b) => b.id),
@@ -156,19 +160,30 @@ void main() {
     final counts = presenter.tabCounts(installments);
     expect(counts.upcoming,
         presenter.unpaidDueSoon.length + presenter.unpaidLater.length);
-    expect(counts.upcoming, 4);
+    expect(counts.upcoming, presenter.unpaidBills.length);
+    expect(counts.upcoming, 5, reason: 'the hero bill is counted');
     expect(counts.setAsides, presenter.budgetedExpenses.length);
     expect(counts.receivables, presenter.receivables.length);
     expect(counts.installments, installments.dueThisMonth.length);
     expect(counts.paid, presenter.paidBills.length);
   });
 
-  test('the upcoming empty copy knows about the hero', () async {
+  test('a lone hero bill is still an Upcoming row', () async {
     when(storage.loadBills()).thenAnswer((_) async => [bill('only', 5)]);
     await loaded();
     expect(presenter.heroBill?.id, 'only');
+    expect(presenter.unpaidDueSoon.map((b) => b.id), ['only']);
+    expect(presenter.tabCounts(installments).upcoming, 1);
+  });
+
+  test('an empty Upcoming means nothing is due', () async {
+    when(storage.loadBills())
+        .thenAnswer((_) async => [bill('done', 5, paid: true)]);
+    await loaded();
+    expect(presenter.heroBill, isNull);
     expect(presenter.tabCounts(installments).upcoming, 0);
-    expect(presenter.upcomingEmptyMessage, 'Nothing else due this month.');
+    expect(
+        presenter.upcomingEmptyMessage, 'No bills due. You are all caught up.');
   });
 
   test('the summary lines carry the presenter totals', () async {
@@ -221,5 +236,82 @@ void main() {
             'Owe ${formatPeso(bpi.currentPayable)} across 1 of 2 lines'));
     expect(presenter.creditLineSubtitle(bpi), contains('statement 20th'));
     expect(presenter.creditLineSubtitle(bpi), contains('due 5th'));
+  });
+
+  test(
+      'credit lines: unbilled installments are named apart, never as owed '
+      'now', () async {
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          FinancialAccount(
+            id: 'bpi-cc',
+            name: 'BPI Card',
+            category: AccountCategory.creditCard,
+            balance: 0,
+            creditLimit: 50000,
+            colorHex: '#FF0000',
+            icon: 'card',
+          ),
+        ]);
+    when(storage.loadInstallments()).thenAnswer((_) async => [
+          Installment(
+            id: 'laptop',
+            name: 'Laptop',
+            accountId: 'bpi-cc',
+            totalAmount: 12000,
+            monthlyAmount: 1000,
+            totalMonths: 12,
+            startMonth: '2026-04',
+          ),
+        ]);
+    await ledger.load();
+    await loaded();
+
+    final card = presenter.creditAccounts.single;
+    expect(card.unbilledInstallments, 12000, reason: 'the live hold');
+    // Nothing is on a statement, so no row and the empty state shows.
+    expect(presenter.creditAccountsWithBalance, isEmpty);
+    expect(presenter.creditOwedNow, 0);
+    expect(presenter.creditUnbilledInstallments, 12000);
+
+    final line = presenter.creditLinesDescription;
+    expect(line, isNot(contains('Owe ')));
+    expect(line, startsWith('Nothing owed now'));
+    expect(
+        line, contains('${formatPeso(12000)} in installments not yet billed'));
+    expect(line, contains('${formatPeso(38000)} available'));
+  });
+
+  test('credit lines: an over-limit card does not cancel another card\'s room',
+      () async {
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          FinancialAccount(
+            id: 'over',
+            name: 'Over Card',
+            category: AccountCategory.creditCard,
+            balance: 12000,
+            creditLimit: 10000,
+            colorHex: '#FF0000',
+            icon: 'card',
+          ),
+          FinancialAccount(
+            id: 'room',
+            name: 'Room Card',
+            category: AccountCategory.creditCard,
+            balance: 1000,
+            creditLimit: 5000,
+            colorHex: '#00FF00',
+            icon: 'card',
+          ),
+        ]);
+    await ledger.load();
+    await loaded();
+
+    // 0 (over its limit, not -2,000) + 4,000.
+    expect(presenter.totalCreditAvailable, 4000);
+    expect(presenter.creditOwedNow, 13000);
+    expect(
+        presenter.creditLinesDescription,
+        'Owe ${formatPeso(13000)} across 2 of 2 lines · '
+        '${formatPeso(4000)} available · pay anytime');
   });
 }

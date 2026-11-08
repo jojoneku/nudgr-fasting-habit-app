@@ -159,7 +159,8 @@ Color _receivableTypeColor(BuildContext context, ReceivableType t) {
 
 // ─── Tab bodies ───────────────────────────────────────────────────────────────
 
-/// Upcoming: the due-soon bills other than the hero's, then the later ones.
+/// Upcoming: the due-soon bills (the hero's included, so its full row
+/// actions are here), then the later ones.
 class UpcomingBillsTab extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final BillsRowActions actions;
