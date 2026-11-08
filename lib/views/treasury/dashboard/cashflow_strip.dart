@@ -54,9 +54,11 @@ class CashflowStrip extends StatelessWidget {
               AppBadge(
                 key: const ValueKey('dashboard.cashflow.savingsRate'),
                 text: presenter.savingsRateLabel,
-                color: presenter.hasSavingsRate
-                    ? appColors.success
-                    : cs.onSurfaceVariant,
+                color: switch (presenter.savingsRateTone) {
+                  RateTone.positive => appColors.success,
+                  RateTone.warning => appColors.orange,
+                  RateTone.neutral => cs.onSurfaceVariant,
+                },
                 variant: AppBadgeVariant.tonal,
                 size: AppBadgeSize.medium,
               ),

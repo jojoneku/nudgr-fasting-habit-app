@@ -235,6 +235,19 @@ enum StatementTone {
   bad,
 }
 
+/// What a rate badge (the savings rate) means, so each app picks its own
+/// accent without deciding anything in `build()`.
+enum RateTone {
+  /// Above zero — the good accent.
+  positive,
+
+  /// Below zero — a warning accent.
+  warning,
+
+  /// Zero, or no rate to show — no accent.
+  neutral,
+}
+
 /// One line of a signed statement (the Month-End Outlook, the Next Month
 /// Forecast): a label, a caption under it, and the amount already formatted
 /// with its sign — `+₱X` added, `−₱X` taken off, `−₱X` for a negative balance.
@@ -652,6 +665,29 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   bool get hasAccounts => _accounts.any((a) => a.isActive);
   List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
+  /// True only for a brand-new Treasury: no account at all (active or
+  /// archived) and nothing logged this month — no bills, budgets or
+  /// transactions. The dashboard then shows one empty state instead of cards
+  /// that would all read ₱0.00. A user who archived every account but still
+  /// has bills or a budget this month keeps the full dashboard.
+  bool get showsOnlyEmptyState =>
+      _accounts.isEmpty &&
+      !_bills.any((b) => b.month == _currentMonth) &&
+      !hasBudget &&
+      !_transactions.any((t) => t.month == _currentMonth);
+
+  /// True when every account the user has is archived.
+  bool get hasOnlyArchivedAccounts => _accounts.isNotEmpty && !hasAccounts;
+
+  /// The Accounts slot's empty-state title when no account is active.
+  String get accountsEmptyTitle =>
+      hasOnlyArchivedAccounts ? 'No active accounts' : 'No accounts yet';
+
+  /// The Accounts slot's empty-state body when no account is active.
+  String get accountsEmptyBody => hasOnlyArchivedAccounts
+      ? 'Your accounts are archived. Add an account to track balances here.'
+      : 'Add your first account to get started';
+
   // --- Account views ---
 
   List<FinancialAccount> get liquidAccounts => _accounts
@@ -670,9 +706,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   double get totalCreditOwed =>
       creditAccounts.fold(0.0, (sum, a) => sum + a.totalDebt);
 
-  /// Total remaining credit across accounts that have a limit set.
-  double get totalCreditAvailable =>
-      creditAccounts.fold(0.0, (sum, a) => sum + (a.availableCredit ?? 0));
+  /// Total remaining credit across accounts that have a limit set. Each card
+  /// counts at most down to zero: a card over its limit has no room left, and
+  /// its overage must not cancel out another card's room.
+  double get totalCreditAvailable => creditAccounts.fold(
+        0.0,
+        (sum, a) => sum + (a.availableCredit ?? 0).clamp(0.0, double.infinity),
+      );
 
   /// The statement of [a] still waiting on payment — the earliest-due unpaid
   /// credit-card bill for it, generated or hand-keyed, with money left on it —
@@ -1276,7 +1316,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// [monthNetCashFlow] with its sign: "+₱3,904.00" / "−₱1,200.00".
   String get monthNetCashFlowLabel => formatPesoSigned(monthNetCashFlow);
 
-  bool get monthNetCashFlowNegative => monthNetCashFlow < 0;
+  /// True when the net flow is below zero once rounded to cents, so a month
+  /// where income equals spending (float residue like −1e-12) reads neutral.
+  bool get monthNetCashFlowNegative => monthNetCashFlow < -_centTolerance;
 
   /// "Spent 72% of income", or "Spent — of income" with no income yet.
   String get spentShareOfIncomeLabel {
@@ -1286,6 +1328,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   bool get hasSavingsRate => savingsRate != null;
+
+  /// The savings-rate badge's tone, judged on the rate as displayed (one
+  /// decimal place): above zero is [RateTone.positive], below zero (you
+  /// net-withdrew from savings) is [RateTone.warning], and zero or no income
+  /// yet is [RateTone.neutral].
+  RateTone get savingsRateTone {
+    final rate = savingsRate;
+    if (rate == null) return RateTone.neutral;
+    final tenthsOfPercent = (rate * 1000).round();
+    if (tenthsOfPercent > 0) return RateTone.positive;
+    if (tenthsOfPercent < 0) return RateTone.warning;
+    return RateTone.neutral;
+  }
 
   /// "Savings rate 12.5%", or "Savings rate —" with no income yet.
   String get savingsRateLabel {
@@ -1308,7 +1363,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
 
   /// "₱A of ₱L available" under a card's utilization meter.
   String creditAvailableLabel(FinancialAccount a) =>
-      '${formatPeso(a.availableCredit ?? 0)} of '
+      '${formatPesoMinus(a.availableCredit ?? 0)} of '
       '${formatPeso(a.creditLimit ?? 0)} available';
 
   /// True when [a] has used 90% or more of its limit.
@@ -1318,30 +1373,43 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   /// `currentPayable == 0`, so Pay stays visible but disabled.
   bool canPayCredit(FinancialAccount a) => a.currentPayable > 0;
 
-  /// Liquid accounts whose own share ([yoursByAccountId]) is below zero.
-  Set<String> get overdrawnAccountIds {
-    final yours = yoursByAccountId;
-    return {
-      for (final a in liquidAccounts)
-        if ((yours[a.id] ?? a.balance) < 0) a.id,
-    };
-  }
+  /// Liquid accounts whose real balance is below zero, past a cent of float
+  /// residue (₱1,000.30 − ₱500.10 − ₱500.20 leaves about −5.7e-14, which is
+  /// zero, not overdrawn). Money held in an account for others does not make
+  /// it overdrawn — the bank still has the money; that case keeps its held
+  /// sub-line instead ([dashboardAccountSublines]).
+  Set<String> get overdrawnAccountIds => {
+        for (final a in liquidAccounts)
+          if (a.balance < -_centTolerance) a.id,
+      };
 
   /// The sub-line under each Accounts row: "Overdrawn · check the last
-  /// transfer" when the account is below zero, else the type, plus what is
-  /// held in it for others ("Bank · ₱2,000.00 held").
+  /// transfer" when the balance is below zero, else the type, plus what is
+  /// held in it for others ("Bank · ₱2,000.00 held"), noting when that is
+  /// more than the balance ("Bank · ₱4,000.00 held · more than the balance").
   Map<String, String> get dashboardAccountSublines {
     final held = heldAmountByAccountId;
     final overdrawn = overdrawnAccountIds;
+    final yours = yoursByAccountId;
+    String heldLine(FinancialAccount a) {
+      final base = '${a.category.label} · ${formatPeso(held[a.id]!)} held';
+      return (yours[a.id] ?? a.balance) < -_centTolerance
+          ? '$base · more than the balance'
+          : base;
+    }
+
     return {
       for (final a in liquidAccounts)
         a.id: overdrawn.contains(a.id)
             ? 'Overdrawn · check the last transfer'
             : (held[a.id] ?? 0) > 0
-                ? '${a.category.label} · ${formatPeso(held[a.id]!)} held'
+                ? heldLine(a)
                 : a.category.label,
     };
   }
+
+  /// Half a centavo: anything smaller is float residue, not money.
+  static const double _centTolerance = 0.005;
 
   /// Goal accounts first, then savings — the dashboard's Goals list.
   List<FinancialAccount> get goalAndSavingsAccounts =>
