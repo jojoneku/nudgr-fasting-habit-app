@@ -6,6 +6,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_archive_copy.dart';
 import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/utils/account_category_label.dart';
 import 'package:intermittent_fasting/utils/account_delete_copy.dart';
@@ -295,6 +296,39 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     );
   }
 
+  /// Archive is a goal-lifecycle action (`archiveGoal`), offered only on a
+  /// completed goal — the same rule as the Completed rows on the Goals screen
+  /// ([TreasuryDashboardPresenter.canArchiveAccount]).
+  bool get _canArchive {
+    final existing = widget.existing;
+    return existing != null &&
+        TreasuryDashboardPresenter.canArchiveAccount(existing);
+  }
+
+  Future<void> _confirmArchive() async {
+    final account = widget.existing!;
+    final confirmed = await AppConfirmDialog.confirm(
+      context: context,
+      title: accountArchiveTitle(account),
+      body: accountArchiveMessage(account),
+      confirmLabel: 'Archive',
+    );
+    if (!confirmed || !mounted) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.presenter.archiveGoal(account.id);
+      if (!mounted) return;
+      AppToast.success(context, accountArchivedToast(account));
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(context, 'Could not archive account: $e');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -388,6 +422,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             isSubmitting: _isSubmitting,
             onSubmit: _submit,
             onDelete: isEdit ? _confirmDelete : null,
+            onArchive: _canArchive ? _confirmArchive : null,
             onAddSubAccount: _canAddPocket ? _showAddPocket : null,
           ),
         ),
@@ -444,6 +479,10 @@ class _AccountSetupForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback? onDelete;
 
+  /// Archives a completed goal. Null hides the button (not a completed goal,
+  /// or a new account).
+  final VoidCallback? onArchive;
+
   /// Opens a nested sub-account (pocket/goal/time deposit) form. Null when the
   /// account can't hold pockets (not an editable liquid parent).
   final VoidCallback? onAddSubAccount;
@@ -493,6 +532,7 @@ class _AccountSetupForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.onDelete,
+    this.onArchive,
     required this.onAddSubAccount,
   });
 
@@ -678,6 +718,20 @@ class _AccountSetupForm extends StatelessWidget {
                 onPressed: isSubmitting ? null : onAddSubAccount,
                 icon: const Icon(Icons.add_circle_outline, size: 18),
                 label: const Text('Add savings pocket / goal'),
+              ),
+            ],
+
+            // Archive (completed goals only, edit only)
+            if (onArchive != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const ValueKey('accountSetup.archive'),
+                onPressed: isSubmitting ? null : onArchive,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                icon: const Icon(Icons.inventory_2_outlined, size: 18),
+                label: const Text('Archive goal'),
               ),
             ],
 

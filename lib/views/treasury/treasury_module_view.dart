@@ -288,7 +288,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             onOpenLedgerMonth: _openLedgerMonth,
           ),
           GroceryCartView(presenter: widget.groceryCartPresenter),
-          GoalsSavingsScreen(presenter: widget.dashPresenter),
+          GoalsSavingsScreen(
+            presenter: widget.dashPresenter,
+            onOpenBudget: () => _tabController.animateTo(_budgetTabIndex),
+          ),
           for (final tab in widget.extraTabs) tab.page,
         ],
       ),
