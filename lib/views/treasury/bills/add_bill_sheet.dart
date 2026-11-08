@@ -13,6 +13,11 @@ import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
+/// Keys for [AddBillSheet], for tests.
+abstract final class AddBillSheetKeys {
+  static const moreOptions = ValueKey('add-bill-more-options');
+}
+
 class AddBillSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final Bill? existing;
@@ -112,6 +117,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
     _paymentNoteController.dispose();
     super.dispose();
   }
+
+  /// The "More options" fold opens on its own when a field inside has a
+  /// value, so editing a bill never hides its category or note.
+  bool get _moreOptionsHasValue =>
+      _selectedCategoryId != null ||
+      _paymentNoteController.text.trim().isNotEmpty;
+
+  /// What sits inside "More options", named on its header.
+  String get _moreOptionsHint =>
+      _expenseCategories.isEmpty ? 'Payment note' : 'Category, payment note';
 
   List<FinanceCategory> get _expenseCategories => widget.presenter.categories
       .where((c) => c.type == CategoryType.expense)
@@ -323,28 +338,42 @@ class _AddBillSheetState extends State<AddBillSheet> {
             ),
           ],
 
-          // Category — account-style picker (icon + name), optional.
-          if (_expenseCategories.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            SheetLabeledField(
-              label: 'Category',
-              child: CategoryPickerField(
-                categories: _expenseCategories,
-                selectedId: _selectedCategoryId,
-                placeholder: 'None',
-                onChanged: (id) => setState(() => _selectedCategoryId = id),
-              ),
-            ),
-          ],
-
-          // Payment note — outline field box like the rest of the form.
-          const SizedBox(height: 12),
-          SheetLabeledField(
-            label: 'Payment Note (optional)',
-            child: TextFormField(
-              controller: _paymentNoteController,
-              decoration: sheetFieldDecoration(context),
-              textInputAction: TextInputAction.done,
+          // Category and payment note are optional: fold them so Save stays
+          // closer on a small phone. The fold opens on its own when either
+          // already has a value, so editing never hides a filled field.
+          const SizedBox(height: 16),
+          AppFold(
+            key: AddBillSheetKeys.moreOptions,
+            title: 'More options',
+            subtitle: _moreOptionsHint,
+            initiallyOpen: _moreOptionsHasValue,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Category — account-style picker (icon + name), optional.
+                if (_expenseCategories.isNotEmpty) ...[
+                  SheetLabeledField(
+                    label: 'Category',
+                    child: CategoryPickerField(
+                      categories: _expenseCategories,
+                      selectedId: _selectedCategoryId,
+                      placeholder: 'None',
+                      onChanged: (id) =>
+                          setState(() => _selectedCategoryId = id),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                SheetLabeledField(
+                  label: 'Payment Note (optional)',
+                  child: TextFormField(
+                    controller: _paymentNoteController,
+                    decoration: sheetFieldDecoration(context),
+                    textInputAction: TextInputAction.done,
+                  ),
+                ),
+              ],
             ),
           ),
 

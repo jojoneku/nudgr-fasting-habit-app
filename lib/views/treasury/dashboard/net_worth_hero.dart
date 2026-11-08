@@ -80,6 +80,35 @@ class NetWorthHero extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           _ThisMonthLine(delta: delta),
+          const SizedBox(height: 12),
+          // Compact figures so both cells fit side by side at 360 dp. Liquid
+          // cash is not repeated: it already heads the Accounts section.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _HeroCell(
+                  key: const ValueKey('dashboard.hero.netCashFlow'),
+                  label: 'NET CASH FLOW',
+                  value: presenter.monthNetCashFlowCompactLabel,
+                  caption: 'Income less spending',
+                  valueColor: presenter.monthNetCashFlowNegative
+                      ? cs.error
+                      : context.appColors.success,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HeroCell(
+                  key: const ValueKey('dashboard.hero.totalAssets'),
+                  label: 'TOTAL ASSETS',
+                  value: presenter.totalAssetsCompactLabel,
+                  caption: 'Cash, savings & goals',
+                  valueColor: cs.onSurface,
+                ),
+              ),
+            ],
+          ),
           if (trend.length >= 2) ...[
             const SizedBox(height: 8),
             AppSparkline(
@@ -87,6 +116,72 @@ class NetWorthHero extends StatelessWidget {
               color: blue,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One small well under the net worth figure (net cash flow, total assets).
+class _HeroCell extends StatelessWidget {
+  final String label;
+  final String value;
+  final String caption;
+  final Color valueColor;
+
+  const _HeroCell({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.caption,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final appColors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        // A translucent well over the gradient; the surface tint reads darker
+        // in dark mode and lighter in light mode.
+        color: cs.surface.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: appColors.fast,
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: AppNumberDisplay(
+              value: value,
+              size: AppNumberSize.body,
+              color: valueColor,
+            ),
+          ),
+          Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: appColors.textMuted,
+            ),
+          ),
         ],
       ),
     );

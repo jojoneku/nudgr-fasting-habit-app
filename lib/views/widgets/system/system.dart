@@ -3,6 +3,7 @@ export 'foundation/app_pressable.dart';
 export 'foundation/app_page_scaffold.dart';
 export 'foundation/app_section.dart';
 export 'foundation/app_card.dart';
+export 'foundation/app_fold.dart';
 
 // Overlays
 export 'overlays/app_bottom_sheet.dart';

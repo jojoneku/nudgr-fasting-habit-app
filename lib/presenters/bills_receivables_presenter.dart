@@ -116,6 +116,29 @@ class ComingUpItem {
   });
 }
 
+/// One account's share of what is still due this month — a row of
+/// [BillsReceivablesPresenter.fundingBreakdown]. A null [account] is the
+/// bucket for items with no account set.
+typedef FundingRow = ({
+  FinancialAccount? account,
+  double billsDue,
+  double setAsides,
+  double total,
+  int count,
+});
+
+/// How a "This month" summary line is colored; the view maps it to a theme
+/// color so the presenter stays UI-free.
+enum BillsSummaryTone { neutral, warning, positive }
+
+/// One line of [BillsReceivablesPresenter.monthSummaryLines].
+typedef BillsSummaryLine = ({
+  String label,
+  String value,
+  String sub,
+  BillsSummaryTone tone,
+});
+
 class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   BillsReceivablesPresenter(
     StorageService storage,
@@ -385,8 +408,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Whole days until [bill]'s due date relative to today. Negative when
   /// overdue. The bill's own month is honoured so a past-month unpaid bill reads
   /// as overdue and a future-month one as far off.
+  ///
+  /// Reads the injected clock, so tests can pin which bills are due soon.
   int billDaysUntilDue(Bill bill) {
-    final now = DateTime.now();
+    final now = _clock();
     final today = DateTime(now.year, now.month, now.day);
     return billDueDate(bill).difference(today).inDays;
   }
@@ -417,6 +442,138 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   List<Bill> get imminentUnpaidBills =>
       bills.where((b) => !b.isPaid && billDaysUntilDue(b) <= 7).toList()
         ..sort((a, b) => billDaysUntilDue(a).compareTo(billDaysUntilDue(b)));
+
+  // ─── Bills tab groups (Plan 071 Phase 6) ──────────────────────────────────────
+  //
+  // The Bills tab lists each bill once: the due-soon ones at the top of
+  // Upcoming, the rest below them, and paid bills on their own tab. The most
+  // imminent one is also spotlighted in the hero above the tabs, but it stays
+  // in "Due soon" so its row actions (Mark unpaid, items, delete, batch
+  // select) are always reachable. Web v2 reads the same lists.
+
+  /// The one bill the Bills hero spotlights: the first of
+  /// [imminentUnpaidBills]. Null when nothing is overdue or due within a week.
+  Bill? get heroBill => imminentUnpaidBills.firstOrNull;
+
+  /// Every overdue or due-within-a-week bill, soonest first — the "Due soon"
+  /// group at the top of the mobile Upcoming tab. Includes [heroBill]: the
+  /// hero card offers only Mark paid and Edit, so the bill's full row (and
+  /// batch selection) lives here too, as on web v2.
+  List<Bill> get unpaidDueSoon => imminentUnpaidBills;
+
+  /// Unpaid bills due more than a week out, by due day — "Later this month".
+  List<Bill> get unpaidLater {
+    final soon = {for (final b in imminentUnpaidBills) b.id};
+    return bills.where((b) => !b.isPaid && !soon.contains(b.id)).toList();
+  }
+
+  /// Every unpaid bill in Upcoming order: [unpaidDueSoon] ([heroBill]
+  /// included) first, then [unpaidLater]. What the Upcoming tab lists on
+  /// mobile and web v2.
+  List<Bill> get unpaidBills => [...unpaidDueSoon, ...unpaidLater];
+
+  /// The month's paid bills, by due day.
+  List<Bill> get paidBills => bills.where((b) => b.isPaid).toList();
+
+  /// What is still to move into this month's unfunded set-asides.
+  double get setAsidePendingTotal => budgetedExpenses
+      .where((e) => !e.isPaid)
+      .fold(0.0, (s, e) => s + e.allocatedAmount);
+
+  /// How many of this month's set-asides are still unfunded.
+  int get setAsidePendingCount =>
+      budgetedExpenses.where((e) => !e.isPaid).length;
+
+  /// The row count of each Bills tab, mobile and web v2. Each one is the
+  /// length of the list that tab shows: Upcoming is [unpaidBills] (the hero
+  /// bill included, since it is listed in "Due soon" too), Paid is
+  /// [paidBills].
+  ///
+  /// Installments live in their own presenter, so it is passed in, the same
+  /// way [comingUpItems] takes it.
+  ({int upcoming, int setAsides, int receivables, int installments, int paid})
+      tabCounts(InstallmentPresenter installments) => (
+            upcoming: unpaidBills.length,
+            setAsides: budgetedExpenses.length,
+            receivables: receivables.length,
+            installments: installments.dueThisMonth.length,
+            paid: paidBills.length,
+          );
+
+  /// What the Upcoming tab says when it has no rows. The hero bill is listed
+  /// in Upcoming too, so an empty tab means no unpaid bill at all.
+  String get upcomingEmptyMessage => 'No bills due. You are all caught up.';
+
+  // ─── "This month" summary (mobile Bills tab) ──────────────────────────────────
+
+  /// One line of the collapsible "This month" card on the mobile Bills tab:
+  /// a label, the formatted figure, a short count line and a tone the view
+  /// maps to a theme color.
+  List<BillsSummaryLine> monthSummaryLines(InstallmentPresenter installments) {
+    final unpaid = unpaidBills.length;
+    final paid = paidBills.length;
+    final pendingIn = pendingReceivables.length;
+    final receivedIn = receivedReceivables.length;
+    final toFund = setAsidePendingCount;
+    final plans = installments.dueThisMonth.length;
+    return [
+      (
+        label: 'Pending',
+        value: formatPeso(totalBillsPending),
+        sub: '$unpaid unpaid',
+        tone: totalBillsPending > 0
+            ? BillsSummaryTone.warning
+            : BillsSummaryTone.neutral,
+      ),
+      (
+        label: 'Paid',
+        value: formatPeso(totalBillsPaid),
+        sub: '$paid settled',
+        tone: BillsSummaryTone.positive,
+      ),
+      (
+        label: 'To receive',
+        value: '+${formatPeso(totalReceivablesPending)}',
+        sub: [
+          '$pendingIn pending',
+          if (receivedIn > 0) '$receivedIn received',
+        ].join(' · '),
+        tone: BillsSummaryTone.positive,
+      ),
+      (
+        label: 'Set-asides to fund',
+        value: formatPeso(setAsidePendingTotal),
+        sub: '$toFund to fund',
+        tone: setAsidePendingTotal > 0
+            ? BillsSummaryTone.warning
+            : BillsSummaryTone.neutral,
+      ),
+      (
+        label: 'Installments',
+        value: formatPeso(installments.totalDueThisMonth),
+        sub: '$plans ${_plural(plans, 'plan')} due',
+        tone: BillsSummaryTone.neutral,
+      ),
+    ];
+  }
+
+  /// The collapsed "This month" header line: what is due and what is coming
+  /// in.
+  String get monthSummaryHeadline => '${formatPeso(totalBillsPending)} due · '
+      '+${formatPeso(totalReceivablesPending)} to receive';
+
+  /// The detail line under a "By account" row: item count, the bills and
+  /// set-asides behind the total, and a flag when no account is set. Shared
+  /// by mobile and web v2.
+  String fundingRowDetail(FundingRow row) => [
+        '${row.count} ${_plural(row.count, 'item')}',
+        if (row.billsDue > 0) '${formatPeso(row.billsDue)} bills',
+        if (row.setAsides > 0) '${formatPeso(row.setAsides)} set-asides',
+        if (row.account == null) 'no account set',
+      ].join(' · ');
+
+  static String _plural(int count, String noun) =>
+      count == 1 ? noun : '${noun}s';
 
   // ─── Coming up (unified timeline) ─────────────────────────────────────────────
 
@@ -648,14 +805,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// assigned account fall into a single trailing `account == null` bucket.
   /// Sorted by descending total, with the unassigned bucket always last. All
   /// aggregation lives here so the view can render without doing math. (Rule 1)
-  List<
-      ({
-        FinancialAccount? account,
-        double billsDue,
-        double setAsides,
-        double total,
-        int count,
-      })> fundingBreakdown() {
+  List<FundingRow> fundingBreakdown() {
     // key: accountId or '' for unassigned → mutable running totals.
     final bills = <String, double>{};
     final setAsides = <String, double>{};
@@ -3645,6 +3795,82 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   List<FinancialAccount> get creditAccounts =>
       _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
+
+  /// The [creditAccounts] that owe something right now — the rows of the
+  /// credit cards card on the Bills tab, each with a Pay action.
+  List<FinancialAccount> get creditAccountsWithBalance =>
+      creditAccounts.where((c) => c.currentPayable > 0).toList();
+
+  /// Unused credit across [creditAccounts]. A card over its limit counts as
+  /// zero, not as negative room.
+  double get totalCreditAvailable => creditAccounts.fold(
+      0.0, (s, c) => s + (c.availableCredit ?? 0).clamp(0, double.infinity));
+
+  /// What [creditAccounts] owe right now: the sum of each card's
+  /// [FinancialAccount.currentPayable]. The same measure picks the rows of
+  /// the credit cards card ([creditAccountsWithBalance]) and its empty state,
+  /// so the summary and the rows never disagree.
+  double get creditOwedNow =>
+      creditAccounts.fold(0.0, (s, c) => s + c.currentPayable);
+
+  /// Installment months [creditAccounts] will still bill, not yet on any
+  /// statement. Named apart from [creditOwedNow], never added to it.
+  double get creditUnbilledInstallments => creditAccounts.fold(
+      0.0,
+      (s, c) =>
+          s + (c.unbilledInstallments > 0 ? c.unbilledInstallments : 0.0));
+
+  /// The line under the credit cards card title: what is owed now across how
+  /// many lines, any installments not yet billed (named separately), and what
+  /// is still available. Shared by mobile and web v2.
+  String get creditLinesDescription {
+    final cards = creditAccounts;
+    final owed = creditOwedNow;
+    final unbilled = creditUnbilledInstallments;
+    if (owed <= 0 && unbilled <= 0) return 'No outstanding balance';
+    return [
+      if (owed > 0)
+        'Owe ${formatPeso(owed)} across '
+            '${creditAccountsWithBalance.length} of ${cards.length} '
+            '${_plural(cards.length, 'line')}'
+      else
+        'Nothing owed now',
+      if (unbilled > 0)
+        '${formatPeso(unbilled)} in installments not yet billed',
+      '${formatPeso(totalCreditAvailable)} available · pay anytime',
+    ].join(' · ');
+  }
+
+  /// The detail line under one credit card: how much of its limit is free,
+  /// how much is used when that is half or more, and its statement and due
+  /// days. Shared by mobile and web v2.
+  String creditLineSubtitle(FinancialAccount card) {
+    final limit = card.creditLimit;
+    final parts = <String>[];
+    if (limit == null) {
+      parts.add('No credit limit set');
+    } else {
+      final u = card.utilization ?? 0;
+      if (u >= 0.5) parts.add('${(u * 100).round()} % used');
+      parts.add('${formatPeso((card.availableCredit ?? 0).clamp(0, limit))} '
+          'of ${formatPeso(limit)} available');
+    }
+    if (card.statementDay != null) {
+      parts.add('statement ${ordinalDay(card.statementDay!)}');
+    }
+    if (card.paymentDueDay != null) {
+      parts.add('due ${ordinalDay(card.paymentDueDay!)}');
+    } else if (card.dueDaysAfterStatement != null) {
+      parts.add('due ${card.dueDaysAfterStatement} days after');
+    }
+    return parts.join(' · ');
+  }
+
+  /// Accounts a card payment ([quickPayCard]) can come from: active and not a
+  /// liability — you can't pay one card from another. Shared by the mobile
+  /// Settle sheet and the web card-payment dialog so they offer the same list.
+  List<FinancialAccount> get cardPayerAccounts =>
+      _ledger.accounts.where((a) => a.isActive && !a.isLiability).toList();
 
   /// Non-liability accounts eligible to fund payment of [bill]. For a bill
   /// whose target account is a liability (CC, BNPL) the payer must be a

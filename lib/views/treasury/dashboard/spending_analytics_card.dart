@@ -4,130 +4,94 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_header_link.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_spending_history_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
-enum _SpendRange {
-  last7('7D'),
-  last30('30D'),
-  thisMonth('This mo'),
-  lastMonth('Last mo');
-
-  const _SpendRange(this.label);
-  final String label;
-}
-
-class SpendingAnalyticsCard extends StatefulWidget {
+/// The Spending card: a header with a "View full" link, then a body.
+///
+/// The body is its own widget ([_SpendingBody]) so another view of the
+/// trends (net worth, income vs expenses) can sit beside it under a switch
+/// without reshaping this card.
+class SpendingAnalyticsCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
   const SpendingAnalyticsCard({super.key, required this.presenter});
 
   @override
-  State<SpendingAnalyticsCard> createState() => _SpendingAnalyticsCardState();
-}
-
-class _SpendingAnalyticsCardState extends State<SpendingAnalyticsCard> {
-  _SpendRange _range = _SpendRange.last7;
-
-  (DateTime, DateTime) _rangeDates() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    switch (_range) {
-      case _SpendRange.last7:
-        return (today.subtract(const Duration(days: 6)), today);
-      case _SpendRange.last30:
-        return (today.subtract(const Duration(days: 29)), today);
-      case _SpendRange.thisMonth:
-        return (DateTime(now.year, now.month, 1), today);
-      case _SpendRange.lastMonth:
-        final lastEnd =
-            DateTime(now.year, now.month, 1).subtract(const Duration(days: 1));
-        return (DateTime(lastEnd.year, lastEnd.month, 1), lastEnd);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final (start, end) = _rangeDates();
-    final days = widget.presenter.dailySpendForRange(start, end);
-    final hasData = days.any((d) => d.amount > 0);
-    final peak = days.fold(0.0, (m, d) => d.amount > m ? d.amount : m);
-    final nonZero = days.where((d) => d.amount > 0).toList();
-    final avg = nonZero.isEmpty
-        ? 0.0
-        : nonZero.fold(0.0, (s, d) => s + d.amount) / nonZero.length;
-    final total = days.fold(0.0, (s, d) => s + d.amount);
-    final peakDay = hasData
-        ? days.reduce((a, b) => a.amount >= b.amount ? a : b).date
-        : null;
-
     return AppSection(
       title: 'Spending',
-      trailing: GestureDetector(
-        onTap: () => FullSpendingHistorySheet.show(context, widget.presenter),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          child: Row(
-            children: [
-              Text(
-                'View Full',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 2),
-              Icon(Icons.chevron_right, color: colorScheme.primary, size: 16),
-            ],
-          ),
-        ),
+      trailing: DashboardHeaderLink(
+        key: const ValueKey('dashboard.spending.viewFull'),
+        label: 'View full',
+        onPressed: () => FullSpendingHistorySheet.show(context, presenter),
       ),
       child: AppCard(
         variant: AppCardVariant.elevated,
-        child: Column(
-          children: [
-            _RangeSelector(
-              value: _range,
-              onChanged: (r) => setState(() => _range = r),
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 120,
-              child: hasData
-                  ? _BarChart(days: days, peak: peak)
-                  : const AppEmptyState(
-                      icon: Icons.bar_chart_rounded,
-                      title: 'No spending in this range',
-                      iconSize: 36,
-                      padding: EdgeInsets.all(AppSpacing.md),
-                    ),
-            ),
-            const SizedBox(height: 12),
-            Divider(
-              height: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 12),
-            _StatsRow(
-              avgDaily: avg,
-              peak: peak,
-              peakDay: peakDay,
-              total: total,
-            ),
-          ],
-        ),
+        child: _SpendingBody(presenter: presenter),
       ),
     );
   }
 }
 
-/// Compact segmented control for the spending window.
+/// Daily spend over a chosen window: the range selector, the bar chart and
+/// the total / average / peak row. Every figure is
+/// [TreasuryDashboardPresenter.spendingSummary]; only the chosen range is
+/// local state.
+class _SpendingBody extends StatefulWidget {
+  final TreasuryDashboardPresenter presenter;
+
+  const _SpendingBody({required this.presenter});
+
+  @override
+  State<_SpendingBody> createState() => _SpendingBodyState();
+}
+
+class _SpendingBodyState extends State<_SpendingBody> {
+  SpendRange _range = SpendRange.last7;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final summary = widget.presenter.spendingSummary(_range);
+
+    return Column(
+      children: [
+        _RangeSelector(
+          value: _range,
+          onChanged: (r) => setState(() => _range = r),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 120,
+          child: summary.hasData
+              ? _BarChart(days: summary.days, peak: summary.peak)
+              : const AppEmptyState(
+                  icon: Icons.bar_chart_rounded,
+                  title: 'No spending in this range',
+                  iconSize: 36,
+                  padding: EdgeInsets.all(AppSpacing.md),
+                ),
+        ),
+        const SizedBox(height: 12),
+        Divider(
+          height: 1,
+          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+        const SizedBox(height: 12),
+        _StatsRow(summary: summary),
+      ],
+    );
+  }
+}
+
+/// Compact segmented control for the spending window. Each segment is at
+/// least 44 dp tall.
 class _RangeSelector extends StatelessWidget {
-  final _SpendRange value;
-  final ValueChanged<_SpendRange> onChanged;
+  final SpendRange value;
+  final ValueChanged<SpendRange> onChanged;
 
   const _RangeSelector({required this.value, required this.onChanged});
 
@@ -135,36 +99,41 @@ class _RangeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
-          for (final r in _SpendRange.values)
+          for (final r in SpendRange.values)
             Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(r),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(vertical: 7),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: r == value ? cs.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    r.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight:
-                          r == value ? FontWeight.w700 : FontWeight.w600,
-                      color: r == value ? cs.onPrimary : cs.onSurfaceVariant,
+              child: Semantics(
+                button: true,
+                selected: r == value,
+                child: GestureDetector(
+                  key: ValueKey('dashboard.spending.range.${r.name}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(r),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOut,
+                    constraints: const BoxConstraints(minHeight: 44),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: r == value ? cs.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      r.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            r == value ? FontWeight.w700 : FontWeight.w600,
+                        color: r == value ? cs.onPrimary : cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
@@ -399,44 +368,34 @@ class _BarChartPainter extends CustomPainter {
 }
 
 class _StatsRow extends StatelessWidget {
-  final double avgDaily;
-  final double peak;
-  final DateTime? peakDay;
-  final double total;
+  final SpendingRangeSummary summary;
 
-  const _StatsRow({
-    required this.avgDaily,
-    required this.peak,
-    required this.peakDay,
-    required this.total,
-  });
+  const _StatsRow({required this.summary});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final peakLabel =
-        peakDay != null ? DateFormat('EEE, MMM d').format(peakDay!) : '—';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _StatChip(
           label: 'TOTAL',
-          value: formatPesoCompact(total),
+          value: summary.totalLabel,
           color: colorScheme.primary,
         ),
         _StatDivider(),
         _StatChip(
           label: 'AVG / DAY',
-          value: formatPesoCompact(avgDaily),
+          value: summary.avgDailyLabel,
           color: colorScheme.onSurfaceVariant,
         ),
         _StatDivider(),
         _StatChip(
           label: 'PEAK DAY',
-          value: peakLabel,
-          subValue: formatPesoCompact(peak),
-          color: peak > 0
+          value: summary.peakDayLabel,
+          subValue: summary.peakAmountLabel,
+          color: summary.hasData
               ? colorScheme.errorContainer
               : colorScheme.onSurfaceVariant,
         ),
@@ -463,6 +422,17 @@ class _StatChip extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // Each chip takes a third of the row and scales down rather than
+    // overflowing: at 360 dp a peak day like "Wed, Sep 24" ran 22 px wide.
+    return Expanded(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: _chip(theme, colorScheme),
+      ),
+    );
+  }
+
+  Widget _chip(ThemeData theme, ColorScheme colorScheme) {
     return Column(
       children: [
         Text(

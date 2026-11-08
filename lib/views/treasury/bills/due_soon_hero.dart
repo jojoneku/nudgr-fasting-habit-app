@@ -15,8 +15,11 @@ class DueSoonHero extends StatelessWidget {
   final String dueLabel;
   final String subtitle;
   final bool overdue;
-  final VoidCallback onMarkPaid;
-  final VoidCallback onEdit;
+
+  /// Null disables the button (the Bills tab does this during a batch
+  /// selection).
+  final VoidCallback? onMarkPaid;
+  final VoidCallback? onEdit;
 
   const DueSoonHero({
     super.key,

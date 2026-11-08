@@ -12,6 +12,11 @@ import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
+/// Keys for [AddBudgetedExpenseSheet], for tests.
+abstract final class AddBudgetedExpenseSheetKeys {
+  static const moreOptions = ValueKey('add-set-aside-more-options');
+}
+
 /// Add / edit a budgeted set-aside. Extracted from the Bills view so the unified
 /// `NewEntrySheet` can embed it. Standalone use keeps the sheet chrome.
 class AddBudgetedExpenseSheet extends StatefulWidget {
@@ -84,6 +89,17 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
 
   bool get _showScopeField =>
       (_isRecurring || _wasRecurring) && _futureMonthCount > 0;
+
+  /// The "More options" fold opens on its own when a field inside has a
+  /// value, so editing a set-aside never hides its category or note.
+  bool get _moreOptionsHasValue =>
+      _selectedCategoryId != null || _noteController.text.trim().isNotEmpty;
+
+  /// What sits inside "More options", named on its header.
+  String get _moreOptionsHint =>
+      widget.presenter.categories.any((c) => c.type == CategoryType.expense)
+          ? 'Category, note'
+          : 'Note';
 
   String _recurrenceLabel(RecurrenceType r) => switch (r) {
         RecurrenceType.monthly => 'Monthly',
@@ -255,15 +271,6 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
                   setState(() => _budgetedType = v ?? _budgetedType),
             ),
           ),
-          const SizedBox(height: 12),
-          SheetLabeledField(
-            label: 'Note (optional)',
-            child: TextFormField(
-              controller: _noteController,
-              decoration: sheetFieldDecoration(context),
-              textInputAction: TextInputAction.done,
-            ),
-          ),
           if (liquidAccounts.isNotEmpty) ...[
             const SizedBox(height: 12),
             const SheetFieldLabel('Fund from account (optional)'),
@@ -284,18 +291,44 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
               onTap: _pickDestination,
             ),
           ],
-          if (expenseCategories.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            SheetLabeledField(
-              label: 'Category',
-              child: CategoryPickerField(
-                categories: expenseCategories,
-                selectedId: _selectedCategoryId,
-                placeholder: 'None',
-                onChanged: (id) => setState(() => _selectedCategoryId = id),
-              ),
+          // Category and note are optional: fold them so Save stays closer on
+          // a small phone. The accounts stay out in the open — they are how a
+          // set-aside funds a goal. The fold opens on its own when a field
+          // inside has a value, so editing never hides a filled field.
+          const SizedBox(height: 16),
+          AppFold(
+            key: AddBudgetedExpenseSheetKeys.moreOptions,
+            title: 'More options',
+            subtitle: _moreOptionsHint,
+            initiallyOpen: _moreOptionsHasValue,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (expenseCategories.isNotEmpty) ...[
+                  SheetLabeledField(
+                    label: 'Category',
+                    child: CategoryPickerField(
+                      categories: expenseCategories,
+                      selectedId: _selectedCategoryId,
+                      placeholder: 'None',
+                      onChanged: (id) =>
+                          setState(() => _selectedCategoryId = id),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                SheetLabeledField(
+                  label: 'Note (optional)',
+                  child: TextFormField(
+                    controller: _noteController,
+                    decoration: sheetFieldDecoration(context),
+                    textInputAction: TextInputAction.done,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
 
           // Recurring toggle — a sinking fund that isn't marked recurring never
           // regenerates, so this has to be settable here and not web-only.

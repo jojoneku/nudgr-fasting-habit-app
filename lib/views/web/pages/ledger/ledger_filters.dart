@@ -18,13 +18,18 @@ class WebLedgerFilters extends ChangeNotifier {
   DateTime? toDate;
   WebLedgerSortKey? sortKey; // null = presenter default (newest first)
   int sortDir = -1;
+
+  /// Search text for the pre-v2 page only. `WebLedgerPageV2` keeps its search
+  /// in `LedgerPresenter` (Plan 071 Phase 10a), shared with the phone.
   String query = '';
+
+  /// A date range asks about the whole ledger, not one month.
+  bool get hasDateRange => fromDate != null || toDate != null;
 
   /// A search term or a date range asks a question about the whole ledger, not
   /// about one month — the grid widens its scope to all history when either is
   /// set, and says so.
-  bool get spansAllMonths =>
-      query.isNotEmpty || fromDate != null || toDate != null;
+  bool get spansAllMonths => query.isNotEmpty || hasDateRange;
 
   int get activeCount => [
         accountIds.isNotEmpty,

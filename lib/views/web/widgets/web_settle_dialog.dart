@@ -4,7 +4,9 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
+import 'package:intermittent_fasting/models/settle_request.dart';
+import 'package:intermittent_fasting/utils/settle_copy.dart';
+import 'package:intermittent_fasting/utils/settle_rules.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../design/web_breakpoints.dart';
 import '../web_keys.dart';
@@ -15,109 +17,6 @@ import 'web_number.dart';
 /// Sentinel for the destination dropdown's "spend it, don't transfer" option.
 /// Null is a *real* answer there, so it can't double as "nothing picked yet".
 const _spendItSentinel = '__spend__';
-
-/// Which kind of obligation the Settle dialog is closing. Decides the wording,
-/// the tone of the primary button, and which fields are asked for — the money
-/// moves differently for each (Plan 063 §5).
-enum SettleKind { bill, receivable, setAside, installment, cardPayment }
-
-/// One row the Settle dialog is settling. One target is single mode (editable
-/// amount); several are batch mode (each settles for its own full amount, the
-/// rows are listed, and only what the batch shares is asked once).
-class SettleTarget {
-  final String id;
-  final String name;
-
-  /// The scheduled figure — the bill amount, the receivable, the allocation,
-  /// the monthly payment, or the card's payable.
-  final double amount;
-
-  /// "due Oct 16" / "Oct 16" — shown in the subtitle and beside a batch row.
-  final String? dateLabel;
-
-  /// The account on file for this row (a bill's payment account, a set-aside's
-  /// funding account). Seeds the picker in single mode when it is on offer.
-  final String? accountId;
-
-  /// A set-aside's destination on file, when it names one.
-  final String? destinationId;
-
-  const SettleTarget({
-    required this.id,
-    required this.name,
-    required this.amount,
-    this.dateLabel,
-    this.accountId,
-    this.destinationId,
-  });
-}
-
-/// What the user settled on. Handed to [showWebSettleDialog]'s `onSubmit` and
-/// returned once that submit succeeds, so the toast can quote the amount that
-/// was actually recorded rather than the one that was scheduled.
-///
-/// The same shape the presenters consumed before the dialogs were unified:
-/// the single-settle fields plus the two batch-only ones
-/// ([useSavedDestinations], [targetIds]).
-class SettleResult {
-  /// The amount actually settled — in single mode the user's figure (a partial
-  /// payment or an overpayment); in batch mode the total of the rows.
-  final double amount;
-
-  /// What the entry said it would be, kept so callers can tell a deliberate
-  /// partial payment from the scheduled figure.
-  final double? scheduledAmount;
-
-  /// When it happened. Defaults to today but is freely back-datable, so last
-  /// month's bills can be reconciled from a desktop.
-  final DateTime date;
-
-  /// Funding (or deposit) account. Null when the flow has no account picker,
-  /// when [recordInLedger] is false, or when no account could cover a batch.
-  final String? accountId;
-
-  /// Second account for set-asides — where the money lands. Null means "spend
-  /// it" (a plain outflow rather than a transfer).
-  final String? destinationId;
-
-  /// False when the user already logged the movement in the ledger by hand, so
-  /// the entry is flagged settled without creating a transaction.
-  final bool recordInLedger;
-
-  /// Batch set-asides: rows that name a destination of their own keep it and
-  /// [destinationId] applies only to the rest.
-  final bool useSavedDestinations;
-
-  /// The ids of the rows settled, in the order they were given.
-  final List<String> targetIds;
-
-  const SettleResult({
-    required this.amount,
-    required this.date,
-    this.scheduledAmount,
-    this.accountId,
-    this.destinationId,
-    this.recordInLedger = true,
-    this.useSavedDestinations = true,
-    this.targetIds = const [],
-  });
-
-  /// True when the settled amount differs from what was scheduled — the callers
-  /// use it to word the confirmation toast honestly.
-  bool get isPartial =>
-      scheduledAmount != null && amount < scheduledAmount! - 0.005;
-  bool get isOverpayment =>
-      scheduledAmount != null && amount > scheduledAmount! + 0.005;
-
-  /// The batch shape the presenters' batch methods were written against.
-  BatchSettleChoice toBatchChoice() => BatchSettleChoice(
-        accountId: accountId,
-        toAccountId: destinationId,
-        useSavedDestinations: useSavedDestinations,
-        alreadyInLedger: !recordInLedger,
-        date: date,
-      );
-}
 
 /// The pre-unification name, kept so the old pages and tests read unchanged.
 typedef WebSettleResult = SettleResult;
@@ -232,8 +131,7 @@ Future<double?> showWebQuickPayDialog(
   required FinancialAccount card,
   required BillsReceivablesPresenter presenter,
 }) async {
-  final payers =
-      presenter.accounts.where((a) => a.isActive && !a.isLiability).toList();
+  final payers = presenter.cardPayerAccounts;
   final result = await showWebSettleDialog(
     context,
     kind: SettleKind.cardPayment,
@@ -341,13 +239,13 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
   /// Bills and receivables can be flagged settled without writing the ledger.
   /// A set-aside *is* the transfer, an installment payment IS its transaction
   /// and a card payment is a transfer, so none of those offers the choice.
-  bool get _offersLedgerToggle =>
-      _kind == SettleKind.bill || _kind == SettleKind.receivable;
+  bool get _offersLedgerToggle => settleOffersLedgerToggle(_kind);
 
   bool get _recordsInLedger => !(_offersLedgerToggle && _alreadyInLedger);
 
   /// Installments ride on their own card, so there is nothing to pick.
-  bool get _asksAccount => _kind != SettleKind.installment && _recordsInLedger;
+  bool get _asksAccount =>
+      settleAsksAccount(_kind, recordInLedger: _recordsInLedger);
 
   bool get _isSetAside => _kind == SettleKind.setAside;
 
@@ -370,24 +268,20 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
   FinancialAccount? get _funder =>
       widget.accounts.where((a) => a.id == _accountId).firstOrNull;
 
-  double? get _typedAmount =>
-      double.tryParse(_amountController.text.replaceAll(',', '').trim());
+  double? get _typedAmount => parseSettleAmount(_amountController.text);
 
   /// The figure that will leave (or enter) the account.
   double get _movingAmount => _isBatch ? _total : (_typedAmount ?? 0);
 
   /// Named, never blocking: the user may be about to move money in first.
   /// Receivables deposit money, so there is nothing to be short of.
-  String? get _shortBalanceNote {
-    if (_kind == SettleKind.receivable || !_asksAccount) return null;
-    final funder = _funder;
-    if (funder == null) return null;
-    final short = _movingAmount - funder.balance;
-    if (short <= 0.005) return null;
-    return '${formatPeso(funder.balance)} · short by ${formatPeso(short)}. '
-        '${funder.name} does not have enough. Pick another account, or move '
-        'money in first.';
-  }
+  String? get _shortBalanceNote => !_asksAccount
+      ? null
+      : settleShortBalanceNote(
+          kind: _kind,
+          amount: _movingAmount,
+          from: _funder,
+        );
 
   bool get _canSubmit {
     if (_isSubmitting) return false;
@@ -406,109 +300,24 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
 
   // ── Copy ─────────────────────────────────────────────────────────────────
 
-  String get _title {
-    if (_isBatch) {
-      return switch (_kind) {
-        SettleKind.bill => 'Pay $_count bills',
-        SettleKind.receivable => 'Receive $_count receivables',
-        SettleKind.setAside => 'Fund $_count set-asides',
-        SettleKind.installment => 'Pay $_count installments',
-        SettleKind.cardPayment => 'Pay $_count cards',
-      };
-    }
-    final name = _single.name;
-    return switch (_kind) {
-      SettleKind.bill || SettleKind.installment => 'Mark $name paid',
-      SettleKind.receivable => 'Receive $name',
-      SettleKind.setAside => 'Fund $name',
-      SettleKind.cardPayment => 'Pay $name',
-    };
-  }
+  SettleCopy get _copy =>
+      SettleCopy(kind: _kind, targets: widget.targets, isBatch: _isBatch);
 
-  String get _subtitle {
-    if (_isBatch) {
-      final total = formatPeso(_total);
-      return switch (_kind) {
-        SettleKind.bill =>
-          '$total total · each bill settles for its own amount',
-        SettleKind.receivable =>
-          '$total total · each one settles for its own amount',
-        SettleKind.setAside =>
-          '$total total · setting money aside is a transfer, not spending',
-        SettleKind.installment =>
-          "$total total · this month's payments, each on its own card",
-        SettleKind.cardPayment => '$total total',
-      };
-    }
-    final scheduled = formatPeso(_single.amount);
-    final when = _single.dateLabel;
-    return switch (_kind) {
-      SettleKind.cardPayment =>
-        'You owe $scheduled · lowers what you owe from the account you pick',
-      SettleKind.installment => 'Monthly $scheduled · charged to its own card',
-      SettleKind.setAside =>
-        'Planned $scheduled${when != null ? ' · $when' : ''}',
-      _ => 'Scheduled $scheduled${when != null ? ' · $when' : ''}',
-    };
-  }
-
-  String get _amountLabel => switch (_kind) {
-        SettleKind.receivable => 'Amount received',
-        SettleKind.setAside => 'Amount to set aside',
-        _ => 'Amount paid',
-      };
-
-  String get _dateLabel => switch (_kind) {
-        SettleKind.receivable => 'Received on',
-        SettleKind.setAside => 'Funded on',
-        _ => 'Paid on',
-      };
-
-  String get _accountLabel => switch (_kind) {
-        SettleKind.receivable => 'Deposit into',
-        SettleKind.setAside => 'Fund from',
-        _ => 'Pay from',
-      };
-
-  String get _confirmLabel {
-    if (_isBatch) {
-      return switch (_kind) {
-        SettleKind.bill => 'Mark $_count paid',
-        SettleKind.receivable => 'Mark $_count received',
-        SettleKind.setAside => 'Fund $_count',
-        _ => 'Pay $_count',
-      };
-    }
-    return switch (_kind) {
-      SettleKind.bill || SettleKind.installment => 'Mark paid',
-      SettleKind.receivable => 'Mark received',
-      SettleKind.setAside => 'Fund',
-      SettleKind.cardPayment => 'Pay',
-    };
-  }
-
-  /// The verb the error toast names, so "Could not fund: …" reads as the
-  /// action that failed.
-  String get _failureVerb => switch (_kind) {
-        SettleKind.cardPayment => 'record payment',
-        _ => _confirmLabel.toLowerCase(),
-      };
+  String get _title => _copy.title;
+  String get _subtitle => _copy.subtitle;
+  String get _amountLabel => _copy.amountLabel;
+  String get _dateLabel => _copy.dateLabel;
+  String get _accountLabel => _copy.accountLabel;
+  String get _confirmLabel => _copy.confirmLabel;
+  String get _failureVerb => _copy.failureVerb;
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
-  String? _validateAmount(double? amount) {
-    if (amount == null || !amount.isFinite || amount <= 0) {
-      return 'Enter an amount';
-    }
-    // Paying more than a card's balance would push the liability negative,
-    // which no account can mean; the other kinds allow an overpayment.
-    if (_kind == SettleKind.cardPayment &&
-        _single.amount > 0 &&
-        amount > _single.amount + 0.005) {
-      return 'More than the ${formatPeso(_single.amount)} owed';
-    }
-    return null;
-  }
+  String? _validateAmount(double? amount) => settleAmountError(
+        amount: amount,
+        kind: _kind,
+        scheduled: _single.amount,
+      );
 
   Future<void> _submit() async {
     final double amount;
@@ -718,9 +527,7 @@ class _WebSettleDialogState extends State<_WebSettleDialog> {
             WebSwitchRow(
               key: WebKeys.billsSettleAlreadyLogged,
               title: 'Already in the ledger',
-              subtitle: _kind == SettleKind.receivable
-                  ? 'Turn on if you logged this deposit by hand'
-                  : 'Turn on if you logged this payment by hand',
+              subtitle: _copy.alreadyLoggedSubtitle,
               value: _alreadyInLedger,
               onChanged: _isSubmitting
                   ? null

@@ -25,7 +25,6 @@ import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dar
 import 'package:intermittent_fasting/views/treasury/shared/photo_log_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
-final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
 
 class LedgerView extends StatefulWidget {
@@ -115,13 +114,38 @@ class _LedgerViewState extends State<LedgerView> {
     );
   }
 
-  void _showEditTransactionSheet(TransactionRecord txn) {
+  void _showEditTransactionSheet(
+    TransactionRecord txn, {
+    bool split = false,
+    bool reimbursable = false,
+  }) {
     AppBottomSheet.show(
       context: context,
       title: 'Edit Transaction',
-      body: AddTransactionSheet(presenter: presenter, existing: txn),
+      body: AddTransactionSheet(
+        presenter: presenter,
+        existing: txn,
+        initialSplit: split,
+        initialReimbursable: reimbursable,
+      ),
     );
   }
+
+  /// Row action "Duplicate": a new entry prefilled from [txn], dated today.
+  void _showDuplicateTransactionSheet(TransactionRecord txn) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Log Transaction',
+      body: AddTransactionSheet(presenter: presenter, duplicateOf: txn),
+    );
+  }
+
+  late final _rowHandlers = _LedgerRowHandlers(
+    onEdit: _showEditTransactionSheet,
+    onDuplicate: _showDuplicateTransactionSheet,
+    onSplit: (t) => _showEditTransactionSheet(t, split: true),
+    onReimbursable: (t) => _showEditTransactionSheet(t, reimbursable: true),
+  );
 
   void _showManageCategoriesSheet() {
     AppBottomSheet.show(
@@ -152,18 +176,19 @@ class _LedgerViewState extends State<LedgerView> {
           body: SafeArea(
             child: Column(
               children: [
-                const _LedgerHeader(),
+                _LedgerHeader(presenter: presenter),
                 _LedgerControlsRow(
                   presenter: presenter,
                   captureInbox: widget.captureInbox,
                   onOpenFilters: _showFilterSortSheet,
                 ),
+                _ActiveFilterChipsRow(presenter: presenter),
                 // In / Out / Net moved to the Dashboard's cashflow strip — no
                 // need to duplicate the month totals on the Ledger.
                 Expanded(
                   child: _TransactionList(
                     presenter: presenter,
-                    onEditTransaction: _showEditTransactionSheet,
+                    handlers: _rowHandlers,
                   ),
                 ),
                 _ChatHardErrorChip(presenter: presenter),
@@ -594,18 +619,92 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 
 // ── Filter & Sort ─────────────────────────────────────────────────────────
 
-/// Page title row — `Ledger` on its own line, left-aligned (reference header).
-class _LedgerHeader extends StatelessWidget {
-  const _LedgerHeader();
+/// Page title row — `Ledger` on its own line, left-aligned (reference header)
+/// with a search icon on the right. The icon opens the search (Plan 071
+/// Phase 10a): the field takes the title's place and a "This month / All
+/// months" scope row appears under it, so a closed search costs no height.
+class _LedgerHeader extends StatefulWidget {
+  final LedgerPresenter presenter;
+  const _LedgerHeader({required this.presenter});
+
+  @override
+  State<_LedgerHeader> createState() => _LedgerHeaderState();
+}
+
+class _LedgerHeaderState extends State<_LedgerHeader> {
+  late final _ctrl = TextEditingController(text: widget.presenter.searchQuery);
+  final _focus = FocusNode();
+
+  /// Open while the user is searching. Starts open when the presenter still
+  /// holds a search from an earlier visit.
+  late bool _open = widget.presenter.isSearching;
+
+  @override
+  void didUpdateWidget(covariant _LedgerHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The search can be cleared from outside the field (the empty list's
+    // Clear search button). Follow it, without fighting a trailing space the
+    // user is still typing.
+    final query = widget.presenter.searchQuery;
+    if (_ctrl.text.trim() != query) _ctrl.text = query;
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() {
+    HapticFeedback.selectionClick();
+    setState(() => _open = true);
+    // The field exists from the next frame on.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    _ctrl.clear();
+    widget.presenter.clearSearch();
+    _focus.unfocus();
+    setState(() => _open = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: _open
+            ? _LedgerSearchBar(
+                presenter: widget.presenter,
+                controller: _ctrl,
+                focusNode: _focus,
+                onClose: _closeSearch,
+              )
+            : _LedgerTitleRow(onOpenSearch: _openSearch),
+      ),
+    );
+  }
+}
+
+class _LedgerTitleRow extends StatelessWidget {
+  final VoidCallback onOpenSearch;
+  const _LedgerTitleRow({required this.onOpenSearch});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canPop = Navigator.canPop(context);
-    return Container(
-      width: double.infinity,
-      color: theme.scaffoldBackgroundColor,
-      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 8, 20, 0),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(canPop ? 4 : 20, 2, 8, 0),
       child: Row(
         children: [
           if (canPop)
@@ -614,16 +713,197 @@ class _LedgerHeader extends StatelessWidget {
               tooltip: 'Back',
               onPressed: () => Navigator.maybePop(context),
             ),
-          Text(
-            'Ledger',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontSize: 23,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              color: theme.colorScheme.onSurface,
+          Expanded(
+            child: Text(
+              'Ledger',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontSize: 23,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('ledgerSearchOpen'),
+            icon: Icon(
+              Icons.search_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            tooltip: 'Search transactions',
+            onPressed: onOpenSearch,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The open search: the field with a close button, then the scope row.
+class _LedgerSearchBar extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final VoidCallback onClose;
+
+  const _LedgerSearchBar({
+    required this.presenter,
+    required this.controller,
+    required this.focusNode,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.only(left: 12, right: 12),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.search_rounded,
+                          size: 18, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          key: const ValueKey('ledgerSearchField'),
+                          controller: controller,
+                          focusNode: focusNode,
+                          onChanged: presenter.setSearch,
+                          textInputAction: TextInputAction.search,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: cs.onSurface),
+                          decoration: const InputDecoration(
+                            hintText: 'Search description, note, amount…',
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('ledgerSearchClose'),
+                icon: Icon(Icons.close_rounded, color: cs.onSurfaceVariant),
+                tooltip: 'Close search',
+                onPressed: onClose,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              children: [
+                _SearchScopeSegment(
+                  key: const ValueKey('ledgerSearchScopeMonth'),
+                  label: 'This month',
+                  selected: !presenter.searchAllMonths,
+                  onTap: () => presenter.setSearchAllMonths(false),
+                ),
+                const SizedBox(width: 8),
+                _SearchScopeSegment(
+                  key: const ValueKey('ledgerSearchScopeAll'),
+                  label: 'All months',
+                  selected: presenter.searchAllMonths,
+                  onTap: () => presenter.setSearchAllMonths(true),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    presenter.searchSummary,
+                    key: const ValueKey('ledgerSearchSummary'),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One half of the search scope switch. The pill reads small; the tap area
+/// is the full 44 px row height.
+class _SearchScopeSegment extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SearchScopeSegment({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: 'Search $label',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              height: kControlPillHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected
+                    ? cs.primary.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                    color: selected ? cs.primary : cs.outlineVariant),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? cs.primary : cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -868,6 +1148,87 @@ class _FilterSortButton extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// One removable chip per active filter, scrolling sideways under the
+/// controls row, so a filter can be dropped without opening the sheet.
+/// Collapses to nothing when no filter is on.
+class _ActiveFilterChipsRow extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ActiveFilterChipsRow({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = presenter.activeFilterChips;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: chips.isEmpty
+          ? const SizedBox(width: double.infinity)
+          : SizedBox(
+              height: 44,
+              child: ListView.separated(
+                key: const ValueKey('ledgerFilterChips'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: chips.length,
+                separatorBuilder: (context, i) => const SizedBox(width: 8),
+                itemBuilder: (context, i) => _RemovableFilterChip(
+                  chip: chips[i],
+                  onRemove: () => presenter.removeFilterChip(chips[i]),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _RemovableFilterChip extends StatelessWidget {
+  final LedgerFilterChip chip;
+  final VoidCallback onRemove;
+  const _RemovableFilterChip({required this.chip, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Remove filter ${chip.label}',
+      excludeSemantics: true,
+      child: Material(
+        color: cs.primary.withValues(alpha: 0.12),
+        shape: StadiumBorder(side: BorderSide(color: cs.primary)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onRemove();
+          },
+          // The whole chip removes it: a 44 px row height keeps the target
+          // big enough, where a lone ✕ glyph would not be.
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12, right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  chip.label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.close_rounded, size: 16, color: cs.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1173,33 +1534,59 @@ class _SelectChip extends StatelessWidget {
 
 // ── Transaction List ─────────────────────────────────────────────────────────
 
+/// What a ledger row can open: the edit sheet (plain, or with Split or "I'll
+/// get this back" switched on) and a prefilled copy.
+class _LedgerRowHandlers {
+  final void Function(TransactionRecord txn) onEdit;
+  final void Function(TransactionRecord txn) onDuplicate;
+  final void Function(TransactionRecord txn) onSplit;
+  final void Function(TransactionRecord txn) onReimbursable;
+
+  const _LedgerRowHandlers({
+    required this.onEdit,
+    required this.onDuplicate,
+    required this.onSplit,
+    required this.onReimbursable,
+  });
+}
+
+/// The row's account swatch: the account's own colour, else its palette slot.
+/// Null when the record has no account.
+Color? _accountColorOf(
+    BuildContext context, LedgerPresenter presenter, String accountId) {
+  final account = presenter.accountById(accountId);
+  if (account == null) return null;
+  return resolveSliceColor(
+    account.colorHex,
+    presenter.accountIndexOf(accountId),
+    brightness: Theme.of(context).brightness,
+  );
+}
+
 /// Builds one transaction row — account/category resolved, swipe-to-delete with
-/// undo. Shared by the day-grouped list and the flat (amount-sorted) list.
+/// undo, long-press row actions. Shared by the day-grouped list and the flat
+/// (amount-sorted) list.
 Widget _buildTxnTile(
   BuildContext context,
   LedgerPresenter presenter,
   TransactionRecord txn,
-  void Function(TransactionRecord txn) onEdit,
+  _LedgerRowHandlers handlers,
 ) {
-  final account =
-      presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
-  final category =
-      presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
-  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
-  final accountColor = idx < 0
-      ? null
-      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
-          brightness: Theme.of(context).brightness);
   // Each row carries its own lighter-grey card fill (see TransactionListTile),
   // so a day's transactions read as a stack of items rather than text on the
   // page. Swipe-to-delete + undo is preserved by TransactionListTile's onDelete.
   return TransactionListTile(
     key: ValueKey(txn.id),
     txn: txn,
-    account: account,
-    accountColor: accountColor,
-    category: category,
-    onTap: () => onEdit(txn),
+    account: presenter.accountById(txn.accountId),
+    accountColor: _accountColorOf(context, presenter, txn.accountId),
+    category: presenter.categoryById(txn.categoryId),
+    actions: presenter.rowActionsFor(txn),
+    dateLabel: presenter.searchRowDateLabel(txn),
+    onTap: () => handlers.onEdit(txn),
+    onDuplicate: () => handlers.onDuplicate(txn),
+    onSplit: () => handlers.onSplit(txn),
+    onReimbursable: () => handlers.onReimbursable(txn),
     onDelete: () async {
       HapticFeedback.mediumImpact();
       final deleted = txn;
@@ -1222,36 +1609,31 @@ Widget _buildTxnTile(
 
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
-  final void Function(TransactionRecord txn) onEditTransaction;
+  final _LedgerRowHandlers handlers;
 
   const _TransactionList({
     required this.presenter,
-    required this.onEditTransaction,
+    required this.handlers,
   });
-
-  static const _empty = AppEmptyState(
-    icon: Icons.receipt_long_outlined,
-    title: 'No transactions this month',
-    body: 'Tap + to log your first one',
-  );
 
   @override
   Widget build(BuildContext context) {
+    final empty = _LedgerEmptyState(presenter: presenter);
     // Amount sort → a flat list ordered by amount (day grouping doesn't apply).
     if (presenter.sortField == LedgerSortField.amount) {
       final txns = presenter.sortedTransactions;
-      if (txns.isEmpty) return _empty;
+      if (txns.isEmpty) return empty;
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
         itemCount: txns.length,
         itemBuilder: (context, i) =>
-            _buildTxnTile(context, presenter, txns[i], onEditTransaction),
+            _buildTxnTile(context, presenter, txns[i], handlers),
       );
     }
 
     // Date sort → day-grouped; the presenter already ordered the day keys.
     final grouped = presenter.groupedTransactions;
-    if (grouped.isEmpty) return _empty;
+    if (grouped.isEmpty) return empty;
     final dates = grouped.keys.toList();
 
     return ListView.builder(
@@ -1263,9 +1645,35 @@ class _TransactionList extends StatelessWidget {
           date: date,
           transactions: grouped[date]!,
           presenter: presenter,
-          onEditTransaction: onEditTransaction,
+          handlers: handlers,
         );
       },
+    );
+  }
+}
+
+/// The empty list. When a search or the filters hide every row it says so and
+/// offers to clear them; otherwise the month really is empty. There is no +
+/// button on the Ledger, so it gives no "tap +" hint.
+class _LedgerEmptyState extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _LedgerEmptyState({required this.presenter});
+
+  static IconData _iconFor(LedgerEmptyReason reason) => switch (reason) {
+        LedgerEmptyReason.search => Icons.search_off_rounded,
+        LedgerEmptyReason.filters => Icons.filter_alt_off_outlined,
+        LedgerEmptyReason.emptyMonth => Icons.receipt_long_outlined,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return AppEmptyState(
+      icon: _iconFor(presenter.emptyListReason),
+      title: presenter.emptyListTitle,
+      body: presenter.emptyListBody,
+      // No label, no button: AppEmptyState needs both.
+      actionLabel: presenter.emptyListActionLabel,
+      onAction: presenter.clearEmptyListCause,
     );
   }
 }
@@ -1276,64 +1684,33 @@ class _DateGroup extends StatelessWidget {
   final DateTime date;
   final List<TransactionRecord> transactions;
   final LedgerPresenter presenter;
-  final void Function(TransactionRecord txn) onEditTransaction;
+  final _LedgerRowHandlers handlers;
 
   const _DateGroup({
     required this.date,
     required this.transactions,
     required this.presenter,
-    required this.onEditTransaction,
+    required this.handlers,
   });
-
-  double get _dailyNet => transactions.fold(
-      0.0,
-      (sum, txn) => switch (txn.type) {
-            TransactionType.inflow => sum + txn.amount,
-            TransactionType.outflow => sum - txn.amount,
-            TransactionType.transfer => sum,
-          });
 
   @override
   Widget build(BuildContext context) {
+    final dailyNet = presenter.dailyNetOf(transactions);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: AppSection(
-        title: _DateHeader.labelFor(date),
-        trailing: _dailyNet != 0 ? _DailyNetBadge(dailyNet: _dailyNet) : null,
+        title: presenter.dateGroupLabel(date),
+        trailing: dailyNet != 0 ? _DailyNetBadge(dailyNet: dailyNet) : null,
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
           children: [
-            ...transactions.map((txn) =>
-                _buildTxnTile(context, presenter, txn, onEditTransaction)),
+            ...transactions
+                .map((txn) => _buildTxnTile(context, presenter, txn, handlers)),
             const SizedBox(height: 4),
           ],
         ),
       ),
     );
-  }
-}
-
-// ── Date Header ──────────────────────────────────────────────────────────────
-
-class _DateHeader extends StatelessWidget {
-  final DateTime date;
-  final double dailyNet;
-
-  const _DateHeader({required this.date, required this.dailyNet});
-
-  static String labelFor(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final d = DateTime(date.year, date.month, date.day);
-    if (d == today) return 'Today';
-    if (d == yesterday) return 'Yesterday';
-    return _dateHeaderFmt.format(date);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(labelFor(date).toUpperCase());
   }
 }
 

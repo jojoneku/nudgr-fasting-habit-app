@@ -316,16 +316,14 @@ void main() {
     expect(s, contains('Credit owed: ${peso(d.totalCreditOwed)}'));
     expect(s, contains('in ${peso(d.monthTotalInflow)}'));
     expect(s, contains('out ${peso(d.monthTotalOutflow)}'));
-    expect(s, contains('Liquid Now: ${peso(d.totalLiquidCash)}'));
-    expect(s, contains('To Receive: ${peso(d.pendingReceivables)}'));
-    expect(s, contains('Upcoming Bills: ${peso(d.monthUnpaidBills)}'));
-    expect(s,
-        contains('Budget / Savings Due: ${peso(d.budgetedExpensesRemaining)}'));
+    expect(s, contains('Liquid now: ${peso(d.totalLiquidCash)}'));
+    expect(s, contains('To receive: ${peso(d.pendingReceivables)}'));
+    expect(s, contains('Upcoming bills: ${peso(d.monthUnpaidBills)}'));
+    expect(s, contains('Set-asides due: ${peso(d.budgetedExpensesRemaining)}'));
     expect(
-        s, contains('Budget Left: ${peso(d.budgetRemainingNetOfObligations)}'));
-    expect(
-        s, contains('Proj. Month-End Cash: ${peso(d.forecastedNetBalance)}'));
-    expect(s, contains('Next Month Forecast (${next.monthName}'));
+        s, contains('Budget left: ${peso(d.budgetRemainingNetOfObligations)}'));
+    expect(s, contains('Projected month-end: ${peso(d.forecastedNetBalance)}'));
+    expect(s, contains('Next month forecast (${next.monthName}'));
     expect(s, contains('${next.endingTitle}: ${next.endingLabel}'));
     expect(s, contains(next.changeLabel));
     expect(s, contains('Bills: ${peso(next.bills)}'));

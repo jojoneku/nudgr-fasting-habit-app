@@ -26,7 +26,7 @@ class BudgetOverviewCard extends StatelessWidget {
     final total = presenter.budgetHealthExpenseTotal;
 
     return AppSection(
-      title: 'Budget This Month',
+      title: 'Budget health',
       trailing: onOpenBudget == null
           ? null
           : TextButton(

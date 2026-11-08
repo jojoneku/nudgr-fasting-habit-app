@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/views/web/dev/preview_seed.dart';
 import 'package:intermittent_fasting/views/web/pages/dashboard/web_account_inventory_dialog.dart';
 import 'package:intermittent_fasting/views/web/pages/dashboard/web_dashboard_page_v2.dart';
 import 'package:intermittent_fasting/views/web/web_keys.dart';
+import 'package:intermittent_fasting/views/web/widgets/web_badge.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -339,6 +340,28 @@ void main() {
       // The unified Settle dialog (Phase 5) renders field labels uppercase.
       expect(find.text('PAY FROM'), findsOneWidget);
       expect(find.widgetWithText(FilledButton, 'Pay'), findsOneWidget);
+    });
+  });
+
+  group('cash flow', () {
+    testWidgets('the savings-rate badge takes the presenter tone',
+        (tester) async {
+      final (dash, bills) = await seeded(tester);
+      await pumpPage(tester, presenter: dash, bills: bills);
+
+      final badge = tester.widget<WebBadge>(find.descendant(
+        of: find.byKey(WebKeys.dashboardCashFlow),
+        matching: find.byType(WebBadge),
+      ));
+      expect(badge.label, dash.savingsRateLabel);
+      expect(
+        badge.tone,
+        switch (dash.savingsRateTone) {
+          RateTone.positive => WebBadgeTone.success,
+          RateTone.warning => WebBadgeTone.warning,
+          RateTone.neutral => WebBadgeTone.neutral,
+        },
+      );
     });
   });
 

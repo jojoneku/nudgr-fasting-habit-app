@@ -219,34 +219,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
       return false;
     }
     if (_f.toDate != null && t.date.isAfter(_dayEnd(_f.toDate!))) return false;
-    if (_query.isNotEmpty) {
-      final cat = _categoryOf(t.categoryId)?.name.toLowerCase() ?? '';
-      final acct = _accountName(t.accountId).toLowerCase();
-      final hay = '${t.description.toLowerCase()} '
-          '${(t.note ?? '').toLowerCase()} $cat $acct';
-      final textMatch = hay.contains(_query);
-
-      // Numeric match: when the query (stripped of ₱, spaces and commas) is a
-      // number, also match on the transaction amount — both exact (1000 ==
-      // 1,000) and as a substring of the formatted amount, so "1000" finds
-      // ₱1,000.00 and "10" finds ₱10.00. Either text OR amount may match.
-      var amountMatch = false;
-      final cleaned =
-          _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(',', '');
-      final n = double.tryParse(cleaned);
-      if (n != null) {
-        final fixed = t.amount.toStringAsFixed(2); // e.g. "1000.00"
-        final grouped = NumberFormat(
-          '#,##0.00',
-          'en_PH',
-        ).format(t.amount); // "1,000.00"
-        amountMatch = t.amount == n ||
-            fixed.contains(cleaned) ||
-            grouped.contains(_query);
-      }
-
-      if (!textMatch && !amountMatch) return false;
-    }
+    // Same matching rule as the v2 page and the phone (Plan 071 Phase 10a);
+    // this page keeps its own query text in the filters.
+    if (!_p.recordMatchesQuery(t, _query)) return false;
     return true;
   }
 
