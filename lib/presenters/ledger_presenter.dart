@@ -727,8 +727,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final cutoff = DateTime(asOf.year, asOf.month, asOf.day + 1);
     var owed = account.balance;
     for (final t in _allTransactions) {
+      // The received date, when set, decides the statement (Plan 072): an
+      // order placed before the close but received after it rides the next
+      // statement, as the lender bills it.
       if (t.accountId != accountId ||
-          t.date.isBefore(cutoff) ||
+          t.statementDate.isBefore(cutoff) ||
           t.isInstallment) {
         continue;
       }
@@ -763,11 +766,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     var paid = 0.0;
     for (final t in _allTransactions) {
       if (t.accountId != accountId ||
-          t.date.isBefore(from) ||
+          t.statementDate.isBefore(from) ||
           t.isInstallment) {
         continue;
       }
-      if (to != null && !t.date.isBefore(to)) continue;
+      if (to != null && !t.statementDate.isBefore(to)) continue;
       if (t.type == TransactionType.inflow) paid += t.amount;
     }
     return paid;
@@ -2046,6 +2049,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String description,
     String? note,
     String? categoryId,
+    DateTime? postedDate,
   }) async {
     if (!canSplitIntoInstallments(existing)) {
       throw ArgumentError.value(existing?.id, 'existing',
@@ -2072,6 +2076,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             months: months,
             interestRate: interestRate,
             date: date,
+            postedDate: postedDate,
             name: name,
             note: cleanNote,
             categoryId: cleanCategory,
@@ -2083,8 +2088,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             totalAmount: amount,
             monthlyAmount: _roundedMonthly(amount, months, interestRate),
             totalMonths: months,
-            startMonth: calculateInstallmentStartMonth(account, date),
+            // A received date (Plan 072) decides the statement the plan
+            // starts on, as the lender bills it.
+            startMonth:
+                calculateInstallmentStartMonth(account, postedDate ?? date),
             purchaseDate: date,
+            postedDate: postedDate,
             interestRate: interestRate,
             note: cleanNote,
             categoryId: cleanCategory,
@@ -2102,6 +2111,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       month: toMonthKey(date),
       installmentId: plan.id,
       isInstallment: true,
+      postedDate: postedDate,
     );
 
     if (existing == null) {
@@ -2295,11 +2305,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String name,
     required String? note,
     required String? categoryId,
+    DateTime? postedDate,
   }) {
+    // The received date, when set, is what the statement follows (Plan 072).
+    final before = plan.postedDate ?? previousDate;
+    final after = postedDate ?? date;
     final scheduleMoved = accountId != plan.accountId ||
-        previousDate.year != date.year ||
-        previousDate.month != date.month ||
-        previousDate.day != date.day;
+        before.year != after.year ||
+        before.month != after.month ||
+        before.day != after.day;
     final termsChanged = amount != plan.totalAmount ||
         months != plan.totalMonths ||
         interestRate != plan.interestRate;
@@ -2315,10 +2329,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // A month set by hand (or waiting for review) does not follow the
       // purchase date (Plan 068).
       startMonth: scheduleMoved && !_startMonthPinned(plan)
-          ? calculateInstallmentStartMonth(account, date,
+          ? calculateInstallmentStartMonth(account, after,
               deferralMonths: plan.deferralMonths)
           : plan.startMonth,
       purchaseDate: date,
+      postedDate: postedDate,
       deferralMonths: plan.deferralMonths,
       interestRate: interestRate,
       note: note,
@@ -2503,6 +2518,47 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (old.installmentId != null || txn.installmentId != null) {
       await refreshInstallmentHolds();
     }
+  }
+
+  // --- Received date (Plan 072) ---
+
+  /// Whether account [accountId] posts charges when an order is received
+  /// (Shopee PayLater style), so its purchases offer a received date.
+  bool postsOnReceipt(String? accountId) =>
+      accountById(accountId)?.postsOnReceipt ?? false;
+
+  /// Sets (or, with null, clears) when the lender posted record [id]. Only
+  /// the statement cycle reads it; balances and spending do not move, so no
+  /// balance delta is applied. The open statement's amount follows through
+  /// the bills presenter's ledger listener.
+  Future<void> setPostedDate(String id, DateTime? postedDate) async {
+    if (!_allTransactions.any((t) => t.id == id)) return;
+    final day = postedDate == null
+        ? null
+        : DateTime(postedDate.year, postedDate.month, postedDate.day);
+    _allTransactions = [
+      for (final t in _allTransactions)
+        t.id == id ? t.copyWith(postedDate: day) : t,
+    ];
+    safeNotify();
+    await _saveAll();
+  }
+
+  /// Confirms that records [ids] were received on the day they were ordered,
+  /// in one write. Stores the order date as the received date, which also
+  /// clears their "confirm received date" notice.
+  Future<void> markReceivedOnOrderDay(Iterable<String> ids) async {
+    final wanted = ids.toSet();
+    if (wanted.isEmpty) return;
+    _allTransactions = [
+      for (final t in _allTransactions)
+        wanted.contains(t.id)
+            ? t.copyWith(
+                postedDate: DateTime(t.date.year, t.date.month, t.date.day))
+            : t,
+    ];
+    safeNotify();
+    await _saveAll();
   }
 
   /// Deletes a transaction. An installment purchase takes its plan and the

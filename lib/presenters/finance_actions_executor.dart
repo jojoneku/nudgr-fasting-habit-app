@@ -2235,6 +2235,8 @@ class FinanceActionsExecutor extends ChangeNotifier
       name: name,
       note: (note == null || note.isEmpty) ? null : note,
       categoryId: categoryId,
+      // Nudgy does not edit the received date (Plan 072); keep it.
+      postedDate: before.postedDate,
     );
     final edit = _PlanEdit(
       before: before,

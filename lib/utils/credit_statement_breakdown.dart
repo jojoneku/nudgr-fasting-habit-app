@@ -27,6 +27,11 @@ import '../models/finance/transaction_record.dart';
 import 'credit_cycle.dart';
 import 'finance_format.dart';
 
+/// How many days before a statement's close a purchase on a "posts on
+/// receipt" account is flagged for a received date (Plan 072). Orders placed
+/// earlier in the cycle are received before the close in practice.
+const int kReceivedDateReviewDays = 14;
+
 /// Which group a statement line sits in.
 enum StatementLineKind {
   /// An ordinary charge on the card.
@@ -63,6 +68,11 @@ class StatementLine {
   /// Always positive; [kind] says which way it moved the balance.
   final double amount;
 
+  /// A purchase on a "posts on receipt" account (Plan 072) with no received
+  /// date, ordered close enough to the close that it may belong to the next
+  /// statement. The sheet asks the user to confirm when it was received.
+  final bool needsReceivedDate;
+
   const StatementLine({
     required this.txn,
     required this.kind,
@@ -70,6 +80,7 @@ class StatementLine {
     required this.installmentLabel,
     required this.dateLabel,
     required this.amount,
+    this.needsReceivedDate = false,
   });
 
   /// True for lines that lower what is owed (refunds, repayments).
@@ -164,6 +175,23 @@ class StatementBreakdown {
 
   /// Charges and credits on this statement — "Transaction total: 10 items".
   int get itemCount => purchases.length + installments.length + refunds.length;
+
+  /// Purchases still waiting on a received date (Plan 072), in order.
+  List<StatementLine> get linesNeedingReceivedDate => [
+        for (final l in purchases)
+          if (l.needsReceivedDate) l
+      ];
+
+  /// The notice over the items, or null when nothing needs a received date:
+  /// "2 orders may post when received. Set the received date so each lands
+  /// on the right statement. Left blank, the order date is used."
+  String? get receivedDateNotice {
+    final n = linesNeedingReceivedDate.length;
+    if (n == 0) return null;
+    final what = n == 1 ? '1 order may' : '$n orders may';
+    return '$what post when received. Set the received date so each lands '
+        'on the right statement. Left blank, the order date is used.';
+  }
 
   /// Carried over + purchases + installments − refunds: the card's balance at
   /// the close, line by line.
@@ -261,6 +289,10 @@ StatementBreakdown buildStatementBreakdown({
   final start = DateTime(cycle.start.year, cycle.start.month, cycle.start.day);
   final afterClose =
       DateTime(cycle.close.year, cycle.close.month, cycle.close.day + 1);
+  // Purchases ordered this close to the close may be received after it, so
+  // on a "posts on receipt" account they are flagged for a received date.
+  final reviewFrom = DateTime(cycle.close.year, cycle.close.month,
+      cycle.close.day - kReceivedDateReviewDays + 1);
 
   // Owed at the previous close: today's balance unwound across everything
   // dated from this cycle's first day on (spending raises what is owed).
@@ -273,11 +305,14 @@ StatementBreakdown buildStatementBreakdown({
 
   for (final t in transactions) {
     if (t.accountId != account.id || t.isInstallment) continue;
-    if (t.date.isBefore(start)) continue;
+    // A received date, when set, decides the statement (Plan 072), exactly as
+    // in LedgerPresenter.payableAsOf.
+    final on = t.statementDate;
+    if (on.isBefore(start)) continue;
     final isInflow = t.type == TransactionType.inflow;
     previousBalance += isInflow ? t.amount : -t.amount;
 
-    if (!t.date.isBefore(afterClose)) {
+    if (!on.isBefore(afterClose)) {
       // After the close: payments (and any other credit) toward this
       // statement, exactly what LedgerPresenter.paymentsToLiabilitySince counts.
       if (isInflow) {
@@ -295,12 +330,18 @@ StatementBreakdown buildStatementBreakdown({
     } else if (t.installmentId != null) {
       installments.add(_line(t, StatementLineKind.installment));
     } else {
-      purchases.add(_line(t, StatementLineKind.purchase));
+      purchases.add(_line(
+        t,
+        StatementLineKind.purchase,
+        needsReceivedDate: account.postsOnReceipt &&
+            t.postedDate == null &&
+            !on.isBefore(reviewFrom),
+      ));
     }
   }
 
   int byDate(StatementLine a, StatementLine b) {
-    final d = a.txn.date.compareTo(b.txn.date);
+    final d = a.txn.statementDate.compareTo(b.txn.statementDate);
     return d != 0 ? d : a.txn.id.compareTo(b.txn.id);
   }
 
@@ -329,7 +370,11 @@ bool _isPayment(TransactionRecord t) =>
     t.transferToAccountId != null ||
     t.billId != null;
 
-StatementLine _line(TransactionRecord t, StatementLineKind kind) {
+StatementLine _line(
+  TransactionRecord t,
+  StatementLineKind kind, {
+  bool needsReceivedDate = false,
+}) {
   String title = t.description.trim();
   String? installmentLabel;
   if (kind == StatementLineKind.installment) {
@@ -352,7 +397,11 @@ StatementLine _line(TransactionRecord t, StatementLineKind kind) {
     kind: kind,
     title: title,
     installmentLabel: installmentLabel,
-    dateLabel: _dayMonth.format(t.date),
+    dateLabel: t.postsOnDifferentDay
+        ? 'Ordered ${_dayMonth.format(t.date)} · '
+            'Received ${_dayMonth.format(t.postedDate!)}'
+        : _dayMonth.format(t.date),
     amount: t.amount,
+    needsReceivedDate: needsReceivedDate,
   );
 }

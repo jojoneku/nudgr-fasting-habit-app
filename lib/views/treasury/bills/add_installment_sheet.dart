@@ -57,6 +57,15 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   int _totalMonths = 12;
   String _startMonth = toMonthKey(DateTime.now());
   DateTime _purchaseDate = DateTime.now();
+
+  /// Plan 072: when the lender posted the purchase, on an account that posts
+  /// when an order is received. Null means the purchase date is used.
+  DateTime? _postedDate;
+
+  /// The date the first statement follows: the received date when set.
+  DateTime get _cycleDate => _postedDate ?? _purchaseDate;
+
+  bool get _offersReceivedDate => widget.presenter.postsOnReceipt(_accountId);
   int _deferralMonths = 0;
   double _interestRate = 0.0;
   bool _monthlyManuallyEdited = false;
@@ -91,7 +100,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     if (_startMonthTouched) return;
     final computed = widget.presenter.suggestedStartMonth(
       accountId: _accountId,
-      purchaseDate: _purchaseDate,
+      purchaseDate: _cycleDate,
       deferralMonths: _deferralMonths,
     );
     setState(() => _startMonth = computed);
@@ -122,10 +131,43 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     if (picked != null) {
       setState(() {
         _purchaseDate = picked;
+        // A received date before the purchase cannot happen.
+        final posted = _postedDate;
+        if (posted != null && posted.isBefore(picked)) _postedDate = null;
         _recalculateStartMonth();
       });
     }
   }
+
+  /// Plan 072: when the order was received — from the purchase day to about
+  /// three months after it. The first statement follows it.
+  Future<void> _pickReceivedDate() async {
+    final bought =
+        DateTime(_purchaseDate.year, _purchaseDate.month, _purchaseDate.day);
+    final last = DateTime(bought.year, bought.month + 3, bought.day);
+    final today = DateTime.now();
+    var initial = _postedDate ?? DateTime(today.year, today.month, today.day);
+    if (initial.isBefore(bought)) initial = bought;
+    if (initial.isAfter(last)) initial = last;
+    final picked = await showDatePicker(
+      context: context,
+      helpText: 'Received on',
+      initialDate: initial,
+      firstDate: bought,
+      lastDate: last,
+    );
+    if (picked != null) {
+      setState(() {
+        _postedDate = picked;
+        _recalculateStartMonth();
+      });
+    }
+  }
+
+  /// What sits inside "More options", named on its header.
+  String get _moreOptionsHint => _offersReceivedDate
+      ? 'Received date, category, deferral, interest, note'
+      : 'Category, deferral, interest, note';
 
   @override
   void initState() {
@@ -143,6 +185,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       _purchaseDate = e.purchaseDate ??
           DateTime.tryParse('${e.startMonth}-01') ??
           DateTime.now();
+      _postedDate = e.postedDate;
       _deferralMonths = e.deferralMonths;
       _interestRate = e.interestRate;
       _monthlyManuallyEdited = true;
@@ -181,6 +224,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   /// value, so editing a plan never hides its category, deferral, interest
   /// or note.
   bool get _moreOptionsHasValue =>
+      (_offersReceivedDate && _postedDate != null) ||
       (_categoryId?.isNotEmpty ?? false) ||
       _deferralMonths > 0 ||
       _interestRate > 0 ||
@@ -236,6 +280,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       totalMonths: _totalMonths,
       startMonth: _startMonth,
       purchaseDate: _purchaseDate,
+      postedDate: _postedDate,
       deferralMonths: _deferralMonths,
       interestRate: _interestRate,
       note: _noteCtrl.text,
@@ -275,7 +320,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     final hint = _startMonthTouched
         ? widget.presenter.pinnedStartMonthHint(
             accountId: _accountId,
-            purchaseDate: _purchaseDate,
+            purchaseDate: _cycleDate,
             deferralMonths: _deferralMonths,
             startMonth: _startMonth,
           )
@@ -363,7 +408,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   Widget _buildCycleHint(BuildContext context) {
     final explanation = widget.presenter.cycleHint(
       accountId: _accountId,
-      purchaseDate: _purchaseDate,
+      purchaseDate: _cycleDate,
       deferralMonths: _deferralMonths,
     );
     if (explanation == null) {
@@ -576,12 +621,48 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           AppFold(
             key: AddInstallmentSheetKeys.moreOptions,
             title: 'More options',
-            subtitle: 'Category, deferral, interest, note',
+            subtitle: _moreOptionsHint,
             initiallyOpen: _moreOptionsHasValue,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_offersReceivedDate) ...[
+                  const _FieldLabel('Received on (optional)'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SheetPickerBox(
+                          key: const ValueKey('installmentReceivedDate'),
+                          onTap: _pickReceivedDate,
+                          trailingIcon: Icons.local_shipping_outlined,
+                          child: Text(
+                            _postedDate == null
+                                ? 'Same as purchase date'
+                                : DateFormat('MMMM d, yyyy')
+                                    .format(_postedDate!),
+                          ),
+                        ),
+                      ),
+                      if (_postedDate != null)
+                        IconButton(
+                          tooltip: 'Clear received date',
+                          onPressed: () => setState(() {
+                            _postedDate = null;
+                            _recalculateStartMonth();
+                          }),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'The first statement follows this date.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 const _FieldLabel('Category (optional)'),
                 CategoryPickerField(
                   categories: widget.presenter.categories,
