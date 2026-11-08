@@ -1020,7 +1020,11 @@ class _CashFlowCard extends StatelessWidget {
       description: 'Income vs spending · ${monthLabel(p.currentMonth)}',
       trailing: WebBadge(
         p.savingsRateLabel,
-        tone: p.hasSavingsRate ? WebBadgeTone.success : WebBadgeTone.neutral,
+        tone: switch (p.savingsRateTone) {
+          RateTone.positive => WebBadgeTone.success,
+          RateTone.warning => WebBadgeTone.warning,
+          RateTone.neutral => WebBadgeTone.neutral,
+        },
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

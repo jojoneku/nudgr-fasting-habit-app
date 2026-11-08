@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/app_colors.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
@@ -8,6 +10,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/budget_overview_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/cashflow_strip.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_header_link.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/month_end_outlook_card.dart';
@@ -16,6 +19,7 @@ import 'package:intermittent_fasting/views/treasury/dashboard/next_month_forecas
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/statement_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/treasury_dashboard_view.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 import '../../../mocks.mocks.dart';
@@ -357,6 +361,134 @@ void main() {
     expect(find.text('Accounts', skipOffstage: false), findsNothing);
     // One action only: the FAB is hidden while the empty state shows.
     expect(find.byType(FloatingActionButton), findsNothing);
+  });
+
+  testWidgets(
+      'archived accounts only: full dashboard, "No active accounts" in the '
+      'Accounts slot', (tester) async {
+    final storage = buildStorage();
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          FinancialAccount(
+            id: 'a1',
+            name: 'Old bank',
+            category: AccountCategory.bank,
+            balance: 0,
+            colorHex: '#2E90FA',
+            icon: 'wallet',
+            isActive: false,
+          ),
+        ]);
+    when(storage.loadTransactions()).thenAnswer((_) async => []);
+    when(storage.loadBudgets()).thenAnswer((_) async => [budget(5000)]);
+    await pumpDashboard(tester, storage: storage);
+
+    expect(find.byKey(const ValueKey('dashboard.emptyState')), findsNothing);
+    expect(find.byType(NetWorthHero), findsOneWidget);
+    final slot = find.byKey(
+      const ValueKey('dashboard.accounts.empty'),
+      skipOffstage: false,
+    );
+    expect(slot, findsOneWidget);
+    expect(
+      find.descendant(of: slot, matching: find.text('No active accounts')),
+      findsOneWidget,
+    );
+    expect(find.text('No accounts yet', skipOffstage: false), findsNothing);
+    expect(
+      find.descendant(of: slot, matching: find.text('Add account')),
+      findsOneWidget,
+    );
+    // The budget still shows.
+    expect(
+        find.byType(BudgetOverviewCard, skipOffstage: false), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('no accounts but a bill this month: the bill still shows',
+      (tester) async {
+    final storage = buildStorage();
+    when(storage.loadAccounts()).thenAnswer((_) async => []);
+    when(storage.loadTransactions()).thenAnswer((_) async => []);
+    when(storage.loadBills()).thenAnswer((_) async => [
+          Bill(
+            id: 'b1',
+            name: 'Internet',
+            billType: BillType.utility,
+            amount: 1699,
+            dueDay: 1,
+            month: month,
+            categoryId: '',
+          ),
+        ]);
+    await pumpDashboard(tester, storage: storage);
+
+    expect(find.byKey(const ValueKey('dashboard.emptyState')), findsNothing);
+    final slot = find.byKey(
+      const ValueKey('dashboard.accounts.empty'),
+      skipOffstage: false,
+    );
+    expect(
+      find.descendant(of: slot, matching: find.text('No accounts yet')),
+      findsOneWidget,
+    );
+    expect(find.byType(UpcomingBillsCard, skipOffstage: false), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('held money above the balance shows the held line, not overdrawn',
+      (tester) async {
+    final storage = buildStorage();
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          account('a1', 'BPI Personal', 3000),
+          FinancialAccount(
+            id: 'h1',
+            name: 'Mom',
+            category: AccountCategory.custodian,
+            balance: 4000,
+            colorHex: '#2E90FA',
+            icon: 'wallet',
+            linkedAccountId: 'a1',
+          ),
+        ]);
+    final presenter = await pumpDashboard(tester, storage: storage);
+
+    expect(presenter.overdrawnAccountIds, isEmpty);
+    expect(find.text('Overdrawn · check the last transfer'), findsNothing);
+    expect(
+      find.text('Bank · ${formatPeso(4000)} held · more than the balance'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a negative savings rate is not painted green', (tester) async {
+    final storage = buildStorage();
+    when(storage.loadAccounts()).thenAnswer((_) async => [
+          account('a1', 'BPI Personal', 42100),
+          account('sav', 'Savings', 1000, category: AccountCategory.savings),
+        ]);
+    when(storage.loadTransactions()).thenAnswer((_) async => [
+          txn('t1', 10000, TransactionType.inflow),
+          TransactionRecord(
+            id: 'raid',
+            date: DateTime.now(),
+            accountId: 'sav',
+            categoryId: '',
+            amount: 2000,
+            type: TransactionType.outflow,
+            description: 'Test',
+            month: month,
+            transferGroupId: 'g1',
+          ),
+        ]);
+    final presenter = await pumpDashboard(tester, storage: storage);
+
+    expect(presenter.savingsRateTone, RateTone.warning);
+    final badge = tester.widget<AppBadge>(
+      find.byKey(const ValueKey('dashboard.cashflow.savingsRate')),
+    );
+    final context = tester.element(find.byType(CashflowStrip));
+    expect(badge.color, isNot(context.appColors.success));
+    expect(badge.color, context.appColors.orange);
   });
 
   testWidgets('the empty state goes away once an account exists',

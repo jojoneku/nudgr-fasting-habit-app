@@ -82,9 +82,11 @@ class TreasuryDashboardView extends StatelessWidget {
             child: CircularProgressIndicator(color: colorScheme.primary),
           );
         }
-        // No accounts: one empty state with one "Add your first account"
-        // action, and nothing else — every other card would read ₱0.00.
-        if (!presenter.hasAccounts) {
+        // A brand-new Treasury (no accounts, nothing logged this month): one
+        // empty state with one "Add your first account" action, and nothing
+        // else — every other card would read ₱0.00. Archived-only accounts,
+        // or bills / budgets / transactions this month, keep the dashboard.
+        if (presenter.showsOnlyEmptyState) {
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: _DashboardEmptyBody(
@@ -99,6 +101,7 @@ class TreasuryDashboardView extends StatelessWidget {
             presenter: presenter,
             syncPresenter: syncPresenter,
             onEditAccount: (account) => _showAccountSheet(context, account),
+            onAddAccount: () => _showAccountSheet(context),
             onAddGoalSavings: () => _showGoalSavingsSheet(context),
             onPayCredit: billsPresenter == null
                 ? null
@@ -179,6 +182,7 @@ class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final SyncPresenter? syncPresenter;
   final ValueChanged<FinancialAccount> onEditAccount;
+  final VoidCallback onAddAccount;
   final VoidCallback onAddGoalSavings;
 
   /// Null when no bills presenter is wired (no quick-pay available).
@@ -190,6 +194,7 @@ class _DashboardScrollBody extends StatelessWidget {
   const _DashboardScrollBody({
     required this.presenter,
     required this.onEditAccount,
+    required this.onAddAccount,
     required this.onAddGoalSavings,
     this.syncPresenter,
     this.onPayCredit,
@@ -209,14 +214,23 @@ class _DashboardScrollBody extends StatelessWidget {
           const SizedBox(height: 12),
           CashflowStrip(presenter: presenter),
           const SizedBox(height: 16),
-          DashboardAccountsList(
-            accounts: presenter.liquidAccounts,
-            sublineByAccountId: presenter.dashboardAccountSublines,
-            overdrawnAccountIds: presenter.overdrawnAccountIds,
-            yoursByAccountId: presenter.yoursByAccountId,
-            totalLiquidCash: presenter.totalLiquidCash,
-            onEdit: onEditAccount,
-          ),
+          // No active account (every one archived, or none left while bills
+          // and budgets remain): an empty card holds the Accounts slot.
+          if (!presenter.hasAccounts)
+            _EmptyAccountsCard(
+              title: presenter.accountsEmptyTitle,
+              body: presenter.accountsEmptyBody,
+              onAddAccount: onAddAccount,
+            )
+          else
+            DashboardAccountsList(
+              accounts: presenter.liquidAccounts,
+              sublineByAccountId: presenter.dashboardAccountSublines,
+              overdrawnAccountIds: presenter.overdrawnAccountIds,
+              yoursByAccountId: presenter.yoursByAccountId,
+              totalLiquidCash: presenter.totalLiquidCash,
+              onEdit: onEditAccount,
+            ),
           // Credit cards live here, directly under Accounts — a card balance is
           // an account, not a monthly bill (moved off the Bills tab).
           if (presenter.creditAccounts.isNotEmpty) ...[
@@ -264,6 +278,36 @@ class _DashboardScrollBody extends StatelessWidget {
             _HeldFundsCard(presenter: presenter, onEdit: onEditAccount),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The Accounts slot when no account is active: "No accounts yet", or
+/// "No active accounts" when every account is archived, with an Add action.
+class _EmptyAccountsCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final VoidCallback onAddAccount;
+
+  const _EmptyAccountsCard({
+    required this.title,
+    required this.body,
+    required this.onAddAccount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      key: const ValueKey('dashboard.accounts.empty'),
+      variant: AppCardVariant.elevated,
+      child: AppEmptyState(
+        icon: Icons.account_balance_wallet_outlined,
+        title: title,
+        body: body,
+        actionLabel: 'Add account',
+        onAction: onAddAccount,
+        iconSize: 48,
       ),
     );
   }
