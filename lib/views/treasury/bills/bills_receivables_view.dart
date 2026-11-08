@@ -603,15 +603,21 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   }
 
   Future<void> _batchSettle() async {
-    switch (_batchSection!) {
-      case _BatchSection.bills:
-        await _batchPayBills();
-      case _BatchSection.receivables:
-        await _batchReceiveReceivables();
-      case _BatchSection.budgeted:
-        await _batchFundExpenses();
-      case _BatchSection.installments:
-        await _batchPayInstallments();
+    // The batch sheet closes before the save runs, so a failure surfaces here.
+    // The selection is kept, so the user can try again.
+    try {
+      switch (_batchSection!) {
+        case _BatchSection.bills:
+          await _batchPayBills();
+        case _BatchSection.receivables:
+          await _batchReceiveReceivables();
+        case _BatchSection.budgeted:
+          await _batchFundExpenses();
+        case _BatchSection.installments:
+          await _batchPayInstallments();
+      }
+    } catch (e) {
+      if (mounted) AppToast.error(context, 'Could not save: $e');
     }
   }
 
@@ -1634,6 +1640,9 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
         recordInLedger: !_alreadyInLedger,
       );
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Keep the sheet open so the entry is not lost; say why it failed.
+      if (mounted) AppToast.error(context, 'Could not save: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1793,6 +1802,9 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
         recordInLedger: !_alreadyInLedger,
       );
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Keep the sheet open so the entry is not lost; say why it failed.
+      if (mounted) AppToast.error(context, 'Could not save: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1999,6 +2011,9 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
         paidDate: _paidDate,
       );
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Keep the sheet open so the entry is not lost; say why it failed.
+      if (mounted) AppToast.error(context, 'Could not save: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -2105,12 +2120,19 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
     final amount = double.tryParse(_amountCtrl.text);
     if (amount == null || amount <= 0) return;
     setState(() => _saving = true);
-    await widget.presenter.markPaid(
-      widget.installment.id,
-      overrideAmount: amount,
-      date: _date,
-    );
-    if (mounted) Navigator.pop(context);
+    try {
+      await widget.presenter.markPaid(
+        widget.installment.id,
+        overrideAmount: amount,
+        date: _date,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Keep the sheet open so the entry is not lost; say why it failed.
+      if (mounted) AppToast.error(context, 'Could not save: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override

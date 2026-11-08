@@ -88,7 +88,7 @@ class CashflowStrip extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                formatPeso(spare),
+                formatPesoMinus(spare),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: spare >= 0 ? appColors.success : cs.error,

@@ -54,7 +54,7 @@ class MetricCardsGrid extends StatelessWidget {
           _MetricRow(
             left: _MetricCard(
               label: 'Liquid Now',
-              value: formatPeso(presenter.totalLiquidCash),
+              value: formatPesoMinus(presenter.totalLiquidCash),
               sub: 'Cash across accounts',
               color: appColors.fast,
               icon: Icons.account_balance_wallet_outlined,
@@ -96,7 +96,7 @@ class MetricCardsGrid extends StatelessWidget {
             ),
             right: _MetricCard(
               label: 'Proj. Month-End Cash',
-              value: formatPeso(forecast),
+              value: formatPesoMinus(forecast),
               sub: 'After bills, budget & savings',
               color: forecastColor,
               icon: Icons.flag_outlined,

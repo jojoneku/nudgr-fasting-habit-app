@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_delete_copy.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
@@ -487,14 +488,14 @@ class _AccountRow extends StatelessWidget {
     final confirmed = await showWebConfirm(
       context,
       title: 'Delete ${account.name}?',
-      message: webAccountDeleteMessage(account),
+      message: accountDeleteMessage(account),
     );
     if (!confirmed || !context.mounted) return;
     try {
       await presenter.deleteAccount(account.id);
     } on StateError catch (e) {
       if (!context.mounted) return;
-      AppToast.error(context, webAccountDeleteError(e));
+      AppToast.error(context, accountDeleteError(e));
     }
   }
 
