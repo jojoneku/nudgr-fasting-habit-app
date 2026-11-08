@@ -115,13 +115,38 @@ class _LedgerViewState extends State<LedgerView> {
     );
   }
 
-  void _showEditTransactionSheet(TransactionRecord txn) {
+  void _showEditTransactionSheet(
+    TransactionRecord txn, {
+    bool split = false,
+    bool reimbursable = false,
+  }) {
     AppBottomSheet.show(
       context: context,
       title: 'Edit Transaction',
-      body: AddTransactionSheet(presenter: presenter, existing: txn),
+      body: AddTransactionSheet(
+        presenter: presenter,
+        existing: txn,
+        initialSplit: split,
+        initialReimbursable: reimbursable,
+      ),
     );
   }
+
+  /// Row action "Duplicate": a new entry prefilled from [txn], dated today.
+  void _showDuplicateTransactionSheet(TransactionRecord txn) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Log Transaction',
+      body: AddTransactionSheet(presenter: presenter, duplicateOf: txn),
+    );
+  }
+
+  late final _rowHandlers = _LedgerRowHandlers(
+    onEdit: _showEditTransactionSheet,
+    onDuplicate: _showDuplicateTransactionSheet,
+    onSplit: (t) => _showEditTransactionSheet(t, split: true),
+    onReimbursable: (t) => _showEditTransactionSheet(t, reimbursable: true),
+  );
 
   void _showManageCategoriesSheet() {
     AppBottomSheet.show(
@@ -158,12 +183,13 @@ class _LedgerViewState extends State<LedgerView> {
                   captureInbox: widget.captureInbox,
                   onOpenFilters: _showFilterSortSheet,
                 ),
+                _ActiveFilterChipsRow(presenter: presenter),
                 // In / Out / Net moved to the Dashboard's cashflow strip — no
                 // need to duplicate the month totals on the Ledger.
                 Expanded(
                   child: _TransactionList(
                     presenter: presenter,
-                    onEditTransaction: _showEditTransactionSheet,
+                    handlers: _rowHandlers,
                   ),
                 ),
                 _ChatHardErrorChip(presenter: presenter),
@@ -872,6 +898,87 @@ class _FilterSortButton extends StatelessWidget {
   }
 }
 
+/// One removable chip per active filter, scrolling sideways under the
+/// controls row, so a filter can be dropped without opening the sheet.
+/// Collapses to nothing when no filter is on.
+class _ActiveFilterChipsRow extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ActiveFilterChipsRow({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = presenter.activeFilterChips;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      alignment: Alignment.topCenter,
+      child: chips.isEmpty
+          ? const SizedBox(width: double.infinity)
+          : SizedBox(
+              height: 44,
+              child: ListView.separated(
+                key: const ValueKey('ledgerFilterChips'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: chips.length,
+                separatorBuilder: (context, i) => const SizedBox(width: 8),
+                itemBuilder: (context, i) => _RemovableFilterChip(
+                  chip: chips[i],
+                  onRemove: () => presenter.removeFilterChip(chips[i]),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _RemovableFilterChip extends StatelessWidget {
+  final LedgerFilterChip chip;
+  final VoidCallback onRemove;
+  const _RemovableFilterChip({required this.chip, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      label: 'Remove filter ${chip.label}',
+      excludeSemantics: true,
+      child: Material(
+        color: cs.primary.withValues(alpha: 0.12),
+        shape: StadiumBorder(side: BorderSide(color: cs.primary)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onRemove();
+          },
+          // The whole chip removes it: a 44 px row height keeps the target
+          // big enough, where a lone ✕ glyph would not be.
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12, right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  chip.label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.close_rounded, size: 16, color: cs.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The Filter & sort bottom sheet: multi-select categories + accounts, the owed
 /// toggle, and Date/Amount sort with direction. Applies live via the presenter.
 /// Opens the spending-heat calendar to pick a single day within the selected
@@ -1173,33 +1280,58 @@ class _SelectChip extends StatelessWidget {
 
 // ── Transaction List ─────────────────────────────────────────────────────────
 
+/// What a ledger row can open: the edit sheet (plain, or with Split or "I'll
+/// get this back" switched on) and a prefilled copy.
+class _LedgerRowHandlers {
+  final void Function(TransactionRecord txn) onEdit;
+  final void Function(TransactionRecord txn) onDuplicate;
+  final void Function(TransactionRecord txn) onSplit;
+  final void Function(TransactionRecord txn) onReimbursable;
+
+  const _LedgerRowHandlers({
+    required this.onEdit,
+    required this.onDuplicate,
+    required this.onSplit,
+    required this.onReimbursable,
+  });
+}
+
+/// The row's account swatch: the account's own colour, else its palette slot.
+/// Null when the record has no account.
+Color? _accountColorOf(
+    BuildContext context, LedgerPresenter presenter, String accountId) {
+  final account = presenter.accountById(accountId);
+  if (account == null) return null;
+  return resolveSliceColor(
+    account.colorHex,
+    presenter.accountIndexOf(accountId),
+    brightness: Theme.of(context).brightness,
+  );
+}
+
 /// Builds one transaction row — account/category resolved, swipe-to-delete with
-/// undo. Shared by the day-grouped list and the flat (amount-sorted) list.
+/// undo, long-press row actions. Shared by the day-grouped list and the flat
+/// (amount-sorted) list.
 Widget _buildTxnTile(
   BuildContext context,
   LedgerPresenter presenter,
   TransactionRecord txn,
-  void Function(TransactionRecord txn) onEdit,
+  _LedgerRowHandlers handlers,
 ) {
-  final account =
-      presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
-  final category =
-      presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
-  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
-  final accountColor = idx < 0
-      ? null
-      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
-          brightness: Theme.of(context).brightness);
   // Each row carries its own lighter-grey card fill (see TransactionListTile),
   // so a day's transactions read as a stack of items rather than text on the
   // page. Swipe-to-delete + undo is preserved by TransactionListTile's onDelete.
   return TransactionListTile(
     key: ValueKey(txn.id),
     txn: txn,
-    account: account,
-    accountColor: accountColor,
-    category: category,
-    onTap: () => onEdit(txn),
+    account: presenter.accountById(txn.accountId),
+    accountColor: _accountColorOf(context, presenter, txn.accountId),
+    category: presenter.categoryById(txn.categoryId),
+    actions: presenter.rowActionsFor(txn),
+    onTap: () => handlers.onEdit(txn),
+    onDuplicate: () => handlers.onDuplicate(txn),
+    onSplit: () => handlers.onSplit(txn),
+    onReimbursable: () => handlers.onReimbursable(txn),
     onDelete: () async {
       HapticFeedback.mediumImpact();
       final deleted = txn;
@@ -1222,36 +1354,31 @@ Widget _buildTxnTile(
 
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
-  final void Function(TransactionRecord txn) onEditTransaction;
+  final _LedgerRowHandlers handlers;
 
   const _TransactionList({
     required this.presenter,
-    required this.onEditTransaction,
+    required this.handlers,
   });
-
-  static const _empty = AppEmptyState(
-    icon: Icons.receipt_long_outlined,
-    title: 'No transactions this month',
-    body: 'Tap + to log your first one',
-  );
 
   @override
   Widget build(BuildContext context) {
+    final empty = _LedgerEmptyState(presenter: presenter);
     // Amount sort → a flat list ordered by amount (day grouping doesn't apply).
     if (presenter.sortField == LedgerSortField.amount) {
       final txns = presenter.sortedTransactions;
-      if (txns.isEmpty) return _empty;
+      if (txns.isEmpty) return empty;
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
         itemCount: txns.length,
         itemBuilder: (context, i) =>
-            _buildTxnTile(context, presenter, txns[i], onEditTransaction),
+            _buildTxnTile(context, presenter, txns[i], handlers),
       );
     }
 
     // Date sort → day-grouped; the presenter already ordered the day keys.
     final grouped = presenter.groupedTransactions;
-    if (grouped.isEmpty) return _empty;
+    if (grouped.isEmpty) return empty;
     final dates = grouped.keys.toList();
 
     return ListView.builder(
@@ -1263,9 +1390,30 @@ class _TransactionList extends StatelessWidget {
           date: date,
           transactions: grouped[date]!,
           presenter: presenter,
-          onEditTransaction: onEditTransaction,
+          handlers: handlers,
         );
       },
+    );
+  }
+}
+
+/// The empty list. When filters hide every row it says so and offers Clear
+/// filters; otherwise the month really is empty. There is no + button on the
+/// Ledger, so it gives no "tap +" hint.
+class _LedgerEmptyState extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _LedgerEmptyState({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = presenter.filtersHideEverything;
+    return AppEmptyState(
+      icon: filtered
+          ? Icons.filter_alt_off_outlined
+          : Icons.receipt_long_outlined,
+      title: presenter.emptyListTitle,
+      actionLabel: filtered ? 'Clear filters' : null,
+      onAction: filtered ? presenter.clearAllFilters : null,
     );
   }
 }
@@ -1276,35 +1424,28 @@ class _DateGroup extends StatelessWidget {
   final DateTime date;
   final List<TransactionRecord> transactions;
   final LedgerPresenter presenter;
-  final void Function(TransactionRecord txn) onEditTransaction;
+  final _LedgerRowHandlers handlers;
 
   const _DateGroup({
     required this.date,
     required this.transactions,
     required this.presenter,
-    required this.onEditTransaction,
+    required this.handlers,
   });
-
-  double get _dailyNet => transactions.fold(
-      0.0,
-      (sum, txn) => switch (txn.type) {
-            TransactionType.inflow => sum + txn.amount,
-            TransactionType.outflow => sum - txn.amount,
-            TransactionType.transfer => sum,
-          });
 
   @override
   Widget build(BuildContext context) {
+    final dailyNet = presenter.dailyNetOf(transactions);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: AppSection(
         title: _DateHeader.labelFor(date),
-        trailing: _dailyNet != 0 ? _DailyNetBadge(dailyNet: _dailyNet) : null,
+        trailing: dailyNet != 0 ? _DailyNetBadge(dailyNet: dailyNet) : null,
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
           children: [
-            ...transactions.map((txn) =>
-                _buildTxnTile(context, presenter, txn, onEditTransaction)),
+            ...transactions
+                .map((txn) => _buildTxnTile(context, presenter, txn, handlers)),
             const SizedBox(height: 4),
           ],
         ),

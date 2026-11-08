@@ -210,9 +210,9 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
     _date = t.date;
     if (t.transferGroupId != null) {
       _type = TransactionType.transfer;
-      final (fromId, toId) = _transferLegs(t);
-      _accountId = fromId ?? t.accountId;
-      _toAccountId = toId ?? t.transferToAccountId;
+      final legs = _p.transferLegsOf(t);
+      _accountId = legs.from?.accountId ?? t.accountId;
+      _toAccountId = legs.to?.accountId ?? t.transferToAccountId;
     } else {
       _type = t.type;
       _accountId = t.accountId;
@@ -250,9 +250,9 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
     final liquid = _accounts;
     if (t.transferGroupId != null) {
       _type = TransactionType.transfer;
-      final (fromId, toId) = _transferLegs(t);
-      _accountId = fromId ?? t.accountId;
-      _toAccountId = toId ?? t.transferToAccountId;
+      final legs = _p.transferLegsOf(t);
+      _accountId = legs.from?.accountId ?? t.accountId;
+      _toAccountId = legs.to?.accountId ?? t.transferToAccountId;
     } else {
       _type = t.type;
       _accountId = liquid.any((a) => a.id == t.accountId)
@@ -262,17 +262,6 @@ class _WebTransactionDialogV2State extends State<WebTransactionDialogV2> {
       _reimbursable = t.reimbursable;
       _owedByController.text = t.owedBy ?? '';
     }
-  }
-
-  (String?, String?) _transferLegs(TransactionRecord t) {
-    String? fromId;
-    String? toId;
-    for (final leg in _p.allTransactions) {
-      if (leg.transferGroupId != t.transferGroupId) continue;
-      if (leg.type == TransactionType.outflow) fromId = leg.accountId;
-      if (leg.type == TransactionType.inflow) toId = leg.accountId;
-    }
-    return (fromId, toId);
   }
 
   @override
