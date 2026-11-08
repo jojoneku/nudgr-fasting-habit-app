@@ -7,6 +7,8 @@ import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/account_badge.dart';
+import 'package:intermittent_fasting/utils/account_delete_copy.dart';
+import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -326,9 +328,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Account?'),
-        content: Text(
-          'This will permanently remove "${widget.existing!.name}". This cannot be undone.',
-        ),
+        content: Text(accountDeleteMessage(widget.existing!)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -353,15 +353,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       if (mounted) Navigator.pop(context);
     } on StateError catch (e) {
       if (!mounted) return;
-      final message = switch (e.message) {
-        'has_sub_accounts' =>
-          'Remove all sub-accounts first before deleting this account.',
-        'has_transactions' =>
-          'This account has transactions or bills linked to it. '
-              'Delete or reassign them first.',
-        _ => 'Could not delete account: ${e.message}',
-      };
-      AppToast.error(context, message);
+      AppToast.error(context, accountDeleteError(e));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1056,6 +1048,9 @@ class _CreditDetailsCard extends StatelessWidget {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: amountInputFormatters,
+              // Blank is fine (no limit); anything else must parse, or a typo
+              // like "1.2.3" would be saved as no limit with no warning.
+              validator: optionalAmountValidator,
               decoration: sheetFieldDecoration(
                 context,
                 prefixText: '₱ ',

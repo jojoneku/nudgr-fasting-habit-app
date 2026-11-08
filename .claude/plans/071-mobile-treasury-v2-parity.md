@@ -1,6 +1,6 @@
 # Plan 071 — Mobile Treasury: fix the scan bugs, then bring the web v2 ideas over
 
-> Status: PROPOSED · Authored: 2026-11-08 · Owner: Treasury mobile
+> Status: IN PROGRESS (Phase 0 built 2026-11-08) · Authored: 2026-11-08 · Owner: Treasury mobile
 > Builds on: Plan 063 (Treasury web v2), Plan 056 (Nudgr tokens)
 > Source: the 2026-11-08 scan that compared each web v2 page with its mobile counterpart (Dashboard, Ledger, Bills, Budget, History, Setup, Goals). Every bug in §3 Phase 0 was checked by hand in the code.
 
@@ -35,7 +35,7 @@ This plan fixes 1, removes 2, and ports the parts of 3 that fit a phone. It does
 | 0.2 | Pay sheets show nothing when a save fails. | `_MarkBillPaidSheet`, `_MarkReceivedSheet`, `_MarkExpensePaidSheet`, `_MarkInstallmentPaidSheet` (`bills_receivables_view.dart` ~1555–2190), `batch_settle_sheet.dart`, `shared/quick_pay_sheet.dart:76-92` | Add `catch` → `AppToast.error('Could not save: …')`, keep the sheet open. Phase 5 replaces these sheets, but this fix ships now because Phase 5 is large. |
 | 0.3 | `formatPeso(-1234)` renders `₱-1,234.00`. The Next Month card on the same screen shows `−₱1,234.00`. | `metric_cards_grid.dart:57, 99`, `cashflow_strip.dart:261` | Add `formatPesoMinus` to `lib/utils/finance_format.dart` (§4). Use it at these call sites. Replace `NextMonthForecast._signedPeso` (`treasury_dashboard_presenter.dart:151`) and web `_signedNegative` (`web_dashboard_page_v2.dart`) with it. |
 | 0.4 | The account delete dialog says "permanently remove … cannot be undone". The presenter refuses when the account has transactions, so the text is false. It never mentions Archive. | `account_setup_view.dart:324-365` | Use the shared delete copy from Phase 1 (move it in this PR if Phase 1 is not merged yet). Map a refused delete to the shared error text. |
-| 0.5 | Credit Limit has no validator. `1.2.3` is saved as `null` with no warning. | `account_setup_view.dart:1053-1062`, parse at `:241-243` | Add the same validator web uses (`web_account_form_dialog_v2.dart:256`): empty is allowed, otherwise a positive number. |
+| 0.5 | Credit Limit has no validator. `1.2.3` is saved as `null` with no warning. | `account_setup_view.dart:1053-1062`, parse at `:241-243` | Add the same validator web uses (`web_account_form_dialog_v2.dart:256`): empty is allowed, otherwise a positive number. *Built note:* the mobile `AmountInputFormatter` already blocks typing `1.2.3`; the gap that remained was a lone `.`, which the validator now rejects. The validator moved to `lib/utils/account_form_rules.dart` as `optionalAmountValidator`. |
 
 Tests:
 - `ledger_presenter` test: deleting a transfer leg through the edit-sheet path removes both legs and restores both on Undo.
@@ -349,4 +349,4 @@ None intended. Treasury has no XP, level or streak math in these paths. No new n
 
 - **Q1. Budget totals on the Dashboard:** expense-only (mobile today) or including savings groups (web today)? Recommendation: **expense-only.** "Budget health" asks "am I overspending?", and money moved into a goal is not spending. Web v2 should switch to the expense-only getters.
 - **Q2. Coming up on the Bills tab:** drop bills from it, or drop the whole Coming up section from the Bills tab? Recommendation: **drop the section from the Bills tab.** The Upcoming tab already shows the same bills in date order. Keep Coming up on the Dashboard and Hub.
-- **Q3. Edit-sheet Delete:** keep the confirm dialog and add Undo, or Undo only (like swipe and web)? Recommendation: **Undo only.** One delete behavior everywhere, and Undo is a better safety net than a confirm people tap through.
+- **Q3. Edit-sheet Delete:** keep the confirm dialog and add Undo, or Undo only (like swipe and web)? Recommendation: **Undo only.** One delete behavior everywhere, and Undo is a better safety net than a confirm people tap through. **Phase 0 used the recommendation (Undo only).** Revert to a confirm if the owner prefers it.

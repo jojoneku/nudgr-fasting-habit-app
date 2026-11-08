@@ -143,13 +143,10 @@ class NextMonthForecast {
   String get endingTitle => 'Projected end of ${monthShortLabel(month)}';
 
   /// [startingCash] as shown: `₱X`, or `−₱X` below zero.
-  String get startingCashLabel => _signedPeso(startingCash);
+  String get startingCashLabel => formatPesoMinus(startingCash);
 
   /// [ending] as shown: `₱X`, or `−₱X` below zero.
-  String get endingLabel => _signedPeso(ending);
-
-  static String _signedPeso(double amount) =>
-      amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
+  String get endingLabel => formatPesoMinus(ending);
 
   /// "+₱1,200.00 vs Oct" / "−₱800.00 vs Oct".
   String get changeLabel {

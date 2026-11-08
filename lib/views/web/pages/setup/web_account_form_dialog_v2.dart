@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_delete_copy.dart';
+import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -12,28 +14,6 @@ import '../../design/account_category_label.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_form_rules.dart';
-
-/// What the delete confirm says before [TreasuryDashboardPresenter.deleteAccount]
-/// runs. The presenter enforces the rule — it refuses with
-/// `StateError('has_sub_accounts')` when pockets still sit under the account
-/// and `StateError('has_transactions')` when any transaction or bill still
-/// references it — so this text only explains that rule; nothing is deleted
-/// around it.
-String webAccountDeleteMessage(FinancialAccount account) =>
-    'This removes "${account.name}" from every list and picker. An account '
-    'with transactions or bills linked to it cannot be deleted — delete or '
-    'reassign those first (a goal can be archived instead, which keeps its '
-    'history). Pockets under it must be removed first too.';
-
-/// The toast for a refused delete, by the presenter's reason.
-String webAccountDeleteError(StateError e) => switch (e.message) {
-      'has_sub_accounts' =>
-        'Remove all sub-accounts first before deleting this account.',
-      'has_transactions' =>
-        'This account has transactions or bills linked to it. '
-            'Delete or reassign them first.',
-      _ => 'Could not delete account: ${e.message}',
-    };
 
 /// The v2 Add/Edit Account form (Plan 063, Phase 8) on the kit's [WebDialog]:
 /// Name and Type side by side, the balance (with the credit limit or the goal
@@ -242,7 +222,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
     if (_nameController.text.trim().isEmpty) {
       errors['name'] = 'Enter account name';
     }
-    final balance = webOptionalAmountValidator(_balanceController.text) ??
+    final balance = optionalAmountValidator(_balanceController.text) ??
         widget.presenter.accountBalanceError(_category, _balanceController.text,
             accountId: widget.existing?.id);
     if (balance != null) errors['balance'] = balance;
@@ -253,13 +233,13 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
       }
     }
     if (_isCredit) {
-      final limit = webOptionalAmountValidator(_creditLimitController.text);
+      final limit = optionalAmountValidator(_creditLimitController.text);
       if (limit != null) errors['creditLimit'] = limit;
       if (_isFixedMinimum) {
         final min = webPositiveAmountValidator(_minimumFixedController.text);
         if (min != null) errors['minimumFixed'] = min;
       }
-      final rate = webOptionalAmountValidator(_financeRateController.text);
+      final rate = optionalAmountValidator(_financeRateController.text);
       if (rate != null) errors['financeRate'] = rate;
     }
     setState(() {
@@ -344,7 +324,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
     final confirmed = await showWebConfirm(
       context,
       title: 'Delete ${account.name}?',
-      message: webAccountDeleteMessage(account),
+      message: accountDeleteMessage(account),
     );
     if (!confirmed || !mounted) return;
 
@@ -354,7 +334,7 @@ class _WebAccountFormDialogV2State extends State<WebAccountFormDialogV2> {
       if (mounted) Navigator.of(context).pop();
     } on StateError catch (e) {
       if (!mounted) return;
-      AppToast.error(context, webAccountDeleteError(e));
+      AppToast.error(context, accountDeleteError(e));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

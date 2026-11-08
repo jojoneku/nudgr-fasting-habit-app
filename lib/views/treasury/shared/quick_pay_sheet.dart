@@ -86,6 +86,9 @@ class _QuickPaySheetState extends State<QuickPaySheet> {
         date: _date,
       );
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Keep the sheet open so the entry is not lost; say why it failed.
+      if (mounted) AppToast.error(context, 'Could not save: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

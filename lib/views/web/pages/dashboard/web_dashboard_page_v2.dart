@@ -505,7 +505,7 @@ class _OutlookCard extends StatelessWidget {
           _OutlookRow(
             label: 'Liquid now',
             caption: 'Cash across accounts',
-            amount: _signedNegative(p.totalLiquidCash),
+            amount: formatPesoMinus(p.totalLiquidCash),
           ),
           _OutlookRow(
             label: 'To receive',
@@ -543,7 +543,7 @@ class _OutlookCard extends StatelessWidget {
             child: _OutlookLine(
               label: 'Projected month-end',
               caption: 'After bills, budget & savings',
-              amount: _signedNegative(projected),
+              amount: formatPesoMinus(projected),
               color: projectedTone,
               emphasis: true,
             ),
@@ -641,11 +641,6 @@ class _NextMonthCard extends StatelessWidget {
     );
   }
 }
-
-/// `₱X` for a non-negative amount, `−₱X` for a negative one — the figure a
-/// row shows for a balance that may have gone below zero.
-String _signedNegative(double amount) =>
-    amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
 
 class _OutlookRow extends StatelessWidget {
   final String label;
@@ -1011,7 +1006,7 @@ class _AccountRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _signedNegative(spendable),
+                  formatPesoMinus(spendable),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: webNumericStyle(
