@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.125] - 2026-11-08
+
+### Added
+- one budget status for mobile and web (Plan 071 Phase 2)
+
 ## [1.1.124] - 2026-11-08
 
 ### Fixed
@@ -1091,7 +1096,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.124...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.125...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -1217,3 +1222,4 @@ distributed via `manifest.json`.
 [1.1.122]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.122
 [1.1.123]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.123
 [1.1.124]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.124
+[1.1.125]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.125
