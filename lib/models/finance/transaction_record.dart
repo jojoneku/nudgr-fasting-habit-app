@@ -38,6 +38,13 @@ class TransactionRecord {
   // or "Jana"). Surfaced on the spawned receivable. Null/empty when unknown.
   final String? owedBy;
 
+  /// The day the lender put this charge on the card's statement, when that
+  /// is not [date]. Shopee PayLater posts an order when it is received, not
+  /// when it was ordered (Plan 072). Null means the statement uses [date].
+  /// Only the statement cycle reads it; spending, budgets and history keep
+  /// using [date].
+  final DateTime? postedDate;
+
   /// When the record was first created on a device. Set once by the owning
   /// presenter's create path and never changed by an edit. Null on records
   /// saved before this field shipped ("added before this release"). It is not
@@ -64,9 +71,21 @@ class TransactionRecord {
     this.reimbursable = false,
     this.reimbursementReceivableId,
     this.owedBy,
+    this.postedDate,
     this.createdAt,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// The day that decides which statement this record lands on: the received
+  /// date when set, else [date].
+  DateTime get statementDate => postedDate ?? date;
+
+  /// True when a received date was set and differs from the order date.
+  bool get postsOnDifferentDay {
+    final p = postedDate;
+    return p != null &&
+        (p.year != date.year || p.month != date.month || p.day != date.day);
+  }
 
   factory TransactionRecord.fromJson(Map<String, dynamic> json) {
     return TransactionRecord(
@@ -88,6 +107,9 @@ class TransactionRecord {
       reimbursable: json['reimbursable'] as bool? ?? false,
       reimbursementReceivableId: json['reimbursementReceivableId'] as String?,
       owedBy: json['owedBy'] as String?,
+      postedDate: json['postedDate'] is String
+          ? DateTime.tryParse(json['postedDate'] as String)
+          : null,
       // Tolerant: a record saved before this field shipped (or a bad value)
       // loads as null rather than failing the pull.
       createdAt: json['createdAt'] is String
@@ -117,6 +139,7 @@ class TransactionRecord {
         'reimbursable': reimbursable,
         'reimbursementReceivableId': reimbursementReceivableId,
         'owedBy': owedBy,
+        'postedDate': postedDate?.toIso8601String(),
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -139,6 +162,8 @@ class TransactionRecord {
     bool? reimbursable,
     String? reimbursementReceivableId,
     String? owedBy,
+    // Sentinel-guarded like createdAt, so a received date can be cleared.
+    Object? postedDate = _kUnset,
     // Sentinel-guarded so a presenter can carry the stored value onto an
     // edited record exactly, null included. Omitting it keeps the current one.
     Object? createdAt = _kUnset,
@@ -164,6 +189,9 @@ class TransactionRecord {
       reimbursementReceivableId:
           reimbursementReceivableId ?? this.reimbursementReceivableId,
       owedBy: owedBy ?? this.owedBy,
+      postedDate: identical(postedDate, _kUnset)
+          ? this.postedDate
+          : postedDate as DateTime?,
       createdAt: identical(createdAt, _kUnset)
           ? this.createdAt
           : createdAt as DateTime?,

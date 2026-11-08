@@ -319,6 +319,8 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                 ? financeRatePercent / 100
                 : null,
         creditBrand: _isCredit ? _creditBrand : null,
+        // The web form has no switch for this yet (Plan 072): keep it.
+        postsOnReceipt: _isCredit && (widget.existing?.postsOnReceipt ?? false),
       );
 
       if (widget.existing != null) {

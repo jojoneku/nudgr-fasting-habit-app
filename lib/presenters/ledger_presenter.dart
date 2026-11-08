@@ -72,6 +72,51 @@ class LedgerFilterChip {
   int get hashCode => Object.hash(kind, id, label);
 }
 
+/// The four list orders the Filter & sort sheet offers, as one choice.
+enum LedgerSortOption {
+  newest('Newest'),
+  oldest('Oldest'),
+  largest('Largest'),
+  smallest('Smallest');
+
+  const LedgerSortOption(this.label);
+  final String label;
+}
+
+/// One selectable account or category in the Filter & sort pickers.
+@immutable
+class LedgerFilterOption {
+  final String id;
+  final String label;
+
+  /// The stored color and its palette slot, for the leading swatch.
+  final String colorHex;
+  final int paletteIndex;
+  final bool selected;
+
+  /// '12 this month', or '' when the option has no records this month.
+  final String detail;
+
+  const LedgerFilterOption({
+    required this.id,
+    required this.label,
+    required this.colorHex,
+    required this.paletteIndex,
+    required this.selected,
+    required this.detail,
+  });
+}
+
+/// A titled section of [LedgerFilterOption]s ("Cash & bank", "Used this
+/// month", …). Empty sections are never returned.
+@immutable
+class LedgerFilterGroup {
+  final String title;
+  final List<LedgerFilterOption> options;
+
+  const LedgerFilterGroup({required this.title, required this.options});
+}
+
 /// The optional row actions for one ledger record, shared by the mobile
 /// long-press sheet and the web v2 row menu so both show the same items.
 /// Edit, Duplicate and Delete are always offered and are not listed here.
@@ -682,8 +727,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final cutoff = DateTime(asOf.year, asOf.month, asOf.day + 1);
     var owed = account.balance;
     for (final t in _allTransactions) {
+      // The received date, when set, decides the statement (Plan 072): an
+      // order placed before the close but received after it rides the next
+      // statement, as the lender bills it.
       if (t.accountId != accountId ||
-          t.date.isBefore(cutoff) ||
+          t.statementDate.isBefore(cutoff) ||
           t.isInstallment) {
         continue;
       }
@@ -718,11 +766,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     var paid = 0.0;
     for (final t in _allTransactions) {
       if (t.accountId != accountId ||
-          t.date.isBefore(from) ||
+          t.statementDate.isBefore(from) ||
           t.isInstallment) {
         continue;
       }
-      if (to != null && !t.date.isBefore(to)) continue;
+      if (to != null && !t.statementDate.isBefore(to)) continue;
       if (t.type == TransactionType.inflow) paid += t.amount;
     }
     return paid;
@@ -940,6 +988,247 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
     safeNotify();
   }
+
+  // --- Filter & sort sheet ---
+
+  /// The current list order as one of the sheet's four choices.
+  LedgerSortOption get sortOption => switch ((_sortField, _sortDescending)) {
+        (LedgerSortField.date, true) => LedgerSortOption.newest,
+        (LedgerSortField.date, false) => LedgerSortOption.oldest,
+        (LedgerSortField.amount, true) => LedgerSortOption.largest,
+        (LedgerSortField.amount, false) => LedgerSortOption.smallest,
+      };
+
+  /// Applies one of the sheet's four list orders.
+  void setSortOption(LedgerSortOption option) => switch (option) {
+        LedgerSortOption.newest =>
+          setSort(LedgerSortField.date, descending: true),
+        LedgerSortOption.oldest =>
+          setSort(LedgerSortField.date, descending: false),
+        LedgerSortOption.largest =>
+          setSort(LedgerSortField.amount, descending: true),
+        LedgerSortOption.smallest =>
+          setSort(LedgerSortField.amount, descending: false),
+      };
+
+  /// 'November 2026' — the Month row's value.
+  String get monthFilterLabel => monthLabel(_selectedMonth);
+
+  /// 'Any day', or the picked day ('Nov 3') — the Day row's value.
+  String get dayFilterLabel {
+    final day = _selectedDate;
+    return day == null ? 'Any day' : _filterChipDayLabel(day);
+  }
+
+  /// The Accounts row's value: 'All accounts', one name, two names, or
+  /// 'N accounts'.
+  String get accountFilterSummary => _selectionSummary(
+        [
+          for (final id in _selectedAccountIds)
+            accountById(id)?.name ?? 'Removed account',
+        ],
+        all: 'All accounts',
+        noun: 'accounts',
+      );
+
+  /// The Categories row's value, worded like [accountFilterSummary].
+  String get categoryFilterSummary => _selectionSummary(
+        [
+          for (final id in _selectedCategoryIds)
+            categoryById(id)?.name ?? 'Removed category',
+        ],
+        all: 'All categories',
+        noun: 'categories',
+      );
+
+  static String _selectionSummary(
+    List<String> names, {
+    required String all,
+    required String noun,
+  }) {
+    if (names.isEmpty) return all;
+    if (names.length <= 2) return names.join(', ');
+    return '${names.length} $noun';
+  }
+
+  /// Whether a day, account or category filter is on (shows that row's
+  /// clear button in the sheet).
+  bool get hasDayFilter => _selectedDate != null;
+  bool get hasAccountFilter => _selectedAccountIds.isNotEmpty;
+  bool get hasCategoryFilter => _selectedCategoryIds.isNotEmpty;
+
+  /// Whether the "Only money owed to you" switch is shown: there is money
+  /// owed this month, or the filter is already on (so it can be turned off).
+  bool get showsOwedFilter => hasOutstandingOwed || _owedOnly;
+
+  /// The owed switch's caption: what is still owed this month.
+  String get owedFilterDetail =>
+      '${formatPeso(outstandingOwedTotal)} not paid back yet';
+
+  /// How many records the list shows with the current filters and search.
+  int get visibleTransactionCount => _visibleTransactions.length;
+
+  /// The sheet's main button: 'Show 23 transactions', 'Show 1 transaction',
+  /// or 'No transactions match' when the filters hide everything.
+  String get showResultsLabel {
+    final n = visibleTransactionCount;
+    if (n == 0) return 'No transactions match';
+    return n == 1 ? 'Show 1 transaction' : 'Show $n transactions';
+  }
+
+  /// True when Reset would change anything: a filter is on or the order is
+  /// not newest first.
+  bool get canResetFilters => activeFilterCount > 0 || isCustomSort;
+
+  /// Clears every filter and puts the list back to newest first.
+  void resetFiltersAndSort() {
+    _selectedCategoryIds.clear();
+    _selectedAccountIds.clear();
+    _owedOnly = false;
+    _selectedDate = null;
+    _sortField = LedgerSortField.date;
+    _sortDescending = true;
+    safeNotify();
+  }
+
+  /// Clears only the account filter.
+  void clearAccountFilters() {
+    if (_selectedAccountIds.isEmpty) return;
+    _selectedAccountIds.clear();
+    safeNotify();
+  }
+
+  /// Clears only the category filter.
+  void clearCategoryFilters() {
+    if (_selectedCategoryIds.isEmpty) return;
+    _selectedCategoryIds.clear();
+    safeNotify();
+  }
+
+  /// Records per account and per category in the selected month, transfer
+  /// legs left out (a transfer is not spending in either category).
+  ({Map<String, int> byAccount, Map<String, int> byCategory}) get _monthCounts {
+    final byAccount = <String, int>{};
+    final byCategory = <String, int>{};
+    for (final t in _transactionsIn(_selectedMonth)) {
+      byAccount[t.accountId] = (byAccount[t.accountId] ?? 0) + 1;
+      if (t.transferGroupId != null) continue;
+      byCategory[t.categoryId] = (byCategory[t.categoryId] ?? 0) + 1;
+    }
+    return (byAccount: byAccount, byCategory: byCategory);
+  }
+
+  static String _countDetail(int n) => n == 0 ? '' : '$n this month';
+
+  /// The account picker's sections: Cash & bank, Savings & goals, Credit,
+  /// Other, and Archived (only archived accounts used this month or already
+  /// picked). Empty sections are left out.
+  List<LedgerFilterGroup> get accountFilterGroups {
+    final counts = _monthCounts.byAccount;
+    final all = accounts;
+    LedgerFilterOption option(FinancialAccount a) => LedgerFilterOption(
+          id: a.id,
+          label: a.name,
+          colorHex: a.colorHex,
+          paletteIndex: all.indexOf(a),
+          selected: _selectedAccountIds.contains(a.id),
+          detail: _countDetail(counts[a.id] ?? 0),
+        );
+    const savingsKinds = {
+      AccountCategory.savings,
+      AccountCategory.goal,
+      AccountCategory.timeDeposit,
+    };
+    final cash = <LedgerFilterOption>[];
+    final savings = <LedgerFilterOption>[];
+    final credit = <LedgerFilterOption>[];
+    final other = <LedgerFilterOption>[];
+    final archived = <LedgerFilterOption>[];
+    for (final a in all) {
+      if (!a.isActive) {
+        if ((counts[a.id] ?? 0) > 0 || _selectedAccountIds.contains(a.id)) {
+          archived.add(option(a));
+        }
+      } else if (a.isLiability) {
+        credit.add(option(a));
+      } else if (savingsKinds.contains(a.category)) {
+        savings.add(option(a));
+      } else if (a.isLiquid) {
+        cash.add(option(a));
+      } else {
+        other.add(option(a));
+      }
+    }
+    return [
+      if (cash.isNotEmpty)
+        LedgerFilterGroup(title: 'Cash & bank', options: cash),
+      if (savings.isNotEmpty)
+        LedgerFilterGroup(title: 'Savings & goals', options: savings),
+      if (credit.isNotEmpty)
+        LedgerFilterGroup(title: 'Credit', options: credit),
+      if (other.isNotEmpty) LedgerFilterGroup(title: 'Other', options: other),
+      if (archived.isNotEmpty)
+        LedgerFilterGroup(title: 'Archived', options: archived),
+    ];
+  }
+
+  /// The category picker's sections for [query] (case-insensitive name
+  /// match; blank shows all): "Used this month" first, busiest first, then
+  /// the rest under Expense and Income. Transfer categories are left out.
+  List<LedgerFilterGroup> categoryFilterGroups(String query) {
+    final counts = _monthCounts.byCategory;
+    final needle = query.trim().toLowerCase();
+    final used = <(FinanceCategory, int)>[];
+    final expense = <FinanceCategory>[];
+    final income = <FinanceCategory>[];
+    for (final c in _categories) {
+      if (c.type == CategoryType.transfer) continue;
+      if (needle.isNotEmpty && !c.name.toLowerCase().contains(needle)) {
+        continue;
+      }
+      final n = counts[c.id] ?? 0;
+      if (n > 0) {
+        used.add((c, n));
+      } else if (c.type == CategoryType.income) {
+        income.add(c);
+      } else {
+        expense.add(c);
+      }
+    }
+    used.sort((a, b) {
+      final byCount = b.$2.compareTo(a.$2);
+      return byCount != 0 ? byCount : a.$1.name.compareTo(b.$1.name);
+    });
+    LedgerFilterOption option(FinanceCategory c, int n) => LedgerFilterOption(
+          id: c.id,
+          label: c.name,
+          colorHex: c.colorHex,
+          paletteIndex: _categories.indexOf(c),
+          selected: _selectedCategoryIds.contains(c.id),
+          detail: _countDetail(n),
+        );
+    return [
+      if (used.isNotEmpty)
+        LedgerFilterGroup(
+          title: 'Used this month',
+          options: [for (final (c, n) in used) option(c, n)],
+        ),
+      if (expense.isNotEmpty)
+        LedgerFilterGroup(
+          title: 'Expense',
+          options: [for (final c in expense) option(c, 0)],
+        ),
+      if (income.isNotEmpty)
+        LedgerFilterGroup(
+          title: 'Income',
+          options: [for (final c in income) option(c, 0)],
+        ),
+    ];
+  }
+
+  /// Whether the category picker shows a search box (long lists only).
+  bool get categoryFilterNeedsSearch =>
+      _categories.where((c) => c.type != CategoryType.transfer).length > 8;
 
   /// True when at least one filter is on and nothing is left to list — the
   /// list then says "No transactions match these filters" and offers Clear
@@ -1760,6 +2049,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String description,
     String? note,
     String? categoryId,
+    DateTime? postedDate,
   }) async {
     if (!canSplitIntoInstallments(existing)) {
       throw ArgumentError.value(existing?.id, 'existing',
@@ -1786,6 +2076,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             months: months,
             interestRate: interestRate,
             date: date,
+            postedDate: postedDate,
             name: name,
             note: cleanNote,
             categoryId: cleanCategory,
@@ -1797,8 +2088,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             totalAmount: amount,
             monthlyAmount: _roundedMonthly(amount, months, interestRate),
             totalMonths: months,
-            startMonth: calculateInstallmentStartMonth(account, date),
+            // A received date (Plan 072) decides the statement the plan
+            // starts on, as the lender bills it.
+            startMonth:
+                calculateInstallmentStartMonth(account, postedDate ?? date),
             purchaseDate: date,
+            postedDate: postedDate,
             interestRate: interestRate,
             note: cleanNote,
             categoryId: cleanCategory,
@@ -1816,6 +2111,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       month: toMonthKey(date),
       installmentId: plan.id,
       isInstallment: true,
+      postedDate: postedDate,
     );
 
     if (existing == null) {
@@ -2009,11 +2305,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String name,
     required String? note,
     required String? categoryId,
+    DateTime? postedDate,
   }) {
+    // The received date, when set, is what the statement follows (Plan 072).
+    final before = plan.postedDate ?? previousDate;
+    final after = postedDate ?? date;
     final scheduleMoved = accountId != plan.accountId ||
-        previousDate.year != date.year ||
-        previousDate.month != date.month ||
-        previousDate.day != date.day;
+        before.year != after.year ||
+        before.month != after.month ||
+        before.day != after.day;
     final termsChanged = amount != plan.totalAmount ||
         months != plan.totalMonths ||
         interestRate != plan.interestRate;
@@ -2029,10 +2329,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // A month set by hand (or waiting for review) does not follow the
       // purchase date (Plan 068).
       startMonth: scheduleMoved && !_startMonthPinned(plan)
-          ? calculateInstallmentStartMonth(account, date,
+          ? calculateInstallmentStartMonth(account, after,
               deferralMonths: plan.deferralMonths)
           : plan.startMonth,
       purchaseDate: date,
+      postedDate: postedDate,
       deferralMonths: plan.deferralMonths,
       interestRate: interestRate,
       note: note,
@@ -2217,6 +2518,47 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (old.installmentId != null || txn.installmentId != null) {
       await refreshInstallmentHolds();
     }
+  }
+
+  // --- Received date (Plan 072) ---
+
+  /// Whether account [accountId] posts charges when an order is received
+  /// (Shopee PayLater style), so its purchases offer a received date.
+  bool postsOnReceipt(String? accountId) =>
+      accountById(accountId)?.postsOnReceipt ?? false;
+
+  /// Sets (or, with null, clears) when the lender posted record [id]. Only
+  /// the statement cycle reads it; balances and spending do not move, so no
+  /// balance delta is applied. The open statement's amount follows through
+  /// the bills presenter's ledger listener.
+  Future<void> setPostedDate(String id, DateTime? postedDate) async {
+    if (!_allTransactions.any((t) => t.id == id)) return;
+    final day = postedDate == null
+        ? null
+        : DateTime(postedDate.year, postedDate.month, postedDate.day);
+    _allTransactions = [
+      for (final t in _allTransactions)
+        t.id == id ? t.copyWith(postedDate: day) : t,
+    ];
+    safeNotify();
+    await _saveAll();
+  }
+
+  /// Confirms that records [ids] were received on the day they were ordered,
+  /// in one write. Stores the order date as the received date, which also
+  /// clears their "confirm received date" notice.
+  Future<void> markReceivedOnOrderDay(Iterable<String> ids) async {
+    final wanted = ids.toSet();
+    if (wanted.isEmpty) return;
+    _allTransactions = [
+      for (final t in _allTransactions)
+        wanted.contains(t.id)
+            ? t.copyWith(
+                postedDate: DateTime(t.date.year, t.date.month, t.date.day))
+            : t,
+    ];
+    safeNotify();
+    await _saveAll();
   }
 
   /// Deletes a transaction. An installment purchase takes its plan and the

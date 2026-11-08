@@ -55,6 +55,11 @@ class Installment {
   final int totalMonths; // total number of payments
   final String startMonth; // 'YYYY-MM' — first payment month
   final DateTime? purchaseDate; // date the installment purchase was made
+
+  /// When the lender posted the purchase, if not [purchaseDate] (Plan 072):
+  /// Shopee PayLater posts an order when it is received. A computed first
+  /// payment month uses this date when it is set.
+  final DateTime? postedDate;
   final int deferralMonths; // months first payment is deferred (0 = none)
   final double
       interestRate; // monthly add-on interest rate in percent (0.0 = 0% promo)
@@ -82,6 +87,7 @@ class Installment {
     required this.totalMonths,
     required this.startMonth,
     this.purchaseDate,
+    this.postedDate,
     this.deferralMonths = 0,
     this.interestRate = 0.0,
     this.note,
@@ -253,6 +259,9 @@ class Installment {
       purchaseDate: json['purchaseDate'] != null
           ? DateTime.tryParse(json['purchaseDate'] as String)
           : null,
+      postedDate: json['postedDate'] is String
+          ? DateTime.tryParse(json['postedDate'] as String)
+          : null,
       deferralMonths: (json['deferralMonths'] as num?)?.toInt() ?? 0,
       interestRate: (json['interestRate'] as num?)?.toDouble() ?? 0.0,
       note: json['note'] as String?,
@@ -276,6 +285,7 @@ class Installment {
         'startMonth': startMonth,
         if (purchaseDate != null)
           'purchaseDate': purchaseDate!.toIso8601String(),
+        if (postedDate != null) 'postedDate': postedDate!.toIso8601String(),
         if (deferralMonths > 0) 'deferralMonths': deferralMonths,
         if (interestRate > 0) 'interestRate': interestRate,
         'note': note,
@@ -295,6 +305,7 @@ class Installment {
     int? totalMonths,
     String? startMonth,
     DateTime? purchaseDate,
+    Object? postedDate = _kUnset,
     int? deferralMonths,
     double? interestRate,
     String? note,
@@ -313,6 +324,9 @@ class Installment {
       totalMonths: totalMonths ?? this.totalMonths,
       startMonth: startMonth ?? this.startMonth,
       purchaseDate: purchaseDate ?? this.purchaseDate,
+      postedDate: identical(postedDate, _kUnset)
+          ? this.postedDate
+          : postedDate as DateTime?,
       deferralMonths: deferralMonths ?? this.deferralMonths,
       interestRate: interestRate ?? this.interestRate,
       note: note ?? this.note,
