@@ -114,4 +114,11 @@ class SettleCopy {
   String get alreadyLoggedSubtitle => kind == SettleKind.receivable
       ? 'Turn on if you logged this deposit by hand'
       : 'Turn on if you logged this payment by hand';
+
+  /// The "More options" fold's subtitle. It names the toggle's state, so a
+  /// collapsed fold never hides that "Already added to ledger" is on.
+  static String ledgerFoldSubtitle({required bool alreadyInLedger}) =>
+      alreadyInLedger
+          ? 'Already added to ledger: on, no new entry'
+          : 'Already added to ledger: off';
 }
