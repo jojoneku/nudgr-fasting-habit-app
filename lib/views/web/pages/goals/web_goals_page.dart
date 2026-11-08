@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_archive_copy.dart';
 import 'package:intermittent_fasting/utils/account_badge.dart';
+import 'package:intermittent_fasting/utils/account_meter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/goal_copy.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/utils/account_category_label.dart';
@@ -110,17 +113,15 @@ class WebGoalsPage extends StatelessWidget {
   Future<void> _archive(BuildContext context, FinancialAccount account) async {
     final ok = await showWebConfirm(
       context,
-      title: 'Archive ${account.name}?',
-      message: 'Files it away and takes it out of your account pickers. '
-          'Nothing is deleted — the transactions stay in your ledger, and you '
-          'can bring it back from the accounts list any time.',
+      title: accountArchiveTitle(account),
+      message: accountArchiveMessage(account),
       confirmLabel: 'Archive',
       destructive: false,
     );
     if (!ok) return;
     await presenter.archiveGoal(account.id);
     if (!context.mounted) return;
-    AppToast.success(context, 'Archived ${account.name}');
+    AppToast.success(context, accountArchivedToast(account));
   }
 
   // ── Build ────────────────────────────────────────────────────────────────
@@ -192,45 +193,58 @@ class WebGoalsPage extends StatelessWidget {
 // ===========================================================================
 
 /// The page's numbers, read from the presenter once per build so the widget
-/// tree below carries no filtering of its own. Everything here is a view of
-/// presenter-owned lists; no goal rule lives in this file.
+/// tree below carries no filtering of its own. Every list and figure here is
+/// a [TreasuryDashboardPresenter] getter — the same ones the mobile Goals
+/// screen reads (Plan 071 Phase 9); no goal rule lives in this file.
 class _GoalsFigures {
   final List<FinancialAccount> active;
   final List<FinancialAccount> completed;
   final List<FinancialAccount> plainSavings;
   final List<FinancialAccount> investments;
+  final List<FinancialAccount> restartable;
   final double totalSaved;
   final double thisMonth;
+  final int activeFunded;
+  final int notStartedCount;
   final double setAsideAllocated;
   final double setAsideFunded;
+  final double savedTowardTargets;
+  final double totalTarget;
+  final double? shareOfTargets;
 
   const _GoalsFigures({
     required this.active,
     required this.completed,
     required this.plainSavings,
     required this.investments,
+    required this.restartable,
     required this.totalSaved,
     required this.thisMonth,
+    required this.activeFunded,
+    required this.notStartedCount,
     required this.setAsideAllocated,
     required this.setAsideFunded,
+    required this.savedTowardTargets,
+    required this.totalTarget,
+    required this.shareOfTargets,
   });
 
-  factory _GoalsFigures.of(TreasuryDashboardPresenter p) {
-    final setAsides = p.setAsidesThisMonth;
-    return _GoalsFigures(
-      active: p.activeGoalAccounts,
-      completed: p.completedGoalAccounts,
-      plainSavings:
-          p.savingsAccounts.where((a) => (a.goalTarget ?? 0) <= 0).toList(),
-      investments: p.accounts
-          .where((a) => a.isActive && a.category == AccountCategory.investment)
-          .toList(),
-      totalSaved: p.totalSavingsAndGoals,
-      thisMonth: p.monthSavingsContributions,
-      setAsideAllocated: setAsides.fold(0.0, (s, e) => s + e.allocated),
-      setAsideFunded: setAsides.fold(0.0, (s, e) => s + e.funded),
-    );
-  }
+  factory _GoalsFigures.of(TreasuryDashboardPresenter p) => _GoalsFigures(
+        active: p.activeGoalAccounts,
+        completed: p.completedGoalAccounts,
+        plainSavings: p.plainSavingsAccounts,
+        investments: p.activeInvestmentAccounts,
+        restartable: p.restartableGoalAccounts,
+        totalSaved: p.totalSavingsAndGoals,
+        thisMonth: p.monthSavingsContributions,
+        activeFunded: p.goalsActiveFunded,
+        notStartedCount: p.goalsNotStartedCount,
+        setAsideAllocated: p.goalSetAsidesThisMonth,
+        setAsideFunded: p.goalSetAsidesFundedThisMonth,
+        savedTowardTargets: p.goalsSavedTowardTargets,
+        totalTarget: p.goalsTotalTarget,
+        shareOfTargets: p.goalsShareOfTargets,
+      );
 
   bool get isEmpty =>
       active.isEmpty &&
@@ -240,24 +254,6 @@ class _GoalsFigures {
 
   bool get hasCards => active.isNotEmpty || completed.isNotEmpty;
 
-  /// Goals with money in them, against the ones still at ₱0.
-  List<FinancialAccount> get started =>
-      active.where((a) => !isNotStarted(a)).toList();
-  List<FinancialAccount> get notStarted => active.where(isNotStarted).toList();
-
-  /// Goals the Start again dialog can offer: completed first, then live goal
-  /// accounts (a savings account with a target is not restartable).
-  List<FinancialAccount> get restartable => [
-        ...completed,
-        ...active.where((a) => a.category == AccountCategory.goal),
-      ];
-
-  double get savedTowardTargets =>
-      active.fold(0.0, (s, a) => s + math.max(0.0, a.balance));
-  double get totalTarget => active.fold(0.0, (s, a) => s + (a.goalTarget ?? 0));
-  double? get shareOfTargets =>
-      totalTarget > 0 ? savedTowardTargets / totalTarget : null;
-
   String get subtitle {
     if (active.isEmpty) return 'Funded through budget set-asides';
     final n = active.length;
@@ -265,9 +261,6 @@ class _GoalsFigures {
         '${formatPeso(savedTowardTargets)} saved of ${formatPeso(totalTarget)}'
         ' · funded through budget set-asides';
   }
-
-  static bool isNotStarted(FinancialAccount a) =>
-      a.balance <= 0 && a.goalStage != GoalStage.funded;
 }
 
 // ===========================================================================
@@ -336,14 +329,14 @@ class _TotalSavedHero extends StatelessWidget {
             items: [
               WebStat(
                 label: 'Active',
-                value: '${figures.started.length} funded',
+                value: '${figures.activeFunded} funded',
                 caption: 'of ${figures.active.length} '
                     '${figures.active.length == 1 ? 'goal' : 'goals'}',
                 tone: WebStatTone.success,
               ),
               WebStat(
                 label: 'Not started',
-                value: '${figures.notStarted.length}',
+                value: '${figures.notStartedCount}',
                 caption: 'nothing set aside yet',
               ),
               WebStat(
@@ -445,7 +438,8 @@ class WebGoalCard extends StatelessWidget {
 
   bool get _completed => account.goalStage == GoalStage.redeemed;
   bool get _reached => account.goalStage == GoalStage.funded;
-  bool get _notStarted => !_completed && _GoalsFigures.isNotStarted(account);
+  bool get _notStarted =>
+      !_completed && TreasuryDashboardPresenter.isGoalNotStarted(account);
 
   @override
   Widget build(BuildContext context) {
@@ -454,11 +448,9 @@ class WebGoalCard extends StatelessWidget {
     final green = context.appColors.success;
     final a = account;
     final target = a.goalTarget ?? 0;
-    // `goalProgress` pins a reached goal at 100%, so spending it doesn't make
-    // the bar collapse as though it was never saved for.
-    final progress = a.hasGoalTarget
-        ? a.goalProgress
-        : (target > 0 ? (a.balance / target).clamp(0.0, 1.0) : 0.0);
+    // Shared with the mobile GoalProgressCard: pins a reached goal at 100%,
+    // so spending it doesn't make the bar collapse.
+    final progress = goalMeterFraction(a);
     final tileColor = _notStarted
         ? cs.surfaceContainerHigh
         : resolveSliceColor(a.colorHex, index, brightness: theme.brightness);
@@ -498,7 +490,7 @@ class WebGoalCard extends StatelessWidget {
               key: WebKeys.goalsCardMarkSpent,
               icon: Icons.check_circle_outline,
               onTap: onMarkSpent),
-        if (a.category == AccountCategory.goal)
+        if (TreasuryDashboardPresenter.canStartAgain(a))
           WebMenuItem('Start again',
               key: WebKeys.goalsCardStartAgain,
               icon: Icons.restart_alt_rounded,
@@ -835,12 +827,7 @@ class _FundingNote extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Each goal is a Savings row in your budget. Money reaches '
-                    'it through a set-aside (Bills → Mark paid → Set aside '
-                    'into), not through a raw transfer, so the month-end '
-                    'outlook stays right. "Start again" clears a completed '
-                    'goal\'s spent stamp and starts it toward a new target; '
-                    'the account and its history stay put.',
+                    kGoalsFundingNote,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontSize: 12.5,
                       height: 1.5,
@@ -1138,7 +1125,7 @@ class _RestartGoalDialogState extends State<_RestartGoalDialog> {
   @override
   void initState() {
     super.initState();
-    _candidates = _GoalsFigures.of(widget.presenter).restartable;
+    _candidates = widget.presenter.restartableGoalAccounts;
     _selectedId = widget.account?.id ?? _candidates.firstOrNull?.id;
     _controller = TextEditingController(text: _targetText(_selected));
   }

@@ -215,6 +215,27 @@ void main() {
     }
   });
 
+  group('hero strip', () {
+    testWidgets(
+        'reads the presenter goal getters the mobile Goals screen reads '
+        '(Plan 071 Phase 9)', (tester) async {
+      final dash = await seeded(tester);
+      await pumpPage(tester, presenter: dash);
+
+      Finder inHero(String text) => find.descendant(
+          of: find.byKey(WebKeys.goalsHero), matching: find.text(text));
+
+      expect(inHero('${dash.goalsActiveFunded} funded'), findsOneWidget);
+      expect(inHero('of ${dash.goalsActiveCount} goals'), findsOneWidget);
+      expect(inHero('${dash.goalsNotStartedCount}'), findsOneWidget);
+      expect(inHero(formatPeso(dash.goalSetAsidesThisMonth)), findsOneWidget);
+      expect(
+          inHero('${formatPeso(dash.goalSetAsidesFundedThisMonth)} '
+              'funded so far'),
+          findsOneWidget);
+    });
+  });
+
   group('set a monthly amount', () {
     testWidgets('hands the not-started goal to the integrator', (tester) async {
       final dash = await seeded(tester);

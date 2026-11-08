@@ -8,6 +8,8 @@ import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.da
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/account_archive_copy.dart';
+import 'package:intermittent_fasting/utils/goal_copy.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -26,10 +28,16 @@ class GoalsSavingsScreen extends StatelessWidget {
   /// bar directly under it is pure duplication.
   final bool showAppBar;
 
+  /// The funding note's "Open the Savings rows in Budget". The Treasury tab
+  /// shell switches to the Budget tab; null (the screen pushed from the
+  /// Dashboard) hides the link and keeps the note.
+  final VoidCallback? onOpenBudget;
+
   const GoalsSavingsScreen({
     super.key,
     required this.presenter,
     this.showAppBar = true,
+    this.onOpenBudget,
   });
 
   void _showAddSheet(BuildContext context) {
@@ -68,23 +76,42 @@ class GoalsSavingsScreen extends StatelessWidget {
       BuildContext context, FinancialAccount account) async {
     final ok = await AppConfirmDialog.confirm(
       context: context,
-      title: 'Archive ${account.name}?',
-      body: 'Files it away and takes it out of your account pickers. Nothing '
-          'is deleted — the transactions stay in your ledger, and you can '
-          'bring it back from the accounts list any time.',
+      title: accountArchiveTitle(account),
+      body: accountArchiveMessage(account),
       confirmLabel: 'Archive',
     );
-    if (ok) await presenter.archiveGoal(account.id);
+    if (!ok) return;
+    await presenter.archiveGoal(account.id);
+    if (!context.mounted) return;
+    AppToast.success(context, accountArchivedToast(account));
   }
 
+  /// Start again for one goal, or — with no [account], from the funding
+  /// note — a picker over every restartable goal (completed first), as on web.
   Future<void> _promptRestart(
-      BuildContext context, FinancialAccount account) async {
+      BuildContext context, FinancialAccount? account) async {
     await AppBottomSheet.show(
       context: context,
-      title: 'Start ${account.name} again',
+      title: account == null
+          ? 'Start a goal again'
+          : 'Start ${account.name} again',
       body: _RestartGoalSheet(presenter: presenter, account: account),
     );
   }
+
+  /// The active-goal card's Start again, or null when the account has no
+  /// lifecycle to restart (a savings account with a target).
+  VoidCallback? _startAgainFor(
+          BuildContext context, FinancialAccount account) =>
+      TreasuryDashboardPresenter.canStartAgain(account)
+          ? () => _promptRestart(context, account)
+          : null;
+
+  /// The funding note's "Start again…", or null when no goal can restart.
+  VoidCallback? _noteStartAgain(BuildContext context) =>
+      presenter.restartableGoalAccounts.isEmpty
+          ? null
+          : () => _promptRestart(context, null);
 
   @override
   Widget build(BuildContext context) {
@@ -98,9 +125,8 @@ class GoalsSavingsScreen extends StatelessWidget {
         // stage filtering.
         final activeGoals = presenter.activeGoalAccounts;
         final completedGoals = presenter.completedGoalAccounts;
-        final plainSavings = presenter.savingsAccounts
-            .where((a) => (a.goalTarget ?? 0) <= 0)
-            .toList();
+        final plainSavings = presenter.plainSavingsAccounts;
+        final hasRows = presenter.hasGoalsOrSavings;
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
@@ -113,7 +139,7 @@ class GoalsSavingsScreen extends StatelessWidget {
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _showAddSheet(context),
             backgroundColor: context.appColors.success,
-            foregroundColor: Colors.white,
+            foregroundColor: theme.colorScheme.onPrimary,
             icon: const Icon(Icons.add),
             label: const Text('Add Goal',
                 style: TextStyle(fontWeight: FontWeight.w600)),
@@ -121,11 +147,16 @@ class GoalsSavingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             children: [
-              _TotalSavedHero(total: presenter.totalSavingsAndGoals),
+              _TotalSavedHero(
+                total: presenter.totalSavingsAndGoals,
+                activeFunded: presenter.goalsActiveFunded,
+                activeCount: presenter.goalsActiveCount,
+                notStarted: presenter.goalsNotStartedCount,
+                setAsides: presenter.goalSetAsidesThisMonth,
+                setAsidesFunded: presenter.goalSetAsidesFundedThisMonth,
+              ),
               const SizedBox(height: 20),
-              if (activeGoals.isEmpty &&
-                  completedGoals.isEmpty &&
-                  plainSavings.isEmpty)
+              if (!hasRows)
                 const AppCard(
                   variant: AppCardVariant.elevated,
                   child: AppEmptyState(
@@ -154,6 +185,8 @@ class GoalsSavingsScreen extends StatelessWidget {
                                 ? () =>
                                     _confirmMarkSpent(context, activeGoals[i])
                                 : null,
+                            onStartAgain:
+                                _startAgainFor(context, activeGoals[i]),
                           ),
                           if (i < activeGoals.length - 1)
                             Divider(
@@ -220,6 +253,13 @@ class GoalsSavingsScreen extends StatelessWidget {
                   ),
                 ),
               ],
+              if (hasRows) ...[
+                const SizedBox(height: 4),
+                _FundingNote(
+                  onOpenBudget: onOpenBudget,
+                  onStartAgain: _noteStartAgain(context),
+                ),
+              ],
             ],
           ),
         );
@@ -228,9 +268,24 @@ class GoalsSavingsScreen extends StatelessWidget {
   }
 }
 
+String _goalsWord(int n) => n == 1 ? 'goal' : 'goals';
+
 class _TotalSavedHero extends StatelessWidget {
   final double total;
-  const _TotalSavedHero({required this.total});
+  final int activeFunded;
+  final int activeCount;
+  final int notStarted;
+  final double setAsides;
+  final double setAsidesFunded;
+
+  const _TotalSavedHero({
+    required this.total,
+    required this.activeFunded,
+    required this.activeCount,
+    required this.notStarted,
+    required this.setAsides,
+    required this.setAsidesFunded,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -253,33 +308,218 @@ class _TotalSavedHero extends StatelessWidget {
         border: Border.all(color: green.withValues(alpha: 0.28)),
       ),
       padding: const EdgeInsets.all(17),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.savings_rounded, size: 30, color: green),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Text(
-                'TOTAL SAVED',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: green,
-                  letterSpacing: 1.0,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                formatPeso(total),
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: cs.onSurface,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
+              Icon(Icons.savings_rounded, size: 30, color: green),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'TOTAL SAVED',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: green,
+                      letterSpacing: 1.0,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    formatPeso(total),
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          const SizedBox(height: 14),
+          Divider(height: 1, color: green.withValues(alpha: 0.22)),
+          const SizedBox(height: 12),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _HeroStat(
+                    key: const ValueKey('goals.hero.active'),
+                    label: 'Active',
+                    value: '$activeFunded funded',
+                    caption: 'of $activeCount ${_goalsWord(activeCount)}',
+                    valueColor: green,
+                  ),
+                ),
+                VerticalDivider(
+                    width: 17, color: green.withValues(alpha: 0.22)),
+                Expanded(
+                  child: _HeroStat(
+                    key: const ValueKey('goals.hero.notStarted'),
+                    label: 'Not started',
+                    value: '$notStarted',
+                    caption: 'nothing set aside yet',
+                    valueColor: cs.onSurface,
+                  ),
+                ),
+                VerticalDivider(
+                    width: 17, color: green.withValues(alpha: 0.22)),
+                Expanded(
+                  child: _HeroStat(
+                    key: const ValueKey('goals.hero.setAsides'),
+                    label: 'Set-asides this month',
+                    value: formatPeso(setAsides),
+                    caption: '${formatPeso(setAsidesFunded)} funded so far',
+                    valueColor: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// One cell of the hero's strip: a small label, the figure, a caption. The
+/// figure scales down rather than wrap, so peso amounts fit at 360 dp.
+class _HeroStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final String caption;
+  final Color valueColor;
+
+  const _HeroStat({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.caption,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall
+              ?.copyWith(color: cs.onSurfaceVariant, height: 1.2),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          caption,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+              color: cs.onSurfaceVariant, fontSize: 11, height: 1.25),
+        ),
+      ],
+    );
+  }
+}
+
+/// "How goals are funded": the web Goals page's note, same words. Goals are
+/// funded through budget set-asides, never a raw transfer, so this screen has
+/// no Fund button; the note says where the money comes from instead.
+class _FundingNote extends StatelessWidget {
+  final VoidCallback? onOpenBudget;
+  final VoidCallback? onStartAgain;
+
+  const _FundingNote({required this.onOpenBudget, required this.onStartAgain});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final blue = cs.primary;
+    final link = onOpenBudget;
+    final restart = onStartAgain;
+    return AppSection(
+      title: 'How goals are funded',
+      child: AppCard(
+        key: const ValueKey('goals.fundingNote'),
+        variant: AppCardVariant.elevated,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: blue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: blue.withValues(alpha: 0.22)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 18, color: blue),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      kGoalsFundingNote,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        height: 1.5,
+                        color: cs.onSurface.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (link != null || restart != null) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (link != null)
+                    OutlinedButton(
+                      key: const ValueKey('goals.fundingNote.openBudget'),
+                      onPressed: link,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                      ),
+                      child: const Text('Open the Savings rows in Budget'),
+                    ),
+                  if (restart != null)
+                    TextButton(
+                      key: const ValueKey('goals.fundingNote.startAgain'),
+                      onPressed: restart,
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(44, 44),
+                      ),
+                      child: const Text('Start again…'),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -396,14 +636,19 @@ class _CompletedGoalRow extends StatelessWidget {
   }
 }
 
-/// Restarts a completed goal against a fresh target, keeping the account and
-/// its transaction history. Asks for the new target rather than reusing the old
+/// Restarts a goal against a fresh target, keeping the account and its
+/// transaction history. Asks for the new target rather than reusing the old
 /// one: a goal worth repeating usually costs something different the next time.
+///
+/// With an [account] it restarts that goal (an active goal's card or a
+/// completed row). With none (the funding note's "Start again…") it first asks
+/// which goal, from [TreasuryDashboardPresenter.restartableGoalAccounts] —
+/// completed goals first, as on web.
 class _RestartGoalSheet extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
-  final FinancialAccount account;
+  final FinancialAccount? account;
 
-  const _RestartGoalSheet({required this.presenter, required this.account});
+  const _RestartGoalSheet({required this.presenter, this.account});
 
   @override
   State<_RestartGoalSheet> createState() => _RestartGoalSheetState();
@@ -411,15 +656,16 @@ class _RestartGoalSheet extends StatefulWidget {
 
 class _RestartGoalSheetState extends State<_RestartGoalSheet> {
   late final TextEditingController _controller;
+  late final List<FinancialAccount> _candidates;
+  String? _selectedId;
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(
-      text: (widget.account.goalTarget ?? 0) > 0
-          ? widget.account.goalTarget!.toStringAsFixed(2)
-          : '',
-    );
+    _candidates = widget.presenter.restartableGoalAccounts;
+    _selectedId = widget.account?.id ?? _candidates.firstOrNull?.id;
+    _controller = TextEditingController(text: _targetText(_selected));
   }
 
   @override
@@ -428,20 +674,44 @@ class _RestartGoalSheetState extends State<_RestartGoalSheet> {
     super.dispose();
   }
 
-  double? get _target => double.tryParse(_controller.text.trim());
-  bool get _canSave => (_target ?? 0) > 0;
+  FinancialAccount? get _selected =>
+      widget.account ??
+      _candidates.where((a) => a.id == _selectedId).firstOrNull;
+
+  static String _targetText(FinancialAccount? a) =>
+      (a?.goalTarget ?? 0) > 0 ? a!.goalTarget!.toStringAsFixed(2) : '';
+
+  double? get _target =>
+      double.tryParse(_controller.text.replaceAll(',', '').trim());
+  bool get _canSave => _selected != null && (_target ?? 0) > 0 && !_saving;
+
+  void _select(String? id) => setState(() {
+        _selectedId = id;
+        _controller.text = _targetText(_selected);
+      });
 
   Future<void> _save() async {
+    final account = _selected;
     final target = _target;
-    if (target == null || target <= 0) return;
-    await widget.presenter
-        .restartGoalAccount(widget.account.id, newTarget: target);
-    if (mounted) Navigator.of(context).pop();
+    if (account == null || target == null || target <= 0) return;
+    setState(() => _saving = true);
+    try {
+      await widget.presenter.restartGoalAccount(account.id, newTarget: target);
+      if (!mounted) return;
+      AppToast.success(context, '${account.name} is tracking a new target');
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      AppToast.error(context, 'Could not restart goal: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final pickGoal = widget.account == null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -453,11 +723,24 @@ class _RestartGoalSheetState extends State<_RestartGoalSheet> {
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 16),
+        if (pickGoal) ...[
+          DropdownButtonFormField<String>(
+            key: const ValueKey('goals.startAgain.goal'),
+            initialValue: _selectedId,
+            decoration: const InputDecoration(labelText: 'Goal'),
+            items: [
+              for (final a in _candidates)
+                DropdownMenuItem(value: a.id, child: Text(a.name)),
+            ],
+            onChanged: _select,
+          ),
+          const SizedBox(height: 16),
+        ],
         AppTextField(
           controller: _controller,
           label: 'New target',
           prefix: const Text('₱ '),
-          autofocus: true,
+          autofocus: !pickGoal,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: amountInputFormatters,
           textInputAction: TextInputAction.done,
@@ -469,6 +752,7 @@ class _RestartGoalSheetState extends State<_RestartGoalSheet> {
           label: 'Start again',
           leading: Icons.restart_alt,
           onPressed: _canSave ? _save : null,
+          isLoading: _saving,
         ),
       ],
     );

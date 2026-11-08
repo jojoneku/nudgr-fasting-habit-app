@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/account_archive_copy.dart';
 import 'package:intermittent_fasting/utils/account_delete_copy.dart';
 import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
@@ -502,17 +503,15 @@ class _AccountRow extends StatelessWidget {
   Future<void> _archive(BuildContext context) async {
     final confirmed = await showWebConfirm(
       context,
-      title: 'Archive ${account.name}?',
-      message: 'The goal is hidden from every list and picker until it is '
-          'reactivated from "All accounts" on the Dashboard. Its '
-          'transactions stay in the ledger.',
+      title: accountArchiveTitle(account),
+      message: accountArchiveMessage(account),
       confirmLabel: 'Archive',
       destructive: false,
     );
     if (!confirmed || !context.mounted) return;
     await presenter.archiveGoal(account.id);
     if (!context.mounted) return;
-    AppToast.show(context, 'Archived ${account.name}.');
+    AppToast.show(context, accountArchivedToast(account));
   }
 
   @override
@@ -684,7 +683,7 @@ class _AccountRow extends StatelessWidget {
             // Archiving is a goal-lifecycle action on the presenter
             // (archiveGoal); other roles have no archive path, so the entry
             // only appears on goal rows.
-            if (isGoal)
+            if (TreasuryDashboardPresenter.canArchiveAccount(a))
               WebMenuItem('Archive',
                   key: WebKeys.setupRowArchive,
                   icon: Icons.inventory_2_outlined,
