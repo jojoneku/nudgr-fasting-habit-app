@@ -30,17 +30,6 @@ import '../../widgets/web_widgets.dart';
 
 const _gap = SizedBox(height: 14);
 
-/// "1st", "2nd", "16th" — due days read as dates, not counts.
-String ordinalDay(int day) {
-  if (day >= 11 && day <= 13) return '${day}th';
-  return switch (day % 10) {
-    1 => '${day}st',
-    2 => '${day}nd',
-    3 => '${day}rd',
-    _ => '${day}th',
-  };
-}
-
 String recurrenceLabel(RecurrenceType r) => switch (r) {
       RecurrenceType.monthly => 'Monthly',
       RecurrenceType.weekly => 'Weekly',

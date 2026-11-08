@@ -19,7 +19,7 @@ import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.
 import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
-import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
+import 'package:intermittent_fasting/views/treasury/bills/hero_bill_card.dart';
 import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/recurring_scope_field.dart';

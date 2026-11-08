@@ -10,6 +10,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
+import 'package:intermittent_fasting/views/treasury/bills/bills_tab_chips.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -91,6 +92,12 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await presenter.setMonth(month);
+    await tester.pumpAndSettle();
+    // Set-asides live on their own tab.
+    final chip = find.byKey(BillsTabKeys.chip(BillsTab.setAsides));
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
     await tester.pumpAndSettle();
   }
 

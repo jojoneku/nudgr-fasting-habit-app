@@ -24,7 +24,9 @@ void main() {
   late LedgerPresenter ledger;
   late BillsReceivablesPresenter presenter;
   late InstallmentPresenter installments;
-  const month = '2026-03';
+  // A month far ahead, so no bill is due soon: the hero would otherwise take
+  // the most imminent bill out of the Upcoming list these tests select in.
+  const month = '2030-03';
 
   Bill bill(String name, {double amount = 500}) => Bill(
         id: name,

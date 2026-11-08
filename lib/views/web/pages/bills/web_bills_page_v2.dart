@@ -138,40 +138,24 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
 
   // ── Presenter-backed lists and totals (Rule 1: no math in build) ─────────
 
-  List<Bill> get _unpaid => [...presenter.bills.where((b) => !b.isPaid)]
-    ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
+  // Unlike mobile, the desktop Upcoming tab lists the hero bill too: the hero
+  // sits in another column and the list is where batch select happens.
+  List<Bill> get _unpaid => presenter.unpaidBills;
 
-  List<Bill> get _paid => [...presenter.bills.where((b) => b.isPaid)]
-    ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
+  List<Bill> get _paid => presenter.paidBills;
 
-  List<Receivable> get _receivables {
-    final all = presenter.receivables;
-    // Still-pending receivables float to the top; received ones sink below.
-    return [
-      ...all.where((r) => !r.isReceived),
-      ...all.where((r) => r.isReceived),
-    ];
-  }
+  // Both lists are already ordered still-owed first by the presenter.
+  List<Receivable> get _receivables => presenter.receivables;
 
-  List<BudgetedExpense> get _setAsides {
-    final all = presenter.budgetedExpenses;
-    // Unfunded first, funded below (stable partition).
-    return [...all.where((e) => !e.isPaid), ...all.where((e) => e.isPaid)];
-  }
+  List<BudgetedExpense> get _setAsides => presenter.budgetedExpenses;
 
   List<Installment> get _installmentsDue => installmentPresenter.dueThisMonth;
 
-  Bill? get _heroBill => presenter.imminentUnpaidBills.firstOrNull;
+  Bill? get _heroBill => presenter.heroBill;
 
-  Set<String> get _imminentIds =>
-      {for (final b in presenter.imminentUnpaidBills) b.id};
+  double get _setAsidePendingTotal => presenter.setAsidePendingTotal;
 
-  double get _setAsidePendingTotal => presenter.budgetedExpenses
-      .where((e) => !e.isPaid)
-      .fold(0.0, (s, e) => s + e.allocatedAmount);
-
-  int get _setAsidePendingCount =>
-      presenter.budgetedExpenses.where((e) => !e.isPaid).length;
+  int get _setAsidePendingCount => presenter.setAsidePendingCount;
 
   List<String> _idsOf(_BatchSection section) => switch (section) {
         // Select-all covers every bill, paid included — the Paid tab is the
@@ -352,7 +336,7 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
       ),
       if (breakdown.isNotEmpty) ...[
         const SizedBox(height: WebInsets.xl),
-        _ByAccountCard(rows: breakdown),
+        _ByAccountCard(presenter: presenter, rows: breakdown),
       ],
       if (comingUp.isNotEmpty) ...[
         const SizedBox(height: WebInsets.xl),
@@ -412,15 +396,18 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
     final section = _tab.section;
     final ids = _idsOf(section);
 
+    final counts = presenter.tabCounts(installmentPresenter);
     final tabs = [
+      // The desktop list keeps the hero bill, so Upcoming counts every unpaid
+      // bill rather than the mobile count, which leaves the hero out.
       WebTab('Upcoming', count: _unpaid.length, key: WebKeys.billsTabUpcoming),
       WebTab('Set-asides',
-          count: _setAsides.length, key: WebKeys.billsTabSetAsides),
+          count: counts.setAsides, key: WebKeys.billsTabSetAsides),
       WebTab('Receivables',
-          count: _receivables.length, key: WebKeys.billsTabReceivables),
+          count: counts.receivables, key: WebKeys.billsTabReceivables),
       WebTab('Installments',
-          count: _installmentsDue.length, key: WebKeys.billsTabInstallments),
-      WebTab('Paid', count: _paid.length, key: WebKeys.billsTabPaid),
+          count: counts.installments, key: WebKeys.billsTabInstallments),
+      WebTab('Paid', count: counts.paid, key: WebKeys.billsTabPaid),
     ];
 
     final selectControl = KeyedSubtree(
@@ -501,11 +488,9 @@ class _BillsBodyV2State extends State<_BillsBodyV2> {
   List<Widget> _buildTabRows(BuildContext context) {
     switch (_tab) {
       case _BillsTab.upcoming:
-        final unpaid = _unpaid;
-        if (unpaid.isEmpty) return [_EmptyHint(_tab.emptyCopy)];
-        final imminent = _imminentIds;
-        final soon = unpaid.where((b) => imminent.contains(b.id)).toList();
-        final later = unpaid.where((b) => !imminent.contains(b.id)).toList();
+        if (_unpaid.isEmpty) return [_EmptyHint(_tab.emptyCopy)];
+        final soon = presenter.imminentUnpaidBills;
+        final later = presenter.unpaidLater;
         final grouped = soon.isNotEmpty && later.isNotEmpty;
         Widget row(Bill b, bool last) => _BillRowV2(
               presenter: presenter,
@@ -2443,44 +2428,16 @@ class _CreditLinesCard extends StatelessWidget {
 
   const _CreditLinesCard({required this.presenter, required this.onPay});
 
-  List<FinancialAccount> get _cards => presenter.creditAccounts;
   List<FinancialAccount> get _withBalance =>
-      _cards.where((c) => c.currentPayable > 0).toList();
+      presenter.creditAccountsWithBalance;
   List<FinancialAccount> get _clear =>
-      _cards.where((c) => c.currentPayable <= 0).toList();
+      presenter.creditAccounts.where((c) => c.currentPayable <= 0).toList();
 
-  double get _available => _cards.fold(
-      0.0, (s, c) => s + (c.availableCredit ?? 0).clamp(0, double.infinity));
+  // The description and each line's subtitle come from the presenter, so the
+  // mobile credit cards card reads the same words.
+  String get _description => presenter.creditLinesDescription;
 
-  String get _description {
-    final owed = presenter.totalCreditOwed(_cards);
-    if (owed <= 0) return 'No outstanding balance';
-    return 'Owe ${formatPeso(owed)} across ${_withBalance.length} of '
-        '${_cards.length} ${_plural(_cards.length, 'line')} · '
-        '${formatPeso(_available)} available · pay anytime';
-  }
-
-  String _subtitle(FinancialAccount card) {
-    final limit = card.creditLimit;
-    final parts = <String>[];
-    if (limit == null) {
-      parts.add('No credit limit set');
-    } else {
-      final u = card.utilization ?? 0;
-      if (u >= 0.5) parts.add('${(u * 100).round()} % used');
-      parts.add('${formatPeso((card.availableCredit ?? 0).clamp(0, limit))} '
-          'of ${formatPeso(limit)} available');
-    }
-    if (card.statementDay != null) {
-      parts.add('statement ${ordinalDay(card.statementDay!)}');
-    }
-    if (card.paymentDueDay != null) {
-      parts.add('due ${ordinalDay(card.paymentDueDay!)}');
-    } else if (card.dueDaysAfterStatement != null) {
-      parts.add('due ${card.dueDaysAfterStatement} days after');
-    }
-    return parts.join(' · ');
-  }
+  String _subtitle(FinancialAccount card) => presenter.creditLineSubtitle(card);
 
   String get _clearLine {
     final names = [
@@ -2767,16 +2724,10 @@ class _ThisMonthCard extends StatelessWidget {
 /// cover the unpaid bills and unfunded set-asides. Reads the pre-aggregated
 /// rows from [BillsReceivablesPresenter.fundingBreakdown]; no math here.
 class _ByAccountCard extends StatelessWidget {
-  final List<
-      ({
-        FinancialAccount? account,
-        double billsDue,
-        double setAsides,
-        double total,
-        int count,
-      })> rows;
+  final BillsReceivablesPresenter presenter;
+  final List<FundingRow> rows;
 
-  const _ByAccountCard({required this.rows});
+  const _ByAccountCard({required this.presenter, required this.rows});
 
   double get _grandTotal => rows.fold(0.0, (s, r) => s + r.total);
 
@@ -2801,13 +2752,7 @@ class _ByAccountCard extends StatelessWidget {
             Builder(builder: (context) {
               final row = rows[i];
               final account = row.account;
-              final detail = [
-                '${row.count} ${_plural(row.count, 'item')}',
-                if (row.billsDue > 0) '${formatPeso(row.billsDue)} bills',
-                if (row.setAsides > 0)
-                  '${formatPeso(row.setAsides)} set-asides',
-                if (account == null) 'no account set',
-              ].join(' · ');
+              final detail = presenter.fundingRowDetail(row);
               return WebListRow(
                 leading: account != null
                     ? AccountBadge(

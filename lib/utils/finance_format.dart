@@ -25,6 +25,17 @@ String formatPesoSigned(double amount) {
 String formatPesoMinus(double amount) =>
     amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
 
+/// "1st", "2nd", "16th" — due days read as dates, not counts.
+String ordinalDay(int day) {
+  if (day >= 11 && day <= 13) return '${day}th';
+  return switch (day % 10) {
+    1 => '${day}st',
+    2 => '${day}nd',
+    3 => '${day}rd',
+    _ => '${day}th',
+  };
+}
+
 /// Formats a 0..1 [fraction] as a percentage. e.g. 0.316 → '32%'.
 String formatPercent(double fraction, {int decimals = 0}) =>
     '${(fraction * 100).toStringAsFixed(decimals)}%';
