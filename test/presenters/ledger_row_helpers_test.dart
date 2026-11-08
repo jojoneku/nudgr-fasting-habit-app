@@ -15,7 +15,8 @@ void main() {
   const month = '2026-03';
 
   FinancialAccount account(String id,
-          {AccountCategory category = AccountCategory.ewallet}) =>
+          {AccountCategory category = AccountCategory.ewallet,
+          bool isActive = true}) =>
       FinancialAccount(
         id: id,
         name: id.toUpperCase(),
@@ -23,6 +24,7 @@ void main() {
         balance: 0,
         colorHex: '#FFFFFF',
         icon: 'wallet',
+        isActive: isActive,
       );
 
   TransactionRecord txn(
@@ -159,6 +161,21 @@ void main() {
       expect(a.canSplit, isTrue);
       expect(a.splitLabel, 'Edit installment plan');
       expect(a.canMarkReimbursable, isFalse);
+    });
+
+    test('expense on an archived credit card: no split', () async {
+      // The add/edit sheet only resolves active top-level accounts, so it
+      // could not honour the split there.
+      when(storage.loadAccounts()).thenAnswer((_) async => [
+            account('gcash'),
+            account('oldcard',
+                category: AccountCategory.creditCard, isActive: false),
+          ]);
+      await load();
+      final a =
+          presenter.rowActionsFor(txn('old-card-buy', accountId: 'oldcard'));
+      expect(presenter.accountById('oldcard')?.isLiability, isTrue);
+      expect(a.canSplit, isFalse);
     });
 
     test('installment payment record: no split', () {
