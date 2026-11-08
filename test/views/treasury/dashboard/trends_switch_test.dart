@@ -182,6 +182,11 @@ void main() {
     expect(inView(s.avgExpenseLabel), findsOneWidget);
     expect(inView(s.avgNetLabel), findsOneWidget);
     expect(inView(s.emptyText), findsNothing);
+    // Averages leave out the live month (₱34k in so far): only last month's
+    // ₱30k in and ₱20k out count.
+    expect(s.avgIncomeLabel, formatPesoCompact(30000));
+    expect(s.avgExpenseLabel, formatPesoCompact(20000));
+    expect(s.months.last.month, month);
   });
 
   testWidgets('a series with fewer than two points shows the empty text',

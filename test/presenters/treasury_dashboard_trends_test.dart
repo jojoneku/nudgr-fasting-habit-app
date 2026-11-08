@@ -43,6 +43,54 @@ void main() {
       expect(of([100, 100, 100]).normalizedValues, [0.5, 0.5, 0.5]);
     });
 
+    test('a negative net worth reads −₱, not ₱-', () {
+      final s = of([-20000, -12500], current: -12500);
+
+      expect(s.currentCompactLabel, '−${formatPesoCompact(12500)}');
+      expect(s.currentCompactLabel, '−₱12.5k');
+      expect(s.startLabel, '−₱20k');
+      expect(s.currentLabel, '−${formatPeso(12500)}');
+      expect(s.changeLabel, '↑ ${formatPesoCompact(7500)} (2 mo)');
+    });
+
+    test('a positive series fills to the bottom, unchanged', () {
+      final s = of([40000, 50000, 45000]);
+
+      expect(s.normalizedValues, [0.0, 1.0, 0.5]);
+      expect(s.normalizedBaseline, 0.0);
+    });
+
+    test('a series crossing zero fills to the zero line', () {
+      final s = of([-10000, 30000]);
+
+      expect(s.normalizedValues, [0.0, 1.0]);
+      expect(s.normalizedBaseline, closeTo(0.25, 1e-9));
+    });
+
+    test('an all-negative series hangs below zero at the top', () {
+      final s = of([-20000, -10000]);
+
+      // Range widens to 0: −20k at the bottom, −10k halfway, zero on top.
+      expect(s.normalizedValues, [0.0, 0.5]);
+      expect(s.normalizedBaseline, 1.0);
+    });
+
+    test('flat or all-zero series paint without NaN', () {
+      for (final vs in [
+        [0.0, 0.0, 0.0],
+        [100.0, 100.0],
+        [-100.0, -100.0],
+      ]) {
+        final s = of(vs);
+        expect(s.normalizedValues.any((v) => v.isNaN), isFalse, reason: '$vs');
+        expect(s.normalizedBaseline.isNaN, isFalse, reason: '$vs');
+        expect(s.normalizedBaseline, inInclusiveRange(0.0, 1.0));
+      }
+      expect(of([0, 0]).normalizedValues, [0.5, 0.5]);
+      expect(of([-100, -100]).normalizedValues, [0.0, 0.0]);
+      expect(of([-100, -100]).normalizedBaseline, 1.0);
+    });
+
     test('one point: no chart, no change', () {
       final s = of([50000], current: 50000);
 
@@ -106,6 +154,62 @@ void main() {
 
       expect(s.hasChart, isFalse);
       expect(s.emptyText, isNotEmpty);
+    });
+
+    IncomeExpenseTrendSummary withLive(
+      List<(double, double)> closed,
+      (double, double) live,
+    ) =>
+        IncomeExpenseTrendSummary(
+          months: [
+            for (var i = 0; i < closed.length; i++)
+              (
+                month: '2026-0${i + 1}',
+                label: 'M$i',
+                income: closed[i].$1,
+                expense: closed[i].$2,
+              ),
+            (month: '2026-11', label: 'Nov', income: live.$1, expense: live.$2),
+          ],
+          currentMonth: '2026-11',
+        );
+
+    test('averages cover closed months only; the live month stays charted', () {
+      // Five closed months at ₱50k in; two days into November, ₱0 so far.
+      final s = withLive(
+        [for (var i = 0; i < 5; i++) (50000, 30000)],
+        (0, 1000),
+      );
+
+      expect(s.months, hasLength(6));
+      expect(s.labels.last, 'Nov');
+      expect(s.closedMonths, hasLength(5));
+      expect(s.avgIncome, 50000);
+      expect(s.avgExpense, 30000);
+      expect(s.avgIncomeLabel, formatPesoCompact(50000));
+      expect(s.avgNetLabel, '+${formatPesoCompact(20000)}');
+      // The live month still sets the bar heights.
+      expect(s.expenseFractions.last, closeTo(1000 / 50000, 1e-9));
+    });
+
+    test('no closed month: the averages read "—"', () {
+      final s = withLive([], (8000, 3000));
+
+      expect(s.hasAverages, isFalse);
+      expect(s.avgIncomeLabel, '—');
+      expect(s.avgExpenseLabel, '—');
+      expect(s.avgNetLabel, '—');
+      expect(s.avgNetTone, StatementTone.neutral);
+    });
+  });
+
+  group('formatPesoCompactMinus', () {
+    test('typographic minus before the peso sign', () {
+      expect(formatPesoCompactMinus(-12500), '−₱12.5k');
+      expect(formatPesoCompactMinus(-2000000), '−₱2M');
+      expect(formatPesoCompactMinus(-500), '−${formatPeso(500)}');
+      expect(formatPesoCompactMinus(45000), '₱45k');
+      expect(formatPesoCompactMinus(-1e-12), formatPeso(0));
     });
   });
 

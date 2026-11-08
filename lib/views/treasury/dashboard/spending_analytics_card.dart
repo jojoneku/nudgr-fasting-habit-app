@@ -300,6 +300,7 @@ class _NetWorthBody extends StatelessWidget {
                   builder: (progress) => CustomPaint(
                     painter: _LineChartPainter(
                       values: summary.normalizedValues,
+                      baseline: summary.normalizedBaseline,
                       labels: summary.labels,
                       progress: progress,
                       lineColor: cs.primary,
@@ -430,11 +431,15 @@ class _GrowIn extends StatelessWidget {
   }
 }
 
-/// A line over points already placed between 0 (lowest) and 1 (highest),
-/// with a soft area under it and a label under each point. Drawn left to
-/// right as [progress] runs.
+/// A line over points already placed between 0 (bottom) and 1 (top), with a
+/// soft area between it and [baseline] and a label under each point. Drawn
+/// left to right as [progress] runs.
 class _LineChartPainter extends CustomPainter {
   final List<double> values;
+
+  /// Where the area fill stops, 0 (bottom) to 1 (top): the zero line once
+  /// the series goes negative, so a negative stretch fills downward from it.
+  final double baseline;
   final List<String> labels;
   final double progress;
   final Color lineColor;
@@ -446,6 +451,7 @@ class _LineChartPainter extends CustomPainter {
 
   _LineChartPainter({
     required this.values,
+    required this.baseline,
     required this.labels,
     required this.progress,
     required this.lineColor,
@@ -469,9 +475,10 @@ class _LineChartPainter extends CustomPainter {
     for (final p in points.skip(1)) {
       line.lineTo(p.dx, p.dy);
     }
+    final baseY = bottom - baseline.clamp(0.0, 1.0) * h;
     final area = Path.from(line)
-      ..lineTo(points.last.dx, bottom)
-      ..lineTo(points.first.dx, bottom)
+      ..lineTo(points.last.dx, baseY)
+      ..lineTo(points.first.dx, baseY)
       ..close();
 
     canvas.save();
@@ -510,6 +517,7 @@ class _LineChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LineChartPainter old) =>
       old.progress != progress ||
+      old.baseline != baseline ||
       old.lineColor != lineColor ||
       old.labelColor != labelColor ||
       !listEquals(old.values, values) ||

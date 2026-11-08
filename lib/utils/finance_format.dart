@@ -64,6 +64,16 @@ String formatPesoCompact(double amount) {
   return formatPeso(amount);
 }
 
+/// Like [formatPesoCompact] but a negative amount gets a typographic '−'
+/// before the peso symbol, not '₱-'. e.g. 45000 → '₱45k', -12500 → '−₱12.5k'.
+/// Rounded to cents first, so float residue never reads '−₱0.00'.
+String formatPesoCompactMinus(double amount) {
+  final cents = _roundToCents(amount);
+  return cents < 0
+      ? '−${formatPesoCompact(cents.abs())}'
+      : formatPesoCompact(cents == 0 ? 0.0 : cents);
+}
+
 /// Converts a 'YYYY-MM' month key to a human-readable label.
 /// e.g. '2026-03' → 'March 2026'
 String monthLabel(String monthKey) {
