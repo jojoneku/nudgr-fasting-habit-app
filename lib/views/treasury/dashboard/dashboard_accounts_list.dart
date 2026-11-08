@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -126,8 +127,8 @@ class _AccountRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   hasHeld
-                      ? '${_accountCategoryLabel(account.category)} · ${formatPeso(heldAmount)} held'
-                      : _accountCategoryLabel(account.category),
+                      ? '${account.category.label} · ${formatPeso(heldAmount)} held'
+                      : account.category.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
@@ -138,12 +139,12 @@ class _AccountRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          // Only liquid accounts reach this list (credit has its own
+          // section), so there is no liability branch here.
           AppNumberDisplay(
-            value: account.isLiability
-                ? 'Owed: ${formatPeso(account.balance)}'
-                : formatPeso(yours),
+            value: formatPeso(yours),
             size: AppNumberSize.body,
-            color: account.isLiability ? cs.error : cs.onSurface,
+            color: cs.onSurface,
           ),
         ],
       ),
@@ -193,17 +194,3 @@ class _ExpanderRow extends StatelessWidget {
     );
   }
 }
-
-String _accountCategoryLabel(AccountCategory category) => switch (category) {
-      AccountCategory.bank => 'Bank',
-      AccountCategory.ewallet => 'eWallet',
-      AccountCategory.cash => 'Cash',
-      AccountCategory.savings => 'Savings',
-      AccountCategory.goal => 'Goal',
-      AccountCategory.timeDeposit => 'Time deposit',
-      AccountCategory.creditCard => 'Credit card',
-      AccountCategory.creditLine => 'Credit line',
-      AccountCategory.bnpl => 'BNPL',
-      AccountCategory.investment => 'Investment',
-      AccountCategory.custodian => 'External',
-    };

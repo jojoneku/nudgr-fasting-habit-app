@@ -34,11 +34,16 @@ class TreasuryDashboardView extends StatelessWidget {
   /// claiming everything is synced.
   final SyncPresenter? syncPresenter;
 
+  /// Switches the module to the Budget tab, for the Budget card's
+  /// "Open budget" link. Null hides the link.
+  final VoidCallback? onOpenBudget;
+
   const TreasuryDashboardView({
     super.key,
     required this.presenter,
     this.billsPresenter,
     this.syncPresenter,
+    this.onOpenBudget,
   });
 
   void _showQuickPay(BuildContext context, FinancialAccount card) {
@@ -88,6 +93,7 @@ class TreasuryDashboardView extends StatelessWidget {
             onPayCredit: billsPresenter == null
                 ? null
                 : (card) => _showQuickPay(context, card),
+            onOpenBudget: onOpenBudget,
           ),
           floatingActionButton: _AddAccountFab(
             onTap: () => _showAccountSheet(context),
@@ -129,6 +135,9 @@ class _DashboardScrollBody extends StatelessWidget {
   /// Null when no bills presenter is wired (no quick-pay available).
   final ValueChanged<FinancialAccount>? onPayCredit;
 
+  /// Null hides the Budget card's "Open budget" link.
+  final VoidCallback? onOpenBudget;
+
   const _DashboardScrollBody({
     required this.presenter,
     required this.onAddAccount,
@@ -136,6 +145,7 @@ class _DashboardScrollBody extends StatelessWidget {
     required this.onAddGoalSavings,
     this.syncPresenter,
     this.onPayCredit,
+    this.onOpenBudget,
   });
 
   @override
@@ -192,7 +202,10 @@ class _DashboardScrollBody extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           if (presenter.hasBudget) ...[
-            BudgetOverviewCard(presenter: presenter),
+            BudgetOverviewCard(
+              presenter: presenter,
+              onOpenBudget: onOpenBudget,
+            ),
             const SizedBox(height: 16),
           ],
           _GoalSection(

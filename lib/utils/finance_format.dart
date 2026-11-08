@@ -36,6 +36,14 @@ String ordinalDay(int day) {
   };
 }
 
+/// Whole-peso figure for places that drop the centavos — status labels
+/// ("Over by ₱76") and tight cells ("₱76 over") — so a label stays one line.
+/// Totals keep [formatPeso]. e.g. 1234.56 → '₱1,235'.
+String formatPesoWhole(double amount) {
+  final formatter = NumberFormat('#,##0', 'en_PH');
+  return '₱${formatter.format(amount.round())}';
+}
+
 /// Formats a 0..1 [fraction] as a percentage. e.g. 0.316 → '32%'.
 String formatPercent(double fraction, {int decimals = 0}) =>
     '${(fraction * 100).toStringAsFixed(decimals)}%';
