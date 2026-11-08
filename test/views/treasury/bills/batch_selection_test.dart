@@ -206,12 +206,17 @@ void main() {
 
     await tester.tap(find.widgetWithText(FilledButton, 'Pay'));
     await tester.pumpAndSettle();
-    expect(find.text('Mark 2 bills paid'), findsOneWidget);
+    expect(find.text('Pay 2 bills'), findsOneWidget);
 
     await tester.tap(find.text('Mark 2 paid'));
     await tester.pumpAndSettle();
 
     expect(presenter.bills.every((b) => b.isPaid), isTrue);
+    // Each bill settles for its own amount, not a share of the total.
+    double paid(String name) =>
+        presenter.bills.firstWhere((b) => b.name == name).paidAmount!;
+    expect(paid('Meralco'), 500);
+    expect(paid('Maynilad'), 300);
     expect(ledger.accounts.first.balance, 19200);
     // The batch finishes by leaving selection mode.
     expect(find.textContaining('selected'), findsNothing);

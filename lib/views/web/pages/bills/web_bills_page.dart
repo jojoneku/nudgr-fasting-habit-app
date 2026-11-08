@@ -16,7 +16,7 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
-import 'package:intermittent_fasting/views/treasury/bills/batch_settle_sheet.dart';
+import 'package:intermittent_fasting/models/settle_request.dart';
 import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';

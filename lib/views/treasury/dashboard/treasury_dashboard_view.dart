@@ -18,7 +18,7 @@ import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dar
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
-import 'package:intermittent_fasting/views/treasury/shared/quick_pay_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class TreasuryDashboardView extends StatelessWidget {
@@ -49,7 +49,7 @@ class TreasuryDashboardView extends StatelessWidget {
   void _showQuickPay(BuildContext context, FinancialAccount card) {
     final bills = billsPresenter;
     if (bills == null) return;
-    showQuickPaySheet(context, card: card, presenter: bills);
+    showCardPaymentSheet(context, card: card, presenter: bills);
   }
 
   void _showAccountSheet(BuildContext context, [FinancialAccount? existing]) {

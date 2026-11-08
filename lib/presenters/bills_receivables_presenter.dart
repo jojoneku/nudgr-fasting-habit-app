@@ -3646,6 +3646,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   List<FinancialAccount> get creditAccounts =>
       _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
 
+  /// Accounts a card payment ([quickPayCard]) can come from: active and not a
+  /// liability — you can't pay one card from another. Shared by the mobile
+  /// Settle sheet and the web card-payment dialog so they offer the same list.
+  List<FinancialAccount> get cardPayerAccounts =>
+      _ledger.accounts.where((a) => a.isActive && !a.isLiability).toList();
+
   /// Non-liability accounts eligible to fund payment of [bill]. For a bill
   /// whose target account is a liability (CC, BNPL) the payer must be a
   /// non-liability account — you can't pay a CC from itself. For other bills
