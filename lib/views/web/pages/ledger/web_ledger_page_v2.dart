@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
@@ -90,7 +89,9 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
 
   late final WebLedgerFilters _f = widget.filters ?? WebLedgerFilters();
   bool get _ownsFilters => widget.filters == null;
-  String get _query => _f.query;
+
+  /// Anything narrowing the grid: a web filter or the shared search.
+  bool get _narrowed => _f.activeCount > 0 || _p.isSearching;
 
   final Set<String> _selected = <String>{};
 
@@ -113,7 +114,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
   void initState() {
     super.initState();
     _draftDate = DateTime.now();
-    _searchController.text = _f.query;
+    _searchController.text = _p.searchQuery;
     _searchController.addListener(_onSearchChanged);
     _f.addListener(_onFiltersChanged);
     _p.addListener(_onLedgerNeedsForm);
@@ -176,7 +177,8 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 220), () {
       if (!mounted) return;
-      _f.setQuery(_searchController.text.trim().toLowerCase());
+      // The web search always looks across every month.
+      _p.setSearch(_searchController.text, allMonths: true);
     });
   }
 
@@ -232,28 +234,8 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
       return false;
     }
     if (_f.toDate != null && t.date.isAfter(_dayEnd(_f.toDate!))) return false;
-    if (_query.isNotEmpty) {
-      final cat = _categoryOf(t.categoryId)?.name.toLowerCase() ?? '';
-      final acct = _accountName(t.accountId).toLowerCase();
-      final hay = '${t.description.toLowerCase()} '
-          '${(t.note ?? '').toLowerCase()} $cat $acct';
-      final textMatch = hay.contains(_query);
-
-      // Numeric match: "1000" finds ₱1,000.00 and "10" finds ₱10.00.
-      var amountMatch = false;
-      final cleaned =
-          _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(',', '');
-      final n = double.tryParse(cleaned);
-      if (n != null) {
-        final fixed = t.amount.toStringAsFixed(2);
-        final grouped = NumberFormat('#,##0.00', 'en_PH').format(t.amount);
-        amountMatch = t.amount == n ||
-            fixed.contains(cleaned) ||
-            grouped.contains(_query);
-      }
-
-      if (!textMatch && !amountMatch) return false;
-    }
+    // Search matching lives in the presenter, shared with the phone.
+    if (!_p.matchesSearch(t)) return false;
     return true;
   }
 
@@ -294,9 +276,8 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
 
   void _clearFilters() {
     _searchController.clear();
-    _f
-      ..clear()
-      ..setQuery('');
+    _f.clear();
+    _p.clearSearch();
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
@@ -507,7 +488,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final spansAll = _f.spansAllMonths;
+    final spansAll = _p.searchSpansAllMonths || _f.hasDateRange;
     final all =
         spansAll ? _p.ledgerSpreadsheetRowsAllMonths : _p.ledgerSpreadsheetRows;
     final rows = _sorted(all.where(_matches).toList());
@@ -561,6 +542,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
           categoryName: (id) => _categoryOf(id)?.name ?? '—',
           sortLabel: _sortLabel,
           rowCount: rows.length,
+          narrowed: _narrowed,
           onClear: _clearFilters,
         ),
         const SizedBox(height: WebInsets.lg),
@@ -686,7 +668,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
                                         _EmptyHintV2(
                                           hasAccounts:
                                               _liquidAccounts.isNotEmpty,
-                                          narrowed: _f.isNarrowed,
+                                          narrowed: _narrowed,
                                           onClearFilters: _clearFilters,
                                           onOpenSetup: widget.onOpenSetup,
                                         ),
@@ -710,8 +692,7 @@ class _WebLedgerPageV2State extends State<WebLedgerPageV2> {
                                               _categoriesFor(r.txn.type),
                                           accountOf: _accountOf,
                                           colorFor: _colorFor,
-                                          canSplit: (t) =>
-                                              _p.canSplitIntoInstallments(t),
+                                          rowActions: _p.rowActionsFor,
                                           onToggleSelect: () => setState(() {
                                             final id = r.txn.id;
                                             _selected.contains(id)
@@ -771,6 +752,7 @@ class _ToolbarV2 extends StatelessWidget {
   final String Function(String?) categoryName;
   final String sortLabel;
   final int rowCount;
+  final bool narrowed;
   final VoidCallback onClear;
 
   const _ToolbarV2({
@@ -782,6 +764,7 @@ class _ToolbarV2 extends StatelessWidget {
     required this.categoryName,
     required this.sortLabel,
     required this.rowCount,
+    required this.narrowed,
     required this.onClear,
   });
 
@@ -839,7 +822,7 @@ class _ToolbarV2 extends StatelessWidget {
           icon: Icons.swap_vert_rounded,
           onClear: () => f.setSort(null),
         ),
-      if (f.isNarrowed)
+      if (narrowed)
         SizedBox(
           height: kLedgerControlHeight,
           child: TextButton(
@@ -1440,7 +1423,7 @@ class _LedgerRowV2 extends StatefulWidget {
   final List<FinanceCategory> categories;
   final FinancialAccount? Function(String?) accountOf;
   final Color Function(FinanceCategory?) colorFor;
-  final bool Function(TransactionRecord) canSplit;
+  final LedgerRowActions Function(TransactionRecord) rowActions;
   final VoidCallback onToggleSelect;
   final void Function(TransactionRecord, DateTime) onDate;
   final void Function(TransactionRecord, String) onAccount;
@@ -1463,7 +1446,7 @@ class _LedgerRowV2 extends StatefulWidget {
     required this.categories,
     required this.accountOf,
     required this.colorFor,
-    required this.canSplit,
+    required this.rowActions,
     required this.onToggleSelect,
     required this.onDate,
     required this.onAccount,
@@ -1502,12 +1485,7 @@ class _LedgerRowV2State extends State<_LedgerRowV2> {
       bg = cs.onSurface.withValues(alpha: 0.06);
     }
 
-    final showSplit = !isTransfer &&
-        t.type == TransactionType.outflow &&
-        acct?.isLiability == true &&
-        widget.canSplit(t);
-    final showReimbursable =
-        !isTransfer && t.type == TransactionType.outflow && !t.isInstallment;
+    final actions = widget.rowActions(t);
 
     Widget body = Container(
       decoration: BoxDecoration(
@@ -1658,20 +1636,16 @@ class _LedgerRowV2State extends State<_LedgerRowV2> {
                     icon: Icons.content_copy_outlined,
                     onTap: () => widget.onDuplicate(t),
                   ),
-                  if (showSplit)
+                  if (actions.canSplit)
                     WebMenuItem(
-                      t.isInstallment
-                          ? 'Edit installment plan'
-                          : 'Split into installments',
+                      actions.splitLabel,
                       key: WebKeys.ledgerRowSplitInstallments,
                       icon: Icons.calendar_view_month_outlined,
                       onTap: () => widget.onSplit(t),
                     ),
-                  if (showReimbursable)
+                  if (actions.canMarkReimbursable)
                     WebMenuItem(
-                      t.reimbursable
-                          ? 'Edit "I\'ll get this back"'
-                          : 'Mark "I\'ll get this back"',
+                      actions.reimbursableLabel,
                       key: WebKeys.ledgerRowReimbursable,
                       icon: Icons.keyboard_return_rounded,
                       onTap: () => widget.onReimbursable(t),

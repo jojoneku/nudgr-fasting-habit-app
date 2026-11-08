@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
+import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/ai_coach_presenter.dart';
@@ -13,6 +14,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/history/monthly_summary_detail_view.dart';
 import 'package:intermittent_fasting/views/treasury/treasury_module_view.dart';
 
 import '../../mocks.mocks.dart';
@@ -24,7 +26,9 @@ import '../../mocks.mocks.dart';
 /// place (and your only way to sign out) when the window crosses the desktop
 /// breakpoint. Second, the seven built-in tabs are all still present.
 void main() {
-  MockStorageService buildStorage() {
+  MockStorageService buildStorage({
+    List<MonthlySummary> summaries = const [],
+  }) {
     final s = MockStorageService();
     when(s.loadNotificationPreferences())
         .thenAnswer((_) async => NotificationPreferences.defaults());
@@ -37,7 +41,7 @@ void main() {
     when(s.loadBudgets()).thenAnswer((_) async => []);
     when(s.loadBudgetGroups()).thenAnswer((_) async => []);
     when(s.loadBudgetedExpenses()).thenAnswer((_) async => []);
-    when(s.loadMonthlySummaries()).thenAnswer((_) async => []);
+    when(s.loadMonthlySummaries()).thenAnswer((_) async => [...summaries]);
     when(s.loadInstallments()).thenAnswer((_) async => []);
     when(s.loadGroceryCart()).thenAnswer((_) async => []);
     when(s.loadGroceryPriceMemory()).thenAnswer((_) async => []);
@@ -57,14 +61,15 @@ void main() {
     return s;
   }
 
-  Future<void> pumpModule(
+  Future<LedgerPresenter> pumpModule(
     WidgetTester tester, {
     List<TreasuryModuleTab> extraTabs = const [],
     int initialTabIndex = 0,
     ValueChanged<int>? onTabChanged,
     AiCoachPresenter? aiCoach,
+    List<MonthlySummary> summaries = const [],
   }) async {
-    final storage = buildStorage();
+    final storage = buildStorage(summaries: summaries);
     final stats = MockStatsPresenter();
     when(stats.addXp(any)).thenAnswer((_) async {});
     when(stats.stats).thenReturn(UserStats.initial());
@@ -95,6 +100,7 @@ void main() {
     ));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    return ledger;
   }
 
   testWidgets('renders all seven built-in tabs', (tester) async {
@@ -159,6 +165,97 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(seen, contains(3));
+  });
+
+  // Plan 071 Phase 8: a closed month's detail screen hands over to the Ledger,
+  // the same way the web History page does.
+  group('History → Open in Ledger', () {
+    MonthlySummary closedMonth(String month) => MonthlySummary(
+          month: month,
+          totalInflow: 1000,
+          totalOutflow: 400,
+          totalBills: 0,
+          totalBillsPaid: 0,
+          billCount: 0,
+          billsPaidCount: 0,
+          totalReceivables: 0,
+          totalReceived: 0,
+          receivableCount: 0,
+          netSavings: 600,
+          endingCash: 600,
+          accountSnapshots: const {},
+          categorySpend: const {},
+        );
+
+    testWidgets(
+        'sets the ledger month, closes the detail and selects the Ledger tab',
+        (tester) async {
+      final ledger = await pumpModule(
+        tester,
+        initialTabIndex: 4, // History
+        summaries: [closedMonth('2025-06')],
+      );
+      await tester.pumpAndSettle();
+      expect(ledger.selectedMonth, isNot('2025-06'));
+
+      await tester.tap(find.text('June 2025'));
+      await tester.pumpAndSettle();
+      expect(find.byType(MonthlySummaryDetailView), findsOneWidget);
+
+      final button = find.widgetWithText(OutlinedButton, 'Open in Ledger');
+      expect(button, findsOneWidget);
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(44));
+
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      expect(ledger.selectedMonth, '2025-06');
+      expect(find.byType(MonthlySummaryDetailView), findsNothing);
+      final tabBar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(tabBar.controller!.index, 1);
+    });
+
+    testWidgets('clears the Ledger filters so its totals match the month',
+        (tester) async {
+      final ledger = await pumpModule(
+        tester,
+        initialTabIndex: 4, // History
+        summaries: [closedMonth('2025-06')],
+      );
+      await tester.pumpAndSettle();
+      // A GCash filter (plus a category, owed and day filter) left on from
+      // an earlier Ledger visit.
+      ledger.setAccount('gcash');
+      ledger.setCategoryFilter('food');
+      ledger.setOwedFilter(true);
+      ledger.setSelectedDate(DateTime(2026, 1, 5));
+      expect(ledger.activeFilterCount, greaterThan(0));
+
+      await tester.tap(find.text('June 2025'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Open in Ledger'));
+      await tester.pumpAndSettle();
+
+      expect(ledger.selectedMonth, '2025-06');
+      expect(ledger.selectedAccountIds, isEmpty);
+      expect(ledger.selectedCategoryIds, isEmpty);
+      expect(ledger.owedOnly, isFalse);
+      expect(ledger.selectedDate, isNull);
+      expect(ledger.activeFilterCount, 0);
+    });
+
+    testWidgets('a standalone detail screen shows no Open in Ledger button',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: MonthlySummaryDetailView(
+          summary: closedMonth('2025-06'),
+          categories: const [],
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open in Ledger'), findsNothing);
+    });
   });
 
   // Nudgy used to be reachable only from the Hub's quick-log bar. The Ledger's

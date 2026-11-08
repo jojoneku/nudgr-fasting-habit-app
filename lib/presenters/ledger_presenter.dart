@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/extracted_entry.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
@@ -39,6 +40,65 @@ enum ReceiptScanOutcome {
   serverError,
   unavailable,
   failed,
+}
+
+/// Which filter a [LedgerFilterChip] stands for.
+enum LedgerFilterKind { day, owed, account, category }
+
+/// Why the phone ledger list is empty: the month has no records, the filters
+/// hide them all, or the search matches none. Drives the empty title, body
+/// and button (see [LedgerPresenter.emptyListReason]).
+enum LedgerEmptyReason { emptyMonth, filters, search }
+
+/// One active ledger filter, shown as a removable chip under the controls
+/// row. [id] is the account or category id (null for day and owed). Pass the
+/// chip back to [LedgerPresenter.removeFilterChip] to clear just that filter.
+@immutable
+class LedgerFilterChip {
+  final LedgerFilterKind kind;
+  final String? id;
+  final String label;
+
+  const LedgerFilterChip({required this.kind, this.id, required this.label});
+
+  @override
+  bool operator ==(Object other) =>
+      other is LedgerFilterChip &&
+      other.kind == kind &&
+      other.id == id &&
+      other.label == label;
+
+  @override
+  int get hashCode => Object.hash(kind, id, label);
+}
+
+/// The optional row actions for one ledger record, shared by the mobile
+/// long-press sheet and the web v2 row menu so both show the same items.
+/// Edit, Duplicate and Delete are always offered and are not listed here.
+@immutable
+class LedgerRowActions {
+  /// "Split into installments": an expense on a credit (liability) account
+  /// that may become, or already is, an installment purchase.
+  final bool canSplit;
+
+  /// 'Edit installment plan' for an existing purchase, else
+  /// 'Split into installments'.
+  final String splitLabel;
+
+  /// "I'll get this back": an expense that is not a transfer leg and not an
+  /// installment purchase.
+  final bool canMarkReimbursable;
+
+  /// 'Edit "I'll get this back"' when already reimbursable, else
+  /// 'Mark "I'll get this back"'.
+  final String reimbursableLabel;
+
+  const LedgerRowActions({
+    required this.canSplit,
+    required this.splitLabel,
+    required this.canMarkReimbursable,
+    required this.reimbursableLabel,
+  });
 }
 
 class LedgerPresenter extends ChangeNotifier with SafeNotifier {
@@ -209,6 +269,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _rowsForMonthCache = null;
     _spreadsheetCache = null;
     _spreadsheetAllCache = null;
+    // Account and category names feed the search matcher.
+    _matcherCache = null;
     super.safeNotify();
   }
 
@@ -456,8 +518,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// [_filteredTransactions]), so the destination account's increase is
   /// visible. Deleting one leg must therefore remove its partner too — that's
   /// what [deleteTransactionOrGroup] is for.
+  ///
+  /// A search (Plan 071 Phase 10a) narrows the same list: it keeps only the
+  /// records that match [searchQuery], and with [searchAllMonths] it starts
+  /// from every month instead of [selectedMonth]. The other filters still
+  /// apply on top.
   List<TransactionRecord> get _visibleTransactions {
-    var txns = _filteredTransactions;
+    var txns = _listBase;
 
     // Multi-select category filter (mirrors the web table view).
     if (_selectedCategoryIds.isNotEmpty) {
@@ -480,7 +547,22 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
               t.date.day == _selectedDate!.day)
           .toList();
     }
+
+    if (isSearching) {
+      txns = txns.where(_searchMatcher(_searchNeedle)).toList();
+    }
     return txns;
+  }
+
+  /// Where the list starts before the filters: the selected month, or every
+  /// month while a search reaches past it. The account filter applies either
+  /// way.
+  List<TransactionRecord> get _listBase {
+    if (!searchSpansAllMonths) return _filteredTransactions;
+    if (_selectedAccountIds.isEmpty) return _allTransactions;
+    return _allTransactions
+        .where((t) => _selectedAccountIds.contains(t.accountId))
+        .toList();
   }
 
   /// Day-grouped transactions honouring the date sort direction. Used when
@@ -806,6 +888,339 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   void setOwedFilter(bool value) {
     _owedOnly = value;
     safeNotify();
+  }
+
+  // --- Ledger list helpers (Plan 071 Phase 4) ---
+
+  /// One chip per active filter, in the order day, owed, accounts,
+  /// categories. Its length always equals [activeFilterCount]; a filter on an
+  /// account or category that no longer exists still gets a chip, so it can be
+  /// removed.
+  List<LedgerFilterChip> get activeFilterChips {
+    final day = _selectedDate;
+    return [
+      if (day != null)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.day,
+          label: _filterChipDayLabel(day),
+        ),
+      if (_owedOnly)
+        const LedgerFilterChip(
+            kind: LedgerFilterKind.owed, label: 'Owed to you'),
+      for (final id in _selectedAccountIds)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.account,
+          id: id,
+          label: accountById(id)?.name ?? 'Removed account',
+        ),
+      for (final id in _selectedCategoryIds)
+        LedgerFilterChip(
+          kind: LedgerFilterKind.category,
+          id: id,
+          label: categoryById(id)?.name ?? 'Removed category',
+        ),
+    ];
+  }
+
+  static final _filterChipDayFmt = DateFormat('MMM d');
+
+  static String _filterChipDayLabel(DateTime d) => _filterChipDayFmt.format(d);
+
+  /// Clears only the filter [chip] stands for; the others stay.
+  void removeFilterChip(LedgerFilterChip chip) {
+    switch (chip.kind) {
+      case LedgerFilterKind.day:
+        _selectedDate = null;
+      case LedgerFilterKind.owed:
+        _owedOnly = false;
+      case LedgerFilterKind.account:
+        _selectedAccountIds.remove(chip.id);
+      case LedgerFilterKind.category:
+        _selectedCategoryIds.remove(chip.id);
+    }
+    safeNotify();
+  }
+
+  /// True when at least one filter is on and nothing is left to list — the
+  /// list then says "No transactions match these filters" and offers Clear
+  /// filters, instead of claiming the month is empty.
+  bool get filtersHideEverything =>
+      activeFilterCount > 0 && _visibleTransactions.isEmpty;
+
+  /// True when a search is on and nothing is left to list.
+  bool get searchHidesEverything => isSearching && _visibleTransactions.isEmpty;
+
+  /// Why the list is empty. A search is named first: it is what the user did
+  /// last, and its text box sits right above the list. Only read this when
+  /// the list is empty.
+  LedgerEmptyReason get emptyListReason {
+    if (searchHidesEverything) return LedgerEmptyReason.search;
+    if (filtersHideEverything) return LedgerEmptyReason.filters;
+    return LedgerEmptyReason.emptyMonth;
+  }
+
+  /// Title of the empty list: blames the search or the filters only when they
+  /// are the cause.
+  String get emptyListTitle => switch (emptyListReason) {
+        LedgerEmptyReason.search => 'No transactions match "$_searchQuery"',
+        LedgerEmptyReason.filters => 'No transactions match these filters',
+        LedgerEmptyReason.emptyMonth => 'No transactions this month',
+      };
+
+  /// One line under the empty title, or null. A search that saw only one
+  /// month points at the wider scope.
+  String? get emptyListBody =>
+      emptyListReason == LedgerEmptyReason.search && !_searchAllMonths
+          ? 'Only ${monthLabel(_selectedMonth)} was searched. '
+              'Try All months.'
+          : null;
+
+  /// Label of the empty list's button, or null for no button.
+  String? get emptyListActionLabel => switch (emptyListReason) {
+        LedgerEmptyReason.search => 'Clear search',
+        LedgerEmptyReason.filters => 'Clear filters',
+        LedgerEmptyReason.emptyMonth => null,
+      };
+
+  /// What the empty list's button does: clears the search or the filters,
+  /// whichever [emptyListReason] names.
+  void clearEmptyListCause() {
+    switch (emptyListReason) {
+      case LedgerEmptyReason.search:
+        clearSearch();
+      case LedgerEmptyReason.filters:
+        clearAllFilters();
+      case LedgerEmptyReason.emptyMonth:
+        break;
+    }
+  }
+
+  // --- Search (Plan 071 Phase 10a) ---
+  //
+  // One search for both apps. The phone list reads [groupedTransactions] /
+  // [sortedTransactions] / [searchResults]; the web grid keeps its own
+  // running-balance rows and asks [matchesSearch] per row. Both match with
+  // [_searchMatcher], so the two apps find the same records.
+
+  String _searchQuery = '';
+  String _searchNeedle = '';
+  bool _searchAllMonths = false;
+
+  /// What the user typed, trimmed. Empty when no search is on.
+  String get searchQuery => _searchQuery;
+
+  /// The search's scope: false searches [selectedMonth], true every month.
+  /// Kept when the query is cleared, so the next search uses the same scope.
+  bool get searchAllMonths => _searchAllMonths;
+
+  bool get isSearching => _searchQuery.isNotEmpty;
+
+  /// True while a search reaches past [selectedMonth]. The web grid then
+  /// reads [ledgerSpreadsheetRowsAllMonths] and swaps its month stepper for
+  /// a scope pill.
+  bool get searchSpansAllMonths => isSearching && _searchAllMonths;
+
+  /// Matching records, after the other filters, newest first. Empty when no
+  /// search is on.
+  List<TransactionRecord> get searchResults {
+    if (!isSearching) return const [];
+    return [..._visibleTransactions]..sort((a, b) {
+        final byDate = b.date.compareTo(a.date);
+        return byDate != 0 ? byDate : b.id.compareTo(a.id);
+      });
+  }
+
+  /// "3 matches" beside the phone's search scope. Empty with no search.
+  String get searchSummary {
+    if (!isSearching) return '';
+    final n = _visibleTransactions.length;
+    return '$n ${n == 1 ? 'match' : 'matches'}';
+  }
+
+  /// Sets the search text and, when [allMonths] is given, its scope. A
+  /// blank [query] ends the search.
+  void setSearch(String query, {bool? allMonths}) {
+    final trimmed = query.trim();
+    final scope = allMonths ?? _searchAllMonths;
+    if (trimmed == _searchQuery && scope == _searchAllMonths) return;
+    _searchQuery = trimmed;
+    _searchNeedle = trimmed.toLowerCase();
+    _searchAllMonths = scope;
+    _notifySearchChanged();
+  }
+
+  /// Switches the scope between [selectedMonth] and every month.
+  void setSearchAllMonths(bool value) =>
+      setSearch(_searchQuery, allMonths: value);
+
+  /// Ends the search. The scope stays as it was.
+  void clearSearch() => setSearch('');
+
+  /// A search changes no stored data and no derived row, so it keeps the row
+  /// caches that [safeNotify] drops. The web grid reads the all-months rows on
+  /// every keystroke pause; rebuilding them each time is what Plan 052 P1
+  /// removed.
+  void _notifySearchChanged() => super.safeNotify();
+
+  /// Whether [t] matches the current search. True when no search is on.
+  bool matchesSearch(TransactionRecord t) =>
+      !isSearching || _searchMatcher(_searchNeedle)(t);
+
+  /// Whether [t] matches [query] under the shared search rules. For a page
+  /// that keeps its own query (the pre-v2 web Ledger).
+  bool recordMatchesQuery(TransactionRecord t, String query) {
+    final needle = query.trim().toLowerCase();
+    return needle.isEmpty || _searchMatcher(needle)(t);
+  }
+
+  static final _searchAmountFmt = NumberFormat('#,##0.00', 'en_PH');
+
+  bool Function(TransactionRecord)? _matcherCache;
+  String? _matcherNeedle;
+
+  /// The search rule, moved here from the web Ledger pages unchanged. A record
+  /// matches when [needle] (trimmed, lower-case) is found in its
+  /// description, note, category name or account name. When [needle] is a
+  /// number once `₱`, spaces and commas are dropped, it also matches on the
+  /// amount: equal ("1000" finds 1,000), or inside the amount as "1000.00" or
+  /// "1,000.00" ("10" finds 10.00). Cached per needle; [safeNotify] drops it
+  /// because names can change.
+  bool Function(TransactionRecord) _searchMatcher(String needle) {
+    final cached = _matcherCache;
+    if (cached != null && _matcherNeedle == needle) return cached;
+
+    final categoryNames = <String, String>{};
+    for (final c in _categories) {
+      categoryNames.putIfAbsent(c.id, () => c.name.toLowerCase());
+    }
+    final accountNames = <String, String>{};
+    for (final a in _accounts) {
+      accountNames.putIfAbsent(a.id, () => a.name.toLowerCase());
+    }
+    final cleaned =
+        needle.replaceAll('₱', '').replaceAll(' ', '').replaceAll(',', '');
+    final number = double.tryParse(cleaned);
+
+    bool matcher(TransactionRecord t) {
+      final hay = '${t.description.toLowerCase()} '
+          '${(t.note ?? '').toLowerCase()} '
+          '${categoryNames[t.categoryId] ?? ''} '
+          '${accountNames[t.accountId] ?? '—'}';
+      if (hay.contains(needle)) return true;
+      if (number == null) return false;
+      return t.amount == number ||
+          t.amount.toStringAsFixed(2).contains(cleaned) ||
+          _searchAmountFmt.format(t.amount).contains(needle);
+    }
+
+    _matcherNeedle = needle;
+    return _matcherCache = matcher;
+  }
+
+  static final _groupDayFmt = DateFormat('EEEE, MMMM d');
+  static final _groupDayYearFmt = DateFormat('EEEE, MMMM d, y');
+  static final _rowDateFmt = DateFormat('MMM d, y');
+
+  /// Header of a day group in the phone list: Today, Yesterday, or the
+  /// weekday, month and day. A day in another year also gets its year, so an
+  /// all-months search never leaves a date unclear.
+  String dateGroupLabel(DateTime date) {
+    final now = _clock();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    if (day == today) return 'Today';
+    if (day == today.subtract(const Duration(days: 1))) return 'Yesterday';
+    return day.year == now.year
+        ? _groupDayFmt.format(day)
+        : _groupDayYearFmt.format(day);
+  }
+
+  /// The date to print on a row itself, or null. Only the flat list (sorted
+  /// by amount) of an all-months search needs it: it has no day headers, and
+  /// its rows come from many months.
+  String? searchRowDateLabel(TransactionRecord t) =>
+      searchSpansAllMonths && _sortField == LedgerSortField.amount
+          ? _rowDateFmt.format(t.date)
+          : null;
+
+  /// The account with [id], or null when there is none (deleted, or no
+  /// account on the record).
+  FinancialAccount? accountById(String? id) {
+    if (id == null) return null;
+    for (final a in accounts) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
+
+  /// Position of the account with [id] in [accounts], or -1. The ledger's
+  /// account colour falls back to the palette slot at this index.
+  int accountIndexOf(String? id) =>
+      id == null ? -1 : accounts.indexWhere((a) => a.id == id);
+
+  /// The category with [id], or null when there is none.
+  FinanceCategory? categoryById(String? id) {
+    if (id == null || id.isEmpty) return null;
+    for (final c in _categories) {
+      if (c.id == id) return c;
+    }
+    return null;
+  }
+
+  /// Net of a day's rows for the date header badge: income adds, expense
+  /// subtracts. Transfer legs are stored as an outflow and an inflow, so a
+  /// transfer inside the list nets to zero; a leg whose partner is filtered
+  /// out counts like any other row.
+  double dailyNetOf(Iterable<TransactionRecord> txns) => txns.fold(
+        0.0,
+        (sum, t) => switch (t.type) {
+          TransactionType.inflow => sum + t.amount,
+          TransactionType.outflow => sum - t.amount,
+          TransactionType.transfer => sum,
+        },
+      );
+
+  /// The two legs of [r]'s transfer: `from` is the outflow on the source
+  /// account, `to` the inflow on the destination. Both are null when [r] is
+  /// not part of a transfer group; one is null when its partner is missing.
+  /// The edit and duplicate forms (phone sheet and web dialog) rebuild
+  /// From/To from these, since neither leg's `type` is `transfer`.
+  ({TransactionRecord? from, TransactionRecord? to}) transferLegsOf(
+      TransactionRecord r) {
+    final group = r.transferGroupId;
+    if (group == null) return (from: null, to: null);
+    TransactionRecord? from;
+    TransactionRecord? to;
+    for (final t in _allTransactions) {
+      if (t.transferGroupId != group) continue;
+      if (t.type == TransactionType.outflow) from = t;
+      if (t.type == TransactionType.inflow) to = t;
+    }
+    return (from: from, to: to);
+  }
+
+  /// Which optional row actions [t] gets (see [LedgerRowActions]). Same rules
+  /// as the web v2 row menu, which reads this too.
+  LedgerRowActions rowActionsFor(TransactionRecord t) {
+    final isExpense =
+        t.transferGroupId == null && t.type == TransactionType.outflow;
+    // The add/edit form only resolves active top-level accounts, so an
+    // expense on an archived (or sub-) card can't be split there — don't
+    // offer the action.
+    final account = accountById(t.accountId);
+    final splittableAccount = account != null &&
+        account.isActive &&
+        !account.isSubAccount &&
+        account.isLiability;
+    return LedgerRowActions(
+      canSplit: isExpense && splittableAccount && canSplitIntoInstallments(t),
+      splitLabel:
+          t.isInstallment ? 'Edit installment plan' : 'Split into installments',
+      canMarkReimbursable: isExpense && !t.isInstallment,
+      reimbursableLabel: t.reimbursable
+          ? 'Edit "I\'ll get this back"'
+          : 'Mark "I\'ll get this back"',
+    );
   }
 
   /// Reimbursement receivable ids that already have a settling inflow leg, i.e.
@@ -3179,6 +3594,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       // position without a word is what made this feel like a glitch.
       _lastCommitSnappedFromMonth = snappedFrom;
     }
+    // A search the entry doesn't match would hide it the same way: end it,
+    // so the row the toast announced is on screen. The phone's search field
+    // follows the cleared query.
+    if (isSearching) clearSearch();
     safeNotify();
   }
 

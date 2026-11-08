@@ -1011,6 +1011,102 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     await _syncAccountsToLedger();
   }
 
+  // --- Goals page figures (Plan 071 Phase 9) ---
+  //
+  // Moved out of the web Goals page (`_GoalsFigures`) so the mobile Goals
+  // screen and the web page read one set of numbers and one set of rules.
+
+  /// Only a completed goal can be archived ([archiveGoal]) — one that sits in
+  /// [completedGoalAccounts]. The rule behind the Archive action on the mobile
+  /// Completed rows, the mobile account form and the web Goals card menu.
+  ///
+  /// Archiving sets `isActive` to false, which takes a top-level goal's
+  /// balance out of total assets and net worth; on a goal still being saved
+  /// into that would quietly drop real money from the totals.
+  static bool canArchiveAccount(FinancialAccount account) =>
+      account.isActive && account.goalStage == GoalStage.redeemed;
+
+  /// Whether Start again ([restartGoalAccount]) is offered. Only goal
+  /// accounts have a lifecycle to restart (a savings account with a target
+  /// does not), and a goal that reached its target but is not yet marked
+  /// spent ([GoalStage.funded]) is held back: restarting it would clear the
+  /// funded stamp without writing a completed record, erasing the success.
+  /// Such a goal goes through "Mark spent" first, then Start again from the
+  /// Completed list.
+  static bool canStartAgain(FinancialAccount account) =>
+      account.category == AccountCategory.goal &&
+      account.goalStage != GoalStage.funded;
+
+  /// A goal with nothing in it yet: no balance and never funded.
+  static bool isGoalNotStarted(FinancialAccount account) =>
+      account.balance <= 0 && account.goalStage != GoalStage.funded;
+
+  /// Savings accounts without a target — plain balances, not progress cards.
+  List<FinancialAccount> get plainSavingsAccounts =>
+      savingsAccounts.where((a) => (a.goalTarget ?? 0) <= 0).toList();
+
+  /// Every active investment account, pockets included — the web Goals page's
+  /// "Savings & investments" table. [investmentAccounts] is top-level only.
+  List<FinancialAccount> get activeInvestmentAccounts => _accounts
+      .where((a) => a.isActive && a.category == AccountCategory.investment)
+      .toList();
+
+  /// Whether the mobile Goals screen has any row to show. Investments are not
+  /// listed there, so they do not count.
+  bool get hasGoalsOrSavings =>
+      activeGoalAccounts.isNotEmpty ||
+      completedGoalAccounts.isNotEmpty ||
+      plainSavingsAccounts.isNotEmpty;
+
+  /// Active goals with money in them.
+  List<FinancialAccount> get startedGoalAccounts =>
+      activeGoalAccounts.where((a) => !isGoalNotStarted(a)).toList();
+
+  /// Active goals still at ₱0.
+  List<FinancialAccount> get notStartedGoalAccounts =>
+      activeGoalAccounts.where(isGoalNotStarted).toList();
+
+  /// Hero "Active · N funded": how many active goals have money in them.
+  int get goalsActiveFunded => startedGoalAccounts.length;
+
+  /// Hero "Active · of N goals".
+  int get goalsActiveCount => activeGoalAccounts.length;
+
+  /// Hero "Not started": active goals with nothing set aside yet.
+  int get goalsNotStartedCount => notStartedGoalAccounts.length;
+
+  /// Hero "Set-asides this month": everything budgeted to be set aside this
+  /// month ([setAsidesThisMonth], allocated).
+  double get goalSetAsidesThisMonth =>
+      setAsidesThisMonth.fold(0.0, (s, e) => s + e.allocated);
+
+  /// Hero "… funded so far": how much of [goalSetAsidesThisMonth] has been
+  /// set aside already.
+  double get goalSetAsidesFundedThisMonth =>
+      setAsidesThisMonth.fold(0.0, (s, e) => s + e.funded);
+
+  /// Money in active goals, an overdrawn goal counting as ₱0.
+  double get goalsSavedTowardTargets => activeGoalAccounts.fold(
+      0.0, (s, a) => s + (a.balance > 0 ? a.balance : 0));
+
+  /// Sum of the active goals' targets.
+  double get goalsTotalTarget =>
+      activeGoalAccounts.fold(0.0, (s, a) => s + (a.goalTarget ?? 0));
+
+  /// [goalsSavedTowardTargets] over [goalsTotalTarget]; null with no targets.
+  double? get goalsShareOfTargets {
+    final total = goalsTotalTarget;
+    return total > 0 ? goalsSavedTowardTargets / total : null;
+  }
+
+  /// Goals Start again can offer: completed first, then live goal accounts
+  /// that [canStartAgain] allows (a reached goal not yet marked spent is left
+  /// out).
+  List<FinancialAccount> get restartableGoalAccounts => [
+        ...completedGoalAccounts,
+        ...activeGoalAccounts.where(canStartAgain),
+      ];
+
   /// Active time-deposit accounts, earliest maturity first — money that unlocks
   /// on a future date. Powers the advisor's forward liquidity view.
   List<FinancialAccount> get timeDepositAccounts => _accounts

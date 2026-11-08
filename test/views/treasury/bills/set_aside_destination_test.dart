@@ -10,7 +10,9 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/views/app_theme.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
+import 'package:intermittent_fasting/views/treasury/bills/bills_tab_chips.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
+import 'package:intermittent_fasting/views/treasury/shared/settle_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../../mocks.mocks.dart';
 
@@ -91,6 +93,12 @@ void main() {
     await tester.pumpAndSettle();
     await presenter.setMonth(month);
     await tester.pumpAndSettle();
+    // Set-asides live on their own tab.
+    final chip = find.byKey(BillsTabKeys.chip(BillsTab.setAsides));
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
   }
 
   Future<void> openFundSheet(WidgetTester tester) async {
@@ -101,8 +109,7 @@ void main() {
 
   bool confirmEnabled(WidgetTester tester) =>
       tester
-          .widget<AppPrimaryButton>(
-              find.widgetWithText(AppPrimaryButton, 'Confirm Payment'))
+          .widget<AppPrimaryButton>(find.byKey(SettleSheetKeys.confirm))
           .onPressed !=
       null;
 
@@ -122,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(confirmEnabled(tester), isTrue);
 
-    await tester.tap(find.text('Confirm Payment'));
+    await tester.tap(find.byKey(SettleSheetKeys.confirm));
     await tester.pumpAndSettle();
 
     expect(presenter.budgetedExpenses.single.isPaid, isTrue);
@@ -140,7 +147,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(confirmEnabled(tester), isTrue);
-    await tester.tap(find.text('Confirm Payment'));
+    await tester.tap(find.byKey(SettleSheetKeys.confirm));
     await tester.pumpAndSettle();
 
     // A plain outflow: the money left BPI and landed nowhere.
@@ -159,7 +166,7 @@ void main() {
     expect(find.text('Choose where it goes'), findsNothing);
     expect(confirmEnabled(tester), isTrue);
 
-    await tester.tap(find.text('Confirm Payment'));
+    await tester.tap(find.byKey(SettleSheetKeys.confirm));
     await tester.pumpAndSettle();
     expect(ledger.accounts.firstWhere((a) => a.id == 'maya').balance, 5000);
   });

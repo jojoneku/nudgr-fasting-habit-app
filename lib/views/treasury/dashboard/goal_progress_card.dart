@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/account_meter.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -16,29 +18,37 @@ class GoalProgressCard extends StatelessWidget {
   /// Null hides the action (plain savings, or a goal still being saved into).
   final VoidCallback? onMarkSpent;
 
+  /// Opens Start again for a goal account (Plan 071 Phase 9: active goals too,
+  /// as on web). Null hides the action: a savings account with a target has
+  /// no lifecycle to restart, and a reached goal is marked spent first.
+  final VoidCallback? onStartAgain;
+
+  /// The card's position in its list — the palette slot `resolveSliceColor`
+  /// falls back to when the account color is near-white, as on the web Goals
+  /// page.
+  final int paletteIndex;
+
   const GoalProgressCard({
     super.key,
     required this.account,
     this.onTap,
     this.onMarkSpent,
+    this.onStartAgain,
+    this.paletteIndex = 0,
   });
 
-  Color _parseColor(BuildContext context) {
-    try {
-      final hex = account.colorHex.replaceFirst('#', '');
-      return Color(int.parse('FF$hex', radix: 16));
-    } catch (_) {
-      return Theme.of(context).colorScheme.tertiary;
-    }
-  }
+  /// Resolved like the web Goals tile: near-white guard plus light-mode
+  /// deepening, so the badge, percent and bar stay readable in both themes.
+  Color _accountColor(Brightness brightness) => resolveSliceColor(
+        account.colorHex,
+        paletteIndex,
+        brightness: brightness,
+      );
 
   /// Pinned at 100% once funded — see [FinancialAccount.goalProgress]. A goal
   /// that was reached and then spent is complete, not back to zero.
-  double get _progress => account.hasGoalTarget
-      ? account.goalProgress
-      : (account.goalTarget == null || account.goalTarget! <= 0)
-          ? 0
-          : (account.balance / account.goalTarget!).clamp(0.0, 1.0);
+  /// Shared with the web goal card through [goalMeterFraction].
+  double get _progress => goalMeterFraction(account);
 
   String get _subtitleText {
     final balanceStr = formatPeso(account.balance);
@@ -58,7 +68,7 @@ class GoalProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final color = _parseColor(context);
+    final color = _accountColor(theme.brightness);
 
     return InkWell(
       onTap: onTap,
@@ -95,6 +105,16 @@ class GoalProgressCard extends StatelessWidget {
                         : formatPeso(account.balance),
                     size: AppNumberSize.body,
                     color: color,
+                  ),
+                if (onStartAgain != null)
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      tooltip: 'Start again',
+                      onPressed: onStartAgain,
+                      icon: const Icon(Icons.restart_alt_rounded, size: 20),
+                    ),
                   ),
               ],
             ),

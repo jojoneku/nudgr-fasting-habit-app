@@ -12,6 +12,11 @@ import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
+/// Keys for [AddInstallmentSheet], for tests.
+abstract final class AddInstallmentSheetKeys {
+  static const moreOptions = ValueKey('add-installment-more-options');
+}
+
 class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
 
@@ -171,6 +176,15 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
       }
     });
   }
+
+  /// The "More options" fold opens on its own when a field inside has a
+  /// value, so editing a plan never hides its category, deferral, interest
+  /// or note.
+  bool get _moreOptionsHasValue =>
+      (_categoryId?.isNotEmpty ?? false) ||
+      _deferralMonths > 0 ||
+      _interestRate > 0 ||
+      _noteCtrl.text.trim().isNotEmpty;
 
   InstallmentInterestPreview? get _interestPreview =>
       widget.presenter.interestPreview(
@@ -461,15 +475,6 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                     color: Theme.of(context).colorScheme.error, fontSize: 12),
               ),
             ),
-          const SizedBox(height: 16),
-
-          // Category (optional)
-          const _FieldLabel('Category (optional)'),
-          CategoryPickerField(
-            categories: widget.presenter.categories,
-            selectedId: _categoryId,
-            onChanged: (val) => setState(() => _categoryId = val),
-          ),
           const SizedBox(height: 8),
 
           // Paying for someone (optional)
@@ -490,19 +495,6 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             ),
           ),
           _buildCycleHint(context),
-          const SizedBox(height: 16),
-
-          // First payment deferral (optional)
-          const _FieldLabel('Deferred First Payment (optional)'),
-          _DeferralSelector(
-            selected: _deferralMonths,
-            onChanged: (val) {
-              setState(() {
-                _deferralMonths = val;
-                _recalculateStartMonth();
-              });
-            },
-          ),
           const SizedBox(height: 16),
 
           // Total Amount
@@ -528,18 +520,6 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             selected: _totalMonths,
             onChanged: _onMonthsChanged,
           ),
-          const SizedBox(height: 16),
-
-          // Monthly Interest Rate (optional)
-          const _FieldLabel('Monthly Interest Rate (optional)'),
-          _InterestRateSelector(
-            selected: _interestRate,
-            onChanged: _onInterestRateChanged,
-          ),
-          if (interestPreview != null) ...[
-            const SizedBox(height: 8),
-            _buildInterestSummary(context, interestPreview),
-          ],
           const SizedBox(height: 16),
 
           // Monthly payment (auto-computed, editable) + start month, side by side.
@@ -590,13 +570,59 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           _buildPinnedHint(context),
           const SizedBox(height: 16),
 
-          // Note — outline field box like the rest of the form.
-          const _FieldLabel('Note (optional)'),
-          TextFormField(
-            controller: _noteCtrl,
-            decoration: sheetFieldDecoration(context,
-                hint: 'e.g. 0% interest, 12 months'),
-            textInputAction: TextInputAction.done,
+          // Category, deferral, interest and note are optional: fold them so
+          // Save stays closer on a small phone. The fold opens on its own when
+          // any of them has a value, so editing never hides a filled field.
+          AppFold(
+            key: AddInstallmentSheetKeys.moreOptions,
+            title: 'More options',
+            subtitle: 'Category, deferral, interest, note',
+            initiallyOpen: _moreOptionsHasValue,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _FieldLabel('Category (optional)'),
+                CategoryPickerField(
+                  categories: widget.presenter.categories,
+                  selectedId: _categoryId,
+                  onChanged: (val) => setState(() => _categoryId = val),
+                ),
+                const SizedBox(height: 16),
+
+                // First payment deferral — moves the start month.
+                const _FieldLabel('Deferred First Payment (optional)'),
+                _DeferralSelector(
+                  selected: _deferralMonths,
+                  onChanged: (val) {
+                    setState(() {
+                      _deferralMonths = val;
+                      _recalculateStartMonth();
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                const _FieldLabel('Monthly Interest Rate (optional)'),
+                _InterestRateSelector(
+                  selected: _interestRate,
+                  onChanged: _onInterestRateChanged,
+                ),
+                if (interestPreview != null) ...[
+                  const SizedBox(height: 8),
+                  _buildInterestSummary(context, interestPreview),
+                ],
+                const SizedBox(height: 16),
+
+                const _FieldLabel('Note (optional)'),
+                TextFormField(
+                  controller: _noteCtrl,
+                  decoration: sheetFieldDecoration(context,
+                      hint: 'e.g. 0% interest, 12 months'),
+                  textInputAction: TextInputAction.done,
+                ),
+              ],
+            ),
           ),
         ],
       ),

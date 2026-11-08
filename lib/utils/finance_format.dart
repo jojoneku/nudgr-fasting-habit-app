@@ -34,6 +34,17 @@ String formatPesoMinus(double amount) {
 /// [amount] rounded to the centavo it displays as.
 double _roundToCents(double amount) => (amount * 100).roundToDouble() / 100;
 
+/// "1st", "2nd", "16th" — due days read as dates, not counts.
+String ordinalDay(int day) {
+  if (day >= 11 && day <= 13) return '${day}th';
+  return switch (day % 10) {
+    1 => '${day}st',
+    2 => '${day}nd',
+    3 => '${day}rd',
+    _ => '${day}th',
+  };
+}
+
 /// Whole-peso figure for places that drop the centavos — status labels
 /// ("Over by ₱76") and tight cells ("₱76 over") — so a label stays one line.
 /// Totals keep [formatPeso]. e.g. 1234.56 → '₱1,235'.
