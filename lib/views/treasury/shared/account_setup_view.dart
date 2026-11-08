@@ -7,41 +7,12 @@ import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/account_badge.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import 'package:intermittent_fasting/utils/account_delete_copy.dart';
 import 'package:intermittent_fasting/utils/account_form_rules.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-
-const _colorOptions = [
-  '#7C3AED',
-  '#2563EB',
-  '#059669',
-  '#D97706',
-  '#DC2626',
-  '#0891B2',
-  '#9333EA',
-  '#64748B',
-];
-
-const _topLevelCategories = [
-  AccountCategory.bank,
-  AccountCategory.ewallet,
-  AccountCategory.cash,
-  AccountCategory.savings,
-  AccountCategory.goal,
-  AccountCategory.creditCard,
-  AccountCategory.creditLine,
-  AccountCategory.bnpl,
-  AccountCategory.investment,
-  AccountCategory.custodian,
-];
-
-const _subAccountCategories = [
-  AccountCategory.savings,
-  AccountCategory.goal,
-  AccountCategory.timeDeposit,
-];
 
 class AccountSetupView extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
@@ -71,7 +42,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   final _minimumFixedController = TextEditingController();
 
   AccountCategory _category = AccountCategory.bank;
-  String _selectedColor = _colorOptions[0];
+  String _selectedColor = kAccountColorOptions[0];
 
   /// Stored badge choice (catalog key / [kMonogramBadgeKey] / '' = default).
   String _iconKey = '';
@@ -101,8 +72,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   String? get _effectiveParentId =>
       widget.existing?.parentAccountId ?? widget.parentAccountId;
 
-  List<AccountCategory> get _availableCategories =>
-      _effectiveParentId == null ? _topLevelCategories : _subAccountCategories;
+  List<AccountCategory> get _availableCategories => _effectiveParentId == null
+      ? kTopLevelAccountCategories
+      : kSubAccountCategories;
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
@@ -632,7 +604,7 @@ class _AccountSetupForm extends StatelessWidget {
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               child: _ColorPicker(
-                options: _colorOptions,
+                options: kAccountColorOptions,
                 selected: selectedColor,
                 onSelected: onColorSelected,
               ),
@@ -740,20 +712,6 @@ class _CategoryDropdown extends StatelessWidget {
     required this.onChanged,
   });
 
-  String _label(AccountCategory cat) => switch (cat) {
-        AccountCategory.bank => 'Bank',
-        AccountCategory.ewallet => 'eWallet',
-        AccountCategory.cash => 'Cash',
-        AccountCategory.savings => 'Savings',
-        AccountCategory.goal => 'Goal',
-        AccountCategory.timeDeposit => 'Time Deposit',
-        AccountCategory.creditCard => 'Credit Card',
-        AccountCategory.creditLine => 'Credit Line',
-        AccountCategory.bnpl => 'BNPL',
-        AccountCategory.investment => 'Investment',
-        AccountCategory.custodian => 'External',
-      };
-
   @override
   Widget build(BuildContext context) {
     return SheetLabeledField(
@@ -762,7 +720,7 @@ class _CategoryDropdown extends StatelessWidget {
         initialValue: value,
         decoration: sheetFieldDecoration(context),
         items: categories
-            .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
+            .map((c) => DropdownMenuItem(value: c, child: Text(c.label)))
             .toList(),
         onChanged: onChanged,
       ),
@@ -848,8 +806,7 @@ class _ColorPicker extends StatelessWidget {
           // Contrast the ring/check against the swatch itself, not a fixed
           // white — otherwise a pale swatch in light mode shows an invisible
           // selection.
-          final onSwatch =
-              color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+          final onSwatch = accountBadgeForeground(color);
           return Semantics(
             label: 'Color $hex',
             selected: isSelected,
@@ -891,9 +848,7 @@ class _ColorPicker extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isCustom
-                      ? (_parse(selected).computeLuminance() > 0.5
-                          ? Colors.black
-                          : Colors.white)
+                      ? accountBadgeForeground(_parse(selected))
                       : Theme.of(context).colorScheme.outlineVariant,
                   width: isCustom ? 2.5 : 1.5,
                 ),
@@ -909,9 +864,7 @@ class _ColorPicker extends StatelessWidget {
               child: isCustom
                   ? Icon(
                       Icons.check,
-                      color: _parse(selected).computeLuminance() > 0.5
-                          ? Colors.black
-                          : Colors.white,
+                      color: accountBadgeForeground(_parse(selected)),
                       size: 18,
                     )
                   : Icon(
@@ -1130,7 +1083,7 @@ class _CreditDetailsCard extends StatelessWidget {
                   prefixText: '₱ ',
                   helperText: 'e.g. a monthly installment',
                 ),
-                validator: _positiveAmountValidator,
+                validator: positiveAmountValidator,
               ),
             ),
           ],
@@ -1175,13 +1128,6 @@ const _dueAfterStatementHelp =
     'Some issuers count days from the statement, e.g. due 15 days after.';
 
 String _daysAfterLabel(int d) => d == 1 ? '1 day' : '$d days';
-
-/// Required, strictly positive peso amount (the fixed minimum payment).
-String? _positiveAmountValidator(String? v) {
-  final parsed = double.tryParse((v ?? '').replaceAll(',', '').trim());
-  if (parsed == null || parsed <= 0) return 'Enter an amount above ₱0';
-  return null;
-}
 
 /// [AppSegmentedControl] stretched to the field width, with tighter segment
 /// padding so three labels fit a phone-width sheet without truncating.

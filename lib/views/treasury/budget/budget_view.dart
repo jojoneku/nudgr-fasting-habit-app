@@ -354,8 +354,8 @@ class _PacePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final color = good ? context.appColors.success : cs.error;
+    // Behind pace is a warning, not an error — the same tone web uses.
+    final color = good ? context.appColors.success : context.appColors.bills;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
@@ -395,8 +395,7 @@ class _SectionBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSection(
       title: section.name.toUpperCase(),
-      hint:
-          '${formatPesoCompact(section.spent)} / ${formatPesoCompact(section.allocated)}',
+      hint: section.headerHint,
       child: Column(
         children: [
           for (var i = 0; i < section.rows.length; i++) ...[

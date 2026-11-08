@@ -2,8 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../presenters/budget_presenter.dart'
-    show kBudgetWatchThreshold;
+import '../../../../presenters/budget_presenter.dart' show BudgetStatus;
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -12,7 +11,8 @@ import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-import '../../design/account_category_label.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
+import 'package:intermittent_fasting/views/treasury/shared/budget_status_color.dart';
 import '../../web_keys.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_inventory_dialog.dart';
@@ -1191,18 +1191,24 @@ class _BudgetHealthCard extends StatelessWidget {
   const _BudgetHealthCard(
       {required this.presenter, required this.onOpenBudget});
 
-  WebBadge _status(double ratio) {
-    if (ratio >= 1.0) return const WebBadge('Over', tone: WebBadgeTone.danger);
-    if (ratio >= kBudgetWatchThreshold) {
-      return const WebBadge('Watch', tone: WebBadgeTone.warning);
-    }
-    return const WebBadge('On track', tone: WebBadgeTone.success);
-  }
+  /// The shared status ([budgetStatusFor], via the presenter) as a badge.
+  /// Over and Watch use the warning tone, the same as the Budget page.
+  WebBadge _status(BudgetHealthRow row) => WebBadge(
+        row.statusLabel,
+        tone: switch (row.status) {
+          BudgetStatus.onTrack => WebBadgeTone.success,
+          BudgetStatus.watch => WebBadgeTone.warning,
+          BudgetStatus.over => WebBadgeTone.warning,
+          BudgetStatus.funded => WebBadgeTone.info,
+        },
+      );
 
-  Color _groupColor(
-      ColorScheme cs, AppThemeExtension colors, int index, double ratio) {
-    if (ratio >= 1.0) return cs.error;
-    if (ratio >= kBudgetWatchThreshold) return colors.bills;
+  Color _groupColor(BuildContext context, int index, BudgetHealthRow row) {
+    final cs = Theme.of(context).colorScheme;
+    final colors = context.appColors;
+    if (row.status == BudgetStatus.watch || row.status == BudgetStatus.over) {
+      return budgetStatusColor(context, row.status);
+    }
     return [cs.primary, colors.weight, colors.treasury, cs.tertiary][index % 4];
   }
 
@@ -1211,14 +1217,11 @@ class _BudgetHealthCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final p = presenter;
-    final allocated = p.budgetAllocatedByGroup;
-    final spent = p.budgetSpentByGroup;
     final totalAlloc = p.totalBudgetAllocated;
     final totalSpent = p.totalBudgetSpent;
     final totalLeft = p.totalBudgetRemaining;
-    final active = p.budgetGroups
-        .where((g) => (allocated[g.id] ?? 0) > 0 || (spent[g.id] ?? 0) > 0)
-        .toList();
+    // Savings groups stay in on web (open question Q1 in Plan 071).
+    final active = p.budgetHealthRows(includeSavings: true);
     final usedPct =
         totalAlloc > 0 ? '${(totalSpent / totalAlloc * 100).round()}%' : '0%';
     final link = _HeaderLink(
@@ -1252,21 +1255,16 @@ class _BudgetHealthCard extends StatelessWidget {
           for (var i = 0; i < active.length; i++) ...[
             if (i > 0) const SizedBox(height: WebInsets.lg),
             Builder(builder: (context) {
-              final g = active[i];
-              final alloc = allocated[g.id] ?? 0;
-              final spnt = spent[g.id] ?? 0;
-              final ratio = alloc > 0 ? spnt / alloc : 0.0;
-              final left = (alloc - spnt).clamp(0.0, double.infinity);
-              final pct = alloc > 0 ? (spnt / alloc * 100).round() : 0;
-              final dot = _groupColor(cs, context.appColors, i, ratio);
+              final row = active[i];
+              final dot = _groupColor(context, i, row);
               return WebBudgetRow(
                 dotColor: dot,
-                name: g.name,
-                spent: formatPeso(spnt),
-                target: formatPeso(alloc),
-                progress: ratio.clamp(0.0, 1.0),
-                status: _status(ratio),
-                sub: '${formatPeso(left)} left · $pct%',
+                name: row.name,
+                spent: formatPeso(row.spent),
+                target: formatPeso(row.allocated),
+                progress: row.progress,
+                status: _status(row),
+                sub: '${formatPeso(row.left)} left · ${row.percentUsed}%',
                 barColor: dot,
               );
             }),
