@@ -14,12 +14,14 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/account_category_label.dart';
 import 'package:intermittent_fasting/utils/credit_cycle.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/goal_lifecycle.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 import 'package:intermittent_fasting/utils/treasury_history_backfill.dart';
+import 'package:intl/intl.dart';
 
 class DailySpend {
   final DateTime date;
@@ -159,6 +161,224 @@ class NextMonthForecast {
   String get budgetCaption => budgetCarriedForward
       ? "Repeats this month's budget"
       : 'Still budgeted to spend';
+
+  /// The chain as statement lines, in order, for the mobile and web cards:
+  /// Starts at + To receive − Bills − Installments − Set-asides − Budget.
+  List<StatementLine> get lines => [
+        StatementLine(
+          label: 'Starts at',
+          caption: "This month's projected end",
+          amount: startingCashLabel,
+          tone: StatementTone.neutral,
+        ),
+        StatementLine(
+          label: 'To receive',
+          caption: 'Expected next month',
+          amount: '+${formatPeso(toReceive)}',
+          tone: StatementTone.income,
+        ),
+        StatementLine(
+          label: 'Bills',
+          caption: 'Incl. card statements',
+          amount: '−${formatPeso(bills)}',
+          tone: StatementTone.bills,
+        ),
+        StatementLine(
+          label: 'Installments',
+          caption: 'Not on a statement yet',
+          amount: '−${formatPeso(installments)}',
+          tone: StatementTone.bills,
+        ),
+        StatementLine(
+          label: 'Set-asides',
+          caption: 'Still to fund',
+          amount: '−${formatPeso(setAsides)}',
+          tone: StatementTone.setAside,
+        ),
+        StatementLine(
+          label: 'Budget',
+          caption: budgetCaption,
+          amount: '−${formatPeso(budget)}',
+          tone: StatementTone.budget,
+        ),
+      ];
+
+  /// Tone of the ending figure: good while next month ends in the black.
+  StatementTone get endingTone =>
+      endsNegative ? StatementTone.bad : StatementTone.good;
+}
+
+/// What a statement line's amount means, so each app picks its own accent
+/// for it without deciding anything in `build()`.
+enum StatementTone {
+  /// A starting balance — no accent.
+  neutral,
+
+  /// Money coming in.
+  income,
+
+  /// Bills and installments going out.
+  bills,
+
+  /// Set-asides still to fund.
+  setAside,
+
+  /// Budget still to spend.
+  budget,
+
+  /// An ending figure that stays at or above zero.
+  good,
+
+  /// An ending figure below zero.
+  bad,
+}
+
+/// What a rate badge (the savings rate) means, so each app picks its own
+/// accent without deciding anything in `build()`.
+enum RateTone {
+  /// Above zero — the good accent.
+  positive,
+
+  /// Below zero — a warning accent.
+  warning,
+
+  /// Zero, or no rate to show — no accent.
+  neutral,
+}
+
+/// One line of a signed statement (the Month-End Outlook, the Next Month
+/// Forecast): a label, a caption under it, and the amount already formatted
+/// with its sign — `+₱X` added, `−₱X` taken off, `−₱X` for a negative balance.
+@immutable
+class StatementLine {
+  final String label;
+  final String caption;
+  final String amount;
+  final StatementTone tone;
+
+  const StatementLine({
+    required this.label,
+    required this.caption,
+    required this.amount,
+    required this.tone,
+  });
+}
+
+/// The Month-End Outlook as a signed statement:
+///
+///   Liquid now + To receive − Upcoming bills − Set-asides due − Budget left
+///     = Projected month-end
+///
+/// Built by [TreasuryDashboardPresenter.monthEndOutlook]; the cards only lay
+/// it out.
+@immutable
+class MonthEndOutlook {
+  final double liquidNow;
+  final double toReceive;
+  final double upcomingBills;
+  final double setAsidesDue;
+  final double budgetLeft;
+
+  /// [TreasuryDashboardPresenter.forecastedNetBalance].
+  final double projected;
+
+  const MonthEndOutlook({
+    required this.liquidNow,
+    required this.toReceive,
+    required this.upcomingBills,
+    required this.setAsidesDue,
+    required this.budgetLeft,
+    required this.projected,
+  });
+
+  List<StatementLine> get lines => [
+        StatementLine(
+          label: 'Liquid now',
+          caption: 'Cash across accounts',
+          amount: formatPesoMinus(liquidNow),
+          tone: StatementTone.neutral,
+        ),
+        StatementLine(
+          label: 'To receive',
+          caption: 'Money owed to you',
+          amount: '+${formatPeso(toReceive)}',
+          tone: StatementTone.income,
+        ),
+        StatementLine(
+          label: 'Upcoming bills',
+          caption: 'Unpaid this month',
+          amount: '−${formatPeso(upcomingBills)}',
+          tone: StatementTone.bills,
+        ),
+        StatementLine(
+          label: 'Set-asides due',
+          caption: 'Still to fund',
+          amount: '−${formatPeso(setAsidesDue)}',
+          tone: StatementTone.setAside,
+        ),
+        StatementLine(
+          label: 'Budget left',
+          caption: 'Still budgeted to spend',
+          amount: '−${formatPeso(budgetLeft)}',
+          tone: StatementTone.budget,
+        ),
+      ];
+
+  String get projectedTitle => 'Projected month-end';
+  String get projectedCaption => 'After bills, budget & savings';
+
+  /// [projected] as shown: `₱X`, or `−₱X` below zero.
+  String get projectedLabel => formatPesoMinus(projected);
+
+  StatementTone get projectedTone =>
+      projected >= 0 ? StatementTone.good : StatementTone.bad;
+}
+
+/// The spending card's window.
+enum SpendRange {
+  last7('7D'),
+  last30('30D'),
+  thisMonth('This mo'),
+  lastMonth('Last mo');
+
+  const SpendRange(this.label);
+  final String label;
+}
+
+/// Daily spend and its summary figures for one [SpendRange], as the spending
+/// card shows them. Built by [TreasuryDashboardPresenter.spendingSummary].
+@immutable
+class SpendingRangeSummary {
+  final List<DailySpend> days;
+
+  /// The largest single day.
+  final double peak;
+
+  /// The day [peak] fell on; null when nothing was spent.
+  final DateTime? peakDay;
+
+  /// Average over the days that had any spend.
+  final double avgDaily;
+  final double total;
+
+  const SpendingRangeSummary({
+    required this.days,
+    required this.peak,
+    required this.peakDay,
+    required this.avgDaily,
+    required this.total,
+  });
+
+  bool get hasData => peakDay != null;
+  String get totalLabel => formatPesoCompact(total);
+  String get avgDailyLabel => formatPesoCompact(avgDaily);
+  String get peakAmountLabel => formatPesoCompact(peak);
+
+  /// "Tue, Nov 4", or "—" when nothing was spent.
+  String get peakDayLabel {
+    final d = peakDay;
+    return d == null ? '—' : DateFormat('EEE, MMM d').format(d);
+  }
 }
 
 class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
@@ -316,6 +536,29 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   bool get hasAccounts => _accounts.any((a) => a.isActive);
   List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
+  /// True only for a brand-new Treasury: no account at all (active or
+  /// archived) and nothing logged this month — no bills, budgets or
+  /// transactions. The dashboard then shows one empty state instead of cards
+  /// that would all read ₱0.00. A user who archived every account but still
+  /// has bills or a budget this month keeps the full dashboard.
+  bool get showsOnlyEmptyState =>
+      _accounts.isEmpty &&
+      !_bills.any((b) => b.month == _currentMonth) &&
+      !hasBudget &&
+      !_transactions.any((t) => t.month == _currentMonth);
+
+  /// True when every account the user has is archived.
+  bool get hasOnlyArchivedAccounts => _accounts.isNotEmpty && !hasAccounts;
+
+  /// The Accounts slot's empty-state title when no account is active.
+  String get accountsEmptyTitle =>
+      hasOnlyArchivedAccounts ? 'No active accounts' : 'No accounts yet';
+
+  /// The Accounts slot's empty-state body when no account is active.
+  String get accountsEmptyBody => hasOnlyArchivedAccounts
+      ? 'Your accounts are archived. Add an account to track balances here.'
+      : 'Add your first account to get started';
+
   // --- Account views ---
 
   List<FinancialAccount> get liquidAccounts => _accounts
@@ -334,9 +577,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
   double get totalCreditOwed =>
       creditAccounts.fold(0.0, (sum, a) => sum + a.totalDebt);
 
-  /// Total remaining credit across accounts that have a limit set.
-  double get totalCreditAvailable =>
-      creditAccounts.fold(0.0, (sum, a) => sum + (a.availableCredit ?? 0));
+  /// Total remaining credit across accounts that have a limit set. Each card
+  /// counts at most down to zero: a card over its limit has no room left, and
+  /// its overage must not cancel out another card's room.
+  double get totalCreditAvailable => creditAccounts.fold(
+        0.0,
+        (sum, a) => sum + (a.availableCredit ?? 0).clamp(0.0, double.infinity),
+      );
 
   /// The statement of [a] still waiting on payment — the earliest-due unpaid
   /// credit-card bill for it, generated or hand-keyed, with money left on it —
@@ -990,6 +1237,202 @@ class TreasuryDashboardPresenter extends ChangeNotifier with SafeNotifier {
     final income = monthTotalInflow;
     if (income <= 0) return null;
     return monthSavingsContributions / income;
+  }
+
+  // --- Dashboard cards (Plan 071 Phase 7) ---
+  // Labels and decisions the mobile dashboard cards (and web v2 where it
+  // shows the same figure) read, so no card computes in `build()`.
+
+  /// The Month-End Outlook statement. Same six figures, same order and same
+  /// labels on mobile and web.
+  MonthEndOutlook get monthEndOutlook => MonthEndOutlook(
+        liquidNow: totalLiquidCash,
+        toReceive: pendingReceivables,
+        upcomingBills: monthUnpaidBills,
+        setAsidesDue: budgetedExpensesRemaining,
+        budgetLeft: budgetRemainingNetOfObligations,
+        projected: forecastedNetBalance,
+      );
+
+  /// "November cash flow" — the cash flow strip's title.
+  String get cashflowTitle =>
+      '${monthLabel(_currentMonth).split(' ').first} cash flow';
+
+  /// "12 days left", "1 day left", or "Last day".
+  String get daysLeftLabel {
+    final left = daysLeftInMonth;
+    if (left == 0) return 'Last day';
+    return '$left ${left == 1 ? 'day' : 'days'} left';
+  }
+
+  /// Bar widths for the cash flow strip: each flow against the larger one,
+  /// so the dominant flow fills the track.
+  double get cashflowIncomeFraction => _flowFraction(monthTotalInflow);
+  double get cashflowExpenseFraction => _flowFraction(monthTotalOutflow);
+
+  double _flowFraction(double flow) {
+    final peak = monthTotalInflow > monthTotalOutflow
+        ? monthTotalInflow
+        : monthTotalOutflow;
+    return peak > 0 ? (flow / peak).clamp(0.0, 1.0) : 0.0;
+  }
+
+  String get monthTotalInflowLabel => formatPeso(monthTotalInflow);
+  String get monthTotalOutflowLabel => formatPeso(monthTotalOutflow);
+
+  /// [monthNetCashFlow] with its sign: "+₱3,904.00" / "−₱1,200.00".
+  String get monthNetCashFlowLabel => formatPesoSigned(monthNetCashFlow);
+
+  /// True when the net flow is below zero once rounded to cents, so a month
+  /// where income equals spending (float residue like −1e-12) reads neutral.
+  bool get monthNetCashFlowNegative => monthNetCashFlow < -_centTolerance;
+
+  /// "Spent 72% of income", or "Spent — of income" with no income yet.
+  String get spentShareOfIncomeLabel {
+    final income = monthTotalInflow;
+    if (income <= 0) return 'Spent — of income';
+    return 'Spent ${(monthTotalOutflow / income * 100).round()}% of income';
+  }
+
+  bool get hasSavingsRate => savingsRate != null;
+
+  /// The savings-rate badge's tone, judged on the rate as displayed (one
+  /// decimal place): above zero is [RateTone.positive], below zero (you
+  /// net-withdrew from savings) is [RateTone.warning], and zero or no income
+  /// yet is [RateTone.neutral].
+  RateTone get savingsRateTone {
+    final rate = savingsRate;
+    if (rate == null) return RateTone.neutral;
+    final tenthsOfPercent = (rate * 1000).round();
+    if (tenthsOfPercent > 0) return RateTone.positive;
+    if (tenthsOfPercent < 0) return RateTone.warning;
+    return RateTone.neutral;
+  }
+
+  /// "Savings rate 12.5%", or "Savings rate —" with no income yet.
+  String get savingsRateLabel {
+    final rate = savingsRate;
+    if (rate == null) return 'Savings rate —';
+    return 'Savings rate ${(rate * 100).toStringAsFixed(1)}%';
+  }
+
+  /// Net cash flow for the hero's small cell: "↑ ₱12.5k" / "↓ ₱3k".
+  String get monthNetCashFlowCompactLabel =>
+      '${monthNetCashFlowNegative ? '↓' : '↑'} '
+      '${formatPesoCompact(monthNetCashFlow.abs())}';
+
+  /// [totalAssets] for the hero's small cell: "₱1.2M".
+  String get totalAssetsCompactLabel => formatPesoCompact(totalAssets);
+
+  /// The Credit section's summary: "Owe ₱X · ₱Y available".
+  String get creditSummaryLabel => 'Owe ${formatPeso(totalCreditOwed)} · '
+      '${formatPeso(totalCreditAvailable)} available';
+
+  /// "₱A of ₱L available" under a card's utilization meter.
+  String creditAvailableLabel(FinancialAccount a) =>
+      '${formatPesoMinus(a.availableCredit ?? 0)} of '
+      '${formatPeso(a.creditLimit ?? 0)} available';
+
+  /// True when [a] has used 90% or more of its limit.
+  bool creditNearLimit(FinancialAccount a) => (a.utilization ?? 0) >= 0.9;
+
+  /// True when [a] has something to pay. A cleared or overpaid card has
+  /// `currentPayable == 0`, so Pay stays visible but disabled.
+  bool canPayCredit(FinancialAccount a) => a.currentPayable > 0;
+
+  /// Liquid accounts whose real balance is below zero, past a cent of float
+  /// residue (₱1,000.30 − ₱500.10 − ₱500.20 leaves about −5.7e-14, which is
+  /// zero, not overdrawn). Money held in an account for others does not make
+  /// it overdrawn — the bank still has the money; that case keeps its held
+  /// sub-line instead ([dashboardAccountSublines]).
+  Set<String> get overdrawnAccountIds => {
+        for (final a in liquidAccounts)
+          if (a.balance < -_centTolerance) a.id,
+      };
+
+  /// The sub-line under each Accounts row: "Overdrawn · check the last
+  /// transfer" when the balance is below zero, else the type, plus what is
+  /// held in it for others ("Bank · ₱2,000.00 held"), noting when that is
+  /// more than the balance ("Bank · ₱4,000.00 held · more than the balance").
+  Map<String, String> get dashboardAccountSublines {
+    final held = heldAmountByAccountId;
+    final overdrawn = overdrawnAccountIds;
+    final yours = yoursByAccountId;
+    String heldLine(FinancialAccount a) {
+      final base = '${a.category.label} · ${formatPeso(held[a.id]!)} held';
+      return (yours[a.id] ?? a.balance) < -_centTolerance
+          ? '$base · more than the balance'
+          : base;
+    }
+
+    return {
+      for (final a in liquidAccounts)
+        a.id: overdrawn.contains(a.id)
+            ? 'Overdrawn · check the last transfer'
+            : (held[a.id] ?? 0) > 0
+                ? heldLine(a)
+                : a.category.label,
+    };
+  }
+
+  /// Half a centavo: anything smaller is float residue, not money.
+  static const double _centTolerance = 0.005;
+
+  /// Goal accounts first, then savings — the dashboard's Goals list.
+  List<FinancialAccount> get goalAndSavingsAccounts =>
+      [...goalAccounts, ...savingsAccounts];
+
+  /// Sum of [upcomingBills] at their full amounts, for the card's footer.
+  double get upcomingBillsTotal =>
+      upcomingBills.fold(0.0, (sum, b) => sum + b.amount);
+
+  bool get hasOverdueBills => upcomingBills.any(isBillOverdue);
+
+  /// "Overdue" or "Due 15" under a bill row.
+  String billDueLabel(Bill bill) =>
+      isBillOverdue(bill) ? 'Overdue' : 'Due ${bill.dueDay}';
+
+  /// Total of the slices the Expense breakdown chart draws.
+  double get categorySpendThisMonthTotal =>
+      categorySpendThisMonth.fold(0.0, (s, e) => s + e.$2);
+
+  /// True when more categories exist than the chart draws ("View all").
+  bool get hasMoreCategorySpend =>
+      allCategorySpendThisMonth.length > categorySpendThisMonth.length;
+
+  /// Daily spend and its totals for [range], ending today ([now] in tests).
+  SpendingRangeSummary spendingSummary(SpendRange range, {DateTime? now}) {
+    final clock = now ?? DateTime.now();
+    final today = DateTime(clock.year, clock.month, clock.day);
+    final (start, end) = switch (range) {
+      SpendRange.last7 => (today.subtract(const Duration(days: 6)), today),
+      SpendRange.last30 => (today.subtract(const Duration(days: 29)), today),
+      SpendRange.thisMonth => (DateTime(today.year, today.month, 1), today),
+      SpendRange.lastMonth => (
+          DateTime(today.year, today.month - 1, 1),
+          DateTime(today.year, today.month, 0),
+        ),
+    };
+    final days = dailySpendForRange(start, end);
+    var peak = 0.0;
+    DateTime? peakDay;
+    var total = 0.0;
+    var spendDays = 0;
+    for (final d in days) {
+      total += d.amount;
+      if (d.amount > 0) spendDays++;
+      if (d.amount > peak) {
+        peak = d.amount;
+        peakDay = d.date;
+      }
+    }
+    return SpendingRangeSummary(
+      days: days,
+      peak: peak,
+      peakDay: peakDay,
+      avgDaily: spendDays == 0 ? 0.0 : total / spendDays,
+      total: total,
+    );
   }
 
   /// Still-to-set-aside portion of this month's budgeted expenses: each

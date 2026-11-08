@@ -12,18 +12,27 @@ String formatPeso(double amount) {
 
 /// Like [formatPeso] but with an explicit leading sign and the minus rendered
 /// as a typographic '−' before the peso symbol. e.g. 3904 → '+₱3,904.00',
-/// -2000 → '−₱2,000.00', 0 → '₱0.00'.
+/// -2000 → '−₱2,000.00', 0 → '₱0.00'. The sign is decided on the amount as
+/// shown (rounded to cents), so float residue like -1e-12 reads '₱0.00'.
 String formatPesoSigned(double amount) {
-  if (amount == 0) return formatPeso(0);
-  final sign = amount > 0 ? '+' : '−';
-  return '$sign${formatPeso(amount.abs())}';
+  final cents = _roundToCents(amount);
+  if (cents == 0) return formatPeso(0);
+  final sign = cents > 0 ? '+' : '−';
+  return '$sign${formatPeso(cents.abs())}';
 }
 
 /// Like [formatPeso] but a negative amount gets a typographic '−' before the
 /// peso symbol, not '₱-'. No sign for zero or positive amounts.
-/// e.g. 1234 → '₱1,234.00', -1234 → '−₱1,234.00'.
-String formatPesoMinus(double amount) =>
-    amount < 0 ? '−${formatPeso(amount.abs())}' : formatPeso(amount);
+/// e.g. 1234 → '₱1,234.00', -1234 → '−₱1,234.00'. Rounded to cents first, so
+/// float residue like -5.7e-14 reads '₱0.00', never '−₱0.00'.
+String formatPesoMinus(double amount) {
+  final cents = _roundToCents(amount);
+  if (cents == 0) return formatPeso(0);
+  return cents < 0 ? '−${formatPeso(cents.abs())}' : formatPeso(cents);
+}
+
+/// [amount] rounded to the centavo it displays as.
+double _roundToCents(double amount) => (amount * 100).roundToDouble() / 100;
 
 /// "1st", "2nd", "16th" — due days read as dates, not counts.
 String ordinalDay(int day) {

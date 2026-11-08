@@ -19,18 +19,25 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
 
   static const int _previewCount = 3;
 
+  List<Bill> get _bills => widget.presenter.upcomingBills;
+
+  List<Bill> get _shown =>
+      _expanded ? _bills : _bills.take(_previewCount).toList();
+
+  int get _hiddenCount => _bills.length - _previewCount;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final bills = widget.presenter.upcomingBills;
-    final total = bills.fold(0.0, (sum, b) => sum + b.amount);
-    final hasOverdue = bills.any(widget.presenter.isBillOverdue);
-    final shown = _expanded ? bills : bills.take(_previewCount).toList();
-    final hiddenCount = bills.length - _previewCount;
+    final bills = _bills;
+    final total = widget.presenter.upcomingBillsTotal;
+    final hasOverdue = widget.presenter.hasOverdueBills;
+    final shown = _shown;
+    final hiddenCount = _hiddenCount;
 
     return AppSection(
-      title: 'Upcoming Bills',
+      title: 'Upcoming bills',
       trailing: hasOverdue
           ? AppBadge(
               text: 'Overdue',
@@ -48,6 +55,7 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
               _BillRow(
                 bill: shown[i],
                 isOverdue: widget.presenter.isBillOverdue(shown[i]),
+                dueLabel: widget.presenter.billDueLabel(shown[i]),
               ),
               if (i < shown.length - 1 || !_expanded && hiddenCount > 0)
                 Divider(
@@ -80,14 +88,20 @@ class _BillRow extends StatelessWidget {
   final Bill bill;
   final bool isOverdue;
 
-  const _BillRow({required this.bill, required this.isOverdue});
+  /// "Overdue" or "Due 15" ([TreasuryDashboardPresenter.billDueLabel]).
+  final String dueLabel;
+
+  const _BillRow({
+    required this.bill,
+    required this.isOverdue,
+    required this.dueLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final nameColor = isOverdue ? colorScheme.error : colorScheme.onSurface;
-    final dueLabel = isOverdue ? 'Overdue' : 'Due ${bill.dueDay}';
     final dueLabelColor =
         isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant;
     final badgeColor = isOverdue ? colorScheme.error : context.appColors.bills;
@@ -136,7 +150,8 @@ class _ExpandRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
-      child: Padding(
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
@@ -167,7 +182,8 @@ class _CollapseRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
-      child: Padding(
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 44),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [

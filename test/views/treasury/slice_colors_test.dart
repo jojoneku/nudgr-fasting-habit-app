@@ -31,6 +31,13 @@ class _FakeDashboard extends Fake implements TreasuryDashboardPresenter {
 
   @override
   List<(FinanceCategory, double)> get allCategorySpendThisMonth => slices;
+
+  @override
+  double get categorySpendThisMonthTotal =>
+      slices.fold(0.0, (sum, s) => sum + s.$2);
+
+  @override
+  bool get hasMoreCategorySpend => false;
 }
 
 MonthlySummary _summary(Map<String, double> categorySpend) => MonthlySummary(
