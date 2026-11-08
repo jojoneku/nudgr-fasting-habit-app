@@ -201,6 +201,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   /// Bills, Budget and Installments follow; it also clears any day filter so
   /// the whole month shows.
   void _openLedgerMonth(String month) {
+    // Drop any account / category / owed filter first: the History detail
+    // shows the whole month, so the Ledger it opens must too, or its totals
+    // stop matching. setMonth alone only clears the day filter.
+    widget.ledgerPresenter.clearAllFilters();
     widget.ledgerPresenter.setMonth(month);
     _tabController.animateTo(_ledgerTabIndex);
   }

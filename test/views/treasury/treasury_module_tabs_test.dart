@@ -215,6 +215,35 @@ void main() {
       expect(tabBar.controller!.index, 1);
     });
 
+    testWidgets('clears the Ledger filters so its totals match the month',
+        (tester) async {
+      final ledger = await pumpModule(
+        tester,
+        initialTabIndex: 4, // History
+        summaries: [closedMonth('2025-06')],
+      );
+      await tester.pumpAndSettle();
+      // A GCash filter (plus a category, owed and day filter) left on from
+      // an earlier Ledger visit.
+      ledger.setAccount('gcash');
+      ledger.setCategoryFilter('food');
+      ledger.setOwedFilter(true);
+      ledger.setSelectedDate(DateTime(2026, 1, 5));
+      expect(ledger.activeFilterCount, greaterThan(0));
+
+      await tester.tap(find.text('June 2025'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Open in Ledger'));
+      await tester.pumpAndSettle();
+
+      expect(ledger.selectedMonth, '2025-06');
+      expect(ledger.selectedAccountIds, isEmpty);
+      expect(ledger.selectedCategoryIds, isEmpty);
+      expect(ledger.owedOnly, isFalse);
+      expect(ledger.selectedDate, isNull);
+      expect(ledger.activeFilterCount, 0);
+    });
+
     testWidgets('a standalone detail screen shows no Open in Ledger button',
         (tester) async {
       await tester.pumpWidget(MaterialApp(
